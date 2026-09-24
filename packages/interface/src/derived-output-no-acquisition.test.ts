@@ -61,6 +61,8 @@ const SCANNER_NON_ACQUISITION = new Set([
   'launchBrowser',
   // Read the persisted Plan 059 evidence graph and hash stored findings;
   // none of them fetches (report-quality-evidence.ts, audit-evidence-quality.ts).
+  'writeFindingsFile',
+  'writeManifestFile',
   'readApprovedAuditEvidence',
   'readAuditEvidenceSnapshot',
   'readEvidenceQualityAssessment',

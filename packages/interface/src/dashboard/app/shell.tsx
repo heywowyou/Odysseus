@@ -9,6 +9,9 @@ import { Badge } from '../components/ui/badge';
 import { useI18n } from '../i18n/provider';
 import { cn } from '../lib/cn';
 import { useApi } from '../lib/use-api';
+import { useCallback } from 'react';
+import { fetchJson } from '../lib/api';
+import { usePolling } from '../lib/use-polling';
 import type { TodoPage } from '../lib/api-types';
 
 interface ReferenceAuditStatus {
@@ -25,9 +28,13 @@ export function AppShell() {
   // endpoint. Plan 060 §8: the count is server-provided, not the length of a
   // client-side array. No polling: the count refreshes when the shell
   // remounts. Hidden on error or zero, so the badge never invents work.
-  const todo = useApi<TodoPage>('/api/prospect-hub/todo');
+  const todoFetcher = useCallback(
+    (signal: AbortSignal) => fetchJson<TodoPage>('/api/prospect-hub/todo', { signal }),
+    [],
+  );
+  const todo = usePolling<TodoPage>(todoFetcher, 15_000);
   const referenceAudit = useApi<ReferenceAuditStatus>('/api/reference-audit/status');
-  const inboxCount = todo.data?.attentionCount ?? 0;
+  const inboxCount = todo.data?.summary.actionableItems ?? 0;
   const refreshTodo = todo.refresh;
   const previousPathname = useRef(pathname);
 

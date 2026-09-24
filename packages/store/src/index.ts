@@ -37,6 +37,12 @@ export {
 } from './report-approvals.js';
 export { findDeltaBaseline, findAuditEvidenceCoverage } from './findings-delta-baseline.js';
 export { createJobModel } from './schemas/job.schema.js';
+export {
+  JOB_STATUSES,
+  JOB_STATUSES_CAN_STILL_WRITE,
+  JOB_STATUSES_SHOWN_AS_ACTIVE,
+  JOB_STATUS_POLICY,
+} from './schemas/job.schema.js';
 export type {
   JobDocument,
   JobDocumentFields,
@@ -72,6 +78,7 @@ export {
   requestJobCancellation,
   resetOrphanedRunningJobs,
   settleCancelRequestedJobsOnStartup,
+  settleCancelRequestedJob,
   updateJobProgress,
 } from './jobs.js';
 export type {
@@ -111,6 +118,7 @@ export {
   clearAuditGradeOverride,
   listAuditStorageIdentities,
 } from './audits.js';
+export { ArchivedProspectAttachmentError } from './audits.js';
 export type { AuditRuntimeFields, FullAuditEstimateSource } from './audits.js';
 
 // Plan 019: report preparation and exact-ID writing selection. All writes
@@ -472,3 +480,6 @@ export {
   StaleReportQualityRunError,
 } from './report-quality.js';
 export type { LatestReportQualityRun, ReportQualityLease } from './report-quality.js';
+
+export { findMissingUniqueIndexes, verifyUniqueIndexes } from './unique-index-check.js';
+export type { RequiredUniqueIndex } from './unique-index-check.js';

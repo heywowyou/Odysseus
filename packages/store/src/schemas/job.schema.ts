@@ -18,8 +18,32 @@ export type JobType =
   | 'outreach-draft-batch'
   | 'outreach-followup-batch'
   | 'outreach-full-scan';
-export type JobStatus =
-  'queued' | 'running' | 'cancel-requested' | 'complete' | 'failed' | 'cancelled' | 'needs-input';
+export const JOB_STATUSES = [
+  'queued',
+  'running',
+  'cancel-requested',
+  'complete',
+  'failed',
+  'cancelled',
+  'needs-input',
+] as const;
+export type JobStatus = (typeof JOB_STATUSES)[number];
+
+/** A stop request is not terminal until its worker reaches a boundary: all
+ * three statuses can still write audit data and must block conflicting work. */
+export const JOB_STATUS_POLICY: Record<JobStatus, { canStillWrite: boolean }> = {
+  queued: { canStillWrite: true },
+  running: { canStillWrite: true },
+  'cancel-requested': { canStillWrite: true },
+  complete: { canStillWrite: false },
+  failed: { canStillWrite: false },
+  cancelled: { canStillWrite: false },
+  'needs-input': { canStillWrite: false },
+};
+export const JOB_STATUSES_CAN_STILL_WRITE = JOB_STATUSES.filter(
+  (status) => JOB_STATUS_POLICY[status].canStillWrite,
+);
+export const JOB_STATUSES_SHOWN_AS_ACTIVE = JOB_STATUSES_CAN_STILL_WRITE;
 export type JobPhase =
   | 'queued'
   | 'crawl'

@@ -77,10 +77,12 @@ export interface LoginRateLimiter {
 export function createLoginRateLimiter(options: { now?: () => number } = {}): LoginRateLimiter {
   const now = options.now ?? Date.now;
   const failures = new Map<string, { count: number; lockedUntil: number }>();
+  const pending = new Set<string>();
   const refillPerMs = GLOBAL_LOGIN_VERIFICATIONS_PER_MINUTE / 60_000;
   const bucket = { tokens: GLOBAL_LOGIN_BURST, updatedAt: now() };
 
   function checkAddress(ip: string, current: number): LoginRateLimitDecision {
+    if (pending.has(ip)) return { allowed: false, retryAfterSeconds: 1 };
     const entry = failures.get(ip);
     if (entry === undefined) return { allowed: true };
     if (current >= entryExpiresAtMs(entry)) {
@@ -119,10 +121,13 @@ export function createLoginRateLimiter(options: { now?: () => number } = {}): Lo
       // A locked address spends nothing, so a locked flood cannot drain the
       // budget the operator's own login draws on.
       if (!perAddress.allowed) return perAddress;
-      return takeGlobalToken(current);
+      const global = takeGlobalToken(current);
+      if (global.allowed) pending.add(rateLimitKeyForAddress(address));
+      return global;
     },
     recordFailure(address) {
       const ip = rateLimitKeyForAddress(address);
+      pending.delete(ip);
       const current = now();
       const existing = failures.get(ip);
       if (existing !== undefined && current >= entryExpiresAtMs(existing)) {
@@ -146,7 +151,9 @@ export function createLoginRateLimiter(options: { now?: () => number } = {}): Lo
       });
     },
     recordSuccess(address) {
-      failures.delete(rateLimitKeyForAddress(address));
+      const ip = rateLimitKeyForAddress(address);
+      pending.delete(ip);
+      failures.delete(ip);
     },
   };
 }

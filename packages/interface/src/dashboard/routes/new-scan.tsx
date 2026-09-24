@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
@@ -68,6 +68,28 @@ export function NewScanPage() {
     delaySeconds: searchParams.get('delaySeconds') ?? '',
     scanConcurrency: searchParams.get('scanConcurrency') ?? '',
   }));
+  const autoAttachedProspectId = useRef<string | undefined>(undefined);
+  const normalizedHost = (url: string): string | undefined => {
+    if (!isValidAbsoluteHttpUrl(url)) return undefined;
+    try {
+      return new URL(url).hostname.toLowerCase();
+    } catch {
+      return undefined;
+    }
+  };
+  const currentHostname = normalizedHost(form.url);
+  const previousHostname = useRef(currentHostname);
+  useEffect(() => {
+    if (previousHostname.current === currentHostname) return;
+    previousHostname.current = currentHostname;
+    const autoAttached = autoAttachedProspectId.current;
+    autoAttachedProspectId.current = undefined;
+    if (autoAttached !== undefined) {
+      setForm((current) =>
+        current.prospectId === autoAttached ? { ...current, prospectId: '' } : current,
+      );
+    }
+  }, [currentHostname]);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [prospectMatches, setProspectMatches] = useState<ProspectMatch[]>([]);
@@ -153,11 +175,11 @@ export function NewScanPage() {
           if (cancelled) return;
           setProspectMatches(matches);
           if (matches.length === 1) {
-            setForm((previous) =>
-              previous.prospectId === ''
-                ? { ...previous, prospectId: matches[0]!.prospectId }
-                : previous,
-            );
+            setForm((previous) => {
+              if (previous.prospectId !== '') return previous;
+              autoAttachedProspectId.current = matches[0]!.prospectId;
+              return { ...previous, prospectId: matches[0]!.prospectId };
+            });
           }
         })
         .catch(() => {
@@ -381,10 +403,17 @@ export function NewScanPage() {
             <Select
               id="new-scan-prospect"
               value={form.prospectId}
-              onChange={(event) => setField('prospectId', event.target.value)}
+              onChange={(event) => {
+                autoAttachedProspectId.current = undefined;
+                setField('prospectId', event.target.value);
+              }}
               aria-label={copy.prospectLabel}
             >
               <option value="">{copy.noProspectOption}</option>
+              {form.prospectId !== '' &&
+              !availableProspectMatches.some((match) => match.prospectId === form.prospectId) ? (
+                <option value={form.prospectId}>{form.prospectId}</option>
+              ) : null}
               {availableProspectMatches.map((match) => (
                 <option key={match.prospectId} value={match.prospectId}>
                   {match.name}

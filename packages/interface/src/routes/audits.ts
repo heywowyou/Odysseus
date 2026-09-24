@@ -33,7 +33,6 @@ import {
   getLatestGeneratedReport,
   getLatestReport,
   getLatestReportApproval,
-  getSeverityRollup,
   getProspectHub,
   approvalCoversReport,
   approvalMatchesReportPair,
@@ -76,6 +75,7 @@ import {
   resolveEffectiveGrade,
   RULE_TRANSLATIONS_FR,
   type ReportFreshness,
+  primaryFindingFilter,
 } from '@odysseus/report';
 import { getPreviewPublicBaseUrl } from '../config.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
@@ -563,7 +563,6 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
 
     const [
       findings,
-      severityRollup,
       reportLanguages,
       selectedPair,
       approval,
@@ -575,7 +574,6 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       latestQualityRun,
     ] = await Promise.all([
       getFindingsForAudit(connection, auditId),
-      getSeverityRollup(connection, auditId),
       listReportLanguages(connection, auditId),
       resolveSelectedAnalysisPairForAudit(connection, auditId),
       getLatestReportApproval(connection, auditId),
@@ -586,6 +584,12 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       getActiveReportBundle(connection, auditId),
       getLatestReportQualityRun(connection, auditId),
     ]);
+    const severityRollup = { critical: 0, serious: 0, moderate: 0, minor: 0 };
+    for (const finding of findings.filter(
+      primaryFindingFilter(audit as unknown as AuditManifest),
+    )) {
+      severityRollup[finding.severity] += 1;
+    }
     // A failed regeneration advances the selected writing pair before PDF
     // rendering. Keep older report documents as history, but never advertise
     // them as the current pair: approval and download deliberately validate

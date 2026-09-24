@@ -5,11 +5,15 @@ import { checkSecurityHeaders } from './security-headers.js';
 
 let lastUserAgent: string | undefined;
 
-function startServer(headers: Record<string, string>): Promise<{ server: Server; origin: string }> {
+function startServer(
+  headers: Record<string, string>,
+  status = 200,
+  body = 'ok',
+): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
       lastUserAgent = req.headers['user-agent'];
-      res.writeHead(200, headers).end('ok');
+      res.writeHead(status, headers).end(body);
     });
     server.listen(0, '127.0.0.1', () => {
       const { port } = server.address() as AddressInfo;
@@ -80,6 +84,30 @@ describe('checkSecurityHeaders', () => {
       hasReferrerPolicy: false,
       hasPermissionsPolicy: false,
     });
+  });
+
+  it.each([401, 403, 429, 503])('treats HTTP %s as incomplete evidence', async (status) => {
+    const started = await startServer({}, status, 'Access denied');
+    server = started.server;
+
+    const result = await checkSecurityHeaders(started.origin, 5000);
+
+    expect(result.fetched).toBe(false);
+    expect(result.fetchError).toBe(`HTTP ${status}`);
+  });
+
+  it('treats a successful challenge page as incomplete evidence', async () => {
+    const started = await startServer(
+      { 'content-type': 'text/html' },
+      200,
+      '<title>Just a moment</title><p>Checking your browser</p>',
+    );
+    server = started.server;
+
+    const result = await checkSecurityHeaders(started.origin, 5000);
+
+    expect(result.fetched).toBe(false);
+    expect(result.fetchError).toMatch(/wall response/u);
   });
 
   it('reports fetched: false without throwing when the origin is unreachable', async () => {

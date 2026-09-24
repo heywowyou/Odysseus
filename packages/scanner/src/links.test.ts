@@ -181,6 +181,14 @@ describe('normalizePageUrl for sitemap coverage', () => {
     ).toBe('https://www.client.example/page');
   });
 
+  it('normalizes an HTTP sitemap entry to the HTTPS site identity', () => {
+    expect(
+      normalizePageUrl('http://client.example/room', 'https://client.example/', {
+        allowWwwApex: true,
+      }),
+    ).toBe('https://client.example/room');
+  });
+
   it('rejects other subdomains and registrable domains', () => {
     expect(
       normalizePageUrl('https://shop.client.example/page', 'https://client.example/', {

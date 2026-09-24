@@ -12,7 +12,6 @@
  * extractLighthouseExcludedCategoryScores, for the audit manifest.
  */
 
-import { MAX_ELEMENTS_PER_FINDING } from '../types/findings.js';
 import type { FindingCategory } from '../types/findings.js';
 import type {
   CoreWebVitalMeasurement,
@@ -572,6 +571,18 @@ export function extractLighthouseCandidates(
 ): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
   const superseded = supersededAudits ?? computeSupersededAudits([lhr]);
+  const absorbedBySuccessor = new Map<
+    string,
+    {
+      urls: Set<string>;
+      fallbacks: Array<{
+        auditId: string;
+        audit: LighthouseAuditInput;
+        weight: number;
+        category: FindingCategory;
+      }>;
+    }
+  >();
 
   if (!isAttributableLighthouseRun(lhr, pageUrl)) return candidates;
 
@@ -614,35 +625,18 @@ export function extractLighthouseCandidates(
         const absorbedUrls =
           successor === undefined ? [] : resourceUrlsForAudit(auditRef.id, audit);
         if (successor !== undefined && absorbedUrls.length > 0) {
-          candidates.push({
-            source: 'lighthouse',
-            ruleId: successorId,
+          const entry = absorbedBySuccessor.get(successorId) ?? {
+            urls: new Set<string>(),
+            fallbacks: [],
+          };
+          for (const url of absorbedUrls) entry.urls.add(url);
+          entry.fallbacks.push({
+            auditId: auditRef.id,
+            audit,
+            weight: auditRef.weight,
             category,
-            severity: capSeverityByGoodFieldData(
-              capSeverityByCoreWebVitalRating(
-                severityFromLighthouse(successor.score, auditRef.weight),
-                successorId,
-                successor.numericValue,
-              ),
-              successorId,
-              goodFieldMetrics,
-            ),
-            wcagCriteria: [],
-            title: successor.title,
-            description: successor.description,
-            pageUrl,
-            element: null,
-            dedupeIdentity: '',
-            rawEvidenceForPage: {
-              score: successor.score,
-              scoreDisplayMode: successor.scoreDisplayMode,
-              numericValue: successor.numericValue ?? null,
-              displayValue: successor.displayValue ?? null,
-              title: successor.title,
-              resourceUrls: absorbedUrls,
-              absorbedFrom: auditRef.id,
-            },
           });
+          absorbedBySuccessor.set(successorId, entry);
         }
         continue;
       }
@@ -671,8 +665,7 @@ export function extractLighthouseCandidates(
         .filter(
           (entry): entry is { item: Record<string, unknown>; node: LighthouseNodeValue } =>
             entry.node !== undefined,
-        )
-        .slice(0, MAX_ELEMENTS_PER_FINDING);
+        );
 
       const isResourceAudit = RESOURCE_IDENTIFIED_LIGHTHOUSE_AUDITS.has(auditRef.id);
 
@@ -799,6 +792,55 @@ export function extractLighthouseCandidates(
         },
       });
     }
+  }
+
+  for (const [successorId, absorbed] of absorbedBySuccessor) {
+    const resourceUrls = [...absorbed.urls].sort();
+    if (resourceUrls.length === 0) continue;
+
+    const successorCandidate = candidates.find(
+      (candidate) => candidate.ruleId === successorId && candidate.pageUrl === pageUrl,
+    );
+    if (successorCandidate !== undefined) {
+      const current = successorCandidate.rawEvidenceForPage['resourceUrls'];
+      successorCandidate.rawEvidenceForPage['resourceUrls'] = [
+        ...new Set([...(Array.isArray(current) ? current : []), ...resourceUrls]),
+      ].sort();
+      continue;
+    }
+
+    const fallback = absorbed.fallbacks[0];
+    const successor = lhr.audits[successorId];
+    if (fallback === undefined || successor === undefined) continue;
+    candidates.push({
+      source: 'lighthouse',
+      ruleId: successorId,
+      category: fallback.category,
+      severity: capSeverityByGoodFieldData(
+        capSeverityByCoreWebVitalRating(
+          severityFromLighthouse(fallback.audit.score, fallback.weight),
+          fallback.auditId,
+          fallback.audit.numericValue,
+        ),
+        successorId,
+        goodFieldMetrics,
+      ),
+      wcagCriteria: [],
+      title: successor.title,
+      description: successor.description,
+      pageUrl,
+      element: null,
+      dedupeIdentity: '',
+      rawEvidenceForPage: {
+        score: fallback.audit.score,
+        scoreDisplayMode: fallback.audit.scoreDisplayMode,
+        numericValue: fallback.audit.numericValue ?? null,
+        displayValue: fallback.audit.displayValue ?? null,
+        title: successor.title,
+        resourceUrls,
+        absorbedFrom: absorbed.fallbacks.map((entry) => entry.auditId),
+      },
+    });
   }
 
   return candidates;

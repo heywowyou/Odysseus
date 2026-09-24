@@ -13,6 +13,9 @@ vi.mock('./schemas/audit.schema.js', () => ({
 vi.mock('./schemas/job.schema.js', () => ({
   createJobModel: vi.fn(),
 }));
+vi.mock('./schemas/prospect-event.schema.js', () => ({
+  createProspectEventModel: vi.fn(),
+}));
 vi.mock('./outreach-threads.js', () => ({
   findOutreachThreadByProspect: vi.fn(),
 }));
@@ -33,6 +36,7 @@ import { checkOutreachAction, checkScanLaunch } from './guards.js';
 import { isSuppressed } from './suppression.js';
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
+import { createProspectEventModel } from './schemas/prospect-event.schema.js';
 import { loadOutreachReportReadiness } from './outreach-report-readiness.js';
 
 const fakeConnection = {} as never;
@@ -100,6 +104,9 @@ describe('central prospect guards', () => {
     vi.mocked(planProspectJobLaunch).mockResolvedValue({ allowed: true });
     mockJobRows();
     vi.mocked(findOutreachThreadByProspect).mockResolvedValue(null);
+    vi.mocked(createProspectEventModel).mockReturnValue({
+      exists: vi.fn().mockResolvedValue(null),
+    } as never);
     vi.mocked(findLiveOutreachDraft).mockResolvedValue(null);
     vi.mocked(loadOutreachReportReadiness).mockResolvedValue({ state: 'ready' });
   });
@@ -232,6 +239,25 @@ describe('central prospect guards', () => {
         action: 'first-email',
       }),
     ).resolves.toMatchObject({ allowed: true, audit: { auditId: 'audit-old' } });
+  });
+
+  it('keeps a prior automated first-touch guard after the outreach thread expires', async () => {
+    mockAuditRows([audit()]);
+    const exists = vi.fn().mockResolvedValue({ _id: 'historical-contact-event' });
+    vi.mocked(createProspectEventModel).mockReturnValue({ exists } as never);
+
+    await expect(
+      checkOutreachAction(fakeConnection, {
+        prospect: vendorHostedProspect,
+        action: 'first-email',
+      }),
+    ).resolves.toEqual({ allowed: false, refusal: 'prospect-outreach-already-started' });
+    expect(exists).toHaveBeenCalledWith({
+      prospectId: vendorHostedProspect.prospectId,
+      type: 'status-changed',
+      actor: 'automation',
+      'payload.to': 'contacted',
+    });
   });
 
   it('accepts a complete audit normalized by older code and flags it as advisory', async () => {

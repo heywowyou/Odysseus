@@ -94,6 +94,24 @@ describe('parseRobotsTxt', () => {
     expect(rules.crawlDelayMs).toBe(3000);
   });
 
+  it('starts a new group after an empty Disallow directive', () => {
+    const text = 'User-agent: *\nDisallow:\n\nUser-agent: SemrushBot\nDisallow: /\n';
+    expect(parseRobotsTxt(text, 'OdysseusBot').disallow).toEqual([]);
+    expect(parseRobotsTxt(text, 'SemrushBot').disallow).toEqual(['/']);
+  });
+
+  it('starts a new group after an empty Allow directive', () => {
+    const text = 'User-agent: *\nAllow:\n\nUser-agent: SemrushBot\nDisallow: /\n';
+    expect(parseRobotsTxt(text, 'OdysseusBot').disallow).toEqual([]);
+    expect(parseRobotsTxt(text, 'SemrushBot').disallow).toEqual(['/']);
+  });
+
+  it('strips a UTF-8 BOM before the first field name', () => {
+    expect(
+      parseRobotsTxt('\uFEFFUser-agent: *\nDisallow: /private\n', 'OdysseusBot').disallow,
+    ).toEqual(['/private']);
+  });
+
   it('falls back to the wildcard group when there is no exact match', () => {
     const text = 'User-agent: *\nDisallow: /admin\n';
     const rules = parseRobotsTxt(text, 'OdysseusAuditBot');

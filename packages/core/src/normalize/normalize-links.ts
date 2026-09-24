@@ -24,7 +24,6 @@
 
 import type { FindingCandidate } from './candidate.js';
 import { shapeIdentity } from './normalize-axe.js';
-import { MAX_ELEMENTS_PER_FINDING } from '../types/findings.js';
 import { MAX_LIGHTHOUSE_DETAILS_ITEMS } from './constants.js';
 import { severityFromCustom } from './severity.js';
 
@@ -246,10 +245,7 @@ export function extractLinkCandidates(
     });
   }
 
-  // Same per-page element cap Lighthouse's node items were held to.
-  const uncrawlable = anchors
-    .filter((anchor) => isUncrawlableAnchor(anchor, pageUrl))
-    .slice(0, MAX_ELEMENTS_PER_FINDING);
+  const uncrawlable = anchors.filter((anchor) => isUncrawlableAnchor(anchor, pageUrl));
   for (const anchor of uncrawlable) {
     const reason = crawlabilityFailureReason(anchor, pageUrl);
     const shape = anchorShape(anchor.snippet);

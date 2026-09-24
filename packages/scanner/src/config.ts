@@ -31,7 +31,10 @@ export function ensureEnvLoaded(): void {
   if (envLoaded) return;
   envLoaded = true;
   try {
-    process.loadEnvFile(path.join(findWorkspaceRoot(), '.env'));
+    const configuredEnvFile = process.env['ODYSSEUS_ENV_FILE'];
+    process.loadEnvFile(
+      configuredEnvFile !== undefined ? configuredEnvFile : path.join(findWorkspaceRoot(), '.env'),
+    );
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }

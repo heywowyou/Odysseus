@@ -4,6 +4,7 @@
  * page entries across recursively resolved sitemap indexes.
  */
 
+import { gunzipSync } from 'node:zlib';
 import { isSameSiteHostname } from '../links.js';
 import type { HostRequestScheduler } from '../host-request-scheduler.js';
 import {
@@ -13,7 +14,7 @@ import {
 } from '../network-target-policy.js';
 import { fetchWithNetworkPolicy } from '../safe-fetch.js';
 
-const LOC_PATTERN = /<loc>\s*([^<]+?)\s*<\/loc>/gi;
+const LOC_PATTERN = /<loc>\s*(?:<!\[CDATA\[([\s\S]*?)\]\]>|([^<]*?))\s*<\/loc>/gi;
 const LASTMOD_PATTERN = /<lastmod>\s*([^<]+?)\s*<\/lastmod>/i;
 const SITEMAP_INDEX_PATTERN = /<sitemapindex[\s>]/i;
 
@@ -65,6 +66,7 @@ export interface SitemapCheckOptions {
 
 function decodeXmlText(value: string): string {
   return value
+    .replace(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/u, '$1')
     .replaceAll('&amp;', '&')
     .replaceAll('&lt;', '<')
     .replaceAll('&gt;', '>')
@@ -79,17 +81,19 @@ export function parseSitemapXml(xml: string): { isSitemapIndex: boolean; entries
   const entries: SitemapEntry[] = [];
   const blocks = xml.split(/<url>|<sitemap>/i).slice(1);
   for (const block of blocks) {
-    const locMatch = block.match(/<loc>\s*([^<]+?)\s*<\/loc>/i);
-    if (!locMatch?.[1]) continue;
+    const locMatch = block.match(/<loc>\s*(?:<!\[CDATA\[([\s\S]*?)\]\]>|([^<]*?))\s*<\/loc>/i);
+    const loc = locMatch?.[1] ?? locMatch?.[2];
+    if (!loc?.trim()) continue;
     const lastmodMatch = block.match(LASTMOD_PATTERN);
     entries.push({
-      url: decodeXmlText(locMatch[1]),
+      url: decodeXmlText(loc),
       ...(lastmodMatch?.[1] ? { lastmod: decodeXmlText(lastmodMatch[1]) } : {}),
     });
   }
   if (entries.length === 0) {
     for (const match of xml.matchAll(LOC_PATTERN)) {
-      if (match[1]) entries.push({ url: decodeXmlText(match[1]) });
+      const loc = match[1] ?? match[2];
+      if (loc?.trim()) entries.push({ url: decodeXmlText(loc) });
     }
   }
   return { isSitemapIndex, entries };
@@ -121,7 +125,10 @@ async function tryFetchSitemap(
               : {}),
           });
     if (!response.ok) return { error: `HTTP ${response.status}` };
-    return { xml: await response.text(), finalUrl: response.url || url };
+    const bytes = Buffer.from(await response.arrayBuffer());
+    const xmlBytes =
+      bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b ? gunzipSync(bytes) : bytes;
+    return { xml: xmlBytes.toString('utf8'), finalUrl: response.url || url };
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
   }
@@ -222,6 +229,10 @@ export async function checkSitemap(
     visitedDocuments.add(finalUrl);
     fetchedSitemapUrls.push(finalUrl);
 
+    if (!/<(?:urlset|sitemapindex)(?:\s|>)/i.test(fetched.xml)) {
+      fetchErrors.push({ url: finalUrl, error: 'invalid sitemap XML document' });
+      continue;
+    }
     const parsed = parseSitemapXml(fetched.xml);
     fetchedDocuments.push({
       url: finalUrl,

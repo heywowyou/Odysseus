@@ -191,7 +191,11 @@ function collectIdentityStrings(source: ReferenceAuditSource): string[] {
       for (const marker of collectIdentityMarkers(value)) add(marker);
     }
   }
-  const analysisStrings = collectLeafStrings(source.analysis);
+  // Provenance digests are machine-generated metadata, not client identity.
+  // A hex digest can contain phone-shaped digit runs and be falsely retained.
+  const analysisForIdentity = { ...source.analysis };
+  delete analysisForIdentity.findingsProvenance;
+  const analysisStrings = collectLeafStrings(analysisForIdentity);
   for (const value of analysisStrings) {
     for (const marker of collectIdentityMarkers(value)) add(marker);
   }

@@ -52,6 +52,10 @@ export {
   writeRenderBundleDir,
 } from './render-bundle-files.js';
 export { buildRenderedPriorities } from './template/rendered-priorities.js';
+export {
+  primaryFindingFilter,
+  unlinkedSitemapPageUrls,
+} from './template/unlinked-sitemap-pages.js';
 export type { RenderedPriority, PriorityEvidence } from './template/rendered-priorities.js';
 export {
   detectFindingVendor,

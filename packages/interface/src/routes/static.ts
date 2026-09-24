@@ -112,6 +112,10 @@ export function registerStaticFallback(router: Router): void {
     if (isHtmlContentType(contentType)) {
       res.setHeader('content-security-policy', SPA_CONTENT_SECURITY_POLICY);
     }
-    createReadStream(resolution.filePath).pipe(res);
+    const fileStream = createReadStream(resolution.filePath);
+    fileStream.on('error', () => {
+      if (!res.destroyed) res.destroy();
+    });
+    fileStream.pipe(res);
   });
 }

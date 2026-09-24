@@ -110,13 +110,24 @@ export async function listAuditStorageIdentities(
     .lean<{ siteUrl: string; startedAt: Date }[]>();
 }
 
+export class ArchivedProspectAttachmentError extends Error {
+  constructor(readonly prospectId: string) {
+    super('odysseus: an audit cannot be attached to an archived prospect');
+    this.name = 'ArchivedProspectAttachmentError';
+  }
+}
+
 export async function attachAuditToProspect(
   connection: Connection,
   auditId: string,
   prospectId: string | null,
   actor = 'operator',
 ): Promise<AuditDocument | null> {
-  if (prospectId !== null && (await getProspectHub(connection, prospectId)) === null) return null;
+  if (prospectId !== null) {
+    const target = await getProspectHub(connection, prospectId);
+    if (target === null) return null;
+    if (target.archivedAt !== undefined) throw new ArchivedProspectAttachmentError(prospectId);
+  }
   const AuditModel = createAuditModel(connection);
   const current = await AuditModel.findOne({ auditId }).lean<AuditDocument>();
   if (current === null) return null;

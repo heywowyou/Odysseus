@@ -33,6 +33,28 @@ describe('crawl coverage gate', () => {
     );
   });
 
+  it('counts blocked challenge and rate-limit pages, but not robots exclusions', () => {
+    const majorityBlocked = {
+      pages: [
+        ...Array.from({ length: 2 }, () => ({ status: 'visited' })),
+        ...Array.from({ length: 8 }, () => ({ status: 'blocked', httpStatus: 429 })),
+        { status: 'skipped-robots' },
+      ],
+    };
+    const minorityBlocked = {
+      pages: [
+        ...Array.from({ length: 8 }, () => ({ status: 'visited' })),
+        ...Array.from({ length: 2 }, () => ({ status: 'blocked', httpStatus: 403 })),
+        { status: 'skipped-robots' },
+      ],
+    };
+
+    expect(assessCrawlCoverage(majorityBlocked).failedUrlCount).toBe(8);
+    expect(assessCrawlCoverage(majorityBlocked).reasonCodes).toEqual(['crawl-failure-share']);
+    expect(assessCrawlCoverage(minorityBlocked).failedUrlCount).toBe(2);
+    expect(assessCrawlCoverage(minorityBlocked).reasonCodes).toEqual([]);
+  });
+
   it('stops an unexplained large sitemap coverage gap even when URL errors are absent', () => {
     const input = {
       pages: pages(3, 0),

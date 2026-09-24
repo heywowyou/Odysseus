@@ -27,11 +27,17 @@ import {
   type DirectoryEntryDocument,
 } from './schemas/directory-entry.schema.js';
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
-import { createJobModel } from './schemas/job.schema.js';
+import { createJobModel, JOB_STATUSES_CAN_STILL_WRITE } from './schemas/job.schema.js';
 import { createAnalysisModel } from './schemas/analysis.schema.js';
 import { createFindingModel } from './schemas/finding.schema.js';
 import { createReportModel } from './schemas/report.schema.js';
 import { createReportApprovalModel } from './schemas/report-approval.schema.js';
+import {
+  createActiveReportBundleModel,
+  createReportBundleModel,
+  createReportQualityLeaseModel,
+  createReportQualityRunModel,
+} from './schemas/report-quality.schema.js';
 import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 import { createOutreachOutcomeModel } from './schemas/outreach-outcome.schema.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
@@ -515,13 +521,15 @@ export async function updateProspect(
       ...options.fieldOrigins,
     };
   }
-  // The merged record above is only validation; what is written is the
-  // patched fields, so concurrent writers of other fields are preserved.
+  // The merged record above is only validation; write origins per field so
+  // a concurrent scan cannot replace origins recorded for another field.
   const $set: Record<string, unknown> = {
     updatedAt: next.updatedAt,
     lastActivityAt: next.lastActivityAt,
-    fieldOrigins: next.fieldOrigins,
   };
+  for (const [field, origin] of Object.entries({ ...editedOrigins, ...options.fieldOrigins })) {
+    $set[`fieldOrigins.${field}`] = origin;
+  }
   const $unset: Record<string, 1> = {};
   for (const key of Object.keys(patch) as EditableProspectField[]) {
     if (next[key] === undefined) $unset[key] = 1;
@@ -545,6 +553,29 @@ export async function updateProspect(
   return written;
 }
 
+async function writeProspectStatusIfCurrent(
+  connection: Connection,
+  current: ProspectHubDocument,
+  status: ProspectStatus,
+  actor: string,
+): Promise<ProspectHubDocument | null> {
+  if (current.status === status) return current;
+  const now = new Date();
+  const written = await createProspectHubModel(connection)
+    .findOneAndUpdate(
+      { prospectId: current.prospectId, status: current.status },
+      { $set: { status, updatedAt: now, lastActivityAt: now } },
+      { returnDocument: 'after', projection: { _id: 0, __v: 0 } },
+    )
+    .lean<ProspectHubDocument>();
+  if (written === null) return getProspectHub(connection, current.prospectId);
+  await recordEvent(
+    connection,
+    event(current.prospectId, 'status-changed', { from: current.status, to: status }, actor),
+  );
+  return written;
+}
+
 export async function setProspectStatus(
   connection: Connection,
   prospectId: string,
@@ -553,15 +584,7 @@ export async function setProspectStatus(
 ): Promise<ProspectHubDocument | null> {
   const current = await getProspectHub(connection, prospectId);
   if (!current) return null;
-  if (current.status === status) return current;
-  const now = new Date();
-  const Model = createProspectHubModel(connection);
-  await Model.updateOne({ prospectId }, { $set: { status, updatedAt: now, lastActivityAt: now } });
-  await recordEvent(
-    connection,
-    event(prospectId, 'status-changed', { from: current.status, to: status }, actor),
-  );
-  return { ...current, status, updatedAt: now, lastActivityAt: now };
+  return writeProspectStatusIfCurrent(connection, current, status, actor);
 }
 
 export interface ProspectLifecycleResult {
@@ -671,7 +694,7 @@ export async function advanceProspectStatus(
   if (current === null) return null;
   const decision = decideAutomaticStatus(current.status, status);
   if (!decision.allowed || !decision.changed) return current;
-  return setProspectStatus(connection, prospectId, status, actor);
+  return writeProspectStatusIfCurrent(connection, current, status, actor);
 }
 
 export class AutomaticStatusTransitionError extends Error {
@@ -752,7 +775,7 @@ export async function applyAutomaticProspectStatus(
     await suppressProspect(connection, current);
   }
   if (!decision.changed) return current;
-  return setProspectStatus(connection, prospectId, status, actor);
+  return writeProspectStatusIfCurrent(connection, current, status, actor);
 }
 
 export async function listProspectEvents(
@@ -1022,6 +1045,10 @@ export interface ProspectDeletionImpact {
   analyses: number;
   reports: number;
   reportApprovals: number;
+  reportQualityLeases: number;
+  reportQualityRuns: number;
+  reportBundles: number;
+  activeReportBundles: number;
   previews: number;
   drafts: number;
   threads: number;
@@ -1082,7 +1109,7 @@ async function prospectDeletionScope(
 
 /** Issue #383: a 'needs-input' job has stopped and cannot recreate
  *  anything, so it does not block a delete or archive cleanup. */
-const ACTIVE_JOB_STATUSES = ['queued', 'running'];
+const ACTIVE_JOB_STATUSES = JOB_STATUSES_CAN_STILL_WRITE;
 
 /** Counts the unfinished jobs a permanent delete would remove. Deleting under
  *  a running job lets its later stages recreate the audit and artifacts the
@@ -1121,18 +1148,35 @@ export async function countProspectDeletionImpact(
 ): Promise<ProspectDeletionImpact | null> {
   if ((await getProspectHub(connection, prospectId)) === null) return null;
   const scope = await prospectDeletionScope(connection, prospectId);
-  const [findings, analyses, reports, reportApprovals, previews, drafts, outcomes, events, jobs] =
-    await Promise.all([
-      createFindingModel(connection).countDocuments(scope.audit),
-      createAnalysisModel(connection).countDocuments(scope.audit),
-      createReportModel(connection).countDocuments(scope.audit),
-      createReportApprovalModel(connection).countDocuments(scope.audit),
-      createOutreachPreviewModel(connection).countDocuments({ prospectId }),
-      createOutreachDraftModel(connection).countDocuments({ prospectId }),
-      createOutreachOutcomeModel(connection).countDocuments(scope.outcome),
-      createProspectEventModel(connection).countDocuments({ prospectId }),
-      createJobModel(connection).countDocuments(scope.job),
-    ]);
+  const [
+    findings,
+    analyses,
+    reports,
+    reportApprovals,
+    reportQualityLeases,
+    reportQualityRuns,
+    reportBundles,
+    activeReportBundles,
+    previews,
+    drafts,
+    outcomes,
+    events,
+    jobs,
+  ] = await Promise.all([
+    createFindingModel(connection).countDocuments(scope.audit),
+    createAnalysisModel(connection).countDocuments(scope.audit),
+    createReportModel(connection).countDocuments(scope.audit),
+    createReportApprovalModel(connection).countDocuments(scope.audit),
+    createReportQualityLeaseModel(connection).countDocuments(scope.audit),
+    createReportQualityRunModel(connection).countDocuments(scope.audit),
+    createReportBundleModel(connection).countDocuments(scope.audit),
+    createActiveReportBundleModel(connection).countDocuments(scope.audit),
+    createOutreachPreviewModel(connection).countDocuments({ prospectId }),
+    createOutreachDraftModel(connection).countDocuments({ prospectId }),
+    createOutreachOutcomeModel(connection).countDocuments(scope.outcome),
+    createProspectEventModel(connection).countDocuments({ prospectId }),
+    createJobModel(connection).countDocuments(scope.job),
+  ]);
   const directoryEntries = await createDirectoryEntryModel(connection).countDocuments({
     prospectId,
   });
@@ -1142,6 +1186,10 @@ export async function countProspectDeletionImpact(
     analyses,
     reports,
     reportApprovals,
+    reportQualityLeases,
+    reportQualityRuns,
+    reportBundles,
+    activeReportBundles,
     previews,
     drafts,
     threads: scope.threadIds.length,
@@ -1182,8 +1230,22 @@ export async function deleteProspectPermanently(
       analyses: total.analyses + count.analyses,
       reports: total.reports + count.reports,
       reportApprovals: total.reportApprovals + count.reportApprovals,
+      reportQualityLeases: total.reportQualityLeases + count.reportQualityLeases,
+      reportQualityRuns: total.reportQualityRuns + count.reportQualityRuns,
+      reportBundles: total.reportBundles + count.reportBundles,
+      activeReportBundles: total.activeReportBundles + count.activeReportBundles,
     }),
-    { audits: 0, findings: 0, analyses: 0, reports: 0, reportApprovals: 0 },
+    {
+      audits: 0,
+      findings: 0,
+      analyses: 0,
+      reports: 0,
+      reportApprovals: 0,
+      reportQualityLeases: 0,
+      reportQualityRuns: 0,
+      reportBundles: 0,
+      activeReportBundles: 0,
+    },
   );
 
   const Preview = createOutreachPreviewModel(connection);
@@ -1369,11 +1431,37 @@ export async function fillMissingProspectIdentity(
   const fill = missingProspectIdentityFill(current, detected);
   const fields = Object.keys(fill) as ProspectIdentityField[];
   if (fields.length === 0) return current;
-  return updateProspect(connection, prospectId, fill, actor, {
-    fieldOrigins: Object.fromEntries(
-      fields.map((field) => [field, DETECTED_IDENTITY_ORIGIN]),
-    ) as Prospect['fieldOrigins'],
-  });
+  const Model = createProspectHubModel(connection);
+  const now = new Date();
+  for (const field of fields) {
+    const value = fill[field];
+    if (value === undefined) continue;
+    await Model.updateOne(
+      { prospectId, [field]: { $exists: false } },
+      {
+        $set: {
+          [field]: value,
+          [`fieldOrigins.${field}`]: DETECTED_IDENTITY_ORIGIN,
+          updatedAt: now,
+          lastActivityAt: now,
+        },
+      },
+    );
+  }
+  const updated = await getProspectHub(connection, prospectId);
+  if (updated === null) return null;
+  const filledFields = fields.filter(
+    (field) =>
+      current[field] === undefined &&
+      JSON.stringify(current[field]) !== JSON.stringify(updated[field]),
+  );
+  if (filledFields.length > 0) {
+    await recordEvent(
+      connection,
+      event(prospectId, 'field-edited', { fields: filledFields }, actor),
+    );
+  }
+  return updated;
 }
 
 export async function upsertDirectoryEntries(

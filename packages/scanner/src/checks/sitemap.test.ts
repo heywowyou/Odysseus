@@ -1,6 +1,7 @@
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
+import { gzipSync } from 'node:zlib';
 import { checkSitemap, parseSitemapXml } from './sitemap.js';
 
 describe('parseSitemapXml', () => {
@@ -18,6 +19,14 @@ describe('parseSitemapXml', () => {
       { url: 'https://example.com/', lastmod: '2026-01-01' },
       { url: 'https://example.com/about', lastmod: '2025-06-15' },
     ]);
+  });
+
+  it('extracts a loc wrapped in CDATA', () => {
+    expect(
+      parseSitemapXml(
+        '<urlset><url><loc><![CDATA[https://example.com/room?a=1&b=2]]></loc></url></urlset>',
+      ).entries,
+    ).toEqual([{ url: 'https://example.com/room?a=1&b=2' }]);
   });
 
   it('handles entries with no lastmod', () => {
@@ -68,7 +77,7 @@ describe('parseSitemapXml', () => {
 });
 
 function startServer(
-  routes: Record<string, { status: number; body: string }>,
+  routes: Record<string, { status: number; body: string | Buffer }>,
 ): Promise<{ server: Server; origin: string }> {
   return new Promise((resolve) => {
     const server = createServer((req, res) => {
@@ -108,6 +117,38 @@ describe('checkSitemap', () => {
     expect(result.found).toBe(true);
     expect(result.sitemapUrl).toBe(`${started.origin}/my-sitemap.xml`);
     expect(result.entries).toEqual([{ url: 'https://example.com/' }]);
+  });
+
+  it('decompresses a gzip sitemap and returns its page entries', async () => {
+    const started = await startServer({
+      '/sitemap.xml': {
+        status: 200,
+        body: gzipSync(
+          Buffer.from('<urlset><url><loc>https://example.com/room</loc></url></urlset>'),
+        ),
+      },
+    });
+    server = started.server;
+
+    const result = await checkSitemap(started.origin, [], 5000);
+
+    expect(result.found).toBe(true);
+    expect(result.entries).toEqual([{ url: 'https://example.com/room' }]);
+  });
+
+  it('does not treat an HTML challenge body as a found sitemap', async () => {
+    const started = await startServer({
+      '/sitemap.xml': {
+        status: 200,
+        body: '<html><title>Verify you are human</title><body>challenge</body></html>',
+      },
+    });
+    server = started.server;
+
+    const result = await checkSitemap(started.origin, [], 5000);
+
+    expect(result.found).toBe(false);
+    expect(result.fetchError).toBeDefined();
   });
 
   it('falls back to /sitemap.xml when no declared URL is given', async () => {
@@ -156,7 +197,7 @@ describe('checkSitemap', () => {
   });
 
   it('recursively flattens nested indexes, dedupes pages, and prevents cycles', async () => {
-    const routes: Record<string, { status: number; body: string }> = {};
+    const routes: Record<string, { status: number; body: string | Buffer }> = {};
     const started = await startServer(routes);
     server = started.server;
     routes['/sitemap.xml'] = {
@@ -227,7 +268,7 @@ describe('checkSitemap', () => {
   });
 
   it('keeps readable child pages and records partial index failures', async () => {
-    const routes: Record<string, { status: number; body: string }> = {};
+    const routes: Record<string, { status: number; body: string | Buffer }> = {};
     const started = await startServer(routes);
     server = started.server;
     routes['/sitemap.xml'] = {
@@ -266,7 +307,7 @@ describe('checkSitemap', () => {
   });
 
   it('does not fetch a child sitemap outside the authorized hostname', async () => {
-    const routes: Record<string, { status: number; body: string }> = {};
+    const routes: Record<string, { status: number; body: string | Buffer }> = {};
     const started = await startServer(routes);
     server = started.server;
     routes['/sitemap.xml'] = {

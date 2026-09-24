@@ -16,7 +16,12 @@
 
 import type { Connection } from 'mongoose';
 import { isHotelVendorHost } from '@odysseus/core';
-import { createJobModel, type JobDocument, type JobType } from './schemas/job.schema.js';
+import {
+  createJobModel,
+  JOB_STATUSES_SHOWN_AS_ACTIVE,
+  type JobDocument,
+  type JobType,
+} from './schemas/job.schema.js';
 import type { CurrentScanIntent } from './scan-intents.js';
 
 export type ProspectActiveJobKind = 'quick-check' | 'prospecting-audit' | 'full-audit';
@@ -24,7 +29,7 @@ export type ProspectActiveJobKind = 'quick-check' | 'prospecting-audit' | 'full-
 export interface ProspectActiveJob {
   jobId: string;
   kind: ProspectActiveJobKind;
-  status: 'queued' | 'running';
+  status: 'queued' | 'running' | 'cancel-requested';
   startedAt: Date;
   targetDomain: string;
 }
@@ -53,7 +58,7 @@ const BROWSER_SCAN_JOB_TYPES: readonly JobType[] = [
 /** Issue #383: a 'needs-input' job is terminal and waiting for a person; it
  *  can neither crawl nor write artifacts, so it is not active work. It stays
  *  visible as unresolved operator work in Audits and To do. */
-const ACTIVE_STATUSES = ['queued', 'running'] as const;
+const ACTIVE_STATUSES = JOB_STATUSES_SHOWN_AS_ACTIVE;
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');

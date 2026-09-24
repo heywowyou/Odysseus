@@ -31,6 +31,7 @@ export interface ScanQueueStrings {
   outcomeRejectedInvalidUrl: string;
   outcomeRejectedSuppressed: string;
   outcomeRejectedProspectUnavailable: string;
+  outcomeRejectedDomainMismatch: string;
   outcomeRejectedOutsideEu: string;
   openQueueAction: string;
   closeAction: string;
@@ -75,6 +76,7 @@ export const scanQueue = {
     outcomeSkippedActive: 'Ignoré : un scan est déjà en file ou en cours pour ce site.',
     outcomeRejectedInvalidUrl: 'Refusé : l’adresse du site n’est pas valide.',
     outcomeRejectedSuppressed: 'Refusé : ce site figure sur la liste à ne pas contacter.',
+    outcomeRejectedDomainMismatch: 'Refusé : le domaine ne correspond pas au prospect sélectionné.',
     outcomeRejectedProspectUnavailable:
       'Refusé : ce prospect est archivé ou introuvable ; restaurez-le avant de lancer un scan.',
     outcomeRejectedOutsideEu:
@@ -119,6 +121,7 @@ export const scanQueue = {
     outcomeSkippedActive: 'Skipped: a scan is already queued or running for this site.',
     outcomeRejectedInvalidUrl: 'Rejected: the website address is not valid.',
     outcomeRejectedSuppressed: 'Rejected: this site is on the do-not-contact list.',
+    outcomeRejectedDomainMismatch: 'Rejected: the domain does not match the selected prospect.',
     outcomeRejectedProspectUnavailable:
       'Rejected: this prospect is archived or missing; restore it before scanning.',
     outcomeRejectedOutsideEu: 'Rejected: Odysseus only audits sites located in France and the EU.',

@@ -12,6 +12,7 @@
  * grade" posture the rest of the scanner holds to.
  */
 
+import { classifyDocumentWall, extractHostSignalMarkers } from '@odysseus/core';
 import { getCrawlerUserAgent } from '../config.js';
 import type { NetworkSafetyDisposition, NetworkTargetPolicy } from '../network-target-policy.js';
 import { fetchWithNetworkPolicy, NetworkSafetyBlockedError } from '../safe-fetch.js';
@@ -25,6 +26,27 @@ export interface LlmsTxtCheckResult {
 export interface LlmsTxtCheckOptions {
   networkPolicy?: NetworkTargetPolicy;
   onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
+}
+
+async function readResponsePrefix(response: Response, maxBytes: number): Promise<string> {
+  if (response.body === null) return '';
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let text = '';
+  let bytes = 0;
+  try {
+    while (bytes < maxBytes) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const chunk = value.subarray(0, maxBytes - bytes);
+      bytes += chunk.byteLength;
+      text += decoder.decode(chunk, { stream: bytes < maxBytes });
+      if (chunk.byteLength < value.byteLength) break;
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+  return text;
 }
 
 export async function checkLlmsTxt(
@@ -48,9 +70,22 @@ export async function checkLlmsTxt(
               ? { onBlocked: options.onNetworkSafetyBlocked }
               : {}),
           });
-    if (!response.ok) {
+    if ([401, 403, 429].includes(response.status) || response.status >= 500) {
       return { found: false, fetchError: `HTTP ${response.status}` };
     }
+    const sample = await readResponsePrefix(response, 64 * 1024);
+    const title = sample.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]?.trim() ?? null;
+    const wall = classifyDocumentWall({
+      status: response.status,
+      title,
+      markupLength: sample.length,
+      visibleTextLength: sample.replace(/<[^>]*>/g, ' ').trim().length,
+      markers: extractHostSignalMarkers(sample),
+    });
+    if (wall.classification === 'wall') {
+      return { found: false, fetchError: `HTTP wall response (${wall.reason})` };
+    }
+    if (!response.ok) return { found: false, fetchError: `HTTP ${response.status}` };
     return { found: true, url };
   } catch (error) {
     if (error instanceof NetworkSafetyBlockedError) throw error;

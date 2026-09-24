@@ -55,16 +55,39 @@ const TVA_PATTERN = /\bFR\s?[0-9A-Z]{2}\s?\d{9}\b/i;
 const MENTIONS_LEGALES_PATH_PATTERN =
   /mentions?-legales?|mentions?-(?:et-)?(?:credits|informations)|informations?-legales?|conditions-generales|\bcgu\b|\bcgv\b|legal-notices?|\blegals\b/i;
 
-/**
- * URL-pattern heuristic only, no navigation. Only considers URLs that
- * actually resolved (the caller is expected to have already filtered out
- * non-2xx pages) - a crawled URL can match the path pattern and still be a
- * dead link (e.g. a malformed href), which must never win over a real page
- * just because it happens to appear earlier in the list.
- */
+function legalPageRank(url: string): number {
+  let pathname: string;
+  try {
+    pathname = new URL(url).pathname.toLowerCase();
+  } catch {
+    return Number.MAX_SAFE_INTEGER;
+  }
+  if (/mentions?-legales?/u.test(pathname)) return 0;
+  if (/informations?-legales?/u.test(pathname)) return 1;
+  if (/legal-notices?|\blegals\b/u.test(pathname)) return 2;
+  if (/mentions?-(?:et-)?(?:credits|informations)/u.test(pathname)) return 3;
+  if (/conditions-generales|\bcgu\b|\bcgv\b/u.test(pathname)) return 4;
+  return Number.MAX_SAFE_INTEGER;
+}
+
+/** Resolved legal-page candidates, ranked so direct legal notices win over
+ *  terms of sale/use pages when both are available. The pathname alone is
+ *  examined: hostnames such as "hotel-cgv.example" cannot select a page. */
+export function findMentionsLegalesUrls(pageUrls: readonly string[]): string[] {
+  return pageUrls
+    .filter((url) => {
+      try {
+        return MENTIONS_LEGALES_PATH_PATTERN.test(new URL(url).pathname);
+      } catch {
+        return false;
+      }
+    })
+    .sort((left, right) => legalPageRank(left) - legalPageRank(right) || left.localeCompare(right));
+}
+
+/** Compatibility helper for callers that only need the preferred page. */
 export function findMentionsLegalesUrl(pageUrls: readonly string[]): string | null {
-  const match = pageUrls.find((url) => MENTIONS_LEGALES_PATH_PATTERN.test(url));
-  return match ?? null;
+  return findMentionsLegalesUrls(pageUrls)[0] ?? null;
 }
 
 // item 0.1/0.6 (La Corniche pass): confirmed live that a single legal

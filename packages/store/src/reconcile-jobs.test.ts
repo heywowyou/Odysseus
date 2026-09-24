@@ -28,7 +28,11 @@ function provenance(digest: string): FindingsProvenance {
  *  same persistAudit-shaped document the pipeline writes. Only the fields
  *  reconciliation reads (auditId, findingsProvenance) are distinct per
  *  test; the rest satisfy the schema's required-field validation. */
-async function storeAudit(auditId: string, auditProvenance: FindingsProvenance): Promise<void> {
+async function storeAudit(
+  auditId: string,
+  auditProvenance: FindingsProvenance,
+  selectedEnglishAnalysisId?: string,
+): Promise<void> {
   const AuditModel = createAuditModel(connection!);
   await AuditModel.create({
     auditId,
@@ -63,6 +67,13 @@ async function storeAudit(auditId: string, auditProvenance: FindingsProvenance):
     },
     pages: [],
     findingsProvenance: auditProvenance,
+    ...(selectedEnglishAnalysisId !== undefined
+      ? {
+          reportPreparation: {
+            writingSelection: { selected: { enAnalysisId: selectedEnglishAnalysisId } },
+          },
+        }
+      : {}),
   });
 }
 
@@ -70,12 +81,13 @@ async function storeReport(
   auditId: string,
   language: 'fr' | 'en',
   reportProvenance: FindingsProvenance,
+  analysisId: string = randomUUID(),
 ): Promise<void> {
   const ReportModel = createReportModel(connection!);
   await ReportModel.create({
     reportId: randomUUID(),
     auditId,
-    analysisId: randomUUID(),
+    analysisId,
     findingsProvenance: reportProvenance,
     rendererVersion: 1,
     rendererBuild: 'test',
@@ -164,7 +176,7 @@ describe.skipIf(!mongoAvailable)('reconcileFailedAuditJobs', () => {
     expect(job?.auditId).toBe(auditId);
   });
 
-  it('leaves the job failed when only one language has a report', async () => {
+  it('advances from a current French report when no English analysis was selected', async () => {
     const auditId = randomUUID();
     const pair = provenance(`digest-${auditId}`);
     await storeAudit(auditId, pair);
@@ -174,7 +186,19 @@ describe.skipIf(!mongoAvailable)('reconcileFailedAuditJobs', () => {
     await reconcileFailedAuditJobs(connection!);
 
     const job = await getJob(connection!, jobId);
-    expect(job?.status).toBe('failed');
+    expect(job?.status).toBe('complete');
+  });
+
+  it('keeps the job failed when a selected English report is missing', async () => {
+    const auditId = randomUUID();
+    const pair = provenance(`digest-${auditId}`);
+    await storeAudit(auditId, pair, 'selected-en-analysis');
+    await storeReport(auditId, 'fr', pair);
+    const jobId = await storeFailedFullAuditJob(auditId);
+
+    await reconcileFailedAuditJobs(connection!);
+
+    expect((await getJob(connection!, jobId))?.status).toBe('failed');
   });
 
   it('leaves the job failed when the reports are stale against the audit provenance', async () => {

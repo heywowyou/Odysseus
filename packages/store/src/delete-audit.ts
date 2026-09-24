@@ -16,10 +16,16 @@ import type { Connection } from 'mongoose';
 import { createAnalysisModel } from './schemas/analysis.schema.js';
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createFindingModel } from './schemas/finding.schema.js';
-import { createJobModel } from './schemas/job.schema.js';
+import { createJobModel, JOB_STATUSES_CAN_STILL_WRITE } from './schemas/job.schema.js';
 import { createProspectHubModel } from './schemas/prospect-hub.schema.js';
 import { createReportApprovalModel } from './schemas/report-approval.schema.js';
 import { createReportModel } from './schemas/report.schema.js';
+import {
+  createActiveReportBundleModel,
+  createReportBundleModel,
+  createReportQualityLeaseModel,
+  createReportQualityRunModel,
+} from './schemas/report-quality.schema.js';
 
 export interface AuditCascadeCounts {
   audits: number;
@@ -27,6 +33,10 @@ export interface AuditCascadeCounts {
   analyses: number;
   reports: number;
   reportApprovals: number;
+  reportQualityLeases: number;
+  reportQualityRuns: number;
+  reportBundles: number;
+  activeReportBundles: number;
 }
 
 export async function deleteAuditCascade(
@@ -42,6 +52,16 @@ export async function deleteAuditCascade(
   const reportApprovals = await createReportApprovalModel(connection)
     .deleteMany({ auditId })
     .exec();
+  const activeReportBundles = await createActiveReportBundleModel(connection)
+    .deleteMany({ auditId })
+    .exec();
+  const reportBundles = await createReportBundleModel(connection).deleteMany({ auditId }).exec();
+  const reportQualityRuns = await createReportQualityRunModel(connection)
+    .deleteMany({ auditId })
+    .exec();
+  const reportQualityLeases = await createReportQualityLeaseModel(connection)
+    .deleteMany({ auditId })
+    .exec();
   const audits = await createAuditModel(connection).deleteOne({ auditId }).exec();
   return {
     audits: audits.deletedCount,
@@ -49,6 +69,10 @@ export async function deleteAuditCascade(
     analyses: analyses.deletedCount,
     reports: reports.deletedCount,
     reportApprovals: reportApprovals.deletedCount,
+    reportQualityLeases: reportQualityLeases.deletedCount,
+    reportQualityRuns: reportQualityRuns.deletedCount,
+    reportBundles: reportBundles.deletedCount,
+    activeReportBundles: activeReportBundles.deletedCount,
   };
 }
 
@@ -65,7 +89,7 @@ export async function deleteFinishedScanJobsForAudit(
     .deleteMany({
       auditId,
       type: { $in: ['full-audit', 'quick-check', 'prospecting-audit', 'outreach-full-scan'] },
-      status: { $nin: ['queued', 'running'] },
+      status: { $nin: [...JOB_STATUSES_CAN_STILL_WRITE] },
     })
     .exec();
   return result.deletedCount;

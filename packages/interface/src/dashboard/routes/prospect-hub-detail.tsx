@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import {
   Archive,
@@ -21,8 +21,9 @@ import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { useI18n } from '../i18n/provider';
-import { fetchJson, sendJson } from '../lib/api';
+import { ApiError, fetchJson, sendJson } from '../lib/api';
 import { useApi } from '../lib/use-api';
+import { usePolling } from '../lib/use-polling';
 import {
   archiveImpactSummary,
   deletionImpactSummary,
@@ -242,9 +243,27 @@ export function ProspectHubDetailPage(): JSX.Element {
   const navigate = useNavigate();
   const requestedReturnTo = searchParams.get('returnTo');
   const returnTo = requestedReturnTo?.startsWith('/prospects') ? requestedReturnTo : '/prospects';
-  const response = useApi<ProspectHubDetail>(
-    prospectId ? `/api/prospects/${encodeURIComponent(prospectId)}` : null,
+  const [missing, setMissing] = useState(false);
+  const prospectPath = prospectId ? `/api/prospects/${encodeURIComponent(prospectId)}` : null;
+  const prospectFetcher = useCallback(
+    (signal: AbortSignal) => {
+      if (prospectPath === null) return Promise.resolve(null);
+      return fetchJson<ProspectHubDetail>(prospectPath, { signal })
+        .then((value) => {
+          setMissing(false);
+          return value;
+        })
+        .catch((error: unknown) => {
+          if (error instanceof ApiError && error.status === 404) setMissing(true);
+          throw error;
+        });
+    },
+    [prospectPath],
   );
+  const response = usePolling<ProspectHubDetail | null>(prospectFetcher, 0, {
+    enabled: prospectPath !== null,
+    key: prospectPath ?? 'none',
+  });
   const actionability = useApi<ProspectActionability>(
     prospectId ? `/api/prospects/${encodeURIComponent(prospectId)}/actionability` : null,
   );
@@ -276,6 +295,8 @@ export function ProspectHubDetailPage(): JSX.Element {
   const [archiveImpact, setArchiveImpact] = useState<ProspectDeletionImpact | null>(null);
   const [lifecycleNotice, setLifecycleNotice] = useState<string | null>(null);
   const [outreachNotice, setOutreachNotice] = useState<string | null>(null);
+  const [pendingOutcome, setPendingOutcome] = useState<string | null>(null);
+  const [pendingTerminalStatus, setPendingTerminalStatus] = useState<string | null>(null);
   // Issue #390: a scan refusal shows next to the scan buttons, with the job
   // that holds the site when the server names it.
   const [scanNotice, setScanNotice] = useState<{
@@ -299,7 +320,7 @@ export function ProspectHubDetailPage(): JSX.Element {
     document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
   }, [loaded]);
 
-  if (response.error)
+  if (!prospect && missing)
     return (
       <div className={`${PAGE_WIDTH.reading} px-5 py-8`}>
         <EmptyState
@@ -316,7 +337,19 @@ export function ProspectHubDetailPage(): JSX.Element {
   if (!prospect)
     return (
       <div className={`${PAGE_WIDTH.reading} px-5 py-8`}>
-        <p className="text-sm text-ink-muted">{copy.loading}</p>
+        {response.error !== undefined ? (
+          <EmptyState
+            title={strings.common.requestFailed}
+            description={response.error}
+            action={
+              <button className={buttonStyles()} onClick={response.refresh}>
+                {strings.common.retry}
+              </button>
+            }
+          />
+        ) : (
+          <p className="text-sm text-ink-muted">{copy.loading}</p>
+        )}
       </div>
     );
 
@@ -373,7 +406,10 @@ export function ProspectHubDetailPage(): JSX.Element {
         websites: addition.websites,
       });
       setWebsite('');
+      setOutreachNotice(null);
       refreshAll();
+    } catch {
+      setOutreachNotice(copy.actionFailed);
     } finally {
       setSaving(false);
     }
@@ -424,7 +460,10 @@ export function ProspectHubDetailPage(): JSX.Element {
     try {
       await sendJson(`/api/prospects/${prospect.prospectId}`, 'PATCH', { emails });
       if (suggestion === undefined) setEmail('');
+      setOutreachNotice(null);
       refreshAll();
+    } catch {
+      setOutreachNotice(copy.actionFailed);
     } finally {
       setSaving(false);
     }
@@ -496,7 +535,10 @@ export function ProspectHubDetailPage(): JSX.Element {
     try {
       await sendJson(`/api/prospects/${prospect.prospectId}`, 'PATCH', patch);
       setEditedFields({});
+      setOutreachNotice(null);
       refreshAll();
+    } catch {
+      setOutreachNotice(copy.actionFailed);
     } finally {
       setSaving(false);
     }
@@ -711,6 +753,16 @@ export function ProspectHubDetailPage(): JSX.Element {
     }
   };
 
+  const requestOutcome = (outcome: string): void => {
+    if (['opt-out', 'won', 'lost'].includes(outcome)) setPendingOutcome(outcome);
+    else void recordOutcome(outcome);
+  };
+
+  const requestStatusChange = (status: string): void => {
+    if (TERMINAL_STATUSES.includes(status as ProspectStatus)) setPendingTerminalStatus(status);
+    else void changeStatus(status);
+  };
+
   const discardDraft = async (draftId: string): Promise<void> => {
     if (!window.confirm(copy.confirmDiscardDraft)) return;
     setOutreachBusy(`discard-${draftId}`);
@@ -894,6 +946,11 @@ export function ProspectHubDetailPage(): JSX.Element {
 
   return (
     <div className={`${PAGE_WIDTH.reading} px-5 py-8`}>
+      {response.error !== undefined ? (
+        <p role="alert" className="mb-4 text-sm text-danger">
+          {response.error}
+        </p>
+      ) : null}
       <PageHeader
         eyebrow={
           <Link className="inline-flex items-center gap-1 hover:underline" to={returnTo}>
@@ -952,6 +1009,32 @@ export function ProspectHubDetailPage(): JSX.Element {
             {copy.finishArchiveCleanup}
           </Button>
         </div>
+      ) : null}
+      {pendingOutcome !== null ? (
+        <ConfirmDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setPendingOutcome(null);
+          }}
+          title={copy.confirmSensitiveOutcomeTitle}
+          description={copy.confirmSensitiveOutcomeDescription}
+          confirmLabel={copy.outcomeLabels[pendingOutcome] ?? copy.outcome}
+          cancelLabel={strings.common.cancel}
+          onConfirm={() => recordOutcome(pendingOutcome)}
+        />
+      ) : null}
+      {pendingTerminalStatus !== null ? (
+        <ConfirmDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setPendingTerminalStatus(null);
+          }}
+          title={copy.confirmTerminalStatusTitle}
+          description={copy.confirmTerminalStatusDescription}
+          confirmLabel={copy.statusLabels[pendingTerminalStatus] ?? copy.statusCorrection}
+          cancelLabel={strings.common.cancel}
+          onConfirm={() => changeStatus(pendingTerminalStatus)}
+        />
       ) : null}
       {archiveImpact !== null ? (
         <ConfirmDialog
@@ -1814,7 +1897,7 @@ export function ProspectHubDetailPage(): JSX.Element {
                   value=""
                   disabled={outreachBusy !== null}
                   onChange={(event) => {
-                    if (event.target.value) void recordOutcome(event.target.value);
+                    if (event.target.value) requestOutcome(event.target.value);
                   }}
                   aria-label={copy.outcome}
                 >
@@ -1835,7 +1918,7 @@ export function ProspectHubDetailPage(): JSX.Element {
                   <Select
                     value={prospect.status}
                     disabled={outreachBusy !== null}
-                    onChange={(event) => void changeStatus(event.target.value)}
+                    onChange={(event) => requestStatusChange(event.target.value)}
                     aria-label={copy.statusAria}
                   >
                     {STATUSES.map((status) => (

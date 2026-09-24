@@ -193,6 +193,10 @@ export function ScanProgressPage(): JSX.Element {
   });
 
   const job = data ?? undefined;
+  const refreshAfterIdentityConfirmation = (): void => {
+    setSettled(false);
+    refresh();
+  };
 
   // A live job can be stopped; the confirm dialog carries the consequence,
   // so the header control itself stays quiet.
@@ -279,7 +283,7 @@ export function ScanProgressPage(): JSX.Element {
     body = (
       <JobView
         job={job}
-        refresh={refresh}
+        refresh={refreshAfterIdentityConfirmation}
         relaunchPending={pendingRelaunchHref !== undefined}
         onRelaunch={requestRelaunch}
       />
@@ -484,7 +488,9 @@ function FullAuditView({
     if (kind === 'failed') return <FailedCard job={job} />;
     if (kind === 'report-issue') return <ReportIssueCard job={job} />;
     if (kind === 'cancelled') return <CancelledCard />;
-    if (kind === 'needs-input') return <NeedsInputCard job={job} refresh={refresh} />;
+    if (kind === 'needs-input') {
+      return <NeedsInputCard job={job} refresh={refresh} />;
+    }
     return <CompleteCard job={job} />;
   }
 

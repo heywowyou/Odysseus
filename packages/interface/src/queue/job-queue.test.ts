@@ -9,6 +9,7 @@ vi.mock('@odysseus/store', () => ({
   reconcileFailedAuditJobs: vi.fn(),
   resetOrphanedRunningJobs: vi.fn(),
   settleCancelRequestedJobsOnStartup: vi.fn(),
+  settleCancelRequestedJob: vi.fn(),
 }));
 vi.mock('@odysseus/scanner', () => ({
   OriginLock: class {},
@@ -39,6 +40,7 @@ import {
   reconcileFailedAuditJobs,
   resetOrphanedRunningJobs,
   settleCancelRequestedJobsOnStartup,
+  settleCancelRequestedJob,
   type JobDocument,
   type JobType,
 } from '@odysseus/store';
@@ -46,7 +48,7 @@ import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import { StaleAcquisitionLeaseError } from '@odysseus/scanner';
 import { captureJobTelemetry } from '../telemetry/job-telemetry.js';
 import { JobCancelledError } from './cancellation.js';
-import { JobQueue, type PipelineFn } from './job-queue.js';
+import { JobQueue, waiterCanInheritServerSlot, type PipelineFn } from './job-queue.js';
 
 const connection = {} as never;
 
@@ -72,6 +74,7 @@ let queue: JobQueue | undefined;
 beforeEach(() => {
   vi.mocked(resetOrphanedRunningJobs).mockResolvedValue(0);
   vi.mocked(settleCancelRequestedJobsOnStartup).mockResolvedValue(0);
+  vi.mocked(settleCancelRequestedJob).mockResolvedValue(false);
   vi.mocked(reconcileFailedAuditJobs).mockResolvedValue(0);
 });
 
@@ -90,6 +93,15 @@ async function runOne(runner: PipelineFn, jobId = 'job-1'): Promise<void> {
     expect(runner).toHaveBeenCalled();
   });
 }
+
+describe('server lock slot handoff', () => {
+  it('does not pass a slot to a waiter still blocked on another key', () => {
+    expect(waiterCanInheritServerSlot(new Set(['shared', 'other']), new Set(['shared']))).toBe(
+      false,
+    );
+    expect(waiterCanInheritServerSlot(new Set(['shared']), new Set(['shared']))).toBe(true);
+  });
+});
 
 describe('JobQueue', () => {
   it('requeues every running job, fresh heartbeats included, on start', async () => {
@@ -127,6 +139,12 @@ describe('JobQueue', () => {
     expect(cancelJob).toHaveBeenCalledWith(connection, 'job-1', 'cancelled by operator');
     expect(failJob).not.toHaveBeenCalled();
     expect(markJobNeedsInput).not.toHaveBeenCalled();
+  });
+
+  it('settles a durable stop request after a normally returning runner', async () => {
+    const runner = vi.fn(async () => undefined);
+    await runOne(runner);
+    expect(settleCancelRequestedJob).toHaveBeenCalledWith(connection, 'job-1');
   });
 
   it('records an identity-confirmation stop as needs-input with its fields', async () => {

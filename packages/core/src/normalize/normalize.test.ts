@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeAudit, type NormalizeAuditInput } from './normalize.js';
+import {
+  aggregateSharedScopeOccurrences,
+  normalizeAudit,
+  type NormalizeAuditInput,
+} from './normalize.js';
+import type { FindingCandidate } from './candidate.js';
 import {
   buildAxeNode,
   buildAxeResultsInput,
@@ -13,6 +18,88 @@ import {
 const STARTED_AT = new Date('2026-08-02T00:00:00.000Z');
 
 describe('normalizeAudit', () => {
+  it('keeps separate merged findings when coarse groups share the same scope', () => {
+    const makeCandidate = (
+      coarseGroupIdentity: string,
+      dedupeIdentity: string,
+    ): FindingCandidate => ({
+      source: 'custom',
+      ruleId: 'alt-text-quality-heuristic',
+      category: 'accessibility',
+      severity: 'moderate',
+      wcagCriteria: ['1.1.1'],
+      title: 'Alt text may be low-value',
+      description: 'Review the image alt text.',
+      pageUrl: 'https://example.com/',
+      element: null,
+      dedupeIdentity,
+      coarseGroupIdentity,
+      rawEvidenceForPage: { reason: coarseGroupIdentity },
+    });
+    const groups = new Map<string, FindingCandidate[]>([
+      ['empty-a', [makeCandidate('empty-alt-non-decorative', 'empty-a')]],
+      ['empty-b', [makeCandidate('empty-alt-non-decorative', 'empty-b')]],
+      ['filename-a', [makeCandidate('filename-pattern', 'filename-a')]],
+      ['filename-b', [makeCandidate('filename-pattern', 'filename-b')]],
+    ]);
+
+    const merged = aggregateSharedScopeOccurrences(groups, (url) => url);
+
+    expect(merged.size).toBe(2);
+    expect([...merged.values()].map((group) => group.length).sort()).toEqual([2, 2]);
+  });
+
+  it('checks all legal candidate pages before emitting an LCEN absence finding', () => {
+    const direct = 'https://example.com/mentions-legales';
+    const cgu = 'https://example.com/cgu';
+    const checkedPages = {
+      resolvedUrl: direct,
+      homepageFallback: false,
+      searchedUrls: [direct, cgu],
+    };
+    const findings = normalizeAudit({
+      auditId: 'audit-legal-pages',
+      startedAt: STARTED_AT,
+      pages: [
+        buildNormalizePageInput({
+          url: direct,
+          mentionsLegales: { pageUrl: direct, checkedPages },
+        }),
+        buildNormalizePageInput({
+          url: cgu,
+          mentionsLegales: { pageUrl: cgu, siren: '732829320', checkedPages },
+        }),
+      ],
+    });
+    expect(
+      findings.filter((finding) => finding.ruleId === 'lcen-mentions-legales-missing'),
+    ).toEqual([]);
+  });
+
+  it('emits one LCEN absence finding when every legal candidate lacks registration data', () => {
+    const direct = 'https://example.com/mentions-legales';
+    const cgu = 'https://example.com/cgu';
+    const checkedPages = {
+      resolvedUrl: direct,
+      homepageFallback: false,
+      searchedUrls: [direct, cgu],
+    };
+    const findings = normalizeAudit({
+      auditId: 'audit-legal-absence',
+      startedAt: STARTED_AT,
+      pages: [
+        buildNormalizePageInput({
+          url: direct,
+          mentionsLegales: { pageUrl: direct, checkedPages },
+        }),
+        buildNormalizePageInput({ url: cgu, mentionsLegales: { pageUrl: cgu, checkedPages } }),
+      ],
+    });
+    expect(
+      findings.filter((finding) => finding.ruleId === 'lcen-mentions-legales-missing'),
+    ).toHaveLength(1);
+  });
+
   it('merges the same exact selector across two pages into one finding', () => {
     const axe = buildAxeResultsInput([
       buildAxeViolation({ id: 'color-contrast', nodes: [buildAxeNode({ target: ['#footer a'] })] }),
@@ -147,6 +234,95 @@ describe('normalizeAudit', () => {
     expect(finding?.firstSeenAt).toEqual(STARTED_AT);
     expect(finding?.lastSeenAt).toEqual(STARTED_AT);
     expect(finding?.dedupeKey).toMatch(/^[0-9a-f]{16}$/);
+  });
+
+  it('combines blocked AI crawler agents into one page-scoped finding', () => {
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [],
+      crawl: {
+        startUrl: 'https://example.com/',
+        pages: [],
+        aiCrawlerBlocks: [
+          { agent: 'GPTBot', disallowPattern: '/' },
+          { agent: 'ClaudeBot', disallowPattern: '/' },
+          { agent: 'Google-Extended', disallowPattern: '/' },
+        ],
+      },
+    });
+    const blocked = findings.filter((finding) => finding.ruleId === 'ai-crawler-blocked');
+
+    expect(blocked).toHaveLength(1);
+    expect(blocked[0]?.occurrences).toBe(3);
+    expect(blocked[0]?.title).toBe('robots.txt blocks AI crawlers from crawling this site');
+    const blockedAgents = blocked[0]?.elements.map((element) => element.selector).join(' ');
+    expect(blockedAgents).toContain('GPTBot');
+    expect(blockedAgents).toContain('ClaudeBot');
+    expect(blockedAgents).toContain('Google-Extended');
+  });
+
+  it('keeps all lighthouse node occurrences while sampling at most twenty elements', () => {
+    const items = Array.from({ length: 30 }, (_, index) => ({
+      tapTarget: { type: 'node', selector: `#node-${index}`, snippet: `<a>${index}</a>` },
+    }));
+    const lighthouse = buildLighthouseResultInput({
+      categories: { seo: { score: 0.3, auditRefs: [{ id: 'tap-targets', weight: 10 }] } },
+      audits: {
+        'tap-targets': buildLighthouseAudit({
+          score: 0.3,
+          details: { type: 'table', items },
+        }),
+      },
+    });
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [buildNormalizePageInput({ url: 'https://example.com/', lighthouse })],
+    });
+    const finding = findings.find((candidate) => candidate.ruleId === 'tap-targets');
+
+    expect(finding?.occurrences).toBe(30);
+    expect(finding?.elements).toHaveLength(20);
+  });
+
+  it('keeps all crawlable-anchor occurrences while sampling at most twenty elements', () => {
+    const url = 'https://example.com/';
+    const headMetadata = {
+      pageUrl: url,
+      title: 'Home',
+      metaDescription: 'Home page',
+      canonicalUrls: [],
+      openGraphTags: {},
+      jsonLdBlocks: [],
+      headings: [],
+      hreflangLinks: [],
+      robotsMeta: null,
+      anchors: Array.from({ length: 30 }, (_, index) => ({
+        selector: `#link-${index}`,
+        snippet: `<a id="link-${index}" href="javascript:void(0)">link</a>`,
+        rawHref: 'javascript:void(0)',
+        href: 'javascript:void(0)',
+        text: 'link',
+        rel: '',
+        role: '',
+        name: '',
+        id: `link-${index}`,
+        textLang: null,
+        pointsToSamePage: false,
+        hasHrefAssociatedAttribute: false,
+        hasEventListener: false,
+      })),
+    };
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages: [buildNormalizePageInput({ url, headMetadata })],
+    });
+    const finding = findings.find((candidate) => candidate.ruleId === 'crawlable-anchors');
+
+    expect(finding?.occurrences).toBe(30);
+    expect(finding?.elements).toHaveLength(20);
   });
 
   it('produces an empty findings array when no page has any scanner output', () => {

@@ -81,6 +81,10 @@ export interface ProspectDeletionImpact {
   analyses: number;
   reports: number;
   reportApprovals: number;
+  reportQualityLeases: number;
+  reportQualityRuns: number;
+  reportBundles: number;
+  activeReportBundles: number;
   previews: number;
   drafts: number;
   threads: number;

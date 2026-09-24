@@ -14,19 +14,50 @@ import type { PageScanResult } from '../scan-page.js';
 import { buildPageDir } from './paths.js';
 import { toAuditRelativeRefs } from './relativize.js';
 
+const SCAN_JSON_VERSION = 2 as const;
+const SCREENSHOT_AUDIT_IDS = new Set(['screenshot-thumbnails', 'final-screenshot']);
+
+function trimmedAxeResult(
+  axe: NonNullable<PageScanResult['axe']>,
+): NonNullable<PageScanResult['axe']> {
+  return {
+    violations: axe.violations,
+    incomplete: axe.incomplete,
+    ...(axe.testEngine !== undefined ? { testEngine: axe.testEngine } : {}),
+  } as NonNullable<PageScanResult['axe']>;
+}
+
+function trimmedLighthouseResult(
+  lighthouse: NonNullable<PageScanResult['lighthouse']>,
+): NonNullable<PageScanResult['lighthouse']> {
+  const audits =
+    lighthouse.audits === null || lighthouse.audits === undefined
+      ? undefined
+      : Object.fromEntries(
+          Object.entries(lighthouse.audits).filter(([id]) => !SCREENSHOT_AUDIT_IDS.has(id)),
+        );
+  return {
+    ...lighthouse,
+    ...(audits !== undefined ? { audits } : {}),
+  } as NonNullable<PageScanResult['lighthouse']>;
+}
+
 export function buildScanJson(
   scanResult: PageScanResult,
   relativizedRenderDiff: PageScanResult['renderDiff'],
 ): PageScanResult {
   return {
     url: scanResult.url,
+    scanJsonVersion: SCAN_JSON_VERSION,
     ...(relativizedRenderDiff !== undefined ? { renderDiff: relativizedRenderDiff } : {}),
     ...(scanResult.renderDiffError !== undefined
       ? { renderDiffError: scanResult.renderDiffError }
       : {}),
-    ...(scanResult.axe !== undefined ? { axe: scanResult.axe } : {}),
+    ...(scanResult.axe !== undefined ? { axe: trimmedAxeResult(scanResult.axe) } : {}),
     ...(scanResult.axeError !== undefined ? { axeError: scanResult.axeError } : {}),
-    ...(scanResult.lighthouse !== undefined ? { lighthouse: scanResult.lighthouse } : {}),
+    ...(scanResult.lighthouse !== undefined
+      ? { lighthouse: trimmedLighthouseResult(scanResult.lighthouse) }
+      : {}),
     ...(scanResult.lighthouseError !== undefined
       ? { lighthouseError: scanResult.lighthouseError }
       : {}),
@@ -170,7 +201,11 @@ export function readPageScanJson(pagesDir: string, url: string): PageScanResult 
   const scanJsonPath = path.join(pagesDir, buildPageDir(url), 'scan.json');
   if (!fs.existsSync(scanJsonPath)) return undefined;
   try {
-    return JSON.parse(fs.readFileSync(scanJsonPath, 'utf-8')) as PageScanResult;
+    const parsed = JSON.parse(fs.readFileSync(scanJsonPath, 'utf-8')) as PageScanResult;
+    // Unversioned v1 scans remain readable. Reject unknown future shapes so
+    // resume treats that page as missing instead of misinterpreting it.
+    if (parsed.scanJsonVersion !== undefined && parsed.scanJsonVersion !== 2) return undefined;
+    return parsed;
   } catch {
     return undefined;
   }

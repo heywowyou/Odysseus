@@ -69,9 +69,13 @@ export function parseRobotsTxt(text: string, userAgent: string): RobotsRules {
   const groups: RobotsGroup[] = [];
   const sitemapUrls: string[] = [];
   let current: RobotsGroup | null = null;
+  let currentGroupHasRuleLine = false;
 
   for (const rawLine of text.split(/\r\n|\r|\n/)) {
-    const line = rawLine.replace(/#.*$/, '').trim();
+    const line = rawLine
+      .replace(/^\uFEFF/u, '')
+      .replace(/#.*$/, '')
+      .trim();
     if (!line) continue;
     const separatorIndex = line.indexOf(':');
     if (separatorIndex === -1) continue;
@@ -84,28 +88,27 @@ export function parseRobotsTxt(text: string, userAgent: string): RobotsRules {
     }
 
     if (field === 'user-agent') {
-      const groupIsOpen =
-        current !== null &&
-        current.disallow.length === 0 &&
-        current.allow.length === 0 &&
-        current.crawlDelayMs === undefined;
-      if (!groupIsOpen) {
+      if (current === null || currentGroupHasRuleLine) {
         current = { agents: [], disallow: [], allow: [] };
         groups.push(current);
+        currentGroupHasRuleLine = false;
       }
       current!.agents.push(value.toLowerCase());
       continue;
     }
     if (!current) continue;
     if (field === 'disallow') {
+      currentGroupHasRuleLine = true;
       if (value) current.disallow.push(value);
       continue;
     }
     if (field === 'allow') {
+      currentGroupHasRuleLine = true;
       if (value) current.allow.push(value);
       continue;
     }
     if (field === 'crawl-delay') {
+      currentGroupHasRuleLine = true;
       const seconds = Number.parseFloat(value);
       if (Number.isFinite(seconds) && seconds >= 0)
         current.crawlDelayMs = Math.round(seconds * 1000);

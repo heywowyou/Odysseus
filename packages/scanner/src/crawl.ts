@@ -43,7 +43,7 @@ import {
   parseRobotsTxt,
   type RobotsRules,
 } from './robots.js';
-import { findMentionsLegalesUrl } from './checks/mentions-legales.js';
+import { findMentionsLegalesUrl, findMentionsLegalesUrls } from './checks/mentions-legales.js';
 import { analyzeRawDocument } from './raw-document-signals.js';
 import { extractTextFromHtml } from './extract-text.js';
 import { isSocialPlatformHost } from './social-hosts.js';
@@ -285,6 +285,8 @@ export interface CrawlResult {
    *  navigation. scanSite forwards this into scanPage so only that one
    *  page runs the SIREN/RCS/TVA text extraction. */
   mentionsLegalesPageUrl?: string;
+  /** All resolved legal notice candidates, ordered by direct-notice preference. */
+  mentionsLegalesCandidateUrls?: string[];
   /** Plan 036: every visited, non-error-status URL `findMentionsLegalesUrl`
    *  searched to produce the winner above (or to find nothing), so the
    *  finding's evidence can name what was actually checked, not just the
@@ -1642,7 +1644,9 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
         (page.httpStatus === undefined || (page.httpStatus >= 200 && page.httpStatus < 300)),
     )
     .map((page) => page.url);
-  const mentionsLegalesPageUrl = findMentionsLegalesUrl(resolvedUrls) ?? undefined;
+  const mentionsLegalesCandidateUrls = findMentionsLegalesUrls(resolvedUrls);
+  const mentionsLegalesPageUrl =
+    mentionsLegalesCandidateUrls[0] ?? findMentionsLegalesUrl(resolvedUrls) ?? undefined;
 
   const disallowMatchCounts = new Map<string, number>();
   for (const page of pages) {
@@ -1716,6 +1720,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     ...(startAnchors !== undefined ? { startAnchors } : {}),
     effectiveDelayMs,
     ...(mentionsLegalesPageUrl !== undefined ? { mentionsLegalesPageUrl } : {}),
+    ...(mentionsLegalesCandidateUrls.length > 0 ? { mentionsLegalesCandidateUrls } : {}),
     mentionsLegalesSearchedUrls: resolvedUrls,
     robotsSitemapUrls: robotsRules.sitemapUrls,
     robotsDisallowMatches,

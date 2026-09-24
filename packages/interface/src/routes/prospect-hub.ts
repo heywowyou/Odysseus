@@ -42,6 +42,7 @@ import {
   type DirectoryFilter,
   type NewProspectHubInput,
   type ProspectHubFilter,
+  ArchivedProspectAttachmentError,
 } from '@odysseus/store';
 import type { ProspectPatch } from '@odysseus/store';
 import {
@@ -292,6 +293,7 @@ export function registerProspectHubRoutes(
 
   router.post('/api/prospects', async ({ req, res }) => {
     const body = recordBody(await readJsonBodyOrRespond(req, res));
+    if (res.headersSent) return;
     if (body === null) {
       sendError(res, 400, 'request body must be a JSON object');
       return;
@@ -314,6 +316,7 @@ export function registerProspectHubRoutes(
 
   router.post('/api/directory/add', async ({ req, res }) => {
     const body = recordBody(await readJsonBodyOrRespond(req, res));
+    if (res.headersSent) return;
     const ids = body?.['directoryIds'];
     if (
       body === null ||
@@ -354,14 +357,23 @@ export function registerProspectHubRoutes(
 
   router.post('/api/audits/:auditId/prospect', async ({ req, res, params }) => {
     const body = recordBody(await readJsonBodyOrRespond(req, res));
+    if (res.headersSent) return;
     const prospectId = body?.['prospectId'];
     if (prospectId !== null && typeof prospectId !== 'string') {
       sendError(res, 400, 'prospectId must be a UUID or null');
       return;
     }
-    const audit = await attachAuditToProspect(connection, params['auditId']!, prospectId);
-    if (audit === null) sendError(res, 404, 'audit or prospect not found');
-    else sendJson(res, 200, audit);
+    try {
+      const audit = await attachAuditToProspect(connection, params['auditId']!, prospectId);
+      if (audit === null) sendError(res, 404, 'audit or prospect not found');
+      else sendJson(res, 200, audit);
+    } catch (error) {
+      if (error instanceof ArchivedProspectAttachmentError) {
+        sendError(res, 409, 'archived prospects cannot receive audits');
+        return;
+      }
+      throw error;
+    }
   });
 
   router.get('/api/prospects/:prospectId/events', async ({ res, params }) => {
@@ -511,6 +523,7 @@ export function registerProspectHubRoutes(
       return;
     }
     const body = await readJsonBodyOrRespond(req, res);
+    if (res.headersSent) return;
     const language = languageFromBody(body, prospect.outreachLanguage ?? 'fr');
     const previewToken = recordBody(body)?.['previewToken'];
     if (language === null) {
@@ -672,6 +685,7 @@ export function registerProspectHubRoutes(
 
   router.patch('/api/prospects/:prospectId', async ({ req, res, params }) => {
     const body = recordBody(await readJsonBodyOrRespond(req, res));
+    if (res.headersSent) return;
     if (body === null) {
       sendError(res, 400, 'request body must be a JSON object');
       return;
@@ -712,6 +726,7 @@ export function registerProspectHubRoutes(
     key: 'url' | 'address',
   ): Promise<{ value: string; body: Record<string, unknown> } | null> => {
     const body = recordBody(await readJsonBodyOrRespond(req, res));
+    if (res.headersSent) return null;
     const value = body?.[key];
     if (body === null || typeof value !== 'string' || value.trim() === '') {
       if (!res.headersSent) sendError(res, 400, `${key} is required`);
@@ -778,6 +793,7 @@ export function registerProspectHubRoutes(
 
   router.patch('/api/prospects/:prospectId/status', async ({ req, res, params }) => {
     const body = recordBody(await readJsonBodyOrRespond(req, res));
+    if (res.headersSent) return;
     const status = body?.['status'];
     if (typeof status !== 'string' || !STATUSES.includes(status as ProspectStatus)) {
       sendError(res, 400, 'status is invalid');
@@ -817,6 +833,7 @@ export function registerProspectHubRoutes(
 
   router.post('/api/prospects/:prospectId/outcome', async ({ req, res, params }) => {
     const body = recordBody(await readJsonBodyOrRespond(req, res));
+    if (res.headersSent) return;
     const outcome = body?.['outcome'];
     if (
       typeof outcome !== 'string' ||

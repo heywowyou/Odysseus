@@ -29,7 +29,8 @@ import {
 import {
   buildArtifactBucketKey,
   parseAuditTimestampDir,
-  writeJsonAtomicSync,
+  writeFindingsFile,
+  writeManifestFile,
 } from '@odysseus/scanner';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
@@ -247,7 +248,7 @@ export async function renormalizeAudit(
     ...(manifest.cruxFieldData !== undefined ? { cruxFieldData: manifest.cruxFieldData } : {}),
   });
 
-  writeJsonAtomicSync(path.join(resolvedDir, 'findings.json'), findings);
+  await writeFindingsFile(resolvedDir, findings);
 
   // Lab metrics are frozen into the manifest when a scan is written. Stored
   // audits predate the rule that a challenge page, an error template or a
@@ -281,7 +282,7 @@ export async function renormalizeAudit(
     renormalizedAt: new Date().toISOString(),
     findingsProvenance: buildFindingsProvenance(findings),
   };
-  await fs.writeFile(manifestPath, JSON.stringify(renormalizedManifest, null, 2));
+  await writeManifestFile(resolvedDir, renormalizedManifest);
 
   return {
     auditId: manifest.auditId,

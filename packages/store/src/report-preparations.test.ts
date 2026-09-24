@@ -248,6 +248,36 @@ describe.skipIf(!mongoAvailable)('writing selection', () => {
     expect(resolution).toEqual({ kind: 'none', reason: 'no-complete-pair' });
   });
 
+  it('preserves selected analysis and operator inputs across concurrent candidate writes', async () => {
+    await insertAudit('prep-path-race');
+    const fr = await insertAnalysis('prep-path-race', 'fr', '2026-09-01T00:00:00Z');
+    const en = await insertAnalysis('prep-path-race', 'en', '2026-09-01T06:00:00Z');
+    const pair = {
+      frAnalysisId: fr.analysisId,
+      enAnalysisId: en.analysisId,
+      findingsProvenance: provenance('sha256:run-a'),
+    };
+    await recordReadyWritingCandidate(connection!, 'prep-path-race', pair);
+    const approved = await approveWritingCandidate(connection!, 'prep-path-race');
+
+    await Promise.all([
+      patchReportPreparationInputs(
+        connection!,
+        'prep-path-race',
+        parseReportPreparationPatch({ customCoverQuestion: { fr: 'Question opérateur ?' } }),
+      ),
+      recordReadyWritingCandidate(connection!, 'prep-path-race', pair),
+    ]);
+
+    const current = await getReportPreparation(connection!, 'prep-path-race');
+    expect(current.customCoverQuestion).toEqual({ fr: 'Question opérateur ?' });
+    expect(current.writingSelection?.selected).toEqual(approved.writingSelection?.selected);
+    expect(current.writingSelection?.candidate).toMatchObject({
+      status: 'ready',
+      pair,
+    });
+  });
+
   it('approves a ready candidate exactly once, atomically', async () => {
     const selected = await seedSelectedPair('prep-approve', 'sha256:old-run');
     const newer = 'sha256:new-run';

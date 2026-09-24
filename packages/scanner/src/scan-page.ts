@@ -32,6 +32,7 @@ import {
   type CanonicalTargetCheckResult,
 } from './checks/canonical-target.js';
 import { getPageTimeoutMs } from './config.js';
+import { normalizePageIdentityUrl } from './links.js';
 import {
   extractMixedContentResources,
   type MixedContentExtraction,
@@ -132,6 +133,8 @@ export interface ScanPageOptions {
    *  SIREN/RCS/TVA text extraction; every page runs transactional-flow
    *  detection, since checkout/cart UI can appear anywhere. */
   mentionsLegalesUrl?: string;
+  /** Every ranked legal page candidate; each is checked before absence is reported. */
+  mentionsLegalesCandidateUrls?: string[];
   /** Plan 036: the full evidence trail for how mentionsLegalesUrl above was
    *  resolved (crawl.ts's own mentionsLegalesSearchedUrls), attached to the
    *  extraction result only for the one page that matches
@@ -179,6 +182,8 @@ export interface ScanPageOptions {
   guard?: PageWorkGuard;
   networkPolicy?: NetworkTargetPolicy;
   onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
+  /** Shared within one scanSite run to avoid re-fetching the same canonical. */
+  canonicalTargetCache?: Map<string, Promise<CanonicalTargetCheckResult | null>>;
   /** Plan 059 step 11: run the bounded hydration sweep as the very last
    *  step on the rendered page, after every check (including the mutating
    *  ones) has finished, so lazy content is seen and its links discovered
@@ -201,6 +206,8 @@ export interface ScanPageOptions {
  * the render-diff or axe results already gathered for that same page.
  */
 export interface PageScanResult {
+  /** Disk schema marker. Missing means a legacy scan.json written before v2. */
+  scanJsonVersion?: 2;
   url: string;
   renderDiff?: RenderDiffOutcome;
   renderDiffError?: string;
@@ -634,7 +641,12 @@ export async function runRenderedAnalysis(
           delete result.frames;
         }
 
-        if (options.mentionsLegalesUrl !== undefined && url === options.mentionsLegalesUrl) {
+        if (
+          (options.mentionsLegalesCandidateUrls?.includes(url) ?? false) ||
+          (options.mentionsLegalesCandidateUrls === undefined &&
+            options.mentionsLegalesUrl !== undefined &&
+            url === options.mentionsLegalesUrl)
+        ) {
           try {
             const bodyText = await withCheckBudget(
               'mentions-legales',
@@ -643,7 +655,7 @@ export async function runRenderedAnalysis(
             );
             mentionsLegalesResult = extractMentionsLegales(url, bodyText);
             mentionsLegalesResult.checkedPages = {
-              resolvedUrl: options.mentionsLegalesUrl,
+              resolvedUrl: options.mentionsLegalesUrl ?? url,
               homepageFallback: options.mentionsLegalesHomepageFallback ?? false,
               searchedUrls: options.mentionsLegalesSearchedUrls ?? [],
             };
@@ -768,18 +780,28 @@ export async function runRenderedAnalysis(
         if (headMetadataResult?.canonicalUrls.length === 1) {
           const canonicalUrl = headMetadataResult.canonicalUrls[0]!;
           try {
-            canonicalTargetResult =
-              (await withCheckBudget(
+            const cacheKey = normalizePageIdentityUrl(canonicalUrl) ?? canonicalUrl;
+            let request = options.canonicalTargetCache?.get(cacheKey);
+            if (request === undefined) {
+              request = withCheckBudget(
                 'canonical-target',
                 () =>
-                  checkCanonicalTarget(
-                    url,
-                    canonicalUrl,
-                    options.timeoutMs ?? getPageTimeoutMs(),
-                    options.scheduler !== undefined ? { scheduler: options.scheduler } : {},
-                  ),
+                  checkCanonicalTarget(url, canonicalUrl, options.timeoutMs ?? getPageTimeoutMs(), {
+                    ...(options.scheduler !== undefined ? { scheduler: options.scheduler } : {}),
+                    ...(options.networkPolicy !== undefined
+                      ? { networkPolicy: options.networkPolicy }
+                      : {}),
+                    ...(options.onNetworkSafetyBlocked !== undefined
+                      ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
+                      : {}),
+                  }),
                 perCheckBudgetMs,
-              )) ?? undefined;
+              );
+              options.canonicalTargetCache?.set(cacheKey, request);
+            }
+            const cachedResult = await request;
+            canonicalTargetResult =
+              cachedResult === null ? undefined : { ...cachedResult, pageUrl: url };
             checkOutcomes['canonical-target'] = 'completed';
           } catch (error) {
             canonicalTargetResult = undefined;
@@ -864,7 +886,7 @@ export async function runRenderedAnalysis(
             () => checkHtmlValidity(page, url),
             perCheckBudgetMs,
           );
-          checkOutcomes['html-validity'] = 'completed';
+          checkOutcomes['html-validity'] = htmlValidityResult.checked ? 'completed' : 'failed';
         } catch {
           htmlValidityResult = undefined;
           checkOutcomes['html-validity'] = 'failed';
@@ -961,7 +983,7 @@ export async function runRenderedAnalysis(
             (signal) => checkReflow(page, url, signal),
             perCheckBudgetMs,
           );
-          checkOutcomes.reflow = 'completed';
+          checkOutcomes.reflow = reflowResult.checked ? 'completed' : 'failed';
         } catch {
           reflowResult = undefined;
           checkOutcomes.reflow = 'failed';

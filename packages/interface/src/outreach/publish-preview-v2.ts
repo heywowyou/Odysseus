@@ -27,6 +27,7 @@ import {
   MissingReviewedRemediationError,
   OUTREACH_PROOF_CARD_COPY,
   isConfinedToThirdPartyFrame,
+  primaryFindingFilter,
 } from '@odysseus/report';
 import type { AuditEvidenceDiagnostics } from '../pipeline/audit-evidence-diagnostics.js';
 import { createPreviewToken, deriveObjectKey, hashPreviewToken } from './preview-token.js';
@@ -41,7 +42,8 @@ export type PublishPreviewV3Refusal =
   | 'domain-mismatch'
   | 'suppressed'
   | 'insufficient-safe-cards'
-  | 'priority-copy-unavailable';
+  | 'priority-copy-unavailable'
+  | 'superseded-preview-cleanup-failed';
 
 export function previewLinks(publicBaseUrl: string): {
   offer: string;
@@ -164,6 +166,7 @@ const BLOCKED_PROOF_STATUSES = new Set<string>([
 ]);
 
 function safePreviewFindings(row: OutreachPublicationRowV3): Finding[] {
+  const inPrimaryReportPopulation = primaryFindingFilter(row.audit as unknown as AuditManifest);
   const blockedUrls = new Set(
     row.audit.pages
       .filter((page) => BLOCKED_PROOF_STATUSES.has(page.status))
@@ -171,7 +174,7 @@ function safePreviewFindings(row: OutreachPublicationRowV3): Finding[] {
   );
   return row.findings.filter(
     (finding) =>
-      !isConfinedToThirdPartyFrame(finding) &&
+      inPrimaryReportPopulation(finding) &&
       !UNDER_CORRECTION_RULE_IDS.has(finding.ruleId) &&
       !finding.pageUrls.some((pageUrl) => blockedUrls.has(pageUrl)),
   );
@@ -193,7 +196,8 @@ export function buildOutreachPreviewSummaryV3(options: {
         | 'coverage-incomplete'
         | 'report-not-ready'
         | 'insufficient-safe-cards'
-        | 'priority-copy-unavailable';
+        | 'priority-copy-unavailable'
+        | 'superseded-preview-cleanup-failed';
     } {
   const { row, language, publicBaseUrl } = options;
   const coverage = coverageFactsFromAudit(summarizeAuditCoverage(row.audit));
@@ -479,6 +483,40 @@ export async function publishPreviewV3(
       logger.error({ objectKey, prospectId: row.prospectId }, 'orphaned preview object');
     }
     return refuse('suppressed');
+  }
+
+  const livePreviews = await options.store.listLivePreviews(row.domain);
+  for (const previous of livePreviews) {
+    if (previous.previewId === recorded.previewId) continue;
+    try {
+      await options.publisher.delete(previous.objectKey);
+      await options.store.revokePreview(previous.previewId, 'superseded by a new first-email call');
+    } catch (error) {
+      // Do not leave the newly published replacement behind when an older
+      // public object could not be safely taken down. The failed old cleanup
+      // leaves its database record live, so the link remains valid.
+      try {
+        await options.publisher.delete(objectKey);
+      } catch (cleanupError) {
+        logger.error(
+          { objectKey, prospectId: row.prospectId, err: cleanupError },
+          'orphaned preview object',
+        );
+      }
+      try {
+        await options.store.revokePreview(recorded.previewId, 'superseded-preview cleanup failed');
+      } catch (cleanupError) {
+        logger.error(
+          { previewId: recorded.previewId, err: cleanupError },
+          'orphaned preview record',
+        );
+      }
+      logger.error(
+        { previewId: previous.previewId, err: error },
+        'could not clean superseded preview',
+      );
+      return refuse('superseded-preview-cleanup-failed');
+    }
   }
 
   return {

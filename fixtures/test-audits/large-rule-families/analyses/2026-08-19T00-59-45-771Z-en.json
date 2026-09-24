@@ -262,7 +262,7 @@
   },
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "6ac12a5f713d2d62",
+    "normalizationFingerprint": "b290ee8667008427",
     "findingsDigest": "sha256:cec2d36bacb3e7fab91a71ced41648f3d96c35a90395490d8b075959d939dec2"
   },
   "analysisId": "2200165d-fb82-43d3-87f1-c28bc0def368"

@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 import { checkCanonicalTarget, extractRobotsMetaContent } from './canonical-target.js';
 import { getCrawlerUserAgent } from '../config.js';
+import { NetworkSafetyBlockedError } from '../safe-fetch.js';
 
 describe('extractRobotsMetaContent', () => {
   it('reads content from a well-formed meta robots tag', () => {
@@ -51,6 +52,74 @@ describe('checkCanonicalTarget', () => {
   afterEach(() => {
     server?.close();
     server = undefined;
+  });
+
+  it('skips trailing-slash self-canonicals by normalized page identity', async () => {
+    let requests = 0;
+    const started = await startServer({ '/page/': { status: 200, body: '<html></html>' } });
+    server = started.server;
+    server.on('request', () => {
+      requests += 1;
+    });
+
+    const result = await checkCanonicalTarget(
+      `${started.origin}/page`,
+      `${started.origin}/page/`,
+      5000,
+    );
+
+    expect(result).toBeNull();
+    expect(requests).toBe(0);
+  });
+
+  it('reports a pinned-policy refusal and does not fetch a private canonical', async () => {
+    let requests = 0;
+    const started = await startServer({ '/target': { status: 200, body: '<html></html>' } });
+    server = started.server;
+    server.on('request', () => {
+      requests += 1;
+    });
+    const blocked: string[] = [];
+
+    await expect(
+      checkCanonicalTarget(`${started.origin}/page`, `${started.origin}/target`, 5000, {
+        networkPolicy: {
+          id: 'public-site-test',
+          allowsPrivateAddresses: false,
+          allowHosts: new Set(),
+        },
+        onNetworkSafetyBlocked: (disposition) => blocked.push(disposition.reason),
+      }),
+    ).rejects.toBeInstanceOf(NetworkSafetyBlockedError);
+
+    expect(blocked).toContain('refused-address');
+    expect(requests).toBe(0);
+  });
+
+  it('records a redirect-hop network refusal through the pinned policy', async () => {
+    const hits: string[] = [];
+    server = createServer((req, res) => {
+      hits.push(req.url ?? '');
+      const port = (server!.address() as AddressInfo).port;
+      res.writeHead(302, { location: `http://localhost:${port}/internal` }).end();
+    });
+    await new Promise<void>((resolve) => server!.listen(0, '127.0.0.1', resolve));
+    const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const blocked: string[] = [];
+
+    await expect(
+      checkCanonicalTarget(`${origin}/page`, `${origin}/moved`, 5000, {
+        networkPolicy: {
+          id: 'test-explicit-host-allowlist',
+          allowsPrivateAddresses: false,
+          allowHosts: new Set(['127.0.0.1']),
+        },
+        onNetworkSafetyBlocked: (disposition) => blocked.push(disposition.reason),
+      }),
+    ).rejects.toBeInstanceOf(NetworkSafetyBlockedError);
+
+    expect(hits).toEqual(['/moved']);
+    expect(blocked).toContain('refused-address');
   });
 
   it('returns null for a self-referencing canonical (nothing new to check)', async () => {

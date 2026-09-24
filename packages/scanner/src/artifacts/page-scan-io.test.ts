@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { normalizeAudit } from '@odysseus/core';
 import {
   CHECK_SCOPE_REGISTRY,
   type CheckExecutionOutcome,
@@ -37,6 +38,7 @@ describe('buildScanJson', () => {
 
     expect(buildScanJson(scanResult, undefined)).toEqual({
       url: 'https://example.com/',
+      scanJsonVersion: 2,
       checkOutcomes,
       renderedCostProfile,
     });
@@ -48,6 +50,88 @@ describe('buildScanJson', () => {
 
     expect(scanJson).not.toHaveProperty('checkOutcomes');
     expect(scanJson).not.toHaveProperty('renderedCostProfile');
+    expect(scanJson.scanJsonVersion).toBe(2);
+  });
+
+  it('trims unused axe and Lighthouse screenshot data without changing normalized findings', () => {
+    const url = 'https://example.com/';
+    const scanResult = {
+      url,
+      axe: {
+        violations: [
+          {
+            id: 'image-alt',
+            impact: 'serious',
+            tags: ['wcag2a', 'wcag111'],
+            help: 'Images must have alternative text',
+            description: 'Ensures images have alternative text',
+            helpUrl: 'https://example.com/rule',
+            nodes: [{ html: '<img src="a.jpg">', target: ['img'] }],
+          },
+        ],
+        incomplete: [],
+        passes: Array.from({ length: 500 }, () => ({
+          id: 'pass',
+          nodes: [{ html: 'x'.repeat(100) }],
+        })),
+        inapplicable: Array.from({ length: 500 }, () => ({
+          id: 'unused',
+          nodes: [{ html: 'x'.repeat(100) }],
+        })),
+      },
+      lighthouse: {
+        categories: {
+          performance: { score: 0.3, auditRefs: [{ id: 'largest-contentful-paint', weight: 25 }] },
+          seo: { score: 0.9, auditRefs: [] },
+          accessibility: { score: 1, auditRefs: [] },
+          'best-practices': { score: 1, auditRefs: [] },
+        },
+        audits: {
+          'largest-contentful-paint': {
+            score: 0.3,
+            scoreDisplayMode: 'numeric',
+            title: 'Largest Contentful Paint',
+            description: 'LCP is too slow.',
+            numericValue: 3200,
+            displayValue: '3.2 s',
+          },
+          'screenshot-thumbnails': {
+            score: null,
+            scoreDisplayMode: 'informative',
+            title: 'Filmstrip',
+            description: '',
+            details: { type: 'filmstrip', items: [{ data: 'x'.repeat(100_000) }] },
+          },
+          'final-screenshot': {
+            score: null,
+            scoreDisplayMode: 'informative',
+            title: 'Final screenshot',
+            description: '',
+            details: { type: 'screenshot', data: 'x'.repeat(100_000) },
+          },
+        },
+      },
+    } as unknown as PageScanResult;
+    const scanJson = buildScanJson(scanResult, undefined);
+    const normalize = (page: PageScanResult) =>
+      normalizeAudit({
+        auditId: 'audit-1',
+        startedAt: new Date('2026-09-24T00:00:00Z'),
+        pages: [
+          {
+            url: page.url,
+            ...(page.axe !== undefined ? { axe: page.axe } : {}),
+            ...(page.lighthouse !== undefined ? { lighthouse: page.lighthouse } : {}),
+          },
+        ],
+      });
+
+    expect(scanJson.axe).not.toHaveProperty('passes');
+    expect(scanJson.axe).not.toHaveProperty('inapplicable');
+    expect(scanJson.lighthouse?.audits).not.toHaveProperty('screenshot-thumbnails');
+    expect(scanJson.lighthouse?.audits).not.toHaveProperty('final-screenshot');
+    expect(JSON.stringify(scanJson).length).toBeLessThan(JSON.stringify(scanResult).length);
+    expect(normalize(scanJson)).toEqual(normalize(scanResult));
   });
 
   it('leaves every other field unchanged, including a Lighthouse result merged after the fact', () => {

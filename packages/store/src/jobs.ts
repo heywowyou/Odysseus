@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto';
 import type { Connection } from 'mongoose';
 import {
   createJobModel,
+  JOB_STATUSES_CAN_STILL_WRITE,
   type JobDocument,
   type JobDocumentFields,
   type JobNeedsInputField,
@@ -44,7 +45,7 @@ export class ActiveJobSlotTakenError extends Error {
  *  'needs-input' job is terminal - the runner has already thrown and
  *  returned - so it waits for a person, not for Chromium, and must not
  *  block a new scan of the same prospect. */
-const UNFINISHED_JOB_STATUSES: JobStatus[] = ['queued', 'running', 'cancel-requested'];
+const UNFINISHED_JOB_STATUSES: readonly JobStatus[] = JOB_STATUSES_CAN_STILL_WRITE;
 
 /** The per-prospect slot a new job occupies: one complete crawl (Full scan,
  *  or the historical prospecting-audit and outreach full-scan types) and
@@ -381,6 +382,22 @@ export async function requestJobCancellation(
  * narrow race where a worker observes the in-process cancellation signal
  * before the durable request write becomes visible.
  */
+export async function settleCancelRequestedJob(
+  connection: Connection,
+  jobId: string,
+  error = 'cancelled by operator',
+): Promise<boolean> {
+  const JobModel = createJobModel(connection);
+  const result = await JobModel.updateOne(
+    { jobId, status: 'cancel-requested' },
+    {
+      $set: { status: 'cancelled', phase: 'cancelled', finishedAt: new Date(), error },
+      $unset: { activeSlot: '' },
+    },
+  );
+  return result.modifiedCount > 0;
+}
+
 export async function cancelJob(
   connection: Connection,
   jobId: string,

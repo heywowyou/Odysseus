@@ -25,6 +25,8 @@ export interface SafeFetchOptions extends CheckNetworkTargetOptions {
   policy: NetworkTargetPolicy;
   onBlocked?: (disposition: NetworkSafetyDisposition) => void;
   maxRedirects?: number;
+  /** Return each validated redirect response to callers that inspect hops. */
+  manualRedirects?: boolean;
   fetchImpl?: typeof fetch;
 }
 
@@ -127,7 +129,8 @@ export async function fetchWithNetworkPolicy(
     }
 
     const response = await fetchImpl(currentUrl, { ...init, redirect: 'manual' });
-    if (!REDIRECT_STATUSES.has(response.status)) return response;
+    if (options.manualRedirects === true || !REDIRECT_STATUSES.has(response.status))
+      return response;
 
     const location = response.headers.get('location');
     if (location === null) return response;

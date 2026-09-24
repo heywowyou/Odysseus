@@ -59,6 +59,7 @@ export function DirectoryPage(): JSX.Element {
       current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
     );
   const [adding, setAdding] = useState(false);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<string | null>(null);
   const navigate = useNavigate();
   const [drawing, setDrawing] = useState(false);
@@ -96,7 +97,10 @@ export function DirectoryPage(): JSX.Element {
     try {
       await sendJson('/api/directory/add', 'POST', { directoryIds: selected });
       setSelected([]);
+      setActionNotice(null);
       response.refresh();
+    } catch {
+      setActionNotice(strings.common.requestFailed);
     } finally {
       setAdding(false);
     }
@@ -107,7 +111,10 @@ export function DirectoryPage(): JSX.Element {
     setRestoring(prospectId);
     try {
       await sendJson(`/api/prospects/${encodeURIComponent(prospectId)}/restore`, 'POST', {});
+      setActionNotice(null);
       response.refresh();
+    } catch {
+      setActionNotice(strings.common.requestFailed);
     } finally {
       setRestoring(null);
     }
@@ -134,6 +141,11 @@ export function DirectoryPage(): JSX.Element {
       <p role="status" className={drawMessage ? 'mb-4 text-sm text-ink' : 'sr-only'}>
         {drawMessage}
       </p>
+      {actionNotice !== null ? (
+        <p role="alert" className="mb-4 text-sm text-danger">
+          {actionNotice}
+        </p>
+      ) : null}
       <ProspectFilterBar
         source="directory"
         state={filterState}

@@ -36,7 +36,8 @@ const MAX_JOBS_PER_PASS = 500;
 
 /**
  * Advances every failed or needs-input full-audit job whose audit now
- * carries a current bilingual report pair to status 'complete'. The
+ * carries a current French report and, when the selected writing pair
+ * includes English, a current English report to status 'complete'. The
  * original record (error text and the finishedAt stamp the stop wrote,
  * plus needsInputFields if present) is deliberately preserved: the
  * recovery is not replayed here, only the present state is corrected.
@@ -70,15 +71,22 @@ export async function reconcileFailedAuditJobs(connection: Connection): Promise<
     const fr = await ReportModel.findOne({ auditId, language: 'fr' })
       .sort({ generatedAt: -1 })
       .lean();
-    const en = await ReportModel.findOne({ auditId, language: 'en' })
-      .sort({ generatedAt: -1 })
-      .lean();
-    if (!fr || !en) continue;
-    if (
-      !findingsProvenanceMatches(fr.findingsProvenance, audit.findingsProvenance) ||
-      !findingsProvenanceMatches(en.findingsProvenance, audit.findingsProvenance)
-    ) {
+    if (!fr || !findingsProvenanceMatches(fr.findingsProvenance, audit.findingsProvenance)) {
       continue;
+    }
+    const selectedEnglishAnalysisId =
+      audit.reportPreparation?.writingSelection?.selected?.enAnalysisId;
+    if (selectedEnglishAnalysisId !== undefined) {
+      const en = await ReportModel.findOne({
+        auditId,
+        language: 'en',
+        analysisId: selectedEnglishAnalysisId,
+      })
+        .sort({ generatedAt: -1 })
+        .lean();
+      if (!en || !findingsProvenanceMatches(en.findingsProvenance, audit.findingsProvenance)) {
+        continue;
+      }
     }
 
     // The status guard in the filter makes the write idempotent and keeps

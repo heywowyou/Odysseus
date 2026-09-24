@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { extractMentionsLegales, findMentionsLegalesUrl } from './mentions-legales.js';
+import {
+  extractMentionsLegales,
+  findMentionsLegalesUrl,
+  findMentionsLegalesUrls,
+} from './mentions-legales.js';
 
 describe('findMentionsLegalesUrl', () => {
   it('finds a URL matching the mentions-legales pattern', () => {
@@ -9,6 +13,24 @@ describe('findMentionsLegalesUrl', () => {
       'https://example.com/contact',
     ];
     expect(findMentionsLegalesUrl(urls)).toBe('https://example.com/mentions-legales');
+  });
+
+  it('prefers a direct legal notice to sale conditions regardless of crawl order', () => {
+    const urls = [
+      'https://example.com/conditions-generales-de-vente',
+      'https://example.com/mentions-legales',
+      'https://example.com/informations-legales',
+    ];
+    expect(findMentionsLegalesUrl(urls)).toBe('https://example.com/mentions-legales');
+    expect(findMentionsLegalesUrls(urls)).toEqual([
+      'https://example.com/mentions-legales',
+      'https://example.com/informations-legales',
+      'https://example.com/conditions-generales-de-vente',
+    ]);
+  });
+
+  it('matches the pathname instead of legal-looking hostnames', () => {
+    expect(findMentionsLegalesUrl(['https://mentions-legales.example.com/contact'])).toBeNull();
   });
 
   it('returns null when no page matches', () => {

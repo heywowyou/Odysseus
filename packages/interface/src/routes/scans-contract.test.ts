@@ -559,6 +559,27 @@ describe('POST /api/scans prospect availability', () => {
     expect(createJob).not.toHaveBeenCalled();
   });
 
+  it('refuses a prospect whose website domain differs from the scan URL', async () => {
+    vi.mocked(getProspectHub).mockResolvedValue({
+      prospectId: 'p-other-domain',
+      websites: [
+        {
+          url: 'https://hotel-autre.fr/',
+          registrableDomain: 'hotel-autre.fr',
+        },
+      ],
+    } as never);
+
+    const response = await post({
+      type: 'full-audit',
+      url: 'https://example.fr/',
+      prospectId: 'p-other-domain',
+    });
+
+    expect(response.body).toEqual({ started: false, refusal: 'prospect-domain-mismatch' });
+    expect(createJob).not.toHaveBeenCalled();
+  });
+
   it('auto-attaches the one active prospect when an archived one shares the domain', async () => {
     vi.mocked(findProspectsByDomain).mockResolvedValue([
       { prospectId: 'p-active' },

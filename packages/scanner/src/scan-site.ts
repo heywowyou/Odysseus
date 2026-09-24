@@ -77,6 +77,7 @@ import { captureStructuralAnchor, type StructuralAnchor } from './temporal-ancho
 import type { NetworkSafetyBlockHandler } from './browser-network-safety.js';
 import { type CrawledPage, type CrawlProgressEvent, type CrawlResult, crawlSite } from './crawl.js';
 import type { CrawlFrontierSnapshot, CrawlOptions } from './crawl.js';
+import type { CanonicalTargetCheckResult } from './checks/canonical-target.js';
 import {
   type LighthouseAnalysisResult,
   type PageScanResult,
@@ -519,9 +520,11 @@ async function runScanLane(
   userAgent: string | undefined,
   servedUrlByIdentity: ReadonlyMap<string, string>,
   mentionsLegalesUrl: string | undefined,
+  mentionsLegalesCandidateUrls: string[] | undefined,
   mentionsLegalesSearchedUrls: string[] | undefined,
   mentionsLegalesHomepageFallback: boolean,
   redirectHostCache: RedirectHostCache,
+  canonicalTargetCache: Map<string, Promise<CanonicalTargetCheckResult | null>>,
   homepageUrl: string | undefined,
   sitemapCheck:
     (SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[] }) | undefined,
@@ -557,12 +560,14 @@ async function runScanLane(
           scheduler,
           screenshotDir,
           redirectHostCache,
+          canonicalTargetCache,
           guard: pageGuard,
           signal: pageAbortController.signal,
           ...(timeoutMs !== undefined ? { timeoutMs } : {}),
           ...(userAgent !== undefined ? { userAgent } : {}),
           ...(navigationUrl !== undefined ? { navigationUrl } : {}),
           ...(mentionsLegalesUrl !== undefined ? { mentionsLegalesUrl } : {}),
+          ...(mentionsLegalesCandidateUrls !== undefined ? { mentionsLegalesCandidateUrls } : {}),
           ...(mentionsLegalesSearchedUrls !== undefined ? { mentionsLegalesSearchedUrls } : {}),
           ...(mentionsLegalesHomepageFallback ? { mentionsLegalesHomepageFallback } : {}),
           ...(homepageUrl !== undefined ? { homepageUrl } : {}),
@@ -600,6 +605,9 @@ interface StagedScanContext {
   userAgent: string | undefined;
   servedUrlByIdentity: ReadonlyMap<string, string>;
   mentionsLegalesUrl: string | undefined;
+  mentionsLegalesCandidateUrls: string[] | undefined;
+  mentionsLegalesSearchedUrls: string[] | undefined;
+  mentionsLegalesHomepageFallback: boolean;
   redirectHostCache: RedirectHostCache;
   homepageUrl: string | undefined;
   sitemapCheck:
@@ -725,6 +733,15 @@ async function analyzePageInTurn(
         ...(navigationUrl !== undefined ? { navigationUrl } : {}),
         ...(context.mentionsLegalesUrl !== undefined
           ? { mentionsLegalesUrl: context.mentionsLegalesUrl }
+          : {}),
+        ...(context.mentionsLegalesCandidateUrls !== undefined
+          ? { mentionsLegalesCandidateUrls: context.mentionsLegalesCandidateUrls }
+          : {}),
+        ...(context.mentionsLegalesSearchedUrls !== undefined
+          ? { mentionsLegalesSearchedUrls: context.mentionsLegalesSearchedUrls }
+          : {}),
+        ...(context.mentionsLegalesHomepageFallback
+          ? { mentionsLegalesHomepageFallback: true }
           : {}),
         ...(context.homepageUrl !== undefined ? { homepageUrl: context.homepageUrl } : {}),
         ...(context.sitemapCheck !== undefined ? { sitemapCheck: context.sitemapCheck } : {}),
@@ -2678,13 +2695,16 @@ export async function scanSite(
       throw error;
     }
   };
-  const fetchFailure = (fetchError: string | undefined): string | undefined =>
-    // An HTTP answer is the site's answer (a 404 llms.txt is the finding
-    // itself), except a transient 5xx, which the ladder may ask again.
-    fetchError === undefined ||
-    (/^HTTP \d{3}$/u.test(fetchError) && !/^HTTP 5(0[0234789])$/u.test(fetchError))
-      ? undefined
-      : fetchError;
+  const fetchFailure = (fetchError: string | undefined): string | undefined => {
+    // A 404 is the absence finding. Authentication barriers, rate limits,
+    // challenges and server errors are acquisition failures, never site facts.
+    if (fetchError === undefined) return undefined;
+    const status = /^HTTP (\d{3})$/u.exec(fetchError)?.[1];
+    if (status === undefined) return fetchError;
+    return [401, 403, 429].includes(Number(status)) || status.startsWith('5')
+      ? fetchError
+      : undefined;
+  };
 
   // llms.txt is a site-level fetch, same shape as sitemap.xml above -
   // fetched once here regardless of whether the homepage itself was
@@ -2827,6 +2847,7 @@ export async function scanSite(
   // costs one third-party navigation per audit, not one per page. See
   // transactional-flow.ts's RedirectHostCache doc comment.
   const redirectHostCache: RedirectHostCache = new Map();
+  const canonicalTargetCache: Map<string, Promise<CanonicalTargetCheckResult | null>> = new Map();
 
   if (options.fullAuditPlanning) {
     const context: StagedScanContext = {
@@ -2838,6 +2859,12 @@ export async function scanSite(
       userAgent: options.userAgent,
       servedUrlByIdentity,
       mentionsLegalesUrl: mentionsLegalesUrlForScan,
+      mentionsLegalesCandidateUrls:
+        crawl.mentionsLegalesCandidateUrls ??
+        (crawl.mentionsLegalesPageUrl !== undefined ? [crawl.mentionsLegalesPageUrl] : undefined),
+      mentionsLegalesSearchedUrls:
+        crawl.mentionsLegalesCandidateUrls ?? crawl.mentionsLegalesSearchedUrls,
+      mentionsLegalesHomepageFallback,
       redirectHostCache,
       homepageUrl: homepageUrlForScan,
       sitemapCheck,
@@ -2956,9 +2983,14 @@ export async function scanSite(
           options.userAgent,
           servedUrlByIdentity,
           mentionsLegalesUrlForScan,
-          crawl.mentionsLegalesSearchedUrls,
+          crawl.mentionsLegalesCandidateUrls ??
+            (crawl.mentionsLegalesPageUrl !== undefined
+              ? [crawl.mentionsLegalesPageUrl]
+              : undefined),
+          crawl.mentionsLegalesCandidateUrls ?? crawl.mentionsLegalesSearchedUrls,
           mentionsLegalesHomepageFallback,
           redirectHostCache,
+          canonicalTargetCache,
           homepageUrlForScan,
           sitemapCheck,
           llmsTxtCheckForScan,

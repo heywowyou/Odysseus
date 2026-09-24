@@ -100,6 +100,49 @@ export interface WriteAuditArtifactsResult {
   pages: NormalizePageInput[];
 }
 
+// Keep only fields consumed by normalizeAudit while the finalizer moves to
+// the next scan.json. In particular, this must not retain readiness, frame
+// diagnostics, acquisition ledgers, Lighthouse screenshots, or other full
+// scan evidence for every page until the whole audit has been finalized.
+const NORMALIZE_PAGE_FIELDS: readonly (keyof NormalizePageInput)[] = [
+  'url',
+  'axe',
+  'axeError',
+  'lighthouse',
+  'lighthouseError',
+  'performanceMeasurement',
+  'renderDiff',
+  'renderDiffError',
+  'mentionsLegales',
+  'mentionsLegalesError',
+  'headMetadata',
+  'headMetadataError',
+  'canonicalTarget',
+  'sitemapCheck',
+  'llmsTxtCheck',
+  'mixedContent',
+  'keyboardNavigation',
+  'formErrorHandling',
+  'videoCaptions',
+  'placeholderLabels',
+  'altText',
+  'securityHeaders',
+  'cookieConsent',
+  'accessibilityStatement',
+  'napConsistency',
+  'reflow',
+  'htmlValidity',
+  'structuredData',
+  'frames',
+];
+
+function normalizePageInput(scan: PageScanResult): NormalizePageInput {
+  const entries = NORMALIZE_PAGE_FIELDS.flatMap((field) =>
+    scan[field] === undefined ? [] : [[field, scan[field]]],
+  );
+  return Object.fromEntries(entries) as NormalizePageInput;
+}
+
 function buildPrivacySecurityCoverage(
   startUrl: string,
   pages: readonly PageScanResult[],
@@ -528,12 +571,11 @@ export async function writeAuditArtifacts(
   const scanByUrl = new Map(input.siteResult.pages.map((page) => [page.url, page]));
   const manifestPages: ManifestPageEntry[] = [];
   const normalizePages: NormalizePageInput[] = [];
-  // Every visited page's resolved scan.json, whichever source it came
-  // from - fed to collectToolVersions/buildSiteSignals/etc below in place
-  // of input.siteResult.pages, since under writePagesAsScanned that array
-  // is empty (issue #64: the real full-audit path never accumulates full
-  // page results in memory - see scan-site.ts).
-  const resolvedPages: PageScanResult[] = [];
+  // Retain only fields needed for site-level manifest summaries. Full page
+  // scan objects are consumed below one at a time and then released.
+  const siteSignalPages: PageScanResult[] = [];
+  let axeCoreVersion: string | null = null;
+  let lighthouseVersion: string | null = null;
 
   function pushCrawlOnlyEntry(crawledPage: CrawlResult['pages'][number]): void {
     manifestPages.push({
@@ -585,7 +627,33 @@ export async function writeAuditArtifacts(
       scanJson = fromDisk;
     }
 
-    resolvedPages.push(scanJson);
+    if (axeCoreVersion === null && scanJson.axe?.testEngine?.version !== undefined) {
+      axeCoreVersion = scanJson.axe.testEngine.version;
+    }
+    if (lighthouseVersion === null && scanJson.lighthouse?.lighthouseVersion !== undefined) {
+      lighthouseVersion = scanJson.lighthouse.lighthouseVersion;
+    }
+    siteSignalPages.push({
+      url: scanJson.url,
+      ...(scanJson.headMetadata !== undefined ? { headMetadata: scanJson.headMetadata } : {}),
+      ...(scanJson.roleContact !== undefined ? { roleContact: scanJson.roleContact } : {}),
+      ...(scanJson.mentionsLegales !== undefined
+        ? { mentionsLegales: scanJson.mentionsLegales }
+        : {}),
+      ...(scanJson.transactionalFlowEvidence !== undefined
+        ? { transactionalFlowEvidence: scanJson.transactionalFlowEvidence }
+        : {}),
+      ...(scanJson.transactionalFlowRedirectChecks !== undefined
+        ? { transactionalFlowRedirectChecks: scanJson.transactionalFlowRedirectChecks }
+        : {}),
+      ...(scanJson.transactionalFlowAmbiguities !== undefined
+        ? { transactionalFlowAmbiguities: scanJson.transactionalFlowAmbiguities }
+        : {}),
+      ...(scanJson.securityHeaders !== undefined
+        ? { securityHeaders: scanJson.securityHeaders }
+        : {}),
+      ...(scanJson.cookieConsent !== undefined ? { cookieConsent: scanJson.cookieConsent } : {}),
+    } as PageScanResult);
 
     // Issue #85: detected only now, after this page has already been
     // scanned - render-diff's settled rendered URL is the earliest point
@@ -691,14 +759,13 @@ export async function writeAuditArtifacts(
     // screenshot refs in rawEvidence.perPage rather than machine-specific
     // absolute paths - true whether scanJson came from an in-memory write
     // just now or a disk read of one scan-site.ts already wrote.
-    normalizePages.push(scanJson);
+    normalizePages.push(normalizePageInput(scanJson));
   }
 
-  const tool = await collectToolVersions(input.browser, resolvedPages);
-  // Same reasoning as resolvedPages above: siteResult.pages is empty under
-  // writePagesAsScanned, so every site-level aggregation below reads the
-  // resolved (in-memory-or-disk) set instead of the input as given.
-  const resolvedSiteResult = { ...input.siteResult, pages: resolvedPages };
+  const tool = await collectToolVersions(input.browser, { axeCoreVersion, lighthouseVersion });
+  // writePagesAsScanned leaves input.siteResult.pages empty, so use compact
+  // site-signal projections collected as each scan.json is finalized.
+  const resolvedSiteResult = { ...input.siteResult, pages: siteSignalPages };
   const manifest = buildManifest({
     auditId,
     kind: input.kind,
@@ -718,13 +785,13 @@ export async function writeAuditArtifacts(
     siteSignals: buildSiteSignals(resolvedSiteResult),
     privacySecurityCoverage: buildPrivacySecurityCoverage(
       input.siteResult.crawl.homepageUrl ?? input.siteResult.crawl.startUrl,
-      resolvedPages,
+      siteSignalPages,
     ),
     // B2 (2026-08-24): recorded on the manifest rather than recomputed by
     // each consumer, so `normalize <dir>` reaches the same grouping
     // offline without re-reading every page's head metadata.
     translationClusters: buildTranslationClusters(
-      resolvedPages.map((page) => ({
+      siteSignalPages.map((page) => ({
         pageUrl: page.url,
         ...(page.headMetadata?.htmlLang !== undefined
           ? { language: page.headMetadata.htmlLang }

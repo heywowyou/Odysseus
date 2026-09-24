@@ -1,5 +1,6 @@
 import { createServer, type Server } from 'node:http';
 import type { Connection } from 'mongoose';
+import { verifyUniqueIndexes } from '@odysseus/store';
 import { Router } from './router.js';
 import { registerScanRoutes } from './routes/scans.js';
 import { registerAuditRoutes } from './routes/audits.js';
@@ -150,13 +151,23 @@ export async function startInterfaceServer(
         { err: error, method: req.method, url: req.url, requestId: getRequestId(req) },
         'unhandled error while handling request',
       );
-      if (!res.headersSent) {
-        res.statusCode = 500;
-        res.setHeader('content-type', 'application/json; charset=utf-8');
+      if (res.headersSent) {
+        res.destroy();
+        return;
       }
+      res.statusCode = 500;
+      res.setHeader('content-type', 'application/json; charset=utf-8');
       res.end(JSON.stringify({ error: 'Internal server error' }));
     });
   });
+
+  const missingUniqueIndexes = await verifyUniqueIndexes(connection);
+  if (missingUniqueIndexes.length > 0) {
+    logger.error(
+      { missingUniqueIndexes },
+      'required MongoDB unique indexes are missing; writes may violate stored-data uniqueness',
+    );
+  }
 
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);

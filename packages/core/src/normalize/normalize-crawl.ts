@@ -195,8 +195,8 @@ export function extractCrawlCandidates(
       category: 'geo',
       severity: severityFromCustom(AI_CRAWLER_BLOCKED_RULE_ID),
       wcagCriteria: [],
-      title: `robots.txt blocks ${block.agent} from crawling this site`,
-      description: `This site's robots.txt disallows ${block.agent} (matched by the rule "Disallow: ${block.disallowPattern}") from the site root. If this is deliberate, no action is needed; if not, this agent cannot read the site at all, which means it cannot cite or reference it in AI-generated answers.`,
+      title: 'robots.txt blocks AI crawlers from crawling this site',
+      description: `This site's robots.txt disallows an AI crawler (matched by the rule "Disallow: ${block.disallowPattern}") from the site root. If this is deliberate, no action is needed; if not, AI assistants cannot read and cite the site.`,
       pageUrl: input.startUrl,
       element: {
         pageUrl: input.startUrl,

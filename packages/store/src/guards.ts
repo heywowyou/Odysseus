@@ -6,6 +6,7 @@ import {
   primaryWebsite,
 } from '@odysseus/core';
 import { createAuditModel } from './schemas/audit.schema.js';
+import { createProspectEventModel } from './schemas/prospect-event.schema.js';
 import { planProspectJobLaunch } from './active-jobs.js';
 import { createJobModel } from './schemas/job.schema.js';
 import {
@@ -44,7 +45,8 @@ export type OutreachActionRefusal =
   | 'thread-unknown'
   | 'thread-not-eligible'
   | 'thread-already-started'
-  | 'preview-already-live';
+  | 'preview-already-live'
+  | 'prospect-outreach-already-started';
 export type OutreachAction = 'preview' | 'first-email' | 'follow-up';
 
 export type ScanLaunchCheck =
@@ -203,6 +205,20 @@ export async function checkOutreachAction(
     })) !== null
   ) {
     return { allowed: false, refusal: 'preview-already-live' };
+  }
+  if (input.action === 'first-email' && !['new', 'audited'].includes(input.prospect.status)) {
+    return { allowed: false, refusal: 'prospect-outreach-already-started' };
+  }
+  if (input.action === 'first-email') {
+    const sentFirstTouch = await createProspectEventModel(connection).exists({
+      prospectId: input.prospect.prospectId,
+      type: 'status-changed',
+      actor: 'automation',
+      'payload.to': 'contacted',
+    });
+    if (sentFirstTouch !== null) {
+      return { allowed: false, refusal: 'prospect-outreach-already-started' };
+    }
   }
   if (input.action === 'first-email' && thread !== null) {
     if ((await findLiveOutreachDraft(connection, thread.threadId, 1)) !== null) {

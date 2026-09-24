@@ -76,6 +76,21 @@ describe('createLoginRateLimiter', () => {
     expect(limiter.check('203.0.113.1')).toEqual({ allowed: false, retryAfterSeconds: 1 });
   });
 
+  it('reserves one in-progress password verification per IP', () => {
+    const limiter = createLoginRateLimiter();
+    expect(limiter.check('203.0.113.9')).toEqual({ allowed: true });
+    expect(limiter.check('203.0.113.9')).toEqual({ allowed: false, retryAfterSeconds: 1 });
+    limiter.recordSuccess('203.0.113.9');
+    expect(limiter.check('203.0.113.9')).toEqual({ allowed: true });
+  });
+
+  it('releases a pending IP reservation when verification fails and applies lockout', () => {
+    const limiter = createLoginRateLimiter();
+    expect(limiter.check('203.0.113.10')).toEqual({ allowed: true });
+    limiter.recordFailure('203.0.113.10');
+    expect(limiter.check('203.0.113.10')).toEqual({ allowed: false, retryAfterSeconds: 1 });
+  });
+
   it('tracks IPs independently', () => {
     const limiter = createLoginRateLimiter();
     limiter.recordFailure('203.0.113.1');

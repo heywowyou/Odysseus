@@ -14,7 +14,6 @@
 
 import { createRequire } from 'node:module';
 import type { Browser } from 'playwright';
-import type { PageScanResult } from '../scan-page.js';
 
 export interface CollectedToolVersions {
   playwrightVersion: string;
@@ -32,12 +31,9 @@ function readPlaywrightVersion(): string {
 
 export async function collectToolVersions(
   browser: Browser,
-  pages: readonly PageScanResult[],
+  versions: { axeCoreVersion: string | null; lighthouseVersion: string | null },
 ): Promise<CollectedToolVersions> {
-  const axeCoreVersion =
-    pages.find((page) => page.axe !== undefined)?.axe?.testEngine.version ?? null;
-  const lighthouseVersion =
-    pages.find((page) => page.lighthouse !== undefined)?.lighthouse?.lighthouseVersion ?? null;
+  const { axeCoreVersion, lighthouseVersion } = versions;
 
   return {
     playwrightVersion: readPlaywrightVersion(),

@@ -7,7 +7,7 @@
  * lock with no await in between (issue #143).
  */
 
-export type ReportProductionRun = 'writing' | 'report-ready';
+export type ReportProductionRun = 'writing' | 'report-ready' | 'job';
 
 const runs = new Map<string, ReportProductionRun>();
 

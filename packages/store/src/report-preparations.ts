@@ -49,16 +49,21 @@ export async function getReportPreparation(
 async function persistPreparation(
   connection: Connection,
   auditId: string,
-  next: ReportPreparation,
+  update: { set: Record<string, unknown>; unset?: readonly string[] },
 ): Promise<ReportPreparation> {
   const AuditModel = createAuditModel(connection);
   const updated = await AuditModel.findOneAndUpdate(
     { auditId },
-    { $set: { reportPreparation: next } },
+    {
+      $set: update.set,
+      ...(update.unset && update.unset.length > 0
+        ? { $unset: Object.fromEntries(update.unset.map((field) => [field, ''])) }
+        : {}),
+    },
     { returnDocument: 'after', projection: { reportPreparation: 1 }, runValidators: true },
   ).lean<Pick<AuditDocument, 'reportPreparation'>>();
   if (!updated) throw new Error(`odysseus: audit ${auditId} not found`);
-  return withStoredDefaults(updated.reportPreparation ?? next);
+  return withStoredDefaults(updated.reportPreparation);
 }
 
 export async function patchReportPreparationInputs(
@@ -67,11 +72,19 @@ export async function patchReportPreparationInputs(
   patch: ReportPreparationPatch,
 ): Promise<ReportPreparation> {
   const current = await getReportPreparation(connection, auditId);
-  return persistPreparation(
-    connection,
-    auditId,
-    applyPreparationPatch(current, patch, new Date().toISOString()),
-  );
+  const next = applyPreparationPatch(current, patch, new Date().toISOString());
+  const set: Record<string, unknown> = { 'reportPreparation.updatedAt': next.updatedAt };
+  const unset: string[] = [];
+  if ('customCoverQuestion' in patch) {
+    if (next.customCoverQuestion === undefined) unset.push('reportPreparation.customCoverQuestion');
+    else set['reportPreparation.customCoverQuestion'] = next.customCoverQuestion;
+  }
+  if ('warningAcknowledgement' in patch) {
+    if (next.warningAcknowledgement === undefined)
+      unset.push('reportPreparation.warningAcknowledgement');
+    else set['reportPreparation.warningAcknowledgement'] = next.warningAcknowledgement;
+  }
+  return persistPreparation(connection, auditId, { set, unset });
 }
 
 export async function recordReadyWritingCandidate(
@@ -80,21 +93,17 @@ export async function recordReadyWritingCandidate(
   pair: AnalysisSelectionRef,
   warnings: readonly WritingSanitizationWarning[] = [],
 ): Promise<ReportPreparation> {
-  const current = await getReportPreparation(connection, auditId);
+  const now = new Date().toISOString();
   return persistPreparation(connection, auditId, {
-    ...current,
-    writingSelection: {
-      ...(current.writingSelection?.selected
-        ? { selected: current.writingSelection.selected }
-        : {}),
-      candidate: {
+    set: {
+      'reportPreparation.writingSelection.candidate': {
         status: 'ready',
         pair,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         ...(warnings.length > 0 ? { warnings } : {}),
       },
+      'reportPreparation.updatedAt': now,
     },
-    updatedAt: new Date().toISOString(),
   });
 }
 
@@ -105,22 +114,18 @@ export async function recordFailedWritingCandidate(
   partialPair: { frAnalysisId?: string; enAnalysisId?: string } = {},
   guardRejections: readonly WritingGuardRejection[] = [],
 ): Promise<ReportPreparation> {
-  const current = await getReportPreparation(connection, auditId);
+  const now = new Date().toISOString();
   return persistPreparation(connection, auditId, {
-    ...current,
-    writingSelection: {
-      ...(current.writingSelection?.selected
-        ? { selected: current.writingSelection.selected }
-        : {}),
-      candidate: {
+    set: {
+      'reportPreparation.writingSelection.candidate': {
         status: 'failed',
         reason,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         ...(partialPair.frAnalysisId || partialPair.enAnalysisId ? { partialPair } : {}),
         ...(guardRejections.length > 0 ? { guardRejections } : {}),
       },
+      'reportPreparation.updatedAt': now,
     },
-    updatedAt: new Date().toISOString(),
   });
 }
 

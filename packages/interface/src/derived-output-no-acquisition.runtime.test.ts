@@ -28,6 +28,8 @@ vi.mock('@odysseus/scanner', async (importOriginal) => {
     'readOdysseusBuildId',
     'ensureEnvLoaded',
     'findWorkspaceRoot',
+    'writeFindingsFile',
+    'writeManifestFile',
   ]);
   const wrapped: Record<string, unknown> = { ...actual };
   for (const [name, value] of Object.entries(actual)) {

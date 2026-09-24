@@ -51,7 +51,8 @@ export function assessCrawlCoverage(input: CrawlCoverageGateInput): CrawlCoverag
   let failedUrlCount = 0;
 
   for (const page of input.pages) {
-    if (page.status !== 'http-error-status' && page.status !== 'error') continue;
+    if (page.status !== 'http-error-status' && page.status !== 'blocked' && page.status !== 'error')
+      continue;
     failedUrlCount += 1;
     if (page.httpStatus !== undefined) {
       failedHttpStatusCounts.set(

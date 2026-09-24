@@ -18,51 +18,30 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ensureEnvLoaded, findWorkspaceRoot } from '@odysseus/scanner';
-import { connectToMongo, createReportModel, disconnectFromMongo } from '@odysseus/store';
+import { findWorkspaceRoot } from '@odysseus/scanner';
+import { createReportModel, disconnectFromMongo } from '@odysseus/store';
+import { probeMongoAvailability, scopedMongoTestUri } from '@odysseus/store/test-support.js';
 
-// Loads .env into this test process only, to discover MONGODB_URI for
-// probing and cleanup. The regression assertion itself is about the
-// CLI subprocess spawned below loading .env independently.
-ensureEnvLoaded();
-
-const MONGO_URI = process.env['MONGODB_URI'];
+// The test process only uses MONGODB_TEST_URI, which is reserved for test
+// databases. It never loads or reads the workspace .env.
+const MONGO_URI = process.env['MONGODB_TEST_URI']
+  ? scopedMongoTestUri('cli_report_env_loading')
+  : undefined;
 const TEST_AUDIT_ID = 'test-fixture-report-env-loading';
 const WORKSPACE_ROOT = findWorkspaceRoot();
 const FIXTURE_SRC = path.join(WORKSPACE_ROOT, 'fixtures/test-audits/small-site');
 const CLI_ENTRY = path.join(WORKSPACE_ROOT, 'packages/cli/src/index.ts');
 const TSX_BIN = path.join(WORKSPACE_ROOT, 'node_modules/.bin/tsx');
-
-async function probeMongo(uri: string, timeoutMs = 2000): Promise<boolean> {
-  try {
-    const connection = await Promise.race([
-      connectToMongo(uri),
-      new Promise<never>((_resolve, reject) => {
-        setTimeout(() => reject(new Error('probe timeout')), timeoutMs);
-      }),
-    ]);
-    await disconnectFromMongo(connection);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-const mongoAvailable = MONGO_URI ? await probeMongo(MONGO_URI) : false;
+const { available: mongoAvailable, connection: testConnection } = MONGO_URI
+  ? await probeMongoAvailability(MONGO_URI)
+  : { available: false, connection: undefined };
 if (!mongoAvailable) {
-  console.warn(
-    `[cli e2e] MongoDB not reachable via MONGODB_URI from .env. Skipping report-command env-loading regression test.`,
-  );
+  console.warn('[cli e2e] MONGODB_TEST_URI is not reachable. Skipping report env-loading test.');
 }
 
 async function deleteTestReportDocs(): Promise<void> {
-  const connection = await connectToMongo(MONGO_URI!);
-  try {
-    const ReportModel = createReportModel(connection);
-    await ReportModel.deleteMany({ auditId: TEST_AUDIT_ID });
-  } finally {
-    await disconnectFromMongo(connection);
-  }
+  if (testConnection === undefined) return;
+  await createReportModel(testConnection).deleteMany({ auditId: TEST_AUDIT_ID });
 }
 
 interface SpawnResult {
@@ -96,6 +75,8 @@ describe.skipIf(!mongoAvailable)(
       tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'odysseus-report-env-test-'));
       await fs.cp(FIXTURE_SRC, tempDir, { recursive: true });
 
+      await fs.writeFile(path.join(tempDir, '.env'), `MONGODB_URI=${MONGO_URI}\n`);
+
       const manifestPath = path.join(tempDir, 'manifest.json');
       const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8')) as { auditId: string };
       manifest.auditId = TEST_AUDIT_ID;
@@ -115,12 +96,17 @@ describe.skipIf(!mongoAvailable)(
 
     afterAll(async () => {
       await deleteTestReportDocs();
+      if (testConnection !== undefined) {
+        await testConnection.dropDatabase();
+        await disconnectFromMongo(testConnection);
+      }
       if (tempDir) await fs.rm(tempDir, { recursive: true, force: true });
     });
 
-    it('succeeds when MONGODB_URI is only present in .env, not inherited from the parent shell', async () => {
+    it('loads a test-only env file while MONGODB_URI is absent from the inherited environment', async () => {
       const childEnv = { ...process.env };
       delete childEnv['MONGODB_URI'];
+      childEnv['ODYSSEUS_ENV_FILE'] = path.join(tempDir, '.env');
 
       const result = await runCli(['report', tempDir, '--language', 'fr'], childEnv);
 

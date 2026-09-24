@@ -114,6 +114,7 @@ describe('D13: a Lighthouse insight suppresses the audits it replaces', () => {
     ]);
 
     const finding = findings.find((f) => f.ruleId === SUCCESSOR);
+    expect(finding?.occurrences).toBe(1);
     expect(finding?.rawEvidence).toMatchObject({
       resourceUrls: ['https://example.com/only-legacy.jpg', 'https://example.com/shared.jpg'],
     });

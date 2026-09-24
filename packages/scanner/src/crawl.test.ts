@@ -192,16 +192,14 @@ function relNextChain(pageCount: number): (url: string) => FakeAnchorSpec[] {
 describe('crawl page deadlines', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.useRealTimers();
   });
 
   it('closes the crawl context when loaded-page content extraction stalls', async () => {
-    vi.useFakeTimers();
-    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
     let resolveContentStarted!: () => void;
     const contentStarted = new Promise<void>((resolve) => {
       resolveContentStarted = resolve;
     });
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
     const page = {
       goto: async (_url: string) => ({
         status: () => 200,
@@ -229,12 +227,13 @@ describe('crawl page deadlines', () => {
       maxPages: 1,
       maxDepth: 0,
       timeoutMs: 10,
+      delayMs: 0,
       sitemapMode: 'none',
     });
     const rejected = expect(pending).rejects.toThrow(/watchdog: crawl page/);
 
     await contentStarted;
-    await vi.advanceTimersByTimeAsync(10);
+    expect(page.content).toHaveBeenCalledTimes(1);
     await rejected;
     expect(context.close).toHaveBeenCalledTimes(1);
   });

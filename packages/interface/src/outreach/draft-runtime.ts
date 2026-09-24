@@ -512,7 +512,8 @@ export type CreateFirstEmailRefusal =
   | 'coverage-incomplete'
   | 'report-not-ready'
   | 'priority-copy-unavailable'
-  | 'preview-stale';
+  | 'preview-stale'
+  | 'superseded-preview-cleanup-failed';
 export type CreateFirstEmailResult =
   | { configured: false; refusal: 'no-preview-bucket-configured' }
   | ({ configured: true; created: boolean; refusal?: CreateFirstEmailRefusal } & Partial<{
@@ -597,15 +598,6 @@ export async function createFirstEmailForProspect(
     };
   }
 
-  const website = primaryWebsite(prospect.websites);
-  if (website !== undefined) {
-    const live = await previewStore.listLivePreviews(website.registrableDomain);
-    for (const preview of live) {
-      if (preview.previewId !== published.previewId) {
-        await previewStore.revokePreview(preview.previewId, 'superseded by a new first-email call');
-      }
-    }
-  }
   const draft = await createTouchOneDraft(connection, prospectId, {
     language: options.language,
     previewToken: published.url.split('/').at(-1) ?? '',

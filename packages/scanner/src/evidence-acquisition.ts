@@ -115,6 +115,8 @@ export function materialResultDigest(checkId: string, page: PageScanResult): str
 }
 
 function errorTextFor(checkId: string, page: PageScanResult): string | undefined {
+  if (checkId === 'html-validity') return page.htmlValidity?.checkError;
+  if (checkId === 'reflow') return page.reflow?.checkError;
   const entry = REGISTRY_BY_ID.get(checkId);
   if (entry?.errorField === undefined) return undefined;
   const value = (page as unknown as Record<string, unknown>)[entry.errorField];

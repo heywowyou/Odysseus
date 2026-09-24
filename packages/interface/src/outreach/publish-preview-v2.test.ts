@@ -148,10 +148,19 @@ function row(overrides: Partial<OutreachPublicationRowV3> = {}): OutreachPublica
   };
 }
 
-function harness(overrides: { suppressed?: boolean; recordPreview?: boolean } = {}) {
+function harness(
+  overrides: {
+    suppressed?: boolean;
+    recordPreview?: boolean;
+    previous?: { previewId: string; objectKey: string };
+    failPreviousDelete?: boolean;
+  } = {},
+) {
   const publisher = createInMemoryPreviewPublisher();
   const recorded: unknown[] = [];
   const previews: { previewId: string; objectKey: string }[] = [];
+  const revoked: string[] = [];
+  const operations: string[] = [];
   const store: OutreachPreviewStorePortV3 & { recorded: unknown[] } = {
     recorded,
     findPublicationRow: () => Promise.resolve(row()),
@@ -166,10 +175,23 @@ function harness(overrides: { suppressed?: boolean; recordPreview?: boolean } = 
         publicExpiresAt: new Date('2026-10-19T09:00:00.000Z'),
       });
     },
-    listLivePreviews: () => Promise.resolve(previews),
-    revokePreview: () => Promise.resolve({ changed: true }),
+    listLivePreviews: () =>
+      Promise.resolve([...(overrides.previous ? [overrides.previous] : []), ...previews]),
+    revokePreview: (previewId) => {
+      operations.push(`revoke:${previewId}`);
+      revoked.push(previewId);
+      return Promise.resolve({ changed: true });
+    },
   };
-  return { store, publisher };
+  const deleteObject = publisher.delete.bind(publisher);
+  publisher.delete = async (objectKey) => {
+    operations.push(`delete:${objectKey}`);
+    if (overrides.failPreviousDelete && objectKey === overrides.previous?.objectKey) {
+      throw new Error('bucket unavailable');
+    }
+    await deleteObject(objectKey);
+  };
+  return { store, publisher, revoked, operations };
 }
 
 describe('buildOutreachPreviewSummaryV3', () => {
@@ -286,6 +308,58 @@ describe('publishPreviewV3', () => {
         priorityCardCategories: ['accessibility', 'accessibility', 'accessibility'],
       },
     });
+  });
+
+  it('deletes the old public object before revoking its record', async () => {
+    const previous = { previewId: 'preview-old', objectKey: 'old-preview.html' };
+    const h = harness({ previous });
+    await h.publisher.put({
+      objectKey: previous.objectKey,
+      html: '<p>old</p>',
+      publicExpiresAt: new Date('2026-10-19T09:00:00.000Z'),
+    });
+
+    const result = await publishPreviewV3({
+      store: h.store,
+      publisher: h.publisher,
+      publicBaseUrl: BASE_URL,
+      prospectId: 'prospect-1',
+      language: 'fr',
+      dryRun: false,
+      now: NOW,
+    });
+
+    expect(result.published).toBe(true);
+    expect(h.operations.indexOf(`delete:${previous.objectKey}`)).toBeLessThan(
+      h.operations.indexOf(`revoke:${previous.previewId}`),
+    );
+    expect(h.publisher.keys()).not.toContain(previous.objectKey);
+    expect(h.revoked).toContain(previous.previewId);
+  });
+
+  it('keeps a previous link live and cleans up the replacement when old-object deletion fails', async () => {
+    const previous = { previewId: 'preview-old', objectKey: 'old-preview.html' };
+    const h = harness({ previous, failPreviousDelete: true });
+    await h.publisher.put({
+      objectKey: previous.objectKey,
+      html: '<p>old</p>',
+      publicExpiresAt: new Date('2026-10-19T09:00:00.000Z'),
+    });
+
+    const result = await publishPreviewV3({
+      store: h.store,
+      publisher: h.publisher,
+      publicBaseUrl: BASE_URL,
+      prospectId: 'prospect-1',
+      language: 'fr',
+      dryRun: false,
+      now: NOW,
+    });
+
+    expect(result).toEqual({ published: false, refusal: 'superseded-preview-cleanup-failed' });
+    expect(h.publisher.keys()).toEqual([previous.objectKey]);
+    expect(h.revoked).toEqual(['preview-1']);
+    expect(h.operations).not.toContain(`revoke:${previous.previewId}`);
   });
 
   it('validates the exact v3 story even in dry-run mode', async () => {

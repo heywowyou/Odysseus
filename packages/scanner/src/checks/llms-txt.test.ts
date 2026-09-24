@@ -61,6 +61,31 @@ describe('checkLlmsTxt', () => {
     expect(lastUserAgent).toBe('CustomBot/2.0');
   });
 
+  it.each([401, 403, 429, 503])('treats HTTP %s as incomplete evidence', async (status) => {
+    const started = await startServer({ '/llms.txt': { status, body: 'Access denied' } });
+    server = started.server;
+
+    const result = await checkLlmsTxt(started.origin, 5000);
+
+    expect(result.found).toBe(false);
+    expect(result.fetchError).toBe(`HTTP ${status}`);
+  });
+
+  it('treats a successful challenge page as incomplete evidence', async () => {
+    const started = await startServer({
+      '/llms.txt': {
+        status: 200,
+        body: '<title>Just a moment</title><p>Checking your browser</p>',
+      },
+    });
+    server = started.server;
+
+    const result = await checkLlmsTxt(started.origin, 5000);
+
+    expect(result.found).toBe(false);
+    expect(result.fetchError).toMatch(/wall response/u);
+  });
+
   it('reports found: false without throwing when /llms.txt is absent', async () => {
     const started = await startServer({});
     server = started.server;

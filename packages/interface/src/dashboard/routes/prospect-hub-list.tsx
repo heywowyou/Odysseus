@@ -1,11 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { Building2 } from 'lucide-react';
 import { Link, useLocation, useSearchParams } from 'react-router';
 import { PageHeader, PAGE_WIDTH } from '../components/page-header';
+import { ConfirmDialog } from '../components/ui/dialog';
 import { Button, buttonStyles } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Card } from '../components/ui/card';
+import { Spinner } from '../components/ui/spinner';
 import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
@@ -77,6 +79,10 @@ export function ProspectHubListPage(): JSX.Element {
     email: '',
   });
   const [creating, setCreating] = useState(false);
+  const [pendingOutcome, setPendingOutcome] = useState<{
+    row: ProspectHubRow;
+    outcome: string;
+  } | null>(null);
   // Issue #375: prospects picked for a batch scan, kept in the order they
   // were ticked, which is the order the review dialog proposes.
   const [selected, setSelected] = useState<ProspectHubRow[]>([]);
@@ -99,7 +105,12 @@ export function ProspectHubListPage(): JSX.Element {
     setSearchParams((current) => setProspectView(current, nextView), { replace: true });
   };
   const response = useApi<ProspectHubListResponse>(buildHubProspectsPath(filterState));
-  const rows = response.data?.rows ?? [];
+  const lastDataRef = useRef<ProspectHubListResponse | undefined>(undefined);
+  if (response.data !== undefined) lastDataRef.current = response.data;
+  const shown = response.data ?? lastDataRef.current;
+  const isStale = response.data === undefined && response.isLoading && shown !== undefined;
+  const rows = shown?.rows ?? [];
+  const [listNotice, setListNotice] = useState<string | null>(null);
   const selectedIds = useMemo(() => new Set(selected.map((row) => row.prospectId)), [selected]);
   const pageFullySelected = rows.length > 0 && rows.every((row) => selectedIds.has(row.prospectId));
   const toggleRow = (row: ProspectHubRow): void =>
@@ -142,18 +153,30 @@ export function ProspectHubListPage(): JSX.Element {
         websites,
         emails,
       });
+      setListNotice(null);
       setNewProspect({ name: '', sector: 'hotel', website: '', email: '' });
       setNewProspectOpen(false);
       window.location.assign(`/prospects/${encodeURIComponent(created.prospectId)}`);
+    } catch {
+      setListNotice(detailCopy.actionFailed);
     } finally {
       setCreating(false);
     }
   };
   const recordOutcome = async (row: ProspectHubRow, outcome: string): Promise<void> => {
-    await sendJson(`/api/prospects/${encodeURIComponent(row.prospectId)}/outcome`, 'POST', {
-      outcome,
-    });
-    response.refresh();
+    try {
+      await sendJson(`/api/prospects/${encodeURIComponent(row.prospectId)}/outcome`, 'POST', {
+        outcome,
+      });
+      setListNotice(null);
+      response.refresh();
+    } catch {
+      setListNotice(detailCopy.actionFailed);
+    }
+  };
+  const requestOutcome = (row: ProspectHubRow, outcome: string): void => {
+    if (['opt-out', 'won', 'lost'].includes(outcome)) setPendingOutcome({ row, outcome });
+    else void recordOutcome(row, outcome);
   };
   return (
     <div className={`${PAGE_WIDTH.surface} px-5 py-8`}>
@@ -255,6 +278,16 @@ export function ProspectHubListPage(): JSX.Element {
         allStatusesLabel={copy.allStatuses}
         statusAriaLabel={copy.statusFilterAria}
       />
+      {listNotice !== null ? (
+        <p role="alert" className="mb-4 text-sm text-danger">
+          {listNotice}
+        </p>
+      ) : null}
+      {response.error !== undefined && rows.length > 0 ? (
+        <p role="alert" className="mb-4 text-sm text-danger">
+          {response.error}
+        </p>
+      ) : null}
       {resultsView ? (
         <Card className="mb-5" title={resultsCopy.title}>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -267,7 +300,7 @@ export function ProspectHubListPage(): JSX.Element {
                   {resultsCopy.statusLabels[status] ?? strings.common.vocabularyFallback}
                 </span>
                 <Badge tone="accent" className="numeric">
-                  {response.data?.statusCounts?.[status] ?? 0}
+                  {shown?.statusCounts?.[status] ?? 0}
                 </Badge>
               </div>
             ))}
@@ -301,13 +334,25 @@ export function ProspectHubListPage(): JSX.Element {
         prospects={queueProspects}
         onQueued={() => setSelected([])}
       />
-      {response.error ? (
+      {response.isLoading && shown === undefined ? (
+        <Card>
+          <div className="space-y-4 py-3" role="status" aria-label={strings.common.loading}>
+            <div className="flex items-center gap-2 text-sm text-ink-muted">
+              <Spinner />
+              {strings.common.loading}
+            </div>
+            {[0, 1, 2, 3].map((item) => (
+              <div key={item} className="h-8 animate-pulse rounded bg-raised" />
+            ))}
+          </div>
+        </Card>
+      ) : response.error !== undefined && rows.length === 0 ? (
         <EmptyState
           icon={Building2}
           title={resultsView ? resultsCopy.errorTitle : copy.errorTitle}
           description={response.error}
         />
-      ) : rows.length === 0 ? (
+      ) : rows.length === 0 && !response.isLoading ? (
         <EmptyState
           icon={Building2}
           title={
@@ -333,7 +378,10 @@ export function ProspectHubListPage(): JSX.Element {
           }
         />
       ) : (
-        <Card>
+        <Card
+          {...(isStale ? { className: 'pointer-events-none opacity-60' } : {})}
+          aria-busy={isStale}
+        >
           <Table>
             <TableHead>
               <TableRow>
@@ -391,7 +439,7 @@ export function ProspectHubListPage(): JSX.Element {
                         <Select
                           value=""
                           onChange={(event) => {
-                            if (event.target.value) void recordOutcome(row, event.target.value);
+                            if (event.target.value) requestOutcome(row, event.target.value);
                           }}
                           aria-label={resultsCopy.outcomeAria.replace('{name}', row.name)}
                         >
@@ -451,12 +499,12 @@ export function ProspectHubListPage(): JSX.Element {
             </TableBody>
           </Table>
           <div className="mt-4 flex items-center justify-between text-sm text-ink-muted">
-            <span>{copy.count.replace('{count}', String(response.data?.total ?? 0))}</span>
+            <span>{copy.count.replace('{count}', String(shown?.total ?? 0))}</span>
             <div className="flex gap-2">
               <Button
                 size="sm"
                 variant="secondary"
-                disabled={filterState.page <= 1}
+                disabled={filterState.page <= 1 || isStale}
                 onClick={() => setPage(filterState.page - 1)}
               >
                 {copy.previous}
@@ -475,6 +523,19 @@ export function ProspectHubListPage(): JSX.Element {
           </div>
         </Card>
       )}
+      {pendingOutcome !== null ? (
+        <ConfirmDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setPendingOutcome(null);
+          }}
+          title={detailCopy.confirmSensitiveOutcomeTitle}
+          description={detailCopy.confirmSensitiveOutcomeDescription}
+          confirmLabel={detailCopy.outcomeLabels[pendingOutcome.outcome] ?? detailCopy.outcome}
+          cancelLabel={strings.common.cancel}
+          onConfirm={() => recordOutcome(pendingOutcome.row, pendingOutcome.outcome)}
+        />
+      ) : null}
     </div>
   );
 }

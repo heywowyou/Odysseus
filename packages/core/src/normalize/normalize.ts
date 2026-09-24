@@ -400,7 +400,6 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
         ...extractRenderDiffCandidates(page.renderDiff, page.url, unusableRaw.get(page.url)),
       );
     }
-    if (page.mentionsLegales) candidates.push(...extractCustomCandidates(page.mentionsLegales));
     if (page.headMetadata) {
       candidates.push(
         ...extractHeadMetadataCandidates({
@@ -450,6 +449,31 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
             candidate.category !== 'seo' || candidate.ruleId === 'noindex-on-public-page',
         ),
       );
+    }
+  }
+
+  // A site may expose a direct legal notice and one or more CGU/CGV pages.
+  // Check every discovered candidate before claiming registration data is
+  // absent, and emit at most one absence finding anchored to the preferred
+  // legal page selected by the crawler.
+  const legalCandidatePages = input.pages.filter(
+    (page) => !isExcludedUrl(contentExcludedUrls, page.url),
+  );
+  const legalCandidates = legalCandidatePages
+    .map((page) => page.mentionsLegales)
+    .filter((value): value is NonNullable<typeof value> => value !== undefined);
+  const legalCandidateCheckFailed = legalCandidatePages.some(
+    (page) => page.mentionsLegalesError !== undefined,
+  );
+  if (legalCandidates.length > 0 && !legalCandidateCheckFailed) {
+    const registrationPresent = legalCandidates.some(
+      (value) => value.siren !== undefined || value.rcs !== undefined || value.tva !== undefined,
+    );
+    if (!registrationPresent) {
+      const preferredUrl = legalCandidates[0]!.checkedPages?.resolvedUrl;
+      const preferred =
+        legalCandidates.find((value) => value.pageUrl === preferredUrl) ?? legalCandidates[0]!;
+      candidates.push(...extractCustomCandidates(preferred));
     }
   }
 
@@ -784,20 +808,19 @@ function mergeGroup(
  * canonicalization decides grouping only, never what is recorded. On a
  * monolingual site the map is empty and every page maps to itself.
  */
-function aggregateSharedScopeOccurrences(
+export function aggregateSharedScopeOccurrences(
   fineGroups: Map<string, FindingCandidate[]>,
   canonicalPageUrl: (pageUrl: string) => string,
 ): Map<string, FindingCandidate[]> {
   const fineKeysByCoarseKey = new Map<string, string[]>();
-  const scopeByCoarseKey = new Map<string, string>();
 
   for (const [fineKey, group] of fineGroups) {
     const first = group[0];
     if (!first) continue;
 
-    // The canonical pages, sorted, so the scope - and the dedupeKey
-    // derived from it - is stable across runs even if the crawl reaches
-    // the pages in a different order. Cross-run identity for the
+    // The canonical pages, sorted, so the scope embedded in the coarse
+    // bucket key stays stable across runs even if crawl order changes.
+    // Cross-run identity for the
     // monitoring tier is dedupeKey (CLAUDE.md trade-off 3).
     const scope = [...new Set(group.map((c) => canonicalPageUrl(c.pageUrl)))].sort().join(' ');
 
@@ -823,7 +846,6 @@ function aggregateSharedScopeOccurrences(
     // with a deliberately broad title says so explicitly, instead of the
     // separation depending on title wording nobody realises is load-bearing.
     const coarseKey = `${first.source}|${first.ruleId}|${first.title}|${first.coarseGroupIdentity ?? ''}|${scope}`;
-    scopeByCoarseKey.set(coarseKey, scope);
     const fineKeys = fineKeysByCoarseKey.get(coarseKey);
     if (fineKeys) {
       fineKeys.push(fineKey);
@@ -846,11 +868,12 @@ function aggregateSharedScopeOccurrences(
 
     const first = combined[0];
     if (!first) continue;
-    const dedupeKey = computeDedupeKey(
-      first.source,
-      first.ruleId,
-      scopeByCoarseKey.get(coarseKey) ?? '',
-    );
+    const dedupeKey = computeDedupeKey(first.source, first.ruleId, coarseKey);
+    if (result.has(dedupeKey)) {
+      throw new Error(
+        `normalize: coarse grouping produced a duplicate dedupe key for ${coarseKey}`,
+      );
+    }
     result.set(dedupeKey, combined);
   }
 

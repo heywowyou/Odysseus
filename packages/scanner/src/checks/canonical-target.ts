@@ -26,8 +26,11 @@
 
 import { auditedHostAliases, classifyHostResponse } from '@odysseus/core';
 import { checkFetchTarget, type LookupAddresses } from '../address-guard.js';
+import { fetchWithNetworkPolicy, NetworkSafetyBlockedError } from '../safe-fetch.js';
+import type { NetworkSafetyDisposition, NetworkTargetPolicy } from '../network-target-policy.js';
 import { getCrawlerUserAgent } from '../config.js';
 import type { HostRequestScheduler } from '../host-request-scheduler.js';
+import { normalizePageIdentityUrl } from '../links.js';
 
 export interface CanonicalTargetCheckResult {
   pageUrl: string;
@@ -68,6 +71,11 @@ export interface CanonicalTargetCheckOptions {
   /** Shared run scheduler, notified when the canonical fetch receives host
    *  pushback so this extra request cannot bypass the audit's pacing policy. */
   scheduler?: HostRequestScheduler;
+  /** Audit policy for pinned, DNS-rebinding-safe requests. */
+  networkPolicy?: NetworkTargetPolicy;
+  onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
+  /** Test seam for local fixtures; production uses the pinned safe fetch. */
+  fetchImpl?: typeof fetch;
 }
 
 /** A hop on the scanned page's own host was chosen by the operator along
@@ -99,7 +107,10 @@ export async function checkCanonicalTarget(
   } catch {
     return null;
   }
-  if (resolved === pageUrl) return null;
+  const resolvedIdentity = normalizePageIdentityUrl(resolved);
+  const pageIdentity = normalizePageIdentityUrl(pageUrl);
+  if (resolved === pageUrl || (resolvedIdentity !== undefined && resolvedIdentity === pageIdentity))
+    return null;
 
   try {
     const signal = AbortSignal.timeout(timeoutMs);
@@ -110,13 +121,28 @@ export async function checkCanonicalTarget(
     for (let redirects = 0; ; redirects++) {
       // A target that resolves to a non-public address is not a fact about
       // the client's site worth reporting, and must not be requested.
-      if (!(await hopIsAllowed(hop, pageHostname, options))) return null;
+      if (options.networkPolicy === undefined && !(await hopIsAllowed(hop, pageHostname, options)))
+        return null;
       await options.scheduler?.pace();
-      response = await fetch(hop, {
-        redirect: 'manual',
+      const request = {
+        redirect: 'manual' as const,
         signal,
         headers: { 'user-agent': getCrawlerUserAgent() },
-      });
+      };
+      response =
+        options.networkPolicy !== undefined
+          ? await fetchWithNetworkPolicy(hop.href, request, {
+              policy: options.networkPolicy,
+              manualRedirects: true,
+              ...(options.lookupAddresses !== undefined
+                ? { lookupAddresses: options.lookupAddresses }
+                : {}),
+              ...(options.onNetworkSafetyBlocked !== undefined
+                ? { onBlocked: options.onNetworkSafetyBlocked }
+                : {}),
+              ...(options.fetchImpl !== undefined ? { fetchImpl: options.fetchImpl } : {}),
+            })
+          : await (options.fetchImpl ?? fetch)(hop, request);
       const retryAfterValue = response.headers.get('retry-after');
       const retryAfterSeconds = retryAfterValue === null ? Number.NaN : Number(retryAfterValue);
       const parsedRetryAfterAt =
@@ -177,6 +203,7 @@ export async function checkCanonicalTarget(
       noindex: robotsContent?.includes('noindex') ?? false,
     };
   } catch (error) {
+    if (error instanceof NetworkSafetyBlockedError) throw error;
     return {
       pageUrl,
       canonicalUrl: resolved,

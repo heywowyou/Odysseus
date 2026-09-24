@@ -201,6 +201,11 @@ export function normalizePageUrl(
   }
 
   if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') return undefined;
+  if (options.allowWwwApex && isSameSiteHostname(base.hostname, resolved.hostname)) {
+    // Sitemap mirrors commonly retain an HTTP spelling after the site moves
+    // to HTTPS. Keep one protocol identity for the crawl's authorized site.
+    resolved.protocol = base.protocol;
+  }
   const hostAllowed = options.allowWwwApex
     ? isSameSiteHostname(base.hostname, resolved.hostname) && resolved.port === base.port
     : resolved.origin === base.origin;

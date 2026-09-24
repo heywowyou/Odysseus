@@ -29,6 +29,7 @@ import {
   reconcileFailedAuditJobs,
   resetOrphanedRunningJobs,
   settleCancelRequestedJobsOnStartup,
+  settleCancelRequestedJob,
   updateJobProgress,
   type JobDocument,
   type JobType,
@@ -57,6 +58,13 @@ export interface PipelineContext {
 const SERVER_WAIT_CANCEL_POLL_MS = 2_000;
 
 export type PipelineFn = (job: JobDocument, ctx: PipelineContext) => Promise<void>;
+
+export function waiterCanInheritServerSlot(
+  waiterKeys: ReadonlySet<string>,
+  releasingKeys: ReadonlySet<string>,
+): boolean {
+  return [...waiterKeys].every((key) => releasingKeys.has(key));
+}
 
 interface ServerWaiter {
   jobId: string;
@@ -226,8 +234,9 @@ export class JobQueue {
    *  that has waited longest for a slot, or back to the claim loop. */
   private releaseSlot(keys?: readonly string[]): void {
     if (keys !== undefined && keys.length > 0) {
+      const releasing = new Set(keys);
       const heir = this.serverWaiters.find(
-        (waiter) => !waiter.slotTransferred && keys.some((key) => waiter.keys.has(key)),
+        (waiter) => !waiter.slotTransferred && waiterCanInheritServerSlot(waiter.keys, releasing),
       );
       if (heir !== undefined) {
         heir.slotTransferred = true;
@@ -444,9 +453,15 @@ export class JobQueue {
         await failJob(this.connection, job.jobId, message);
       }
     } finally {
-      this.inFlight.delete(job.jobId);
-      this.cancellation.forget(job.jobId);
-      forgetJobPhaseTelemetry(job.jobId);
+      try {
+        // Any outcome after a durable stop request is terminal cancellation,
+        // including a normal return or a different pipeline error.
+        await settleCancelRequestedJob(this.connection, job.jobId);
+      } finally {
+        this.inFlight.delete(job.jobId);
+        this.cancellation.forget(job.jobId);
+        forgetJobPhaseTelemetry(job.jobId);
+      }
     }
   }
 }

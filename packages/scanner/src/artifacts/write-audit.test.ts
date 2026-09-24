@@ -136,6 +136,9 @@ describe('writeAuditArtifacts characterization', () => {
             transactionalFlowEvidence: [
               { kind: 'checkout-form', selector: 'form', pageUrl: home, detail: 'checkout' },
             ],
+            checkOutcomes: { axe: 'completed' },
+            readiness: { status: 'ready', samples: ['x'.repeat(10_000)] } as never,
+            acquisitionAttempts: [{ checkId: 'axe', outcome: 'succeeded' }] as never,
             headMetadata: {
               title: 'Example',
               openGraphTags: { 'og:site_name': 'Example' },
@@ -179,6 +182,9 @@ describe('writeAuditArtifacts characterization', () => {
       cookieConsent: 'completed',
     });
     expect(result.pages).toHaveLength(2);
+    expect(result.pages[0]).not.toHaveProperty('checkOutcomes');
+    expect(result.pages[0]).not.toHaveProperty('readiness');
+    expect(result.pages[0]).not.toHaveProperty('acquisitionAttempts');
     expect(result.pages[0]?.renderDiff?.rawScreenshotRef).not.toBe(screenshot);
     expect(path.isAbsolute(result.pages[0]?.renderDiff?.rawScreenshotRef ?? '/')).toBe(false);
     const homeEntry = result.manifest.pages.find((page) => page.url === home);

@@ -249,6 +249,10 @@ export interface ProspectHubStrings {
       analyses: string;
       reports: string;
       reportApprovals: string;
+      reportQualityLeases: string;
+      reportQualityRuns: string;
+      reportBundles: string;
+      activeReportBundles: string;
       previews: string;
       drafts: string;
       threads: string;
@@ -326,6 +330,10 @@ export interface ProspectHubStrings {
     firstEmailCreated: string;
     followUpCreated: string;
     outcomeSaved: string;
+    confirmSensitiveOutcomeTitle: string;
+    confirmSensitiveOutcomeDescription: string;
+    confirmTerminalStatusTitle: string;
+    confirmTerminalStatusDescription: string;
     outreachLanguage: string;
     outreachLanguageHint: string;
     languageLabels: Record<'fr' | 'en', string>;
@@ -676,6 +684,10 @@ export const prospectHub = {
         analyses: '{count} analyse(s)',
         reports: '{count} rapport(s)',
         reportApprovals: '{count} validation(s) de rapport',
+        reportQualityLeases: '{count} verrou(s) qualité rapport',
+        reportQualityRuns: '{count} contrôle(s) qualité rapport',
+        reportBundles: '{count} archive(s) de rapport',
+        activeReportBundles: '{count} archive(s) de rapport active(s)',
         previews: '{count} aperçu(s)',
         drafts: '{count} brouillon(s)',
         threads: '{count} fil(s) d’échange',
@@ -757,6 +769,12 @@ export const prospectHub = {
       firstEmailCreated: 'Premier email préparé. Relisez-le dans cette section.',
       followUpCreated: 'Relance préparée. Relisez-la dans cette section.',
       outcomeSaved: 'Résultat enregistré : {outcome}.',
+      confirmSensitiveOutcomeTitle: 'Confirmer ce résultat ?',
+      confirmSensitiveOutcomeDescription:
+        'Cette action peut désinscrire le prospect ou clôturer son suivi commercial.',
+      confirmTerminalStatusTitle: 'Confirmer ce changement de statut ?',
+      confirmTerminalStatusDescription:
+        'Ce statut clôt le suivi actif et peut retirer les brouillons ou aperçus associés.',
       outreachLanguage: 'Langue des emails et de l’aperçu',
       outreachLanguageHint:
         'Langue utilisée pour le client, indépendante de la langue du tableau de bord.',
@@ -801,6 +819,8 @@ export const prospectHub = {
         'thread-unknown':
           'aucun premier email n’a encore été rédigé ; commencez par le premier email',
         'thread-already-started': 'le premier email a déjà été envoyé ; passez par la relance',
+        'prospect-outreach-already-started':
+          'un premier email a déjà été préparé ou envoyé pour ce prospect',
         'draft-already-live':
           'un brouillon est déjà en attente ; relisez-le et envoyez-le depuis la boîte mail',
         'no-preview-bucket-configured': 'stockage de l’aperçu non configuré',
@@ -1200,6 +1220,10 @@ export const prospectHub = {
         analyses: '{count} analysis record(s)',
         reports: '{count} report(s)',
         reportApprovals: '{count} report approval(s)',
+        reportQualityLeases: '{count} report quality lease(s)',
+        reportQualityRuns: '{count} report quality run(s)',
+        reportBundles: '{count} report bundle(s)',
+        activeReportBundles: '{count} active report bundle(s)',
         previews: '{count} preview(s)',
         drafts: '{count} draft(s)',
         threads: '{count} conversation thread(s)',
@@ -1281,6 +1305,12 @@ export const prospectHub = {
       firstEmailCreated: 'First email prepared. Review it in this section.',
       followUpCreated: 'Follow-up prepared. Review it in this section.',
       outcomeSaved: 'Outcome saved: {outcome}.',
+      confirmSensitiveOutcomeTitle: 'Confirm this outcome?',
+      confirmSensitiveOutcomeDescription:
+        'This action may opt the prospect out or close its sales follow-up.',
+      confirmTerminalStatusTitle: 'Confirm this status change?',
+      confirmTerminalStatusDescription:
+        'This status closes active follow-up and may remove related drafts or previews.',
       outreachLanguage: 'Email and preview language',
       outreachLanguageHint: 'Language used for the client, independent of the dashboard language.',
       languageLabels: { fr: 'French', en: 'English' },
@@ -1323,6 +1353,8 @@ export const prospectHub = {
         'candidate-unknown': 'prospect not found',
         'thread-unknown': 'no first email has been drafted yet; start with the first email',
         'thread-already-started': 'the first email was already sent; use the follow-up',
+        'prospect-outreach-already-started':
+          'a first email has already been prepared or sent for this prospect',
         'draft-already-live': 'a draft is already waiting; review it and send it from the mailbox',
         'no-preview-bucket-configured': 'preview storage is not configured',
         'reference-audit-unavailable': 'the permanent reference audit is unavailable',

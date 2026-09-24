@@ -33,6 +33,10 @@ import { JobCancelledError } from '../cancellation.js';
 import type { PipelineContext } from '../job-queue.js';
 import { createScanProgressReporter } from '../report-progress.js';
 import { reportJobPhase } from './report-job-phase.js';
+import {
+  releaseReportProduction,
+  tryAcquireReportProduction,
+} from '../../pipeline/report-production-lock.js';
 
 export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): Promise<void> {
   const { connection } = ctx;
@@ -103,96 +107,103 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
       connection,
     );
 
-    if (job.options.prospectId !== undefined) {
-      await finalizeProspectScan(connection, {
-        prospectId: job.options.prospectId,
-        manifest: auditResult.manifest,
-      });
+    if (!tryAcquireReportProduction(auditResult.auditId, 'job')) {
+      throw new Error(`report production is already running for audit ${auditResult.auditId}`);
     }
+    try {
+      if (job.options.prospectId !== undefined) {
+        await finalizeProspectScan(connection, {
+          prospectId: job.options.prospectId,
+          manifest: auditResult.manifest,
+        });
+      }
 
-    // Computed once here over the same findings array every later stage
-    // receives: the analysis and report stages each used to canonicalize
-    // and hash the full array per language, four times per job. Computing
-    // from the live findings (not the manifest's copy of the stamp) keeps
-    // the stages' manifest-versus-findings asserts meaningful: they still
-    // compare two independently obtained values.
-    const findingsProvenance = buildFindingsProvenance(auditResult.findings);
+      // Computed once here over the same findings array every later stage
+      // receives: the analysis and report stages each used to canonicalize
+      // and hash the full array per language, four times per job. Computing
+      // from the live findings (not the manifest's copy of the stamp) keeps
+      // the stages' manifest-versus-findings asserts meaningful: they still
+      // compare two independently obtained values.
+      const findingsProvenance = buildFindingsProvenance(auditResult.findings);
 
-    // Written now, not only in completeJob at the end: a report-stage
-    // failure below still leaves the audit and both analyses persisted,
-    // and the operator needs the dashboard link to reach them. See #35.
-    await reportJobPhase(connection, job.jobId, job.type, {
-      phase: 'analyze-fr',
-      auditId: auditResult.auditId,
-    });
-    throwIfCancelled();
-    const frAnalysis = await runAnalysisStage(
-      auditResult.auditDir,
-      auditResult.manifest,
-      auditResult.findings,
-      {
-        language: 'fr',
-        obligationAssessment: auditResult.obligationAssessment,
+      // Written now, not only in completeJob at the end: a report-stage
+      // failure below still leaves the audit and both analyses persisted,
+      // and the operator needs the dashboard link to reach them. See #35.
+      await reportJobPhase(connection, job.jobId, job.type, {
+        phase: 'analyze-fr',
+        auditId: auditResult.auditId,
+      });
+      throwIfCancelled();
+      const frAnalysis = await runAnalysisStage(
+        auditResult.auditDir,
+        auditResult.manifest,
+        auditResult.findings,
+        {
+          language: 'fr',
+          obligationAssessment: auditResult.obligationAssessment,
+          findingsProvenance,
+        },
+        connection,
+      );
+
+      await recordReadyWritingCandidate(
+        connection,
+        auditResult.auditId,
+        {
+          frAnalysisId: frAnalysis.analysis.analysisId,
+          findingsProvenance: frAnalysis.analysis.findingsProvenance,
+        },
+        frAnalysis.sanitizationWarnings,
+      );
+      await approveWritingCandidate(connection, auditResult.auditId);
+
+      // Plan 067: render only the canonical French report on the normal path.
+      throwIfCancelled();
+      await reportJobPhase(connection, job.jobId, job.type, { phase: 'report-fr' });
+      await runAllReportsStage(
+        auditResult.auditDir,
+        auditResult.manifest,
+        auditResult.findings,
+        { fr: frAnalysis.analysis },
+        connection,
         findingsProvenance,
-      },
-      connection,
-    );
+      );
 
-    await recordReadyWritingCandidate(
-      connection,
-      auditResult.auditId,
-      {
-        frAnalysisId: frAnalysis.analysis.analysisId,
-        findingsProvenance: frAnalysis.analysis.findingsProvenance,
-      },
-      frAnalysis.sanitizationWarnings,
-    );
-    await approveWritingCandidate(connection, auditResult.auditId);
+      // P0.1 (2026-08-21 La Corniche feedback pass): a completed job whose
+      // report advertises a pillar (performance) it has zero data for used
+      // to look identical, in the dashboard, to a genuinely complete one -
+      // the only place that fact was visible was 27 pages into the PDF
+      // itself. Status stays 'complete' (the audit and report did generate);
+      // needsReview flags the gap for the dashboard without inventing a new
+      // status value every other status check would need to learn about.
+      const needsReview = hasMeasuredCoreWebVitals(auditResult.manifest)
+        ? undefined
+        : 'Performance measurement (Lighthouse) failed on every scanned page: the report has no Core Web Vitals data.';
 
-    // Plan 067: render only the canonical French report on the normal path.
-    throwIfCancelled();
-    await reportJobPhase(connection, job.jobId, job.type, { phase: 'report-fr' });
-    await runAllReportsStage(
-      auditResult.auditDir,
-      auditResult.manifest,
-      auditResult.findings,
-      { fr: frAnalysis.analysis },
-      connection,
-      findingsProvenance,
-    );
+      // The registry is only forgotten in runJob's finally, after this runner
+      // resolves, so a stop requested during the long analyze or report window
+      // still gets observed here instead of being overwritten by 'complete'.
+      // The audit, analyses, and reports are already persisted and the job
+      // already carries the auditId (updateJobProgress writes it even to a
+      // cancelled job), so the
+      // dashboard still reaches the work.
+      throwIfCancelled();
 
-    // P0.1 (2026-08-21 La Corniche feedback pass): a completed job whose
-    // report advertises a pillar (performance) it has zero data for used
-    // to look identical, in the dashboard, to a genuinely complete one -
-    // the only place that fact was visible was 27 pages into the PDF
-    // itself. Status stays 'complete' (the audit and report did generate);
-    // needsReview flags the gap for the dashboard without inventing a new
-    // status value every other status check would need to learn about.
-    const needsReview = hasMeasuredCoreWebVitals(auditResult.manifest)
-      ? undefined
-      : 'Performance measurement (Lighthouse) failed on every scanned page: the report has no Core Web Vitals data.';
+      await completeJob(connection, job.jobId, {
+        auditId: auditResult.auditId,
+        ...(needsReview !== undefined ? { needsReview } : {}),
+      });
 
-    // The registry is only forgotten in runJob's finally, after this runner
-    // resolves, so a stop requested during the long analyze or report window
-    // still gets observed here instead of being overwritten by 'complete'.
-    // The audit, analyses, and reports are already persisted and the job
-    // already carries the auditId (updateJobProgress writes it even to a
-    // cancelled job), so the
-    // dashboard still reaches the work.
-    throwIfCancelled();
-
-    await completeJob(connection, job.jobId, {
-      auditId: auditResult.auditId,
-      ...(needsReview !== undefined ? { needsReview } : {}),
-    });
-
-    // Plan 002 (issue #132): the crawl checkpoint deliberately outlives the
-    // audit stage, so only now is it safe to drop. It sits after
-    // completeJob inside this try on purpose: a crash in any stage above,
-    // or in completeJob itself, requeues the job, and the checkpoint is
-    // what keeps that retry from re-crawling the whole site.
-    deleteCrawlCheckpoint(auditResult.auditDir);
-    deleteCrawlStateFile(auditResult.auditDir);
+      // Plan 002 (issue #132): the crawl checkpoint deliberately outlives the
+      // audit stage, so only now is it safe to drop. It sits after
+      // completeJob inside this try on purpose: a crash in any stage above,
+      // or in completeJob itself, requeues the job, and the checkpoint is
+      // what keeps that retry from re-crawling the whole site.
+      deleteCrawlCheckpoint(auditResult.auditDir);
+      deleteCrawlStateFile(auditResult.auditDir);
+    } finally {
+      releaseReportProduction(auditResult.auditId, 'job');
+    }
   } finally {
     release();
   }
