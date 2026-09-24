@@ -1278,6 +1278,20 @@ default cap instead; that decision is the operator's.
     (milestone 13, not built) is `dedupeKey`, so stored audits predating this
     need `normalize <dir>` before they can be diffed against new ones.
 
+    Amended 2026-09-24 (plan 075 Q5, operator decision). axe's `image-alt`
+    joins this shape: one site-wide finding, with the image files in
+    `rawEvidence.resourceUrls`, and one finding per third-party frame
+    origin so embedded content stays outside the site's totals. Per-image
+    identity was measured and rejected on the numbers. Whistler Paris named
+    7 pasted footer images through links whose `aria-label` rotated per
+    page, and embedded them as `data:` URIs with no file to key on: 59
+    critical findings. Villas Foch's 226 gallery images stayed 14 critical
+    findings over different page sets. After the change, 118 findings
+    became 59 and 61 became 48, with occurrences unchanged. « Write alt
+    text for these images » is one instruction to the client's agency;
+    whether each image is informative or decorative is a decision the
+    agency makes per file from the list.
+
 31. **A fourth review site (Domaine Lagnonu, lagnonu.fr) found a P0 the
     1345-test suite passed over, plus nine report defects**, 2026-08-24.
     Recorded because the finding pattern matters more than any one fix:

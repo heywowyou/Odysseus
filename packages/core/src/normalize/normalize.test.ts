@@ -126,10 +126,13 @@ describe('normalizeAudit', () => {
 
   it('does NOT merge the same rule with different selectors across pages', () => {
     const axeA = buildAxeResultsInput([
-      buildAxeViolation({ id: 'image-alt', nodes: [buildAxeNode({ target: ['#hero-img'] })] }),
+      buildAxeViolation({ id: 'role-img-alt', nodes: [buildAxeNode({ target: ['#hero-img'] })] }),
     ]);
     const axeB = buildAxeResultsInput([
-      buildAxeViolation({ id: 'image-alt', nodes: [buildAxeNode({ target: ['#banner-img'] })] }),
+      buildAxeViolation({
+        id: 'role-img-alt',
+        nodes: [buildAxeNode({ target: ['#banner-img'] })],
+      }),
     ]);
 
     const findings = normalizeAudit({

@@ -93,13 +93,10 @@ describe('extractAxeCandidates template identity', () => {
   });
 
   it('leaves a rule off the allowlist alone, so its findings stay separate', () => {
-    // Writing alt text is a separate editorial decision per image, so
-    // image-alt is deliberately excluded (trade-off 30's own warning).
+    // Each role="img" element needs its own name, so role-img-alt is not on
+    // the shape allowlist (trade-off 30's own warning).
     const [a] = extractAxeCandidates(
-      violation('image-alt', [
-        '<img class="lazy" src="/a.jpg">',
-        '<img class="lazy" src="/b.jpg">',
-      ]),
+      violation('role-img-alt', ['<div role="img" class="lazy">', '<div role="img" class="lazy">']),
       PAGE,
     );
     expect(a?.dedupeIdentity).toBeUndefined();

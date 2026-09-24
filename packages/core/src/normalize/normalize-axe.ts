@@ -310,10 +310,9 @@ function isChallengeFrameSelector(
  * selector or from the scanner's own frame record; otherwise the iframe's
  * attributes are left out, and the inner element's shape carries the
  * identity alone. */
-function frameIdentity(
+function frameSource(
   selector: string,
   pageUrl: string,
-  snippet: string,
   frameOriginsBySelector: ReadonlyMap<string, string> | undefined,
 ): string | undefined {
   const boundary = selector.indexOf('>>>');
@@ -328,8 +327,42 @@ function frameIdentity(
       source = srcMatch[1];
     }
   }
-  const innerShape = shapeIdentity(snippet) ?? selector.slice(boundary + 3).trim();
+  return source;
+}
+
+function frameIdentity(
+  selector: string,
+  pageUrl: string,
+  snippet: string,
+  frameOriginsBySelector: ReadonlyMap<string, string> | undefined,
+): string | undefined {
+  const source = frameSource(selector, pageUrl, frameOriginsBySelector);
+  if (source === undefined) return undefined;
+  const innerShape = shapeIdentity(snippet) ?? selector.slice(selector.indexOf('>>>') + 3).trim();
   return `frame:${source}|${innerShape}`;
+}
+
+/** Plan 075 Q5 (operator decision, 2026-09-24): a missing text alternative
+ *  is one site-wide finding, with every image named in its evidence.
+ *  « Write alt text for these images » is one instruction the client's
+ *  agency carries out once, the same reading trade-off 30 gave Lighthouse's
+ *  resource audits. Per-element identity failed on real sites in two ways:
+ *  Whistler Paris named 7 footer images through links whose aria-label
+ *  rotated per page, which made 59 critical findings, and Villas Foch's 226
+ *  gallery images stayed 14 findings over different page sets. Content in
+ *  a third-party frame keeps one finding per frame origin, so it stays
+ *  outside the site's own totals (Q1). */
+const SITE_WIDE_AXE_RULES: ReadonlySet<string> = new Set(['image-alt']);
+
+function siteWideIdentity(
+  ruleId: string,
+  selector: string,
+  pageUrl: string,
+  frameOriginsBySelector: ReadonlyMap<string, string> | undefined,
+): string | undefined {
+  if (!SITE_WIDE_AXE_RULES.has(ruleId)) return undefined;
+  const source = frameSource(selector, pageUrl, frameOriginsBySelector);
+  return source === undefined ? 'site-wide' : `frame:${source}|site-wide`;
 }
 
 /** axe puts the measured colour values in a check outcome's data. Those values are the
@@ -460,6 +493,13 @@ export function extractAxeCandidates(
           })(),
         },
         ...(() => {
+          const siteWide = siteWideIdentity(
+            violation.id,
+            selector,
+            pageUrl,
+            options?.frameOriginsBySelector,
+          );
+          if (siteWide !== undefined) return { dedupeIdentity: siteWide };
           const identity =
             checkDataIdentity(violation.id, node.data, axeCheckData(node), violation.data) ??
             templateIdentity(violation.id, selector, node.html, node.failureSummary);

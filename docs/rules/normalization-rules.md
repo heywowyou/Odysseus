@@ -536,3 +536,8 @@ it counts for `structured-data-entity-missing`, `entity-data-incomplete` and
 check uses. `entity-data-incomplete` judges business entities only
 (Organization, LocalBusiness and its subtypes): a `WebSite` node proves an
 entity exists but is never expected to carry an address or telephone.
+
+`image-alt` is one site-wide finding, plus one per third-party frame origin
+(trade-off 30, Q5). Its image files are listed in `rawEvidence.resourceUrls`;
+an image embedded as a `data:` URI has no file and appears through its element
+sample only.

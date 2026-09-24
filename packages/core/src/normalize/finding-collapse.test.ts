@@ -202,13 +202,14 @@ describe('D4b: target-size collapses per control group', () => {
 function imagePage(
   url: string,
   images: Array<{ selector: string; src: string }>,
+  ruleId = 'image-alt',
 ): NormalizePageInput {
   return {
     url,
     axe: {
       violations: [
         {
-          id: 'image-alt',
+          id: ruleId,
           impact: 'critical',
           tags: ['wcag2a', 'wcag111'],
           help: 'Images must have alternate text',
@@ -284,15 +285,34 @@ describe('findings covering the same scope for one rule are one problem (issue #
 
   it('keeps a different scope apart, so a one-page defect is not folded into a site-wide one', () => {
     const findings = normalize([
+      imagePage(
+        'https://example.com/',
+        [...gallery, { selector: '#hero > img', src: '/img/hero.jpg' }],
+        'role-img-alt',
+      ),
+      imagePage('https://example.com/about', gallery, 'role-img-alt'),
+    ]).filter((f) => f.ruleId === 'role-img-alt');
+
+    expect(findings).toHaveLength(2);
+    expect(findings.map((f) => f.pageUrls.length).sort()).toEqual([1, 2]);
+  });
+
+  it('makes image-alt one site-wide finding, whatever pages each image sits on', () => {
+    // Plan 075 Q5. Villas Foch: 226 images without alt stayed 14 findings
+    // over different page sets under the scope rule above.
+    const findings = normalize([
       imagePage('https://example.com/', [
         ...gallery,
         { selector: '#hero > img', src: '/img/hero.jpg' },
       ]),
       imagePage('https://example.com/about', gallery),
+      imagePage('https://example.com/rooms', [{ selector: '#room > img', src: '/img/room.jpg' }]),
     ]).filter((f) => f.ruleId === 'image-alt');
 
-    expect(findings).toHaveLength(2);
-    expect(findings.map((f) => f.pageUrls.length).sort()).toEqual([1, 2]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.occurrences).toBe(8);
+    expect(findings[0]?.pageUrls).toHaveLength(3);
+    expect(findings[0]?.rawEvidence['resourceUrls']).toHaveLength(5);
   });
 
   it('collapses one rule split per control, where each control sits on the same pages', () => {

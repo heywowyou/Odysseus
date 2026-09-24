@@ -171,9 +171,11 @@ describe('embedded frame identity (plan 075, E2)', () => {
 });
 
 describe('runtime state classes in identity (plan 075, F6)', () => {
+  // role-img-alt, not image-alt: image-alt is one site-wide finding (Q5), so
+  // it no longer exercises the per-element identity these cases are about.
   const node = (target: string[], html: string) =>
     buildAxeResultsInput([
-      buildAxeViolation({ id: 'image-alt', nodes: [buildAxeNode({ target, html })] }),
+      buildAxeViolation({ id: 'role-img-alt', nodes: [buildAxeNode({ target, html })] }),
     ]);
 
   it('merges one footer image whose animation classes differed between pages', () => {
@@ -245,5 +247,38 @@ describe('shapeIdentity on a snippet cut inside its opening tag', () => {
     const { shapeIdentity } = await import('./normalize-axe.js');
     const full = '<a class="book-btn" href="#" fspanel-ctx-type="booking" fspanel-ctx-code="4301">';
     expect(shapeIdentity(full.slice(0, 62))).toBe(shapeIdentity(full.slice(0, 66)));
+  });
+});
+
+describe('image-alt is one site-wide finding per frame origin (plan 075, Q5)', () => {
+  const image = (target: string[], html: string) =>
+    buildAxeResultsInput([
+      buildAxeViolation({ id: 'image-alt', nodes: [buildAxeNode({ target, html })] }),
+    ]);
+
+  it('gives footer images named through a per-page link label one identity', () => {
+    // Whistler Paris: the same pasted badge sat in a link whose aria-label was
+    // a different SEO keyword on every page, and its src was a data: URI.
+    const [a] = extractAxeCandidates(
+      image(
+        ['a[aria-label="hotel gare du nord"] > img'],
+        '<img id="image_0" src="data:image/png;base6...">',
+      ),
+      'https://example.com/a',
+    );
+    const [b] = extractAxeCandidates(
+      image(['a[aria-label="hotel paris 10"] > img'], '<img id="image_1" src="/logo.png">'),
+      'https://example.com/b',
+    );
+    expect(a?.dedupeIdentity).toBe('site-wide');
+    expect(b?.dedupeIdentity).toBe('site-wide');
+  });
+
+  it('keeps an image inside a third-party frame apart from the site-wide finding', () => {
+    const [framed] = extractAxeCandidates(
+      image(['iframe[src="https://maps.example.org/embed"]', 'img'], '<img src="/marker.svg">'),
+      'https://example.com/',
+    );
+    expect(framed?.dedupeIdentity).toBe('frame:https://maps.example.org|site-wide');
   });
 });

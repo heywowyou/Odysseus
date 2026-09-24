@@ -127,7 +127,7 @@
   "generatedAt": "2026-08-06T21:14:07.795Z",
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "42d49b86e2d286cc",
+    "normalizationFingerprint": "153e5549e7a17997",
     "findingsDigest": "sha256:89272af65c331a67473cd477450ac42eb6b57c5c78f81aac9476a05050f0b6d8"
   },
   "analysisId": "ab3b67d4-b718-4e11-8d2e-89b9cffc7664"
