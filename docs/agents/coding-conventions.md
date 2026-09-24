@@ -233,8 +233,10 @@ PR or issue, and triggers no GitHub Actions run. The machine-readable list goes
 to `reports/dependency-updates.json` (gitignored).
 
 `renovate.json` stays the policy. Its groups (React/Next, TypeScript/ESLint,
-Playwright/browser tooling, accessibility tooling), the minimum release age of
-`config:best-practices`, and the custom managers for pinned tools all apply.
+Playwright/browser tooling, accessibility tooling), its 3-day minimum release
+age (strictly filtered, so a younger release is never proposed; pnpm's own
+release-age default stays underneath), and the custom managers for pinned
+tools all apply.
 Its schedule, automerge and PR-limit settings have no effect in local mode.
 
 Applying updates:
