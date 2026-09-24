@@ -15,6 +15,9 @@
  * raise the rate limit on GitHub-hosted lookups (Actions, tags); it is never
  * printed and nothing is written to GitHub.
  *
+ * An update younger than renovate.json's minimumReleaseAge is marked pending;
+ * `pnpm run deps:apply` skips it until a later report no longer does.
+ *
  * Usage: pnpm run deps:check [-- --json <file>]
  * Output: a report on stdout, and reports/dependency-updates.json (gitignored).
  */
@@ -145,6 +148,15 @@ function parseLog(log) {
               newDigest: update.newDigest,
               updateType: update.updateType,
               isLockfileUpdate: update.isLockfileUpdate === true,
+              releaseTimestamp: update.releaseTimestamp,
+              // Local mode computes the minimum release age but does not filter on
+              // it. A pin keeps the installed version, and a release without a
+              // timestamp cannot be aged, so only a dated new release can be pending.
+              pending:
+                update.pendingChecks === true &&
+                update.releaseTimestamp !== undefined &&
+                update.updateType !== 'pin' &&
+                update.updateType !== 'pinDigest',
             });
           }
         }
@@ -185,7 +197,10 @@ function describe(update) {
   const to = update.isLockfileUpdate
     ? `${update.newVersion} (lockfile)`
     : `${update.newValue}${digest}`;
-  return `${update.depName} ${from} -> ${to} [${update.packageFile}]`;
+  const pending = update.pending
+    ? ` (pending, released ${update.releaseTimestamp.slice(0, 10)})`
+    : '';
+  return `${update.depName} ${from} -> ${to} [${update.packageFile}]${pending}`;
 }
 
 function main() {

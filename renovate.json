@@ -3,7 +3,6 @@
   "extends": ["config:best-practices"],
   "timezone": "Europe/Paris",
   "minimumReleaseAge": "3 days",
-  "internalChecksFilter": "strict",
   "schedule": ["before 6am every weekday"],
   "prConcurrentLimit": 4,
   "prHourlyLimit": 2,

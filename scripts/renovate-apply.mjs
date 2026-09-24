@@ -13,7 +13,8 @@
  * - The packageManager field gets the new pnpm version and its sha512.
  * - Docker and GitHub Actions updates rewrite the tag and pin the digest.
  *
- * It never commits and never touches a major unless the group is named
+ * An update the report marks pending (younger than the minimum release age)
+ * is skipped. It never commits and never touches a major unless the group is named
  * explicitly with --allow-major. Usage:
  *   node scripts/renovate-apply.mjs <group> [<group>...] [--allow-major]
  *   node scripts/renovate-apply.mjs --list
@@ -119,9 +120,14 @@ for (const name of names) {
   if (group.updateType === 'major' && !allowMajor) {
     throw new Error(`${name} is a major update; review it and pass --allow-major.`);
   }
-  const npmUpdates = group.updates.filter((update) => update.manager === 'npm');
+  const ready = group.updates.filter((update) => update.pending !== true);
+  if (ready.length === 0) {
+    process.stdout.write(`Skipped ${name}: every update is younger than the minimum release age\n`);
+    continue;
+  }
+  const npmUpdates = ready.filter((update) => update.manager === 'npm');
   applyNpmSpecifiers(npmUpdates);
-  for (const update of group.updates) {
+  for (const update of ready) {
     if (update.manager !== 'npm') applyImageOrAction(update);
   }
   pnpm(['install']);
