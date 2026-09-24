@@ -152,6 +152,14 @@ Lighthouse's `meta-description`, `link-text`, `crawlable-anchors` and
 extracted (trade-off 110). Lighthouse keeps only what needs its throttled
 navigation: lab metrics and the performance audits.
 
+A noindex page is reported as `noindex-on-public-page` (critical) only when
+something besides the sitemap marks it as public: the homepage or a language
+home, or an hreflang or canonical pointer from another indexable page. When
+the sitemap entry is the only public signal, the page gets the minor
+`sitemap-lists-noindex` instead: CMS sitemaps list taxonomy and gallery
+archives that the site deliberately keeps out of search, so the contradiction,
+not a hidden public page, is the defect (La Corniche, 2026-09-24).
+
 **Page-status vocabulary**, matching CLAUDE.md rule 5's coverage glossary:
 
 - **inventoried URL**: successfully navigated, or explicitly recorded with a

@@ -1140,4 +1140,37 @@ describe('noindex public evidence (plan 075, B2)', () => {
     } as unknown as NormalizeAuditInput).filter((f) => f.ruleId === 'noindex-on-public-page');
     expect(findings).toHaveLength(0);
   });
+
+  it('reports noindex archives that only the sitemap lists as one minor sitemap finding', () => {
+    const galleries = [
+      'https://example.com/gallery_category/le-bar',
+      'https://example.com/gallery_category/le-spa',
+    ];
+    const findings = normalizeAudit({
+      auditId: 'a',
+      startedAt: STARTED_AT,
+      pages: [
+        buildNormalizePageInput({
+          url: 'https://example.com/',
+          headMetadata: head('https://example.com/', null),
+        }),
+        ...galleries.map((url) =>
+          buildNormalizePageInput({ url, headMetadata: head(url, 'noindex, nofollow') }),
+        ),
+      ],
+      crawl: {
+        startUrl: 'https://example.com/',
+        sitemapUrls: galleries,
+        pages: [
+          { url: 'https://example.com/', status: 'visited', depth: 0 },
+          ...galleries.map((url) => ({ url, status: 'visited', depth: 1 })),
+        ],
+      },
+    } as unknown as NormalizeAuditInput);
+    expect(findings.filter((f) => f.ruleId === 'noindex-on-public-page')).toHaveLength(0);
+    const sitemap = findings.filter((f) => f.ruleId === 'sitemap-lists-noindex');
+    expect(sitemap).toHaveLength(1);
+    expect(sitemap[0]?.severity).toBe('minor');
+    expect([...(sitemap[0]?.pageUrls ?? [])].sort()).toEqual(galleries);
+  });
 });

@@ -439,14 +439,16 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
 
     // A deliberate noindex page still receives accessibility, privacy and
     // legal checks, but search-snippet/content SEO advice has no public
-    // audience. Keep the dedicated noindex-public rule itself, because it is
-    // the exception that tells the operator the directive is unexpected.
+    // audience. Keep the two rules about the directive itself: the
+    // noindex-public exception and the sitemap that contradicts it.
     if (page.headMetadata !== undefined && headMetadataHasNoindex(page.headMetadata)) {
       const pageCandidates = candidates.splice(pageCandidateStart);
       candidates.push(
         ...pageCandidates.filter(
           (candidate) =>
-            candidate.category !== 'seo' || candidate.ruleId === 'noindex-on-public-page',
+            candidate.category !== 'seo' ||
+            candidate.ruleId === 'noindex-on-public-page' ||
+            candidate.ruleId === 'sitemap-lists-noindex',
         ),
       );
     }

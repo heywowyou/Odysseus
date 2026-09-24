@@ -700,6 +700,10 @@ export const OUTREACH_PROOF_CARD_COPY: Readonly<Record<string, OutreachProofCard
     fr: 'Le sitemap contient des adresses qui redirigent ou appartiennent à un autre site.',
     en: 'The sitemap contains addresses that redirect or belong to another site.',
   },
+  'sitemap-lists-noindex': {
+    fr: 'Le sitemap soumet aux moteurs de recherche des pages qui demandent à ne pas être indexées.',
+    en: 'The sitemap submits pages to search engines that ask not to be indexed.',
+  },
   'sitemap-stale': {
     fr: 'La liste des pages déclarée par le site ne correspond plus au site publié.',
     en: "The site's declared page list no longer matches the published site.",

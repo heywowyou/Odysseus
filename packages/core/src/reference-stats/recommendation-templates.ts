@@ -188,6 +188,15 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
       },
     },
   ],
+  'sitemap-lists-noindex': [
+    {
+      id: 'sitemap-lists-noindex-align-sitemap',
+      text: {
+        fr: 'Retirez du sitemap les pages volontairement exclues des résultats de recherche, ou retirez leur directive noindex.',
+        en: 'Remove pages deliberately kept out of search results from the sitemap, or remove their noindex directive.',
+      },
+    },
+  ],
   'jsonld-missing': [
     {
       id: 'jsonld-missing-add-structured-data',

@@ -498,6 +498,11 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss:
         'Le plan de site doit contenir les URL finales du site, pas des adresses qui redirigent ou qui appartiennent à un autre domaine.',
     },
+    'sitemap-lists-noindex': {
+      label: 'Le sitemap liste des pages qui demandent à ne pas être indexées',
+      gloss:
+        'Le plan de site soumet aux moteurs de recherche des pages qui leur demandent, dans le même temps, de ne pas les indexer.',
+    },
     'speed-index': {
       label: "L'affichage visible de la page se complète lentement (Speed Index)",
       gloss: "Vitesse à laquelle le contenu visible d'une page se remplit pendant le chargement.",

@@ -818,6 +818,10 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     text: 'Remplacez les entrées redirigées ou externes du plan de site par les URL finales et canoniques appartenant à ce site.',
     snippet: { kind: 'not-applicable' },
   },
+  'sitemap-lists-noindex': {
+    text: 'Retirez ces pages du plan de site si leur exclusion des résultats de recherche est voulue ; sinon, retirez la directive noindex.',
+    snippet: { kind: 'not-applicable' },
+  },
   'speed-index': {
     text: "Accélérez l'affichage progressif de la page, en traitant d'abord ce qui bloque le rendu et le poids des images.",
     snippet: { kind: 'not-applicable' },

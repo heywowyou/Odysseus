@@ -27,6 +27,7 @@ const CUSTOM_RULE_CHECKS: Readonly<Record<string, string>> = {
   'redirect-chain-excessive': CRAWL_INVENTORY_CHECK_ID,
   'http-error-status': CRAWL_INVENTORY_CHECK_ID,
   'noindex-on-public-page': 'head-metadata',
+  'sitemap-lists-noindex': 'head-metadata',
   'meta-title-missing': 'head-metadata',
   'meta-title-length': 'head-metadata',
   'title-not-translated': 'head-metadata',

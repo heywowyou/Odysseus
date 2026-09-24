@@ -12,6 +12,7 @@ import {
   NO_H1_RULE_ID,
   OPENGRAPH_MISSING_RULE_ID,
   NOINDEX_ON_PUBLIC_PAGE_RULE_ID,
+  SITEMAP_LISTS_NOINDEX_RULE_ID,
   META_DESCRIPTION_MISSING_RULE_ID,
   lighthouseAuditsCoveredByHeadMetadata,
   type HeadMetadataCheckInput,
@@ -314,6 +315,34 @@ describe('noindex-on-public-page', () => {
     expect(
       extractHeadMetadataCandidates(baseInput({ xRobotsTag: 'max-snippet: 50, index' })),
     ).toEqual([]);
+  });
+
+  it('reports a noindex page with no public signal at all as nothing', () => {
+    expect(
+      extractHeadMetadataCandidates(baseInput({ robotsMeta: 'noindex', publicEvidence: {} })),
+    ).toEqual([]);
+  });
+
+  it('reports the sitemap, at minor, when the sitemap is the only public signal', () => {
+    const candidates = extractHeadMetadataCandidates(
+      baseInput({ robotsMeta: 'noindex, nofollow', publicEvidence: { inSitemap: true } }),
+    );
+    expect(ruleIds(candidates)).toEqual([SITEMAP_LISTS_NOINDEX_RULE_ID]);
+    expect(candidates[0]?.severity).toBe('minor');
+    expect(candidates[0]?.description).toContain(
+      '<meta name="robots" content="noindex, nofollow">',
+    );
+  });
+
+  it('keeps the critical finding when another page also marks the noindex page as public', () => {
+    const candidates = extractHeadMetadataCandidates(
+      baseInput({
+        robotsMeta: 'noindex',
+        publicEvidence: { inSitemap: true, isHreflangTarget: true },
+      }),
+    );
+    expect(ruleIds(candidates)).toEqual([NOINDEX_ON_PUBLIC_PAGE_RULE_ID]);
+    expect(candidates[0]?.severity).toBe('critical');
   });
 });
 

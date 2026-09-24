@@ -96,6 +96,7 @@ export const MULTIPLE_H1_RULE_ID = 'multiple-h1';
 export const NO_H1_RULE_ID = 'no-h1';
 export const OPENGRAPH_MISSING_RULE_ID = 'opengraph-missing';
 export const NOINDEX_ON_PUBLIC_PAGE_RULE_ID = 'noindex-on-public-page';
+export const SITEMAP_LISTS_NOINDEX_RULE_ID = 'sitemap-lists-noindex';
 export const META_DESCRIPTION_MISSING_RULE_ID = 'meta-description-missing';
 
 /** Directives that are themselves `name: value`, so their colon never
@@ -439,9 +440,43 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
       : []),
   ];
   const publicEvidence = input.publicEvidence;
-  const hasPublicEvidence =
-    publicEvidence === undefined || Object.values(publicEvidence).some((value) => value === true);
-  if (noindexSources.length > 0 && !LEGAL_PATH_PATTERN.test(pageUrl) && hasPublicEvidence) {
+  const publicSignals =
+    publicEvidence === undefined
+      ? undefined
+      : Object.entries(publicEvidence)
+          .filter(([, value]) => value === true)
+          .map(([signal]) => signal);
+  // A sitemap entry is the only public signal a CMS writes on its own: it
+  // lists taxonomy and gallery archives the site deliberately keeps out of
+  // search (lacoorniche, 2026-09-24: 13 noindex category archives). When it
+  // is the only signal, the contradiction between sitemap and page is the
+  // defect, not a hidden public page.
+  const sitemapIsOnlySignal =
+    publicSignals !== undefined && publicSignals.length === 1 && publicSignals[0] === 'inSitemap';
+  const noindexEvidence = {
+    robotsMeta: input.robotsMeta,
+    ...(input.googlebotMeta !== undefined ? { googlebotMeta: input.googlebotMeta } : {}),
+    ...(input.xRobotsTag !== undefined ? { xRobotsTag: input.xRobotsTag } : {}),
+    ...(publicEvidence !== undefined ? { publicEvidence } : {}),
+  };
+  if (noindexSources.length > 0 && !LEGAL_PATH_PATTERN.test(pageUrl) && sitemapIsOnlySignal) {
+    candidates.push(
+      pageCandidate(
+        SITEMAP_LISTS_NOINDEX_RULE_ID,
+        'seo',
+        [],
+        'The sitemap lists pages that ask not to be indexed',
+        `This page asks search engines not to index it (${noindexSources.join('; ')}), yet the sitemap submits it for indexing. It is neither a home page nor the hreflang or canonical target of another indexable page, so the exclusion looks deliberate and the sitemap entry is the inconsistency. Remove the page from the sitemap, or remove the noindex if the page should appear in search results.`,
+        pageUrl,
+        null,
+        noindexEvidence,
+      ),
+    );
+  } else if (
+    noindexSources.length > 0 &&
+    !LEGAL_PATH_PATTERN.test(pageUrl) &&
+    (publicSignals === undefined || publicSignals.length > 0)
+  ) {
     candidates.push(
       pageCandidate(
         NOINDEX_ON_PUBLIC_PAGE_RULE_ID,
@@ -451,12 +486,7 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
         `This page asks search engines not to index it (${noindexSources.join('; ')}), and its URL does not match the pattern this tool treats as an intentionally-excluded legal page (mentions légales, CGU/CGV, cookies, privacy policy). If this exclusion was not deliberate, the page cannot appear in search results at all.`,
         pageUrl,
         null,
-        {
-          robotsMeta: input.robotsMeta,
-          ...(input.googlebotMeta !== undefined ? { googlebotMeta: input.googlebotMeta } : {}),
-          ...(input.xRobotsTag !== undefined ? { xRobotsTag: input.xRobotsTag } : {}),
-          ...(publicEvidence !== undefined ? { publicEvidence } : {}),
-        },
+        noindexEvidence,
       ),
     );
   }
