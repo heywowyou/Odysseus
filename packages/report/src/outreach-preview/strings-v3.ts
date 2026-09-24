@@ -28,11 +28,6 @@ export interface OutreachPreviewStringsV3 {
   priorityPageSingular: string;
   priorityPagesPlural: string;
   prioritySiteWide: string;
-  dataQualityHeading: string;
-  dataQualityIntro: string;
-  dataQualityStatus: { complete: string; limited: string; unavailable: string };
-  limitationsHeading: string;
-  unavailableNote: string;
   scrollCueLabel: string;
   offerHeading: string;
   offerBody: string;
@@ -73,16 +68,6 @@ const COPY = {
     priorityPageSingular: 'page concernée',
     priorityPagesPlural: 'pages concernées',
     prioritySiteWide: 'portée générale',
-    dataQualityHeading: 'Qualité des données de l’analyse',
-    dataQualityIntro: 'Ce que l’analyse a pu vérifier et les limites à connaître.',
-    dataQualityStatus: {
-      complete: 'Complet',
-      limited: 'Exploitable avec limites',
-      unavailable: 'Diagnostic détaillé indisponible',
-    },
-    limitationsHeading: 'Limites à connaître',
-    unavailableNote:
-      'Le diagnostic détaillé de la qualité des données n’est pas disponible pour cette analyse. Les résultats restent limités aux mesures effectivement enregistrées.',
     offerHeading: 'Le diagnostic complet',
     offerBody:
       'Le diagnostic technique complet, proposé à {price}, documente les constats, les pages et éléments concernés, leur ordre de priorité et les corrections recommandées. Pour le commander, répondez simplement à ce message.',
@@ -104,16 +89,6 @@ const COPY = {
     priorityPageSingular: 'page affected',
     priorityPagesPlural: 'pages affected',
     prioritySiteWide: 'site-wide scope',
-    dataQualityHeading: 'Scan data quality',
-    dataQualityIntro: 'What the scan was able to verify and the limitations to keep in mind.',
-    dataQualityStatus: {
-      complete: 'Complete',
-      limited: 'Usable with limitations',
-      unavailable: 'Detailed diagnostic unavailable',
-    },
-    limitationsHeading: 'Limitations to keep in mind',
-    unavailableNote:
-      'The detailed data-quality diagnostic is unavailable for this scan. The results remain limited to the measurements that were actually recorded.',
     offerHeading: 'The full diagnostic',
     offerBody:
       'The full technical diagnostic, priced at {price}, documents the findings, the pages and elements concerned, their priority order and the recommended corrections. To order it, simply reply to this message.',

@@ -427,7 +427,6 @@ describe('the v3 outreach preview summary contract', () => {
   function summaryV3(overrides: Partial<OutreachPreviewSummaryV3> = {}): OutreachPreviewSummaryV3 {
     return {
       contentVersion: 'v3',
-      observedAt: new Date('2026-09-19T08:00:00.000Z'),
       language: 'fr',
       recipient: { businessName: 'Hôtel de la Plage', dataOrigins: ['public-website'] },
       links: {
@@ -456,7 +455,6 @@ describe('the v3 outreach preview summary contract', () => {
         priorityCard({ rank: 2 }),
         priorityCard({ rank: 3, severity: 'moderate' }),
       ],
-      dataQuality: { status: 'complete', limitations: [] },
       facts: { state: 'omitted' },
       ...overrides,
     };
@@ -508,33 +506,22 @@ describe('the v3 outreach preview summary contract', () => {
     ).toBe(false);
   });
 
-  it('keeps scoped limitations coherent with the data-quality status', () => {
+  it('carries no scan date and no data-quality section', () => {
     expect(
-      outreachPreviewSummaryV3Schema.safeParse(
-        summaryV3({ dataQuality: { status: 'limited', limitations: [] } }),
-      ).success,
+      outreachPreviewSummaryV3Schema.safeParse({
+        ...summaryV3(),
+        observedAt: new Date('2026-09-19T08:00:00.000Z'),
+      }).success,
     ).toBe(false);
-
-    const limitation = {
-      code: 'performance-sample-limited',
-      summary: {
-        fr: 'Les mesures de vitesse couvrent un échantillon restreint.',
-        en: 'Speed measurements cover a limited sample.',
-      },
-    };
     expect(
-      outreachPreviewSummaryV3Schema.safeParse(
-        summaryV3({ dataQuality: { status: 'limited', limitations: [limitation] } }),
-      ).success,
-    ).toBe(true);
-    expect(
-      outreachPreviewSummaryV3Schema.safeParse(
-        summaryV3({ dataQuality: { status: 'complete', limitations: [limitation] } }),
-      ).success,
+      outreachPreviewSummaryV3Schema.safeParse({
+        ...summaryV3(),
+        dataQuality: { status: 'complete', limitations: [] },
+      }).success,
     ).toBe(false);
   });
 
-  it('runs the public-content guard over v3 priority and limitation copy', () => {
+  it('runs the public-content guard over v3 priority copy', () => {
     const hostileCard = summaryV3();
     hostileCard.priorityCards = [
       priorityCard({ rank: 1 }),
@@ -545,24 +532,5 @@ describe('the v3 outreach preview summary contract', () => {
       priorityCard({ rank: 3 }),
     ];
     expect(outreachPreviewSummaryV3Schema.safeParse(hostileCard).success).toBe(false);
-
-    expect(
-      outreachPreviewSummaryV3Schema.safeParse(
-        summaryV3({
-          dataQuality: {
-            status: 'limited',
-            limitations: [
-              {
-                code: 'unsafe-limitation',
-                summary: {
-                  fr: 'Une amende est prévue.',
-                  en: 'A penalty applies.',
-                },
-              },
-            ],
-          },
-        }),
-      ).success,
-    ).toBe(false);
   });
 });

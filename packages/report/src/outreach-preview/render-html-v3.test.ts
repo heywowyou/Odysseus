@@ -7,7 +7,6 @@ import { lintOutreachPreviewHtml } from './preview-lint.js';
 function summary(overrides: Partial<OutreachPreviewSummaryV3> = {}): OutreachPreviewSummaryV3 {
   return {
     contentVersion: 'v3',
-    observedAt: new Date('2026-09-19T08:00:00.000Z'),
     language: 'fr',
     recipient: {
       businessName: 'Hôtel de la Plage',
@@ -66,7 +65,6 @@ function summary(overrides: Partial<OutreachPreviewSummaryV3> = {}): OutreachPre
         affectedPageCount: 2,
       },
     ],
-    dataQuality: { status: 'complete', limitations: [] },
     facts: { state: 'omitted' },
     ...overrides,
   };
@@ -78,7 +76,6 @@ describe('generateOutreachPreviewHtmlV3', () => {
     const headings = [
       'Principaux résultats',
       'À traiter en premier',
-      'Qualité des données de l’analyse',
       'Le diagnostic complet',
       'À propos de vos données',
     ].map((text) => html.indexOf(text));
@@ -111,34 +108,16 @@ describe('generateOutreachPreviewHtmlV3', () => {
     expect(html).toContain('6 pages concernées');
   });
 
-  it('renders limited diagnostics but has no surface for operational warnings', () => {
-    const html = generateOutreachPreviewHtmlV3(
-      summary({
-        dataQuality: {
-          status: 'limited',
-          limitations: [
-            {
-              code: 'temporal-drift',
-              summary: {
-                fr: 'Le site a changé pendant le scan.',
-                en: 'The site changed during the scan.',
-              },
-            },
-          ],
-        },
-      }),
+  it('shows neither a scan date nor a data-quality section', () => {
+    const html = generateOutreachPreviewHtmlV3(summary());
+    expect(html).toContain(
+      '<div class="cover-signature" style="font-size:13px;opacity:0.5">Odysseus</div>',
     );
-    expect(html).toContain('Exploitable avec limites');
-    expect(html).toContain('Le site a changé pendant le scan.');
-    expect(html).not.toContain('Diagnostics d’exploitation');
-  });
-
-  it('renders the unavailable diagnostic as a disclosure, not a refusal', () => {
-    const html = generateOutreachPreviewHtmlV3(
-      summary({ dataQuality: { status: 'unavailable', limitations: [] } }),
+    expect(html).not.toMatch(
+      /\d{1,2} (?:janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre) 20\d\d/u,
     );
-    expect(html).toContain('Diagnostic détaillé indisponible');
-    expect(html).toContain('Les résultats restent limités aux mesures effectivement enregistrées.');
+    expect(html).not.toContain('Qualité des données');
+    expect(html).not.toContain('Limites à connaître');
   });
 
   it('keeps the price code-owned and the document self-contained', () => {
@@ -161,30 +140,11 @@ describe('generateOutreachPreviewHtmlV3', () => {
     ).toBeNull();
   });
 
-  it('rejects contradictory data-quality state', () => {
-    expect(() =>
-      generateOutreachPreviewHtmlV3(
-        summary({
-          dataQuality: {
-            status: 'complete',
-            limitations: [
-              {
-                code: 'temporal-drift',
-                summary: { fr: 'Limite.', en: 'Limitation.' },
-              },
-            ],
-          },
-        }),
-      ),
-    ).toThrow();
-  });
-
   it('switches the whole current surface to English', () => {
     const html = generateOutreachPreviewHtmlV3(summary({ language: 'en' }));
     expect(html).toContain('<html lang="en">');
     expect(html).toContain('Measured results');
     expect(html).toContain('What to address first');
-    expect(html).toContain('Scan data quality');
     expect(html).not.toContain('Principaux résultats');
   });
 });

@@ -526,13 +526,6 @@ export const outreachPreviewSummarySchema: z.ZodType<OutreachPreviewSummary> = z
  * keep their original contracts. */
 export const OUTREACH_PREVIEW_CONTENT_VERSION_V3 = 'v3' as const;
 
-export type OutreachPreviewDiagnosticStatus = 'complete' | 'limited' | 'unavailable';
-
-export interface OutreachPreviewLimitation {
-  code: string;
-  summary: { fr: string; en: string };
-}
-
 export interface OutreachPriorityCard {
   rank: 1 | 2 | 3;
   title: { fr: string; en: string };
@@ -542,9 +535,11 @@ export interface OutreachPriorityCard {
   affectedPageCount: number;
 }
 
+/** Carries no scan date and no data-quality section: neither helps a
+ *  prospect decide, and the paid report keeps both (amended 2026-09-24,
+ *  trade-off 42). */
 export interface OutreachPreviewSummaryV3 {
   contentVersion: typeof OUTREACH_PREVIEW_CONTENT_VERSION_V3;
-  observedAt: Date;
   language: OutreachPreviewLanguage;
   recipient: OutreachPreviewRecipientFacts;
   links: { offer: string; privacy: string; optOut: string };
@@ -557,10 +552,6 @@ export interface OutreachPreviewSummaryV3 {
    *  they are. Sums to `distinctFindingCount`. */
   categoryTotals: Record<FindingCategory, number>;
   priorityCards: [OutreachPriorityCard, OutreachPriorityCard, OutreachPriorityCard];
-  dataQuality: {
-    status: OutreachPreviewDiagnosticStatus;
-    limitations: OutreachPreviewLimitation[];
-  };
   facts: { state: 'omitted' } | { state: 'rendered'; heading: string; paragraphs: string[] };
 }
 
@@ -585,21 +576,9 @@ const outreachPriorityCardV3Schema = z
   })
   .strict();
 
-const outreachPreviewLimitationSchema = z
-  .object({
-    code: z
-      .string()
-      .min(1)
-      .max(120)
-      .regex(/^[a-z0-9-]+$/u),
-    summary: bilingualSchema,
-  })
-  .strict();
-
 export const outreachPreviewSummaryV3Schema: z.ZodType<OutreachPreviewSummaryV3> = z
   .object({
     contentVersion: z.literal(OUTREACH_PREVIEW_CONTENT_VERSION_V3),
-    observedAt: z.date(),
     language: z.enum(['fr', 'en']),
     recipient: z
       .object({
@@ -626,12 +605,6 @@ export const outreachPreviewSummaryV3Schema: z.ZodType<OutreachPreviewSummaryV3>
       outreachPriorityCardV3Schema,
       outreachPriorityCardV3Schema,
     ]),
-    dataQuality: z
-      .object({
-        status: z.enum(['complete', 'limited', 'unavailable']),
-        limitations: z.array(outreachPreviewLimitationSchema).max(32),
-      })
-      .strict(),
     facts: factsSchema,
   })
   .strict()
@@ -690,25 +663,10 @@ export const outreachPreviewSummaryV3Schema: z.ZodType<OutreachPreviewSummaryV3>
         message: 'priority card page count cannot exceed the affected page count',
       });
     }
-    if (input.dataQuality.status === 'limited' && input.dataQuality.limitations.length === 0) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'limited data quality requires at least one limitation',
-      });
-    }
-    if (input.dataQuality.status !== 'limited' && input.dataQuality.limitations.length !== 0) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'only limited data quality may carry client limitations',
-      });
-    }
 
     const publicStrings: string[] = [input.recipient.businessName];
     for (const card of input.priorityCards) {
       publicStrings.push(card.title.fr, card.title.en);
-    }
-    for (const limitation of input.dataQuality.limitations) {
-      publicStrings.push(limitation.summary.fr, limitation.summary.en);
     }
     if (input.facts.state === 'rendered') {
       publicStrings.push(input.facts.heading, ...input.facts.paragraphs);

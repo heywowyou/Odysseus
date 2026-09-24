@@ -143,18 +143,7 @@ function row(overrides: Partial<OutreachPublicationRowV3> = {}): OutreachPublica
     audit: audit(),
     findings: FINDINGS,
     analysis: analysis(),
-    diagnostics: { status: 'complete', clientLimitations: [], operationalWarnings: [] },
     ...overrides,
-  };
-}
-
-function limitationWith(fr: string) {
-  return {
-    limitationId: 'lim-wording',
-    code: 'mobile-ua-negotiated-variant-untested',
-    summary: { fr, en: 'The mobile analysis keeps our published crawler identity.' },
-    reportDestination: 'section-11',
-    evidenceRefs: ['ref-1'],
   };
 }
 
@@ -230,51 +219,6 @@ describe('buildOutreachPreviewSummaryV3', () => {
     ]) {
       expect(publicBytes).not.toContain(sentinel);
     }
-  });
-
-  it('carries client limitations and drops operational warnings', () => {
-    const limitation = {
-      limitationId: 'lim-1',
-      code: 'temporal-drift',
-      summary: {
-        fr: 'Le site a changé pendant le scan.',
-        en: 'The site changed during the scan.',
-      },
-      reportDestination: 'section-11',
-      evidenceRefs: ['ref-1'],
-    };
-    const result = buildOutreachPreviewSummaryV3({
-      row: row({
-        diagnostics: {
-          status: 'limited',
-          clientLimitations: [limitation],
-          operationalWarnings: [{ code: 'environment-unapproved', referenceCount: 2 }],
-        },
-      }),
-      language: 'fr',
-      publicBaseUrl: BASE_URL,
-    });
-    expect('summary' in result).toBe(true);
-    if (!('summary' in result)) return;
-    expect(result.summary.dataQuality).toEqual({
-      status: 'limited',
-      limitations: [{ code: 'temporal-drift', summary: limitation.summary }],
-    });
-    expect(JSON.stringify(result.summary)).not.toContain('environment-unapproved');
-  });
-
-  it('publishes diagnostics-unavailable rather than refusing it', () => {
-    const result = buildOutreachPreviewSummaryV3({
-      row: row({
-        diagnostics: { status: 'unavailable', clientLimitations: [], operationalWarnings: [] },
-      }),
-      language: 'fr',
-      publicBaseUrl: BASE_URL,
-    });
-    expect('summary' in result && result.summary.dataQuality).toEqual({
-      status: 'unavailable',
-      limitations: [],
-    });
   });
 
   it('fails closed when a top-three report priority has no reviewed public copy', () => {
@@ -396,46 +340,10 @@ describe('publishPreviewV3', () => {
     expect(h.publisher.keys()).toHaveLength(0);
   });
 
-  it('publishes an audit whose stored limitation uses the legacy crawler wording', async () => {
-    const h = harness({
-      row: row({
-        diagnostics: {
-          status: 'limited',
-          clientLimitations: [
-            limitationWith(
-              "L'analyse mobile conserve l'identité de notre robot d'analyse : seules la fenêtre d'affichage et les capacités tactiles changent.",
-            ),
-          ],
-          operationalWarnings: [],
-        },
-      }),
-    });
-    const result = await publishPreviewV3({
-      store: h.store,
-      publisher: h.publisher,
-      publicBaseUrl: BASE_URL,
-      prospectId: 'prospect-1',
-      language: 'fr',
-      dryRun: false,
-      now: NOW,
-    });
-    expect(result.published).toBe(true);
-    const [key] = h.publisher.keys();
-    const html = (await h.publisher.get(key!))?.html ?? '';
-    expect(html).toContain('notre outil d');
-    expect(html).not.toContain('notre robot');
-  });
-
   it('refuses without uploading when the final lint rejects the page', async () => {
-    const h = harness({
-      row: row({
-        diagnostics: {
-          status: 'limited',
-          clientLimitations: [limitationWith('Nos outils déterministes ont vu ce point.')],
-          operationalWarnings: [],
-        },
-      }),
-    });
+    // The name passes the schema's content guard but not the French
+    // editorial lint, which is the layer this refusal exists for.
+    const h = harness({ row: row({ businessName: 'Hôtel du Scanner' }) });
     for (const dryRun of [true, false]) {
       const result = await publishPreviewV3({
         store: h.store,

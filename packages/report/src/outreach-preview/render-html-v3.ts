@@ -4,7 +4,7 @@ import {
   outreachPreviewSummaryV3Schema,
   type OutreachPreviewSummaryV3,
 } from '@odysseus/core';
-import { escapeHtml, fillTemplate, formatDate } from '../template/html-utils.js';
+import { escapeHtml, fillTemplate } from '../template/html-utils.js';
 import { CATEGORY_ORDER } from '../template/design-tokens.js';
 import { renderDocumentCoverLayout } from '../template/sections/cover.js';
 import { resolveDecisionQuestion } from '../template/generic-question.js';
@@ -34,25 +34,11 @@ const V3_ADDITIONAL_STYLES = `
   font-weight: 600;
 }
 .priority-card .card-meta { margin-bottom: var(--space-2); }
-.data-quality-status {
-  display: inline-flex;
-  margin-bottom: var(--space-4);
-  padding: 6px 10px;
-  border: 1px solid var(--divider);
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
-.data-quality-status-limited { color: var(--sev-moderate); }
-.data-quality-status-complete { color: var(--accent-strong); }
-.data-quality-status-unavailable { color: var(--muted); }
-.limitations-list { margin: var(--space-2) 0 0; padding-left: 1.2rem; }
 .category-grid { display: grid; gap: var(--space-3); }
 .category-grid-1 { grid-template-columns: 1fr; }
 .category-grid-2 { grid-template-columns: repeat(2, 1fr); }
 .category-grid-3 { grid-template-columns: repeat(3, 1fr); }
 .category-grid-4 { grid-template-columns: repeat(4, 1fr); }
-.limitations-list li { margin: 0 0 var(--space-2); }
 @media (max-width: 480px) {
   .category-grid-3,
   .category-grid-4 { grid-template-columns: repeat(2, 1fr); }
@@ -168,31 +154,6 @@ function renderPriorities(input: OutreachPreviewSummaryV3, s: OutreachPreviewStr
   ].join('');
 }
 
-function renderDataQuality(input: OutreachPreviewSummaryV3, s: OutreachPreviewStringsV3): string {
-  const status = input.dataQuality.status;
-  const limitations =
-    status === 'limited'
-      ? [
-          `<h3 class="breakdown-heading">${escapeHtml(s.limitationsHeading)}</h3>`,
-          '<ul class="limitations-list">',
-          ...input.dataQuality.limitations.map(
-            (limitation) => `<li>${escapeHtml(limitation.summary[input.language])}</li>`,
-          ),
-          '</ul>',
-        ].join('')
-      : status === 'unavailable'
-        ? `<p class="fineprint">${escapeHtml(s.unavailableNote)}</p>`
-        : '';
-  return [
-    '<section class="preview-section data-quality-section">',
-    renderSectionHead(s.dataQualityHeading),
-    `<p class="section-lede">${escapeHtml(s.dataQualityIntro)}</p>`,
-    `<div class="data-quality-status data-quality-status-${status}">${escapeHtml(s.dataQualityStatus[status])}</div>`,
-    limitations,
-    '</section>',
-  ].join('');
-}
-
 function renderFacts(input: OutreachPreviewSummaryV3): string {
   if (input.facts.state === 'omitted') return '';
   const [criterion, ...rest] = input.facts.paragraphs;
@@ -247,7 +208,6 @@ export function generateOutreachPreviewHtmlV3(input: OutreachPreviewSummaryV3): 
   const validated = outreachPreviewSummaryV3Schema.parse(input);
   const s = outreachPreviewStringsV3(validated.language);
   const reportStrings = getStrings(validated.language);
-  const observedDate = formatDate(new Date(validated.observedAt), validated.language);
   const reportType =
     validated.coverage.performanceMeasuredPageCount > 0
       ? reportStrings.cover.reportType
@@ -271,14 +231,13 @@ export function generateOutreachPreviewHtmlV3(input: OutreachPreviewSummaryV3): 
       headline: validated.recipient.businessName,
       question: resolveDecisionQuestion(validated.language),
       reportType: reportType.replace(/ ·[\u00a0 ]/gu, '\u00a0· '),
-      signature: `${observedDate} · Odysseus`,
+      signature: 'Odysseus',
       scrollCue: renderScrollCue(s),
     }),
     '</header>',
     renderIntroduction(s),
     renderResults(validated, s, reportStrings),
     renderPriorities(validated, s),
-    renderDataQuality(validated, s),
     renderFacts(validated),
     renderOffer(validated, s),
     renderPrivacy(validated, s),

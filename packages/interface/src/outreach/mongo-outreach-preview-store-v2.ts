@@ -22,9 +22,6 @@ import {
   type AuditIntentSourceJob,
   type ProspectWorkAudit,
 } from '@odysseus/store';
-import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
-import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
-import { readAuditEvidenceDiagnostics } from '../pipeline/audit-evidence-diagnostics.js';
 import type {
   OutreachPublicationAudit,
   OutreachPublicationRowV3,
@@ -41,7 +38,6 @@ export function createMongoOutreachPreviewStoreV3(
   options: { prospectId: string; qualificationVersion?: string },
 ): OutreachPreviewStorePortV3 {
   void options.qualificationVersion;
-  const artifactStore = createConfiguredArtifactStore();
 
   return {
     async findPublicationRow(
@@ -113,14 +109,6 @@ export function createMongoOutreachPreviewStoreV3(
 
       const website = primaryWebsite(prospect.websites);
       if (website === undefined) return { refused: 'domain-mismatch' };
-      const hostname = new URL(audit.siteUrl).hostname;
-      const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
-      const diagnostics = await readAuditEvidenceDiagnostics({
-        auditDir,
-        hostname,
-        startedAt: audit.startedAt,
-        store: artifactStore,
-      });
       const dataOrigins: OutreachPublicationRowV3['dataOrigins'] = [
         'public-hotel-catalogue',
         'public-website',
@@ -137,7 +125,6 @@ export function createMongoOutreachPreviewStoreV3(
         audit: audit as OutreachPublicationAudit,
         findings: findings as Finding[],
         analysis: selected.fr,
-        diagnostics,
       };
     },
 

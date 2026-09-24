@@ -14,7 +14,6 @@ const VIEWPORTS = [
 function summary(language: 'fr' | 'en'): OutreachPreviewSummaryV3 {
   return {
     contentVersion: 'v3',
-    observedAt: new Date('2026-09-19T08:00:00.000Z'),
     language,
     recipient: {
       businessName: language === 'fr' ? 'Hôtel de la Plage' : 'Beach Hotel',
@@ -73,18 +72,6 @@ function summary(language: 'fr' | 'en'): OutreachPreviewSummaryV3 {
         affectedPageCount: 2,
       },
     ],
-    dataQuality: {
-      status: 'limited',
-      limitations: [
-        {
-          code: 'temporal-drift',
-          summary: {
-            fr: 'Le site a changé pendant le scan.',
-            en: 'The site changed during the scan.',
-          },
-        },
-      ],
-    },
     facts: { state: 'omitted' },
   };
 }

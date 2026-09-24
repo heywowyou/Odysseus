@@ -31,8 +31,6 @@ import {
   isConfinedToThirdPartyFrame,
   primaryFindingFilter,
 } from '@odysseus/report';
-import type { AuditEvidenceDiagnostics } from '../pipeline/audit-evidence-diagnostics.js';
-import { currentLimitationWording } from './limitation-wording.js';
 import { createPreviewToken, deriveObjectKey, hashPreviewToken } from './preview-token.js';
 import type { PreviewPublisher } from './preview-publisher.js';
 import { logger } from '../logger.js';
@@ -76,7 +74,6 @@ export interface OutreachPublicationRowV3 {
   audit: OutreachPublicationAudit;
   findings: readonly Finding[];
   analysis: AnalysisDocument;
-  diagnostics: AuditEvidenceDiagnostics;
 }
 
 export interface PublishedPreviewFacts {
@@ -280,7 +277,6 @@ export function buildOutreachPreviewSummaryV3(options: {
   });
   const summary: OutreachPreviewSummaryV3 = {
     contentVersion: 'v3',
-    observedAt: row.audit.finishedAt,
     language,
     recipient: {
       businessName: row.businessName,
@@ -291,19 +287,6 @@ export function buildOutreachPreviewSummaryV3(options: {
     ...aggregate,
     categoryTotals: categoryTotalsFor(safeFindings),
     priorityCards: cards,
-    dataQuality: {
-      status: row.diagnostics.status,
-      limitations:
-        row.diagnostics.status === 'limited'
-          ? row.diagnostics.clientLimitations.map((limitation) => ({
-              code: limitation.code,
-              summary: {
-                fr: currentLimitationWording(limitation.summary.fr),
-                en: currentLimitationWording(limitation.summary.en),
-              },
-            }))
-          : [],
-    },
     facts,
   };
   outreachPreviewSummaryV3Schema.parse(summary);

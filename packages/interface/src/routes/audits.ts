@@ -487,7 +487,6 @@ type OutreachPreviewBuildOutcome =
 async function buildAuditOutreachPreviewHtml(
   connection: Connection,
   audit: AuditDocumentFields,
-  artifactStore: ArtifactStore | undefined,
 ): Promise<OutreachPreviewBuildOutcome> {
   const publicBaseUrl = getPreviewPublicBaseUrl();
   const prospectId = audit.prospectId;
@@ -519,13 +518,6 @@ async function buildAuditOutreachPreviewHtml(
     return { state: 'refused', refusal: 'report-not-ready' };
   }
   const hostname = new URL(audit.siteUrl).hostname;
-  const auditDir = buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt);
-  const diagnostics = await readAuditEvidenceDiagnostics({
-    auditDir,
-    hostname,
-    startedAt: audit.startedAt,
-    store: artifactStore,
-  });
   const built = buildOutreachPreviewSummaryV3({
     row: {
       prospectId: '',
@@ -540,7 +532,6 @@ async function buildAuditOutreachPreviewHtml(
       audit,
       findings,
       analysis: selected.fr,
-      diagnostics,
     },
     language: 'fr',
     publicBaseUrl,
@@ -1847,7 +1838,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 404, 'audit not found');
       return;
     }
-    const outcome = await buildAuditOutreachPreviewHtml(connection, audit, artifactStore);
+    const outcome = await buildAuditOutreachPreviewHtml(connection, audit);
     if (outcome.state === 'refused') {
       sendJson(res, 200, { rendered: false, refusal: outcome.refusal });
       return;
@@ -1862,7 +1853,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 404, 'audit not found');
       return;
     }
-    const outcome = await buildAuditOutreachPreviewHtml(connection, audit, artifactStore);
+    const outcome = await buildAuditOutreachPreviewHtml(connection, audit);
     if (outcome.state === 'refused') {
       sendJson(res, 200, { rendered: false, refusal: outcome.refusal });
       return;

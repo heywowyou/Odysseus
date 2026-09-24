@@ -2314,6 +2314,13 @@ detail. The preview renders the non-zero categories largest first, as the paid
 report's own category breakdown does. Touch 1 does not reuse these counts; its
 frozen facts are unchanged.
 
+The same day the operator removed the scan date from the cover and the
+data-quality section (status and client limitations) from the preview. Neither
+helps a prospect decide, the limitations read as caveats about our own tool
+in a sales document, and the paid report keeps both. The v3 summary drops
+`observedAt` and `dataQuality`, so a strict parse rejects either field rather
+than a renderer merely skipping it.
+
 
 ### 43. A preview is served by hashing the visitor's own token, and the public site never learns anything else
 

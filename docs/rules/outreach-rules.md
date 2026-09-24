@@ -248,12 +248,10 @@ Plan 050 crawl qualification and Plan 068 diagnostics answer different
 questions and must not be merged:
 
 - incomplete declared crawl -> no preview;
-- completed crawl + diagnostics `complete` -> normal v3 preview;
-- completed crawl + diagnostics `limited` -> preview plus the existing
-  bounded client-facing limitation summaries;
-- completed crawl + diagnostics `unavailable` -> preview plus a fixed
-  "detailed diagnostics unavailable" disclosure;
-- operational warnings are operator-only and never enter public HTML.
+- completed crawl -> v3 preview, whatever the diagnostics status;
+- diagnostics, client limitations and operational warnings never enter the
+  preview (operator decision, 2026-09-24): they do not help a prospect decide,
+  and the paid report keeps its own data-quality disclosures.
 
 Touch 1 may reuse only the exact public-safe facts frozen when v3 was published:
 distinct-finding count, unique affected-page count, severity totals, and the
@@ -277,7 +275,6 @@ What v3 shows, and nothing more:
 - non-zero category totals over the same distinct findings, largest first;
 - exactly three ranked priority cards in the same order as the first three
   paid-report priorities, using reviewed public-safe copy;
-- scan-data quality status and only bounded client limitations where relevant;
 - the deterministic regulatory facts block when the sources permit it;
 - the code-owned EUR 990 HT price, with the ask being to reply and request the
   diagnostic, not a checkout link;
@@ -285,9 +282,9 @@ What v3 shows, and nothing more:
   and the 30-day link expiry.
 
 What it never contains: screenshots or any image, exact URLs, selectors,
-finding or rule IDs, occurrences, raw evidence, remediation, model prose,
-model risk, the historical v2 grade/risk hero, population statistics, or a
-legal conclusion about the business.
+finding or rule IDs, occurrences, raw evidence, remediation, model prose, model
+risk, the scan date, a data-quality section, the historical v2 grade/risk hero,
+population statistics, or a legal conclusion about the business.
 
 Lifecycle rules:
 
