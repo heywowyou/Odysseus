@@ -5937,3 +5937,24 @@ here and slows every audit), and treating refusals as scheduler pushback (a
 ban does not lift because the crawl slows, so backing off only spends the
 queue more slowly). The scan phase after the crawl is not covered: a host
 that bans mid-scan still surfaces as failed page scans.
+
+### 115. The audit browser presents French to every site (build decision, plan 075 H6, 2026-09-24)
+
+Every Playwright context and the Lighthouse runs use the `fr-FR` locale
+(`packages/scanner/src/audit-locale.ts`): `navigator.language`, the
+Accept-Language header and Chromium's `--lang` flag. Before, the browser kept
+Chromium's default English locale. Grand Hôtel des Alpes runs WPML's
+browser-language redirect, which sends a visitor to the translation in their
+browser's language: its 43 French and 40 Italian pages all redirected to
+English, and a French hotel was audited in English only.
+
+Consequence on a site that redirects by browser language: the French pages
+are audited and the other languages become redirects to their French
+translations. On a site that does not, nothing changes apart from the header.
+The audit's environment fingerprint records the locale.
+
+Rejected alternative, for now: a per-page locale taken from each page's
+declared language. It audits every language version, but every browser
+context (crawl, render diff, consent, mobile, states, booking flow) and the
+Lighthouse tab would need the page's language before loading it. Revisit if a
+client needs a non-French version of such a site audited.

@@ -1,4 +1,5 @@
 import lighthouse, { type Result } from 'lighthouse';
+import { AUDIT_ACCEPT_LANGUAGE } from './audit-locale.js';
 import { getLighthouseTimeoutMs } from './config.js';
 
 export interface LighthouseOptions {
@@ -39,6 +40,11 @@ export async function runLighthouse(
     // time per page for a number nobody looks at. See
     // LIGHTHOUSE_EXCLUDED_CATEGORIES in @odysseus/core.
     onlyCategories: ['performance', 'seo'],
+    // The same language the audit's Playwright contexts present, so a site
+    // that picks its content by language serves Lighthouse the page the
+    // rest of the audit read (plan 075 H6). Chromium's own language comes
+    // from the launch flag in browser.ts.
+    extraHeaders: { 'Accept-Language': AUDIT_ACCEPT_LANGUAGE },
   });
 
   if (!runnerResult) {

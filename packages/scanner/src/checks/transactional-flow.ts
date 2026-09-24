@@ -27,6 +27,7 @@
  */
 
 import type { Browser, Page } from 'playwright';
+import { AUDIT_BROWSER_LOCALE } from '../audit-locale.js';
 import type {
   TransactionalFlowAmbiguity,
   TransactionalFlowEvidence,
@@ -551,7 +552,7 @@ async function inspectDestinationPage(
   if (!(await hostIsAllowed(linkUrl))) {
     return { linkUrl, resolution: 'undetermined', detail: NON_PUBLIC_DESTINATION_DETAIL };
   }
-  const context = await browser.newContext({ userAgent });
+  const context = await browser.newContext({ userAgent, locale: AUDIT_BROWSER_LOCALE });
   guard?.track(context);
   try {
     context.setDefaultTimeout(timeoutMs);

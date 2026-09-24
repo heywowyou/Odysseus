@@ -1,4 +1,5 @@
 import { promises as fs } from 'node:fs';
+import { AUDIT_BROWSER_LOCALE } from './audit-locale.js';
 import path from 'node:path';
 import type { Browser, Page } from 'playwright';
 import {
@@ -194,7 +195,11 @@ export async function renderDiff(
   // context holding one settled document, so the cost of keeping it is
   // small next to writing two full-page PNGs that get deleted at the end
   // of the scan. See couldEverBeKept in artifacts/prune-screenshots.ts.
-  const rawContext = await browser.newContext({ javaScriptEnabled: false, userAgent });
+  const rawContext = await browser.newContext({
+    javaScriptEnabled: false,
+    userAgent,
+    locale: AUDIT_BROWSER_LOCALE,
+  });
   if (options.networkPolicy !== undefined) {
     await installBrowserNetworkSafety(
       rawContext,
@@ -244,7 +249,7 @@ export async function renderDiff(
       await new Promise((resolve) => setTimeout(resolve, options.preRenderedDelayMs));
     }
 
-    const renderedContext = await browser.newContext({ userAgent });
+    const renderedContext = await browser.newContext({ userAgent, locale: AUDIT_BROWSER_LOCALE });
     if (options.networkPolicy !== undefined) {
       await installBrowserNetworkSafety(
         renderedContext,

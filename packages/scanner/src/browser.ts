@@ -1,4 +1,5 @@
 import { createServer } from 'node:net';
+import { AUDIT_BROWSER_LOCALE } from './audit-locale.js';
 import { chromium, type Browser } from 'playwright';
 import { buildSanitizedBrowserEnv } from './browser-isolation-preflight.js';
 import { startEgressProxy, type EgressProxy } from './egress-proxy.js';
@@ -107,6 +108,9 @@ export async function launchBrowser(options: LaunchBrowserOptions = {}): Promise
     try {
       const launchArgs = [
         `--remote-debugging-port=${debugPort}`,
+        // Lighthouse opens its own tab over the debugging port, outside any
+        // Playwright context, so its `navigator.language` comes from here.
+        `--lang=${AUDIT_BROWSER_LOCALE}`,
         ...(proxy?.chromiumArgs ?? []),
         ...(options.extraArgs ?? []),
         ...parseChromiumExtraArgs(process.env['ODYSSEUS_CHROMIUM_EXTRA_ARGS']),

@@ -9,6 +9,7 @@
  * ledger; any other run gets no graph and keeps the legacy evidence path.
  */
 import { canonicalDigest, type Finding } from '@odysseus/core';
+import { AUDIT_ACCEPT_LANGUAGE, AUDIT_BROWSER_LOCALE } from '../audit-locale.js';
 import { ACCESSIBILITY_CAPABILITY_REGISTRY } from '../accessibility-capabilities.js';
 import {
   buildAuditEnvironmentFingerprint,
@@ -84,10 +85,10 @@ export function runEvidenceGraphStage(
         hasTouch: false,
       },
     ],
-    // The browser context sets neither, so Chromium's defaults apply.
+    // Every audit browser presents the audit locale (plan 075 H6).
     locale: {
-      locale: 'chromium-default',
-      acceptLanguage: 'chromium-default',
+      locale: AUDIT_BROWSER_LOCALE,
+      acceptLanguage: AUDIT_ACCEPT_LANGUAGE,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
     networkPolicyId: input.networkPolicy.id,

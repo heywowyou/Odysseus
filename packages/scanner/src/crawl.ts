@@ -1,4 +1,5 @@
 import type { Browser } from 'playwright';
+import { AUDIT_BROWSER_LOCALE } from './audit-locale.js';
 import type {
   AuditConfigSnapshot,
   HostStoppedAnswering,
@@ -831,7 +832,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     queue.push({ url: normalizedSeed, depth: 0, discoveryMethod: 'seed' });
   }
 
-  const context = await options.browser.newContext({ userAgent });
+  const context = await options.browser.newContext({ userAgent, locale: AUDIT_BROWSER_LOCALE });
   const crawlGuard = createPageWorkGuard(options.guard);
   crawlGuard.track(context);
   if (options.networkPolicy !== undefined) {

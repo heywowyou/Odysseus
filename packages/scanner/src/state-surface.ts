@@ -14,6 +14,7 @@
  * aborted, never retried by other means.
  */
 import type { Browser, Page } from 'playwright';
+import { AUDIT_BROWSER_LOCALE } from './audit-locale.js';
 import { getCrawlerUserAgent, getRenderSettleTimeoutMs } from './config.js';
 import { runAxe, type AxeResults } from './axe.js';
 import {
@@ -260,6 +261,7 @@ export async function runConsentSurfaceAnalysis(
     viewport: { ...BASELINE_DESKTOP_VIEWPORT },
     deviceScaleFactor: 1,
     hasTouch: false,
+    locale: AUDIT_BROWSER_LOCALE,
   });
   if (options.networkPolicy !== undefined) {
     await installBrowserNetworkSafety(

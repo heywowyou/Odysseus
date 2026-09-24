@@ -123,3 +123,59 @@ describe('sitemap coverage through a same-site redirect', () => {
     expect(result.sitemapCoverage).toMatchObject({ eligiblePageCount: 2, scannedPageCount: 2 });
   }, 45_000);
 });
+
+/**
+ * Plan 075 H6. Grand Hôtel des Alpes runs WPML's browser-language redirect:
+ * a visitor whose browser language differs from the page's is sent to the
+ * translation in their language. Chromium's default English locale sent
+ * every French page to its English twin, so the French site was never
+ * audited. The audit browser now presents French.
+ */
+describe('a site that redirects by browser language', () => {
+  const PORT = 5194;
+  const origin = `http://localhost:${PORT}`;
+  let server: Server;
+  let ownBrowser: Browser;
+  const acceptLanguages: string[] = [];
+
+  const page = (lang: string, twin: string, body: string): string =>
+    `<html lang="${lang}"><head><script>` +
+    `if (!navigator.language.toLowerCase().startsWith('${lang}')) location.replace('${twin}');` +
+    `</script></head><body>${body}</body></html>`;
+
+  beforeAll(async () => {
+    server = http.createServer((req, res) => {
+      acceptLanguages.push(String(req.headers['accept-language'] ?? ''));
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      if (req.url === '/fr/chambres') {
+        res.end(page('fr', '/en/rooms', '<h1>Chambres</h1>'));
+        return;
+      }
+      if (req.url === '/en/rooms') {
+        res.end(page('en', '/fr/chambres', '<h1>Rooms</h1>'));
+        return;
+      }
+      res.end('<html lang="fr"><body><a href="/fr/chambres">Chambres</a></body></html>');
+    });
+    await listen(server, PORT);
+    ({ browser: ownBrowser } = await launchBrowser());
+  }, 30_000);
+
+  afterAll(async () => {
+    await ownBrowser?.close();
+    await close(server);
+  });
+
+  it('audits the French page instead of following the redirect to its English twin', async () => {
+    const result = await crawlSite(`${origin}/`, {
+      browser: ownBrowser,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+    });
+
+    const french = result.pages.find((entry) => entry.url === `${origin}/fr/chambres`);
+    expect(french?.status).toBe('visited');
+    expect(acceptLanguages.some((header) => header.startsWith('fr-FR'))).toBe(true);
+  }, 30_000);
+});

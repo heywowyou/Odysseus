@@ -32,6 +32,7 @@
  */
 
 import type { Browser } from 'playwright';
+import { AUDIT_BROWSER_LOCALE } from '../audit-locale.js';
 import { getCrawlerUserAgent } from '../config.js';
 import type { PageWorkGuard } from '../page-work-guard.js';
 import {
@@ -261,6 +262,7 @@ export async function checkCookieConsent(
   // audit can be mistaken for the visitor having consented.
   const context = await browser.newContext({
     userAgent: options.userAgent ?? getCrawlerUserAgent(),
+    locale: AUDIT_BROWSER_LOCALE,
   });
   if (options.networkPolicy !== undefined) {
     await installBrowserNetworkSafety(

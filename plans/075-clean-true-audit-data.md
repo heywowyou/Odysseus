@@ -457,7 +457,7 @@ Checked and clean or already known in this sweep: 0 findings on non-visited page
   - Core walks `@graph` and top-level arrays the same way `structured-data-extract.ts` does, for `readJsonLdTypes`, the entity-field check and the FAQ check. One shared pure reader, in core.
   - Stored audits: re-normalize. `structured-data-entity-missing` disappears on the 4 audits, whistlerparis's `faq-content-without-schema` disappears, and `entity-data-incomplete` may appear where a `@graph` entity lacks fields.
   - Tests: normalize-geo unit tests with a Yoast `@graph` holding `Organization`, `WebSite` and `FAQPage`.
-- **H6. Each page is visited in its own language.**
+- **H6. Each page is visited in its own language.** Implemented as one audit-wide French locale (trade-off 115); the per-page locale below stays the recorded alternative.
   - The browser context for a page takes the language its raw document declares (`<html lang>`, already fetched for the render diff) as `locale` and `Accept-Language`, falling back to `fr-FR`. A client-side redirect whose target is the translation of the source (same cluster, or the source's hreflang or switcher alternate) is then recorded as a language redirect, not as a `redirect-interstitial`, if it still happens.
   - Record the chosen locale in the audit environment fingerprint instead of `chromium-default`.
   - Stored audit: grandhoteldesalpes needs a rescan to get its French pages; only worth running before that hotel is contacted.

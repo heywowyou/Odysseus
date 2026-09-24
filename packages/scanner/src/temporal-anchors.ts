@@ -26,6 +26,7 @@
  * two page scans leaves behind.
  */
 import type { Browser } from 'playwright';
+import { AUDIT_BROWSER_LOCALE } from './audit-locale.js';
 import { canonicalDigest } from '@odysseus/core';
 import {
   installBrowserNetworkSafety,
@@ -186,6 +187,7 @@ export async function captureStructuralAnchor(
   const context = await browser.newContext({
     javaScriptEnabled: false,
     userAgent: options.userAgent,
+    locale: AUDIT_BROWSER_LOCALE,
   });
   try {
     if (options.networkPolicy !== undefined) {

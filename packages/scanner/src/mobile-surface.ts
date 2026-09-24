@@ -15,6 +15,7 @@
  * intention.
  */
 import type { Browser, Page, Response } from 'playwright';
+import { AUDIT_BROWSER_LOCALE } from './audit-locale.js';
 import { getCrawlerUserAgent, getRenderSettleTimeoutMs } from './config.js';
 import { runAxe, type AxeResults } from './axe.js';
 import {
@@ -114,6 +115,7 @@ export async function runMobileSurfaceAnalysis(
     hasTouch: MOBILE_SURFACE_PROFILE.hasTouch,
     colorScheme: MOBILE_SURFACE_PROFILE.media.colorScheme,
     reducedMotion: MOBILE_SURFACE_PROFILE.media.reducedMotion,
+    locale: AUDIT_BROWSER_LOCALE,
   });
   if (options.networkPolicy !== undefined) {
     await installBrowserNetworkSafety(
