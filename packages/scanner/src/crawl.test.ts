@@ -406,6 +406,49 @@ describe('crawlSite continuation-family guard wiring', () => {
   });
 });
 
+describe('crawlSite on a site that upgrades http to https', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // An http:// start URL keeps the sitemap's http:// spellings, while the
+  // site's own links, read on the https pages, are https://. Every sitemap
+  // entry then named a page the links had already reached.
+  it('records an http sitemap entry as a redirect to the https page, not a second visit', async () => {
+    installFetchStub({
+      'http://example.com/robots.txt': `User-agent: *\nAllow: /\nSitemap: http://example.com/sitemap.xml\n`,
+      'http://example.com/sitemap.xml': [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        '  <url><loc>http://example.com/</loc></url>',
+        '  <url><loc>http://example.com/rooms</loc></url>',
+        '</urlset>',
+      ].join('\n'),
+    });
+    const upgradeToHttps = new Proxy({} as Record<string, string>, {
+      get: (_target, url: string) =>
+        url.startsWith('http://') ? `https://${url.slice('http://'.length)}` : undefined,
+    });
+    const result = await crawlSite('http://example.com', {
+      browser: makeFakeBrowser(
+        (url) => (url === 'https://example.com/' ? [{ href: '/rooms' }] : []),
+        upgradeToHttps,
+      ),
+      maxPages: 20,
+      maxDepth: 5,
+      delayMs: 0,
+      sitemapMode: 'supplement',
+    });
+
+    const visited = result.pages.filter((page) => page.status === 'visited').map((p) => p.url);
+    expect(visited.sort()).toEqual(['https://example.com/', 'https://example.com/rooms']);
+    const httpRooms = result.pages.find((page) => page.url === 'http://example.com/rooms');
+    expect(httpRooms?.status).toBe('redirect-interstitial');
+    expect(httpRooms?.redirectTargetUrl).toBe('https://example.com/rooms');
+    expect(result.sitemapCoverage?.scannedPageCount).toBe(2);
+  });
+});
+
 /** Issue #39 (Villas Foch): a real page linked bare domain and mailbox
  *  hrefs without a scheme, the crawler resolved them relative to the
  *  current path, the server answered 404, and those four URLs were then

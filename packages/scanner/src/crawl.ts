@@ -443,12 +443,16 @@ function retryAfterMs(headers: Record<string, string>): number | undefined {
   return Number.isFinite(timestamp) ? Math.max(0, timestamp - Date.now()) : undefined;
 }
 
+/** An http-to-https upgrade is a same-site redirect too: an http:// start
+ *  URL keeps a sitemap's http:// spellings, and without this every entry
+ *  was visited, and then scanned, a second time beside its https twin. */
 function sameSiteServerRedirect(requestedUrl: string, landedUrl: string): boolean {
   try {
     const requested = new URL(requestedUrl);
     const landed = new URL(landedUrl);
+    const upgradedToHttps = requested.protocol === 'http:' && landed.protocol === 'https:';
     return (
-      requested.protocol === landed.protocol &&
+      (requested.protocol === landed.protocol || upgradedToHttps) &&
       requested.port === landed.port &&
       isSameSiteHostname(requested.hostname, landed.hostname)
     );
