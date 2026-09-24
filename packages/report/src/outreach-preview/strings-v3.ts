@@ -14,6 +14,7 @@ export interface OutreachPreviewStringsV3 {
   affectedPages: string;
   severityHeading: string;
   severity: { critical: string; serious: string; moderate: string; minor: string };
+  categoryHeading: string;
   category: {
     accessibility: string;
     seo: string;
@@ -65,6 +66,7 @@ const COPY = {
     coverageIntro:
       'Le diagnostic distingue les pages recensées, les pages analysées en détail et les pages mesurées pour la vitesse.',
     totalsSubheading: 'Constats relevés',
+    categoryHeading: 'Répartition par catégorie',
     prioritiesHeading: 'À traiter en premier',
     prioritiesIntro:
       'Ces trois points suivent le même ordre de priorité que le rapport de diagnostic complet.',
@@ -95,6 +97,7 @@ const COPY = {
     coverageIntro:
       'The diagnostic distinguishes pages inventoried, pages analysed in detail and pages measured for speed.',
     totalsSubheading: 'Findings identified',
+    categoryHeading: 'Breakdown by category',
     prioritiesHeading: 'What to address first',
     prioritiesIntro:
       'These three points follow the same priority order as the full diagnostic report.',

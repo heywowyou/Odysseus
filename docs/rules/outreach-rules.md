@@ -274,6 +274,7 @@ What v3 shows, and nothing more:
 - inventoried, content-checked and performance-measured page counts, separately;
 - distinct-finding count and unique affected-page count;
 - non-zero severity totals;
+- non-zero category totals over the same distinct findings, largest first;
 - exactly three ranked priority cards in the same order as the first three
   paid-report priorities, using reviewed public-safe copy;
 - scan-data quality status and only bounded client limitations where relevant;

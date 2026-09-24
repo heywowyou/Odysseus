@@ -26,6 +26,14 @@ function summary(overrides: Partial<OutreachPreviewSummaryV3> = {}): OutreachPre
     distinctFindingCount: 5,
     affectedPageCount: 11,
     severityTotals: { critical: 1, serious: 1, moderate: 1, minor: 2 },
+    categoryTotals: {
+      accessibility: 2,
+      seo: 1,
+      geo: 0,
+      performance: 2,
+      rendering: 0,
+      privacy: 0,
+    },
     priorityCards: [
       {
         rank: 1,
@@ -82,6 +90,17 @@ describe('generateOutreachPreviewHtmlV3', () => {
     expect(markup).not.toContain('preview-scorecard');
     expect(markup).not.toContain('preview-risk');
     expect(markup).not.toContain('data-grade=');
+  });
+
+  it('breaks the findings down by category, largest first, without empty categories', () => {
+    const html = generateOutreachPreviewHtmlV3(summary());
+    const section = html.slice(html.indexOf('Répartition par catégorie'));
+    const tiles = [...section.matchAll(/<div class="stat-label">([^<]+)<\/div>/gu)]
+      .map((match) => match[1])
+      .slice(0, 3);
+    expect(tiles).toEqual(['Accessibilité', 'Performance', 'Référencement naturel']);
+    expect(section).not.toContain('Rendu JavaScript');
+    expect(section).not.toContain('Confidentialité</div>');
   });
 
   it('renders priority ranks and bounded reviewed copy only', () => {

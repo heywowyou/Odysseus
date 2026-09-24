@@ -5,6 +5,7 @@ import {
   type OutreachPreviewSummaryV3,
 } from '@odysseus/core';
 import { escapeHtml, fillTemplate, formatDate } from '../template/html-utils.js';
+import { CATEGORY_ORDER } from '../template/design-tokens.js';
 import { renderDocumentCoverLayout } from '../template/sections/cover.js';
 import { resolveDecisionQuestion } from '../template/generic-question.js';
 import { getStrings, type ReportStrings } from '../template/strings/i18n.js';
@@ -46,8 +47,15 @@ const V3_ADDITIONAL_STYLES = `
 .data-quality-status-complete { color: var(--accent-strong); }
 .data-quality-status-unavailable { color: var(--muted); }
 .limitations-list { margin: var(--space-2) 0 0; padding-left: 1.2rem; }
+.category-grid { display: grid; gap: var(--space-3); }
+.category-grid-1 { grid-template-columns: 1fr; }
+.category-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.category-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.category-grid-4 { grid-template-columns: repeat(4, 1fr); }
 .limitations-list li { margin: 0 0 var(--space-2); }
 @media (max-width: 480px) {
+  .category-grid-3,
+  .category-grid-4 { grid-template-columns: repeat(2, 1fr); }
   .priority-card { grid-template-columns: 34px minmax(0, 1fr); gap: var(--space-3); }
   .priority-rank { width: 30px; height: 30px; font-size: 15px; }
 }
@@ -95,6 +103,14 @@ function renderResults(
         `<div class="severity-tile severity-${severity}"><div class="severity-heading"><span class="severity-dot"></span><span class="severity-label">${escapeHtml(s.severity[severity])}</span></div><div class="severity-value">${input.severityTotals[severity]}</div><div class="severity-meaning">${escapeHtml(severityMeanings[severity])}</div></div>`,
     )
     .join('');
+  // Largest first, as in the full report's own category breakdown; the
+  // stable sort keeps the report's category order between equal counts.
+  const categories = CATEGORY_ORDER.filter((category) => input.categoryTotals[category] > 0).sort(
+    (a, b) => input.categoryTotals[b] - input.categoryTotals[a],
+  );
+  const categoryTiles = categories
+    .map((category) => renderStatTile(input.categoryTotals[category], s.category[category]))
+    .join('');
   return [
     `<section class="preview-section results-section" id="${PREVIEW_RESULTS_ID}">`,
     renderSectionHead(s.resultsHeading),
@@ -113,6 +129,10 @@ function renderResults(
     '</div>',
     `<h3 class="breakdown-heading">${escapeHtml(s.severityHeading)}</h3>`,
     `<div class="severity-grid severity-grid-${nonZero.length}">${severityTiles}</div>`,
+    `<h3 class="breakdown-heading">${escapeHtml(s.categoryHeading)}</h3>`,
+    // Five or six categories balance better as rows of three than as a row
+    // of four with one or two left over.
+    `<div class="category-grid category-grid-${categories.length > 4 ? 3 : categories.length}">${categoryTiles}</div>`,
     '</section>',
   ].join('');
 }

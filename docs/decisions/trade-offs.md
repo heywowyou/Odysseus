@@ -2303,6 +2303,17 @@ preview instead of publishing as a side effect, which closes the old
 publish-per-draft behaviour. A preview built by subtracting fields from a
 paid-report input remains forbidden, now in both directions.
 
+**Amended 2026-09-24: v3 adds category totals.** A prospect saw how many
+findings there were and how severe, but not which areas they fall in. The v3
+summary now carries `categoryTotals`, one count per finding category, over the
+same distinct findings as the severity totals, and the schema rejects totals
+that do not add up to the distinct-finding count. The object is strict and its
+keys are the closed `FindingCategory` vocabulary, so this admits one more
+bounded count per category and nothing else: no rule, occurrence or page
+detail. The preview renders the non-zero categories largest first, as the paid
+report's own category breakdown does. Touch 1 does not reuse these counts; its
+frozen facts are unchanged.
+
 
 ### 43. A preview is served by hashing the visitor's own token, and the public site never learns anything else
 

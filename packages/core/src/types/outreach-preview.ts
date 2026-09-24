@@ -44,6 +44,7 @@
 
 import { z } from 'zod';
 import type { Grade } from '../grade.js';
+import type { FindingCategory } from './findings.js';
 import { REGIME_TABLE, getRegime } from '../compliance/regimes.js';
 import { formatFullAuditPrice } from '../offer/pricing.js';
 import {
@@ -551,6 +552,10 @@ export interface OutreachPreviewSummaryV3 {
   distinctFindingCount: number;
   affectedPageCount: number;
   severityTotals: Record<OutreachPreviewSeverity, number>;
+  /** The same distinct findings as `severityTotals`, split by category, so
+   *  the reader sees which areas the findings fall in, not only how severe
+   *  they are. Sums to `distinctFindingCount`. */
+  categoryTotals: Record<FindingCategory, number>;
   priorityCards: [OutreachPriorityCard, OutreachPriorityCard, OutreachPriorityCard];
   dataQuality: {
     status: OutreachPreviewDiagnosticStatus;
@@ -558,6 +563,17 @@ export interface OutreachPreviewSummaryV3 {
   };
   facts: { state: 'omitted' } | { state: 'rendered'; heading: string; paragraphs: string[] };
 }
+
+const categoryTotalsSchema = z
+  .object({
+    accessibility: countSchema(MAX_TOTAL_PAGES),
+    seo: countSchema(MAX_TOTAL_PAGES),
+    geo: countSchema(MAX_TOTAL_PAGES),
+    performance: countSchema(MAX_TOTAL_PAGES),
+    rendering: countSchema(MAX_TOTAL_PAGES),
+    privacy: countSchema(MAX_TOTAL_PAGES),
+  })
+  .strict();
 
 const outreachPriorityCardV3Schema = z
   .object({
@@ -604,6 +620,7 @@ export const outreachPreviewSummaryV3Schema: z.ZodType<OutreachPreviewSummaryV3>
     distinctFindingCount: countSchema(MAX_TOTAL_PAGES),
     affectedPageCount: countSchema(MAX_TOTAL_PAGES),
     severityTotals: severityTotalsSchema,
+    categoryTotals: categoryTotalsSchema,
     priorityCards: z.tuple([
       outreachPriorityCardV3Schema,
       outreachPriorityCardV3Schema,
@@ -643,6 +660,16 @@ export const outreachPreviewSummaryV3Schema: z.ZodType<OutreachPreviewSummaryV3>
       context.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'severity totals must equal the distinct finding count',
+      });
+    }
+    const categoryTotal = Object.values(input.categoryTotals).reduce(
+      (total, count) => total + count,
+      0,
+    );
+    if (categoryTotal !== input.distinctFindingCount) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'category totals must equal the distinct finding count',
       });
     }
     if (input.distinctFindingCount < input.priorityCards.length) {

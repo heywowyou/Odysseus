@@ -16,6 +16,7 @@ import {
   summarizeAuditCoverage,
   type AuditManifest,
   type Finding,
+  type FindingCategory,
   type OutreachPreviewSeverity,
   type OutreachPreviewSummaryV3,
   type OutreachProofCard,
@@ -159,6 +160,23 @@ function aggregateFacts(
   };
 }
 
+/** Counted over the same population as `aggregateFacts`, so the two
+ *  breakdowns always add up to the same distinct finding count. */
+function categoryTotalsFor(findings: readonly Finding[]): Record<FindingCategory, number> {
+  const totals: Record<FindingCategory, number> = {
+    accessibility: 0,
+    seo: 0,
+    geo: 0,
+    performance: 0,
+    rendering: 0,
+    privacy: 0,
+  };
+  for (const finding of findings) {
+    if (!isConfinedToThirdPartyFrame(finding)) totals[finding.category] += 1;
+  }
+  return totals;
+}
+
 const UNDER_CORRECTION_RULE_IDS = new Set<string>();
 const BLOCKED_PROOF_STATUSES = new Set<string>([
   'blocked',
@@ -271,6 +289,7 @@ export function buildOutreachPreviewSummaryV3(options: {
     links: previewLinks(publicBaseUrl),
     coverage,
     ...aggregate,
+    categoryTotals: categoryTotalsFor(safeFindings),
     priorityCards: cards,
     dataQuality: {
       status: row.diagnostics.status,

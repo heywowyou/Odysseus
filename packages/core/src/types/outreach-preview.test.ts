@@ -443,6 +443,14 @@ describe('the v3 outreach preview summary contract', () => {
       distinctFindingCount: 4,
       affectedPageCount: 7,
       severityTotals: { critical: 1, serious: 1, moderate: 1, minor: 1 },
+      categoryTotals: {
+        accessibility: 2,
+        seo: 1,
+        geo: 0,
+        performance: 1,
+        rendering: 0,
+        privacy: 0,
+      },
       priorityCards: [
         priorityCard({ rank: 1, severity: 'critical' }),
         priorityCard({ rank: 2 }),
@@ -464,12 +472,37 @@ describe('the v3 outreach preview summary contract', () => {
     ).toBe(false);
   });
 
+  it('requires category totals that add up to the distinct finding count', () => {
+    expect(
+      outreachPreviewSummaryV3Schema.safeParse(
+        summaryV3({
+          categoryTotals: {
+            accessibility: 3,
+            seo: 1,
+            geo: 0,
+            performance: 1,
+            rendering: 0,
+            privacy: 0,
+          },
+        }),
+      ).success,
+    ).toBe(false);
+  });
+
   it('rejects three priority cards when the document has fewer than three distinct findings', () => {
     expect(
       outreachPreviewSummaryV3Schema.safeParse(
         summaryV3({
           distinctFindingCount: 2,
           severityTotals: { critical: 1, serious: 1, moderate: 0, minor: 0 },
+          categoryTotals: {
+            accessibility: 2,
+            seo: 0,
+            geo: 0,
+            performance: 0,
+            rendering: 0,
+            privacy: 0,
+          },
         }),
       ).success,
     ).toBe(false);
