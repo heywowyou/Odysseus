@@ -20,7 +20,7 @@ import type { Connection } from 'mongoose';
 import type { MailboxDraftAdapter } from './mailbox-draft-adapter.js';
 import type { PreviewPublisher } from './preview-publisher.js';
 
-export const MAILBOX_DRAFT_DELETE_WARNING = 'mailbox-draft-deletion-pending' as const;
+const MAILBOX_DRAFT_DELETE_WARNING = 'mailbox-draft-deletion-pending' as const;
 
 export interface WithdrawOutreachAdapters {
   /** Resolved lazily so a prospect without live previews never needs a bucket. */
