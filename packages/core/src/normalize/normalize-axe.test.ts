@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { extractAxeCandidates } from './normalize-axe.js';
+import {
+  extractAxeCandidates,
+  shapeIdentity,
+  withoutRuntimeStateClasses,
+} from './normalize-axe.js';
 import { buildAxeNode, buildAxeResultsInput, buildAxeViolation } from './fixtures.js';
 
 describe('extractAxeCandidates', () => {
@@ -280,5 +284,60 @@ describe('image-alt is one site-wide finding per frame origin (plan 075, Q5)', (
       'https://example.com/',
     );
     expect(framed?.dedupeIdentity).toBe('frame:https://maps.example.org|site-wide');
+  });
+});
+
+describe('runtime ids, state attributes and class order in identity (plan 075, H3)', () => {
+  it('gives one Swiper list the same identity whatever id it was generated with', () => {
+    expect(withoutRuntimeStateClasses('#swiper-wrapper-7162110913f1d271b')).toBe(
+      withoutRuntimeStateClasses('#swiper-wrapper-ceb139b113f101052d'),
+    );
+  });
+
+  it('keeps an authored id that only resembles a generated one', () => {
+    expect(withoutRuntimeStateClasses('#swiper-wrapper-home')).toBe('#swiper-wrapper-home');
+  });
+
+  it('reads classes in any order as the same compound selector', () => {
+    expect(
+      withoutRuntimeStateClasses('.heroscreen > .isSlide.fullGallery > .fullGallery-remoteCont'),
+    ).toBe(
+      withoutRuntimeStateClasses('.heroscreen > .fullGallery.isSlide > .fullGallery-remoteCont'),
+    );
+  });
+
+  it('leaves attribute values with spaces and dots intact while sorting classes', () => {
+    expect(withoutRuntimeStateClasses('.b.a[aria-label="hotel paris 10.e"] > img')).toBe(
+      '[aria-label="hotel paris 10.e"].a.b > img',
+    );
+  });
+
+  it('ignores the current-page state Webflow adds to one link', () => {
+    const home = shapeIdentity(
+      '<a href="/?r=0" aria-current="page" class="navbar_logo w-inline-block w--current">',
+    );
+    const other = shapeIdentity('<a href="/?r=0" class="w-inline-block navbar_logo">');
+    expect(home).toBeDefined();
+    expect(home).toBe(other);
+  });
+
+  it('merges one slider button that axe named three ways', () => {
+    const button = (target: string[]) =>
+      extractAxeCandidates(
+        buildAxeResultsInput([
+          buildAxeViolation({
+            id: 'button-name',
+            nodes: [buildAxeNode({ target, html: '<button data-action="prev"></button>' })],
+          }),
+        ]),
+        'https://example.com/',
+      )[0]?.dedupeIdentity;
+    const identities = new Set([
+      button(['.heroscreen > .isSlide.fullGallery > .fullGallery-remoteCont > button']),
+      button(['.heroscreen > .fullGallery.isSlide > .fullGallery-remoteCont > button']),
+      button(['button[data-action="prev"]']),
+    ]);
+    expect(identities.size).toBe(1);
+    expect([...identities][0]).toBeDefined();
   });
 });

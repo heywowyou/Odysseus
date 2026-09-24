@@ -541,3 +541,10 @@ entity exists but is never expected to carry an address or telephone.
 (trade-off 30, Q5). Its image files are listed in `rawEvidence.resourceUrls`;
 an image embedded as a `data:` URI has no file and appears through its element
 sample only.
+
+An axe element's identity ignores what changes between page loads: runtime
+state classes (animation, player size, Webflow's `w--current`), the
+`aria-current` attribute, Swiper's generated `swiper-wrapper-<hex>` ids, and
+the order of classes within one compound selector. `button-name` joins the
+shape-identified rules with its failure statement, like `link-name`. The
+printed selector is never rewritten.

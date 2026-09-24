@@ -106,6 +106,9 @@ function truncateSnippet(html: string): string {
  *  independent problems hides findings. Each entry is a rule where one
  *  template change fixes every occurrence:
  *   - link-name: the accessible name comes from the template writing the link.
+ *   - button-name: the same, for the template writing the button (plan 075
+ *     H3: one slider « previous » button was three critical findings on
+ *     Grand Hôtel Opéra, named three ways by axe).
  *   - scrollable-region-focusable: one tabindex on one component.
  *   - target-size: one control group, one size rule.
  *
@@ -117,6 +120,7 @@ function truncateSnippet(html: string): string {
  *  scanner output, never on the assumption that it looks similar. */
 const SHAPE_IDENTIFIED_AXE_RULES: ReadonlySet<string> = new Set([
   'link-name',
+  'button-name',
   'scrollable-region-focusable',
   'target-size',
   'aria-prohibited-attr',
@@ -149,19 +153,81 @@ const ATTRIBUTE = /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')|([^\s=]+)/g;
  *  `ytp-large-width-mode`. Measured on stored audits; add a class only when
  *  a real site shows it toggling. */
 const RUNTIME_STATE_CLASS =
-  /^(?:animated|animatedParent|animateOnce|go|slow|slower|slowest|fast|faster|in-view|aos-animate)$|^fade(?:In|Out)\w*$|^animate__\w+$|^ytp-[\w-]*-mode$/;
+  /^(?:animated|animatedParent|animateOnce|go|slow|slower|slowest|fast|faster|in-view|aos-animate|w--current)$|^fade(?:In|Out)\w*$|^animate__\w+$|^ytp-[\w-]*-mode$/;
 
 function isRuntimeStateClass(className: string): boolean {
   return RUNTIME_STATE_CLASS.test(className);
 }
 
-/** The selector with runtime state classes removed, used as the identity
- *  only; the printed selector is untouched. */
+/** Attributes that state where the visitor is, not what the element is:
+ *  Webflow marks the logo link `aria-current="page"` on the home page only,
+ *  which split one unnamed logo link into three findings on Bellevigne. */
+const RUNTIME_STATE_ATTRS: ReadonlySet<string> = new Set(['aria-current']);
+
+const RUNTIME_STATE_ATTRIBUTE_SELECTOR = /\[aria-current(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\]]*))?\]/g;
+
+/** Ids a library generates on every page load. Swiper names each slider
+ *  wrapper `swiper-wrapper-<random hex>`, so one Webflow slider list was six
+ *  critical findings on Bellevigne, one per page (trade-off 30 records the
+ *  same token defeating file identity). */
+const RUNTIME_ID = /#swiper-wrapper-[0-9a-f]{8,}(?![\w-])/g;
+
+/** One compound selector with its classes in a fixed order. Scripts add
+ *  classes in whatever order they run, and axe prints them as found: one
+ *  slider button was `.isSlide.fullGallery` on some pages and
+ *  `.fullGallery.isSlide` on others, three critical findings on Grand Hôtel
+ *  Opéra. Bracketed and parenthesised parts are kept whole. */
+function withSortedClasses(compound: string): string {
+  const kept: string[] = [];
+  const masked = compound.replace(/\[[^\]]*\]|\([^)]*\)/g, (part) => {
+    kept.push(part);
+    return `\u0000${kept.length - 1}\u0000`;
+  });
+  const classes = masked.match(/\.-?[_a-zA-Z][\w-]*/g) ?? [];
+  const rest = masked.replace(/\.-?[_a-zA-Z][\w-]*/g, '');
+  const restored = rest.replace(/\u0000(\d+)\u0000/g, (_, index: string) => kept[Number(index)]!);
+  return `${restored}${[...classes].sort().join('')}`;
+}
+
+function splitCompounds(selector: string): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let depth = 0;
+  let quote: string | undefined;
+  for (const char of selector) {
+    if (quote !== undefined) {
+      current += char;
+      if (char === quote) quote = undefined;
+      continue;
+    }
+    if (char === '"' || char === "'") quote = char;
+    else if (char === '[' || char === '(') depth += 1;
+    else if (char === ']' || char === ')') depth -= 1;
+    else if (depth === 0 && /[\s>+~]/.test(char)) {
+      if (current !== '') parts.push(current);
+      if (char !== ' ') parts.push(char);
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  if (current !== '') parts.push(current);
+  return parts;
+}
+
+/** The selector as an identity: runtime state classes, state attributes and
+ *  generated ids removed, and classes sorted within each compound. Used as
+ *  the identity only; the printed selector is untouched. */
 export function withoutRuntimeStateClasses(selector: string): string {
-  return selector
+  const stateFree = selector
     .replace(/\.(-?[_a-zA-Z][\w-]*)/g, (match, className: string) =>
       isRuntimeStateClass(className) ? '' : match,
     )
+    .replace(RUNTIME_STATE_ATTRIBUTE_SELECTOR, '')
+    .replace(RUNTIME_ID, '#swiper-wrapper-*');
+  return splitCompounds(stateFree)
+    .map((part) => (/^[>+~]$/.test(part) ? part : withSortedClasses(part)))
+    .join(' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -191,8 +257,9 @@ export function shapeIdentity(snippet: string): string | undefined {
       classList = (attr[2] ?? attr[3] ?? '')
         .split(/\s+/)
         .filter((className) => className !== '' && !isRuntimeStateClass(className))
+        .sort()
         .join(' ');
-    if (name === 'style') continue;
+    if (name === 'style' || RUNTIME_STATE_ATTRS.has(name)) continue;
     names.add(name);
   }
 
@@ -254,7 +321,7 @@ function templateIdentity(
   if (SHAPE_IDENTIFIED_AXE_RULES.has(ruleId)) {
     const shape = shapeIdentity(snippet);
     if (shape !== undefined) {
-      if (ruleId === 'link-name' || ruleId === 'aria-prohibited-attr') {
+      if (ruleId === 'link-name' || ruleId === 'button-name' || ruleId === 'aria-prohibited-attr') {
         return `${shape} | ${(failureSummary ?? '').trim()}`;
       }
       return shape;
