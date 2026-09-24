@@ -32,6 +32,7 @@ import { buildFindingsProvenance } from '@odysseus/core';
 import {
   approveWritingCandidate,
   getReportPreparation,
+  reconcileFailedAuditJobs,
   recordFailedWritingCandidate,
   recordReadyWritingCandidate,
   type AuditDocument,
@@ -219,6 +220,9 @@ export async function regenerateWriting(
     markReportProductionStage(auditId, 'pdf-generation');
     try {
       const reports = await regenerateReportsForAudit(connection, audit, artifactStore);
+      // Same as makeReportReady: a scan job that failed before its report
+      // now has a current one, so its row must stop reading as failed.
+      await reconcileFailedAuditJobs(connection);
       pdfs = { kind: 'generated', reports };
       markReportProductionCompleted(auditId);
     } catch (renderError) {

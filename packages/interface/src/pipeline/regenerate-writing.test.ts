@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@odysseus/store', () => ({
   approveWritingCandidate: vi.fn(),
   getReportPreparation: vi.fn(),
+  reconcileFailedAuditJobs: vi.fn(),
   recordFailedWritingCandidate: vi.fn(),
   recordReadyWritingCandidate: vi.fn(),
 }));
@@ -19,6 +20,7 @@ vi.mock('./regenerate-reports.js', async (importOriginal) => ({
 import {
   approveWritingCandidate,
   getReportPreparation,
+  reconcileFailedAuditJobs,
   recordReadyWritingCandidate,
 } from '@odysseus/store';
 import { runAnalysisStage } from './analysis-stage.js';
@@ -79,5 +81,12 @@ describe('writing regeneration freshness recovery', () => {
       expect.anything(),
     );
     expect(regenerateReportsForAudit).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks the failed scan job complete once the rewritten reports exist', async () => {
+    const connection = {} as never;
+    await regenerateWriting(connection, audit, undefined);
+
+    expect(reconcileFailedAuditJobs).toHaveBeenCalledWith(connection);
   });
 });
