@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       mongo-test:
-        image: mongo:7.0.39
+        image: mongo:7.0.43
         ports:
           - 27018:27017
         # The job waits for a healthy service before its first step, so the

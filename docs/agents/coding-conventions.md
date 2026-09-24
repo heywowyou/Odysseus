@@ -240,8 +240,9 @@ Its schedule, automerge and PR-limit settings have no effect in local mode.
 Applying updates:
 
 - Work in a separate worktree or branch, one Renovate group per commit. Apply
-  the group with pnpm (`pnpm up -r <pkg>@<version>`, or `pnpm update -r <pkg>`
-  for a lockfile-only update), then run `pnpm run check` and `pnpm run test`.
+  the group with pnpm at the exact version the report names (`pnpm up -r
+  <pkg>@<version>`, or `pnpm update -r --no-save <pkg>@<version>` for a
+  lockfile-only update: a bare `pnpm update` skips the minimum release age), then run `pnpm run check` and `pnpm run test`.
   Run `pnpm run test:e2e` when the group touches Playwright, Chromium,
   Lighthouse, axe, or the report renderer, and `pnpm run test:deploy` when it
   touches `deploy/`, the Dockerfile, or compose.

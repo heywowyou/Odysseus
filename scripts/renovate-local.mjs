@@ -34,7 +34,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // Renovate tracks this pin itself through the custom manager in renovate.json.
-const RENOVATE_IMAGE = 'ghcr.io/renovatebot/renovate:44.112.0';
+const RENOVATE_IMAGE = 'ghcr.io/renovatebot/renovate:44.112.1';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const jsonFlag = process.argv.indexOf('--json');
