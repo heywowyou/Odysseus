@@ -15,6 +15,7 @@ import { createProspectEventModel } from './schemas/prospect-event.schema.js';
 import { createProspectHubModel } from './schemas/prospect-hub.schema.js';
 import { createReportApprovalModel } from './schemas/report-approval.schema.js';
 import { createReportModel } from './schemas/report.schema.js';
+import { createRetentionRunModel } from './schemas/retention-run.schema.js';
 import { createSireneCacheModel } from './schemas/sirene-cache.schema.js';
 import { createSuppressionModel } from './schemas/suppression.schema.js';
 import { probeMongoAvailability, scopedMongoTestUri } from './test-support.js';
@@ -39,6 +40,7 @@ const MODEL_FACTORIES: ReadonlyArray<(connection: Connection) => Model<never>> =
   createProspectHubModel,
   createReportApprovalModel,
   createReportModel,
+  createRetentionRunModel,
   createSireneCacheModel,
   createSuppressionModel,
 ] as never;

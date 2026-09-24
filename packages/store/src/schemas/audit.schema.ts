@@ -53,6 +53,12 @@ export interface AuditDocumentFields extends Omit<
    *  audits whose evidence graph was never assembled, which the delta
    *  then treats as unknown-legacy rather than as invented comparability. */
   evidenceCoverage?: FindingsDeltaCoverage;
+  /** Plan 077: set when retention removed this superseded, delivered
+   *  audit's raw scan evidence (`pages/**`, crawl state) and kept only what
+   *  its delivered report and the findings delta read. DB-only like
+   *  manualFields. Every route that needs the raw evidence refuses an audit
+   *  carrying it. */
+  retention?: { slimmedAt: Date };
 }
 
 export type AuditDocument = AuditDocumentFields;
@@ -646,6 +652,8 @@ const gradeOverrideSchema = new Schema(
   { _id: false },
 );
 
+const retentionSchema = new Schema({ slimmedAt: { type: Date, required: true } }, { _id: false });
+
 // Exported for schemas/audit.schema.test.ts's AuditManifest-vs-paths diff
 // guard; the rest of the package keeps going through createAuditModel.
 export const auditSchema = new Schema<AuditDocument>(
@@ -687,6 +695,7 @@ export const auditSchema = new Schema<AuditDocument>(
     // verbatim by the findings delta, never queried by field (same
     // reasoning as report-quality.schema.ts's modelCalls).
     evidenceCoverage: { type: Schema.Types.Mixed } as never,
+    retention: { type: retentionSchema },
   },
   { collection: 'audits' },
 );

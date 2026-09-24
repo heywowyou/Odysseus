@@ -47,6 +47,7 @@ const documentOnlyKeys = [
   'reportPreparation',
   'gradeOverride',
   'evidenceCoverage',
+  'retention',
 ] as const;
 
 describe('auditSchema', () => {

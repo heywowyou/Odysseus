@@ -488,3 +488,32 @@ export {
   type OutreachDraftIndexMigration,
 } from './outreach-draft-index-migration.js';
 export type { RequiredUniqueIndex } from './unique-index-check.js';
+
+// Plan 077: retention snapshot, targeted deletes and the run record.
+export {
+  deleteAnalysesById,
+  deleteReportBundlesById,
+  deleteReportsById,
+  getAuditSlimmedAt,
+  getLatestRetentionRun,
+  listRetentionJobRefs,
+  loadRetentionSnapshot,
+  markAuditSlimmed,
+  persistRetentionRun,
+} from './retention.js';
+export type {
+  NewRetentionRun,
+  RetentionAnalysisRow,
+  RetentionAuditRow,
+  RetentionBundleRow,
+  RetentionJobRef,
+  RetentionQualityRunRow,
+  RetentionReportRow,
+  RetentionStoreSnapshot,
+} from './retention.js';
+export { RETENTION_RUN_TTL_DAYS } from './schemas/retention-run.schema.js';
+export type {
+  RetentionRunCounts,
+  RetentionRunDocument,
+  RetentionRunFailure,
+} from './schemas/retention-run.schema.js';
