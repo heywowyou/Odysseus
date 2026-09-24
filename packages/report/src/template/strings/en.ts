@@ -280,7 +280,11 @@ export const en: ReportStrings = {
     topPriorityIsNotLegalNoPointer:
       'Priority 1 is not tied to any accessibility criterion: it was ranked first based on its complexity-to-impact ratio. None of the priorities in this report are tied to an accessibility criterion. Other obligations unrelated to accessibility may apply separately: see the "Legal exposure" section for the detail.',
     summaryCountsTemplate:
-      'The audit identified {total} findings in total, including {actionable} that are critical or serious ({critical} critical and {serious} serious).',
+      'The audit identified {total} findings in total, including {actionable} ({critical} and {serious} serious).',
+    actionableCountSingularTemplate: '{count} that is critical or serious',
+    actionableCountPluralTemplate: '{count} that are critical or serious',
+    criticalCountSingularTemplate: '{count} critical',
+    criticalCountPluralTemplate: '{count} critical',
     coveredByPrioritiesTemplate:
       '{covered} of these {total} findings are covered by the priorities in the "{prioritiesSection}" section; the rest are listed by severity in "{remainingSection}".',
   },

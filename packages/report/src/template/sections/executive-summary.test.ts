@@ -238,6 +238,40 @@ describe('item 16: a non-legal top priority is acknowledged in the executive sum
     expect(html).not.toContain('rattachée à aucun critère');
   });
 
+  it('makes a count of one agree in the counts sentence, in French and English', () => {
+    const findings = (['critical', 'serious', 'serious', 'minor'] as const).map((severity, i) => ({
+      ...buildFinding(`f${i}`),
+      severity,
+    }));
+    const fr = renderExecutiveSummary(
+      getStrings('fr'),
+      1,
+      buildAnalysis([nonLegalTheme]),
+      findings,
+      emptyManifest,
+    );
+    expect(fr).toContain('dont 3 critiques ou sérieux (1 critique et 2 sérieux)');
+    expect(fr).not.toContain('1 critiques');
+
+    const single = renderExecutiveSummary(
+      getStrings('fr'),
+      1,
+      buildAnalysis([nonLegalTheme]),
+      findings.slice(0, 1),
+      emptyManifest,
+    );
+    expect(single).toContain('dont 1 critique ou sérieux (1 critique et 0 sérieux)');
+
+    const en = renderExecutiveSummary(
+      getStrings('en'),
+      1,
+      { ...buildAnalysis([nonLegalTheme]), language: 'en' as const },
+      findings.slice(0, 1),
+      emptyManifest,
+    );
+    expect(en).toContain('including 1 that is critical or serious (1 critical and 0 serious)');
+  });
+
   it('item 0.4: the counts sentence is bound from the findings passed in, never from the model prose', () => {
     const analysis = buildAnalysis([nonLegalTheme]);
     const findings = [

@@ -309,7 +309,11 @@ export const fr: ReportStrings = {
     topPriorityIsNotLegalNoPointer:
       "La priorité 1 n'est rattachée à aucun critère d'accessibilité : elle a été classée en premier sur la base de son rapport complexité/impact. Aucune des priorités retenues dans ce rapport n'est rattachée à un critère d'accessibilité. D'autres obligations, sans lien avec l'accessibilité, peuvent s'appliquer par ailleurs : voir la section « Cadre réglementaire » pour le détail.",
     summaryCountsTemplate:
-      "L'audit a identifié {total} constats au total, dont {actionable} critiques ou sérieux ({critical} critiques et {serious} sérieux).",
+      "L'audit a identifié {total} constats au total, dont {actionable} ({critical} et {serious} sérieux).",
+    actionableCountSingularTemplate: '{count} critique ou sérieux',
+    actionableCountPluralTemplate: '{count} critiques ou sérieux',
+    criticalCountSingularTemplate: '{count} critique',
+    criticalCountPluralTemplate: '{count} critiques',
     coveredByPrioritiesTemplate:
       'Parmi ces {total} constats, {covered} sont couverts par les priorités de la section « {prioritiesSection} » ; les autres sont listés par sévérité dans « {remainingSection} ».',
   },

@@ -498,6 +498,14 @@ export interface ReportStrings {
      *  beneath the model's qualitative prose: the summary leads, the
      *  template-owned counts follow. */
     summaryCountsTemplate: string;
+    /** The counted phrases {actionable} and {critical} are filled with, so
+     *  a count of one agrees ("1 critique", "1 that is critical") instead of
+     *  the fixed plural a bare number inside the template forced. Template:
+     *  {count}. Chosen through html-utils.ts's pluralize. */
+    actionableCountSingularTemplate: string;
+    actionableCountPluralTemplate: string;
+    criticalCountSingularTemplate: string;
+    criticalCountPluralTemplate: string;
     /** Fix #1, 2026-08-25 report review: bridges the site-wide count in
      *  summaryCountsTemplate to the 6-card Priorities section, which does
      *  not cover every critical/serious finding (themes.ts's

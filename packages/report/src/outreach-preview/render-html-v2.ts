@@ -20,7 +20,7 @@ import {
   outreachPreviewSummarySchema,
   type OutreachPreviewSummary,
 } from '@odysseus/core';
-import { escapeHtml, fillTemplate, formatDate } from '../template/html-utils.js';
+import { escapeHtml, fillTemplate, formatDate, pluralize } from '../template/html-utils.js';
 import { computeSeverityGrade, computeSeverityRiskLevel } from '../template/grade.js';
 import { renderScorecardGrade } from '../template/render-scorecard.js';
 import { renderDocumentCoverLayout } from '../template/sections/cover.js';
@@ -57,11 +57,19 @@ function renderGradeSignal(input: OutreachPreviewSummary, s: OutreachPreviewStri
     .join('');
   const basisNote = fillTemplate(s.riskBasisTemplate, {
     critical: input.severityTotals.critical,
-    criticalWord:
-      input.severityTotals.critical === 1 ? s.criticalFindingSingular : s.criticalFindingPlural,
+    criticalWord: pluralize(
+      input.language,
+      input.severityTotals.critical,
+      s.criticalFindingSingular,
+      s.criticalFindingPlural,
+    ),
     serious: input.severityTotals.serious,
-    seriousWord:
-      input.severityTotals.serious === 1 ? s.seriousFindingSingular : s.seriousFindingPlural,
+    seriousWord: pluralize(
+      input.language,
+      input.severityTotals.serious,
+      s.seriousFindingSingular,
+      s.seriousFindingPlural,
+    ),
   });
   return [
     `<div class="preview-signal" id="${PREVIEW_CONTENT_ID}">`,

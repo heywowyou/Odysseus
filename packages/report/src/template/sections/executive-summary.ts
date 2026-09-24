@@ -8,6 +8,7 @@ import {
   escapeProse,
   fillTemplate,
   formatNumber,
+  pluralize,
   renderSheetHeader,
   sheet,
 } from '../html-utils.js';
@@ -283,9 +284,21 @@ export function renderExecutiveSummary(
   // how a real report ended up stating "94 constats" in this sentence
   // while the cover, stats tile, and severity chart all said 93.
   const stats = computeStatistics(findings, manifest);
+  const countedPhrase = (count: number, singular: string, plural: string): string =>
+    fillTemplate(pluralize(analysis.language, count, singular, plural), {
+      count: formatNumber(count, analysis.language),
+    });
   const countsSentence = fillTemplate(e.summaryCountsTemplate, {
-    actionable: formatNumber(stats.critical + stats.serious, analysis.language),
-    critical: formatNumber(stats.critical, analysis.language),
+    actionable: countedPhrase(
+      stats.critical + stats.serious,
+      e.actionableCountSingularTemplate,
+      e.actionableCountPluralTemplate,
+    ),
+    critical: countedPhrase(
+      stats.critical,
+      e.criticalCountSingularTemplate,
+      e.criticalCountPluralTemplate,
+    ),
     serious: formatNumber(stats.serious, analysis.language),
     total: formatNumber(stats.totalFindings, analysis.language),
   });

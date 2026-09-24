@@ -108,8 +108,8 @@ export function applyEnglishClientFacingCopy(strings: ReportStrings): ReportStri
         'The most significant findings on this site are concentrated in accessibility; organic ' +
         'search and visibility in AI assistants require fewer priority fixes.',
       summaryCountsTemplate:
-        'The diagnostic found {total} distinct findings, including {actionable} that are critical ' +
-        'or serious ({critical} critical and {serious} serious).',
+        'The diagnostic found {total} distinct findings, including {actionable} ' +
+        '({critical} and {serious} serious).',
       coveredByPrioritiesTemplate:
         'The priorities in the "{prioritiesSection}" section cover {covered} of the {total}; the ' +
         'remainder stay documented by severity in "{remainingSection}".',

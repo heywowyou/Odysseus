@@ -75,15 +75,19 @@ function renderRiskBadge(
   const stats = computeStatistics(findings, manifest);
   const basisNote = fillTemplate(strings.metadata.riskBasisTemplate, {
     critical: formatNumber(stats.critical, analysis.language),
-    criticalWord:
-      stats.critical === 1
-        ? strings.metadata.criticalFindingSingular
-        : strings.metadata.criticalFindingPlural,
+    criticalWord: pluralize(
+      analysis.language,
+      stats.critical,
+      strings.metadata.criticalFindingSingular,
+      strings.metadata.criticalFindingPlural,
+    ),
     serious: formatNumber(stats.serious, analysis.language),
-    seriousWord:
-      stats.serious === 1
-        ? strings.metadata.seriousFindingSingular
-        : strings.metadata.seriousFindingPlural,
+    seriousWord: pluralize(
+      analysis.language,
+      stats.serious,
+      strings.metadata.seriousFindingSingular,
+      strings.metadata.seriousFindingPlural,
+    ),
   });
 
   return `

@@ -155,8 +155,8 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
         'le référencement naturel et la visibilité dans les assistants IA appellent moins de ' +
         'corrections prioritaires.',
       summaryCountsTemplate:
-        'Le diagnostic a relevé {total} constats distincts, dont {actionable} critiques ou ' +
-        'sérieux ({critical} critiques et {serious} sérieux).',
+        'Le diagnostic a relevé {total} constats distincts, dont {actionable} ' +
+        '({critical} et {serious} sérieux).',
       coveredByPrioritiesTemplate:
         'Les priorités présentées dans la section « {prioritiesSection} » en couvrent ' +
         '{covered} sur {total} ; les autres restent documentés par gravité dans ' +
