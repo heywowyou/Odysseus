@@ -14,6 +14,7 @@ import {
   outreachResultNotice,
   scanAgeLabel,
   scanRefusalNotice,
+  visibleDrafts,
   websiteAddition,
 } from './prospect-hub-detail-model';
 
@@ -175,5 +176,17 @@ describe('scanAgeLabel', () => {
       '1 day ago',
       '3 days ago',
     ]);
+  });
+});
+
+describe('visibleDrafts', () => {
+  it('lists live drafts and hides discarded drafts and failed attempts', () => {
+    const drafts = [
+      { draftId: 'live', status: 'created' },
+      { draftId: 'discarded', status: 'deleted', reviewOutcome: 'skipped' },
+      { draftId: 'failed', status: 'failed' },
+      { draftId: 'pending-delete', status: 'mailbox-delete-pending' },
+    ];
+    expect(visibleDrafts(drafts).map((draft) => draft.draftId)).toEqual(['live', 'pending-delete']);
   });
 });

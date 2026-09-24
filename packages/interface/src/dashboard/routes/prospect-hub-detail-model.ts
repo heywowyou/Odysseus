@@ -11,6 +11,17 @@ import { normalizeSiren } from './audit-detail-model';
 
 type DetailCopy = DashboardStrings['prospectHub']['detail'];
 
+/** The drafts the page lists. A discarded draft is gone for the operator:
+ *  listing it would keep the prospect looking drafted after a return to its
+ *  audited state. A failed attempt never became a draft; its refusal was
+ *  shown when it happened, and its links point at a preview already taken
+ *  offline. Both rows stay stored for history. */
+export function visibleDrafts<T extends { status: string; reviewOutcome?: string }>(
+  drafts: readonly T[],
+): T[] {
+  return drafts.filter((draft) => draft.reviewOutcome !== 'skipped' && draft.status !== 'failed');
+}
+
 export interface DetailWebsite {
   url: string;
   registrableDomain: string;

@@ -56,6 +56,7 @@ import {
   outreachResultNotice,
   scanAgeLabel,
   scanRefusalNotice,
+  visibleDrafts,
   websiteAddition,
 } from './prospect-hub-detail-model';
 import { formatCommune, formatDateTime, formatSector } from '../lib/format';
@@ -360,9 +361,7 @@ export function ProspectHubDetailPage(): JSX.Element {
   // copied, and revoked next to the publish action for as long as it is live.
   const livePreview = previews.find((preview) => preview.status === 'live');
   const livePreviewUrl = livePreview?.url ?? null;
-  // A discarded draft is gone for the operator: listing it would keep the
-  // prospect looking drafted after a return to its audited state.
-  const drafts = (prospect.drafts ?? []).filter((draft) => draft.reviewOutcome !== 'skipped');
+  const drafts = visibleDrafts(prospect.drafts ?? []);
   const work = prospect.work;
   const recommendation = work?.recommendation;
   const activeScan = work?.activeScan;
