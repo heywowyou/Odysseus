@@ -12,7 +12,7 @@ Brief: `docs/agents/audit-data-defect-hunt.md`
 | 4 | 2026-09-23 | 8 post-075 rescans (7 full, 1 capped pilot) | All 10 (fresh angle: terminal job state against its artifacts) | 7 | Part F (F1 to F7); rescan execution ledger |
 | 5 | 2026-09-23 | Same 8 | All 11 (fresh angle: run-to-run determinism) | 4 | Part F (F8 to F11, Q4) |
 | 6 | 2026-09-23 | hotelchateauroyal and grandhotelchicago rescans, their FR reports, the reference audit, the lacoorniche failure | Population, acquisition, counting, legal, stored products (partial: not all 11 angles) | 7 | Part G (G1 to G7) |
-| 7 | 2026-09-24 | Latest full audit of all 13 VPS sites (7 new since sweep 6), plus an in-memory re-normalization of each with `5abe9b7a` | All 12 except stored products in the database (read-only MCP down) and determinism (no repeated run) | 7 | Part H (H1 to H7, Q5); plan reopened |
+| 7 | 2026-09-24 | Latest full audit of all 13 VPS sites (7 new since sweep 6), plus an in-memory re-normalization of each with `5abe9b7a` | All 12 except determinism (no repeated run) | 7 | Part H (H1 to H7, Q5); plan reopened |
 
 These first three sweeps predate the brief and did not each cover every
 angle, so they do not count toward the stop rule. The next run starts at
@@ -160,9 +160,19 @@ ones on 12 of 13 (haaitza 55 → 56), so the defects are live in today's code.
   whistlerparis's cover counts 59 critical where the site has 7 images, and
   its priorities lead with them. PDFs were not copied; counts read from the
   findings the report is built from.
-- Stored products: whistlerparis has a generated FR report on the split data
-  (`2026-09-24T18-32-45Z`). Approvals, previews and drafts not checked: the
-  read-only database MCP did not connect.
+- Stored products: whistlerparis has a generated FR report on the split
+  data (`2026-09-24T18-32-45Z`), not sent. Five first emails went out on
+  2026-09-24 with live v3 previews (read from the database and the preview
+  bucket through the app container, read-only): villasfoch, capdantibes,
+  atlantichotel, hoteldegarlande, grandhotelbellevue. Each preview's
+  `sourceFindingsDigest` equals its audit's. No false claim is shown, and all
+  three priority cards describe real defects. Totals are inflated where
+  splits exist: villasfoch « Critique 15 » (14 are H1's split `image-alt`),
+  grandhotelbellevue « Sérieux 23 » (12 `link-name`, known split),
+  capdantibes « Sérieux 17 » (10 `target-size`). hoteldegarlande's third
+  card (critical LCP) rests on lab runs only, since CrUX has no LCP for it
+  (E5). Republishing would revoke the links already sent, so the previews
+  stay; corrections go into the paid report after Part H.
 - Terminal state: hotelpointfrance's report step failure is the known
   structure-pass limit (recorded at 075 closure).
 - Determinism: no audit has two runs of the same pages this sweep.
@@ -189,8 +199,6 @@ new audits exist then.
 - What makes chicago's lab runs bimodal (whole-`body` shifts in some runs
   only); the finding side is covered by F9. Settled only by a Lighthouse
   probe of the homepage.
-- Stored products for sweep 7 (approvals, previews, drafts) were not read:
-  the read-only database MCP did not connect.
 - French copy was read in the stored PDFs for the rules touched by this
   sweep only; a full per-rule review against the writing style and
   obligation basis is still open (angle 8).
