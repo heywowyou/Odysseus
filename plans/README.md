@@ -14,8 +14,9 @@ Earlier indexes are kept as history, not as binding decisions:
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 | --- | --- | --- | --- | --- | --- |
+| [077](077-keep-latest-versions-only.md) | Keep the latest version, delete superseded ones after a grace period | P2 | L | none | TODO: approved 2026-09-24, not started. |
 
-No plan is active. Verified findings waiting to be planned are GitHub issues.
+Verified findings waiting to be planned are GitHub issues.
 
 Status values: `TODO`, `IN PROGRESS`, `IMPLEMENTED`, `DONE`,
 `BLOCKED: <reason>`, `FROZEN` (parked backlog, file under `archive/`,
