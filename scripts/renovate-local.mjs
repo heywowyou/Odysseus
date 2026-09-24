@@ -141,6 +141,8 @@ function parseLog(log) {
               currentVersion: dep.currentVersion,
               newValue: update.newValue,
               newVersion: update.newVersion,
+              currentDigest: dep.currentDigest,
+              newDigest: update.newDigest,
               updateType: update.updateType,
               isLockfileUpdate: update.isLockfileUpdate === true,
             });
@@ -174,8 +176,15 @@ function groupUpdates(updates) {
 }
 
 function describe(update) {
-  const from = update.currentVersion ?? update.currentValue;
-  const to = update.isLockfileUpdate ? `${update.newVersion} (lockfile)` : update.newValue;
+  // A lockfile update keeps the range, so the installed version is what moves;
+  // otherwise the declared range (or pin) in the package file is what changes.
+  const from = update.isLockfileUpdate
+    ? (update.currentVersion ?? update.currentValue)
+    : (update.currentValue ?? update.currentVersion);
+  const digest = update.newDigest !== undefined ? `@${update.newDigest.slice(0, 19)}` : '';
+  const to = update.isLockfileUpdate
+    ? `${update.newVersion} (lockfile)`
+    : `${update.newValue}${digest}`;
   return `${update.depName} ${from} -> ${to} [${update.packageFile}]`;
 }
 

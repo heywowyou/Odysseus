@@ -62,6 +62,11 @@
       "labels": ["renovate/manual-major-review"]
     },
     {
+      "description": "The regex-tracked pins (restic, the local Renovate image, agent tooling) have no digest capture group, so they stay pinned by version, not digest.",
+      "matchManagers": ["custom.regex"],
+      "pinDigests": false
+    },
+    {
       "description": "Issue #252: automerge only dev-only patch updates, and only after every required CI check passes.",
       "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["patch"],
