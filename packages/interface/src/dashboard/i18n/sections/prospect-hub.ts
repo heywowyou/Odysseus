@@ -827,6 +827,8 @@ export const prospectHub = {
         'reference-audit-unavailable': 'exemple d’audit permanent indisponible',
         'no-mailbox-configured': 'boîte mail non configurée',
         'insufficient-safe-cards': 'preuves sûres insuffisantes',
+        'preview-lint-rejected':
+          'le contrôle final de l’aperçu a refusé son texte ; rien n’a été publié (détail dans le journal du serveur)',
         'no-usable-contact': 'aucun contact utilisable',
         'evidence-incomplete': 'preuves incomplètes',
         'preview-not-published': 'aperçu non publié',
@@ -1360,6 +1362,8 @@ export const prospectHub = {
         'reference-audit-unavailable': 'the permanent reference audit is unavailable',
         'no-mailbox-configured': 'mailbox is not configured',
         'insufficient-safe-cards': 'not enough safe proof cards',
+        'preview-lint-rejected':
+          'the preview’s final check rejected its text; nothing was published (details in the server log)',
         'no-usable-contact': 'no usable contact',
         'evidence-incomplete': 'evidence is incomplete',
         'preview-not-published': 'preview is not published',

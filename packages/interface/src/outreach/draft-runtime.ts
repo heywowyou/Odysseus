@@ -512,6 +512,7 @@ export type CreateFirstEmailRefusal =
   | 'coverage-incomplete'
   | 'report-not-ready'
   | 'priority-copy-unavailable'
+  | 'preview-lint-rejected'
   | 'preview-stale'
   | 'superseded-preview-cleanup-failed';
 export type CreateFirstEmailResult =

@@ -260,8 +260,8 @@ export interface SurfaceLimitationRecord extends SurfaceCapabilityStatement {
 
 export const MOBILE_UA_NEGOTIATION_LIMITATION: SurfaceCapabilityStatement = {
   code: 'mobile-ua-negotiated-variant-untested',
-  fr: "L'analyse mobile conserve l'identité de notre robot d'analyse : seules la fenêtre d'affichage et les capacités tactiles changent. Les variantes du site servies uniquement à un navigateur mobile identifié par son user-agent ne sont pas testées.",
-  en: 'The mobile analysis keeps our published crawler identity: only the viewport and touch capabilities change. Variants of the site served only to a mobile browser identified by its user agent are not tested.',
+  fr: "L'analyse mobile conserve l'identité de notre outil d'analyse : seules la fenêtre d'affichage et les capacités tactiles changent. Les variantes du site servies uniquement à un navigateur mobile identifié par son user-agent ne sont pas testées.",
+  en: "The mobile analysis keeps our analysis tool's published identity: only the viewport and touch capabilities change. Variants of the site served only to a mobile browser identified by its user agent are not tested.",
 };
 
 /** The statement recorded on a page whose mobile surface could not run at
@@ -278,8 +278,8 @@ export const MOBILE_SURFACE_UNAVAILABLE: SurfaceCapabilityStatement = {
  *  no impersonation, no partial mobile evidence). */
 export const MOBILE_SURFACE_IDENTITY_REFUSED: SurfaceCapabilityStatement = {
   code: 'mobile-ua-identity-refused',
-  fr: "La surface mobile a été refusée pour cette page : elle exige l'identité publiée de notre robot et une autre identité était configurée.",
-  en: "One page's mobile surface was refused: it requires our published crawler identity and a different identity was configured.",
+  fr: "La surface mobile a été refusée pour cette page : elle exige l'identité publiée de notre outil d'analyse et une autre identité était configurée.",
+  en: "One page's mobile surface was refused: it requires our analysis tool's published identity and a different identity was configured.",
 };
 
 /**

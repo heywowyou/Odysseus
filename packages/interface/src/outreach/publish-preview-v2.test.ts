@@ -148,12 +148,23 @@ function row(overrides: Partial<OutreachPublicationRowV3> = {}): OutreachPublica
   };
 }
 
+function limitationWith(fr: string) {
+  return {
+    limitationId: 'lim-wording',
+    code: 'mobile-ua-negotiated-variant-untested',
+    summary: { fr, en: 'The mobile analysis keeps our published crawler identity.' },
+    reportDestination: 'section-11',
+    evidenceRefs: ['ref-1'],
+  };
+}
+
 function harness(
   overrides: {
     suppressed?: boolean;
     recordPreview?: boolean;
     previous?: { previewId: string; objectKey: string };
     failPreviousDelete?: boolean;
+    row?: OutreachPublicationRowV3;
   } = {},
 ) {
   const publisher = createInMemoryPreviewPublisher();
@@ -163,7 +174,7 @@ function harness(
   const operations: string[] = [];
   const store: OutreachPreviewStorePortV3 & { recorded: unknown[] } = {
     recorded,
-    findPublicationRow: () => Promise.resolve(row()),
+    findPublicationRow: () => Promise.resolve(overrides.row ?? row()),
     isSuppressed: () => Promise.resolve(overrides.suppressed ?? false),
     recordPreview: (input) => {
       recorded.push(input);
@@ -383,6 +394,62 @@ describe('publishPreviewV3', () => {
     });
     expect(h.store.recorded).toEqual([]);
     expect(h.publisher.keys()).toHaveLength(0);
+  });
+
+  it('publishes an audit whose stored limitation uses the legacy crawler wording', async () => {
+    const h = harness({
+      row: row({
+        diagnostics: {
+          status: 'limited',
+          clientLimitations: [
+            limitationWith(
+              "L'analyse mobile conserve l'identité de notre robot d'analyse : seules la fenêtre d'affichage et les capacités tactiles changent.",
+            ),
+          ],
+          operationalWarnings: [],
+        },
+      }),
+    });
+    const result = await publishPreviewV3({
+      store: h.store,
+      publisher: h.publisher,
+      publicBaseUrl: BASE_URL,
+      prospectId: 'prospect-1',
+      language: 'fr',
+      dryRun: false,
+      now: NOW,
+    });
+    expect(result.published).toBe(true);
+    const [key] = h.publisher.keys();
+    const html = (await h.publisher.get(key!))?.html ?? '';
+    expect(html).toContain('notre outil d');
+    expect(html).not.toContain('notre robot');
+  });
+
+  it('refuses without uploading when the final lint rejects the page', async () => {
+    const h = harness({
+      row: row({
+        diagnostics: {
+          status: 'limited',
+          clientLimitations: [limitationWith('Nos outils déterministes ont vu ce point.')],
+          operationalWarnings: [],
+        },
+      }),
+    });
+    for (const dryRun of [true, false]) {
+      const result = await publishPreviewV3({
+        store: h.store,
+        publisher: h.publisher,
+        publicBaseUrl: BASE_URL,
+        prospectId: 'prospect-1',
+        language: 'fr',
+        dryRun,
+        now: NOW,
+      });
+      expect(result).toEqual({ published: false, refusal: 'preview-lint-rejected' });
+    }
+    expect(h.publisher.keys()).toHaveLength(0);
+    expect(h.store.recorded).toEqual([]);
   });
 
   it('still removes an uploaded object if persistence loses the suppression race', async () => {

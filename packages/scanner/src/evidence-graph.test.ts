@@ -168,7 +168,7 @@ describe('assembleAuditEvidenceGraph', () => {
       (entry) => entry.code === 'robots-disallowed-pages',
     );
     expect(robots?.summary.fr).toBe(
-      "2 pages du site n'ont pas été analysées, car son fichier robots.txt en interdit l'accès à notre robot d'analyse.",
+      "2 pages du site n'ont pas été analysées, car son fichier robots.txt en interdit l'accès à notre outil d'analyse.",
     );
     expect(robots?.summary.en).toContain('2 pages of the site were not analysed');
     expect(robots?.evidenceRefs).toEqual([`${ORIGIN}/admin`, `${ORIGIN}/prive`]);

@@ -245,15 +245,15 @@ const INVENTORY_DISCLOSURES: Partial<
     code: 'robots-disallowed-pages',
     fr: byCount(
       count,
-      "Une page du site n'a pas été analysée, car son fichier robots.txt en interdit l'accès à notre robot d'analyse.",
+      "Une page du site n'a pas été analysée, car son fichier robots.txt en interdit l'accès à notre outil d'analyse.",
       (n) =>
-        `${n} pages du site n'ont pas été analysées, car son fichier robots.txt en interdit l'accès à notre robot d'analyse.`,
+        `${n} pages du site n'ont pas été analysées, car son fichier robots.txt en interdit l'accès à notre outil d'analyse.`,
     ),
     en: byCount(
       count,
-      'One page of the site was not analysed because its robots.txt file forbids our crawler from accessing it.',
+      'One page of the site was not analysed because its robots.txt file forbids our analysis tool from accessing it.',
       (n) =>
-        `${n} pages of the site were not analysed because its robots.txt file forbids our crawler from accessing them.`,
+        `${n} pages of the site were not analysed because its robots.txt file forbids our analysis tool from accessing them.`,
     ),
   }),
   'operator-excluded': (count) => ({
@@ -990,15 +990,15 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
         HYDRATION_BOUND_LIMITATION.code,
         byCount(
           hydrationBoundPages.length,
-          "Le contenu d'une page continuait de s'afficher pendant le défilement de notre robot : la page n'a été analysée que jusqu'à la limite de ce balayage.",
+          "Le contenu d'une page continuait de s'afficher pendant le défilement effectué par notre outil d'analyse : la page n'a été analysée que jusqu'à la limite de ce balayage.",
           (n) =>
-            `Le contenu de ${n} pages continuait de s'afficher pendant le défilement de notre robot : ces pages n'ont été analysées que jusqu'à la limite de ce balayage.`,
+            `Le contenu de ${n} pages continuait de s'afficher pendant le défilement effectué par notre outil d'analyse : ces pages n'ont été analysées que jusqu'à la limite de ce balayage.`,
         ),
         byCount(
           hydrationBoundPages.length,
-          "One page's content kept loading while our crawler scrolled: the page was analysed only up to the bound of that sweep.",
+          "One page's content kept loading while our analysis tool scrolled: the page was analysed only up to the bound of that sweep.",
           (n) =>
-            `${n} pages' content kept loading while our crawler scrolled: those pages were analysed only up to the bound of that sweep.`,
+            `${n} pages' content kept loading while our analysis tool scrolled: those pages were analysed only up to the bound of that sweep.`,
         ),
         hydrationBoundPages,
       ),

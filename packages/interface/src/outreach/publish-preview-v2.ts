@@ -26,10 +26,12 @@ import {
   generateOutreachPreviewHtmlV3,
   MissingReviewedRemediationError,
   OUTREACH_PROOF_CARD_COPY,
+  OutreachPreviewLintError,
   isConfinedToThirdPartyFrame,
   primaryFindingFilter,
 } from '@odysseus/report';
 import type { AuditEvidenceDiagnostics } from '../pipeline/audit-evidence-diagnostics.js';
+import { currentLimitationWording } from './limitation-wording.js';
 import { createPreviewToken, deriveObjectKey, hashPreviewToken } from './preview-token.js';
 import type { PreviewPublisher } from './preview-publisher.js';
 import { logger } from '../logger.js';
@@ -43,6 +45,7 @@ export type PublishPreviewV3Refusal =
   | 'suppressed'
   | 'insufficient-safe-cards'
   | 'priority-copy-unavailable'
+  | 'preview-lint-rejected'
   | 'superseded-preview-cleanup-failed';
 
 export function previewLinks(publicBaseUrl: string): {
@@ -275,7 +278,10 @@ export function buildOutreachPreviewSummaryV3(options: {
         row.diagnostics.status === 'limited'
           ? row.diagnostics.clientLimitations.map((limitation) => ({
               code: limitation.code,
-              summary: limitation.summary,
+              summary: {
+                fr: currentLimitationWording(limitation.summary.fr),
+                en: currentLimitationWording(limitation.summary.en),
+              },
             }))
           : [],
     },
@@ -297,6 +303,20 @@ export function buildOutreachPreviewSummaryV3(options: {
 
 function refuse(refusal: PublishPreviewV3Refusal): PublishPreviewV3Result {
   return { published: false, refusal };
+}
+
+/** The final lint is fail-closed by design; a rejection is reported as a
+ *  refusal the dashboard can name rather than an unhandled server error. */
+export function renderOutreachPreviewHtmlV3(
+  summary: OutreachPreviewSummaryV3,
+): { html: string } | { refused: 'preview-lint-rejected' } {
+  try {
+    return { html: generateOutreachPreviewHtmlV3(summary) };
+  } catch (error) {
+    if (!(error instanceof OutreachPreviewLintError)) throw error;
+    logger.error({ rule: error.rule }, 'outreach preview rejected by its final lint');
+    return { refused: 'preview-lint-rejected' };
+  }
 }
 
 export type PublishedPreviewDraftRefusal =
@@ -428,6 +448,9 @@ export async function publishPreviewV3(
   });
   if ('refused' in built) return refuse(built.refused);
 
+  const rendered = renderOutreachPreviewHtmlV3(built.summary);
+  if ('refused' in rendered) return refuse(rendered.refused);
+
   if (options.dryRun) {
     return {
       published: false,
@@ -442,7 +465,7 @@ export async function publishPreviewV3(
     };
   }
 
-  const html = generateOutreachPreviewHtmlV3(built.summary);
+  const { html } = rendered;
   const token = createPreviewToken();
   const tokenHash = hashPreviewToken(token);
   const objectKey = deriveObjectKey(tokenHash);

@@ -31,8 +31,8 @@ export const HYDRATION_SWEEP_UNAVAILABLE: SurfaceCapabilityStatement = {
  *  saw. This is the explicit surface limitation section 9 requires. */
 export const HYDRATION_BOUND_LIMITATION: SurfaceCapabilityStatement = {
   code: 'hydration-bound-reached',
-  fr: "Le contenu d'une page continuait de s'afficher pendant le défilement de notre robot : la page n'a été analysée que jusqu'à la limite de ce balayage.",
-  en: "One page's content kept loading while our crawler scrolled: the page was analysed only up to the bound of that sweep.",
+  fr: "Le contenu d'une page continuait de s'afficher pendant le défilement effectué par notre outil d'analyse : la page n'a été analysée que jusqu'à la limite de ce balayage.",
+  en: "One page's content kept loading while our analysis tool scrolled: the page was analysed only up to the bound of that sweep.",
 };
 
 /** Scroll steps the sweep will pay for at most. A real lazy page settles

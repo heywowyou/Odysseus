@@ -69,7 +69,6 @@ import {
   computeAutomaticGrade,
   summarizeThirdPartyFindings,
   findUnconfirmedIdentityFields,
-  generateOutreachPreviewHtmlV3,
   generateOutreachPreviewPdf,
   remediationFor,
   resolveEffectiveGrade,
@@ -83,6 +82,7 @@ import { createMongoOutreachPreviewStoreV3 } from '../outreach/mongo-outreach-pr
 import {
   buildOutreachPreviewSummaryV3,
   publishPreviewV3,
+  renderOutreachPreviewHtmlV3,
   type PublishPreviewV3Refusal,
 } from '../outreach/publish-preview-v2.js';
 import type { Router } from '../router.js';
@@ -498,7 +498,9 @@ async function buildAuditOutreachPreviewHtml(
     if ('refused' in row) return { state: 'refused', refusal: row.refused };
     const built = buildOutreachPreviewSummaryV3({ row, language: 'fr', publicBaseUrl });
     if ('refused' in built) return { state: 'refused', refusal: built.refused };
-    return { state: 'rendered', html: generateOutreachPreviewHtmlV3(built.summary) };
+    const rendered = renderOutreachPreviewHtmlV3(built.summary);
+    if ('refused' in rendered) return { state: 'refused', refusal: rendered.refused };
+    return { state: 'rendered', html: rendered.html };
   }
 
   const [findings, selected, frReport] = await Promise.all([
@@ -544,7 +546,9 @@ async function buildAuditOutreachPreviewHtml(
     publicBaseUrl,
   });
   if ('refused' in built) return { state: 'refused', refusal: built.refused };
-  return { state: 'rendered', html: generateOutreachPreviewHtmlV3(built.summary) };
+  const rendered = renderOutreachPreviewHtmlV3(built.summary);
+  if ('refused' in rendered) return { state: 'refused', refusal: rendered.refused };
+  return { state: 'rendered', html: rendered.html };
 }
 
 export function registerAuditRoutes(router: Router, connection: Connection): void {

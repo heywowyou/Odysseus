@@ -531,6 +531,8 @@ export const auditDetail = {
           'Pas assez de priorités exploitables pour construire un aperçu fiable.',
         'priority-copy-unavailable':
           'Une des trois premières priorités ne dispose pas encore d’un libellé public validé ; l’aperçu n’est pas publié.',
+        'preview-lint-rejected':
+          'Le contrôle final de l’aperçu a refusé son texte : l’aperçu n’est pas publié. Le détail figure dans le journal du serveur.',
         'preview-stale':
           'Le rapport sélectionné a changé depuis la publication de cet aperçu : réémettez le lien avant de rédiger un nouvel email.',
         'not-an-outreach-audit': 'Cet audit n’est pas lié à un prospect de la campagne.',
@@ -876,6 +878,8 @@ export const auditDetail = {
         'insufficient-safe-cards': 'Too few usable priorities to build a reliable preview.',
         'priority-copy-unavailable':
           'One of the first three priorities does not yet have approved public copy, so the preview was not published.',
+        'preview-lint-rejected':
+          'The preview’s final check rejected its text, so the preview was not published. The server log has the details.',
         'preview-stale':
           'The selected report changed after this preview was published: reissue the link before drafting a new email.',
         'not-an-outreach-audit': 'This audit is not linked to a campaign prospect.',
