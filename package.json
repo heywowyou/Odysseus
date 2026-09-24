@@ -36,7 +36,8 @@
     "fixtures:refresh": "node scripts/refresh-fixtures.mjs",
     "measure:audit-data-quality": "node scripts/measure-audit-data-quality.mjs",
     "fixtures:pushback-corpus": "tsx scripts/build-pushback-corpus.ts",
-    "deps:check": "node scripts/renovate-local.mjs"
+    "deps:check": "node scripts/renovate-local.mjs",
+    "deps:apply": "node scripts/renovate-apply.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
