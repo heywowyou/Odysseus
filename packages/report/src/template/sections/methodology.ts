@@ -119,6 +119,12 @@ function renderFact(
         : m.legalCitationTransactionalFlowLocationOnSite;
       return fillTemplate(m.legalCitationTransactionalFlowFactTemplate, { flowType, location });
     }
+    case 'sme-balance-sheet-unknown':
+      return fillTemplate(m.legalCitationSmeBalanceSheetUnknownFactTemplate, {
+        effectifCode: fact.effectifCode,
+        turnover: formatEur(fact.turnoverEur, language),
+        threshold: formatEur(fact.thresholdEur, language),
+      });
     case 'transactional-flow-unknown':
       return m.legalCitationTransactionalFlowUnknownFact;
     // Issue #42: distinguish "the detector ran and found nothing" (the

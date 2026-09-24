@@ -66,11 +66,21 @@ read them the other way.
 
 ## 3. Scope test, regime 2
 
-**Prong A, size.** The microenterprise exemption applies only where
-fewer than 10 persons are employed AND turnover or balance sheet total
-does not exceed EUR 2 million. Failing either prong removes the
-exemption. Status: secondary, consistently stated, not yet read in the
-decree text itself.
+**Prong A, size.** Art. L412-13 code de la consommation: « Les
+entreprises employant moins de dix personnes qui fournissent des services
+et dont le chiffre d'affaires annuel n'excède pas deux millions d'euros ou
+dont le total du bilan n'excède pas deux millions d'euros sont dispensées
+des exigences d'accessibilité ». Same definition as directive art. 3(23).
+Status: primary, read in the code text on 2026-09-24.
+
+So a service provider is exempt with fewer than 10 persons AND either
+turnover or balance sheet total at or below EUR 2 million. It is in scope
+on size with 10 or more persons, or with turnover AND balance sheet total
+both above EUR 2 million. Turnover above EUR 2 million alone decides
+nothing: no source we use publishes the balance sheet, so
+`assessObligations` resolves that case to `undetermined`
+(`sme-balance-sheet-unknown`). Exactly EUR 2 million is within the
+exemption.
 
 Headcount of 10 or more therefore establishes scope on the size prong
 alone. Headcount under 10 does not establish exemption.
@@ -420,7 +430,6 @@ obligation does or does not apply there.
 
 ## 9. Remaining verification
 
-- microenterprise threshold wording in the decree text itself
 - astreinte and récidive figures under route 1
 - confirmation that EN 301 549 is the only applicable harmonised standard
 - the transitional provisions and the 2030 date, section 3

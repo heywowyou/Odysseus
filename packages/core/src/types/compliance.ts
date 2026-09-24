@@ -166,6 +166,16 @@ export type ObligationBasisFact =
   | { kind: 'effectif-band'; code: string; label: string }
   | { kind: 'turnover'; amountEur: number; thresholdEur: number }
   | { kind: 'sme-exemption'; effectifCode: string; turnoverEur: number }
+  /** Under 10 staff with turnover above the EUR 2M threshold. Article
+   *  L412-13 keeps the exemption while either turnover or the balance sheet
+   *  total stays at or below EUR 2M, and no balance sheet is available, so
+   *  the exemption can be neither confirmed nor ruled out. */
+  | {
+      kind: 'sme-balance-sheet-unknown';
+      effectifCode: string;
+      turnoverEur: number;
+      thresholdEur: number;
+    }
   | { kind: 'transactional-flow'; evidence: TransactionalFlowEvidence[] }
   | { kind: 'no-transactional-flow' }
   | { kind: 'transactional-flow-unknown' }

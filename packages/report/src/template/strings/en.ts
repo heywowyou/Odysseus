@@ -1008,6 +1008,8 @@ export const en: ReportStrings = {
       'The headcount band used for this example is fictional: {label}.',
     legalCitationTurnoverFactTemplate:
       'Recorded annual turnover is {amount}; the published threshold is {threshold}.',
+    legalCitationSmeBalanceSheetUnknownFactTemplate:
+      'The register records headcount band {effectifCode} and turnover of {turnover}, above {threshold}; the balance sheet total was not available to compare with that threshold.',
     legalCitationSmeFactTemplate:
       'The registry reports headcount band {effectifCode} and turnover of {turnover}.',
     legalCitationSyntheticSmeFactTemplate:

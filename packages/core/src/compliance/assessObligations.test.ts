@@ -80,15 +80,29 @@ describe('assessObligations', () => {
     });
   });
 
-  it('is in_scope by turnover alone with a low headcount band', () => {
+  // Art. L412-13: under 10 staff stays exempt while turnover OR the balance
+  // sheet total is at or below EUR 2M. Turnover above it, with no balance
+  // sheet, decides nothing.
+  it('is undetermined when turnover alone exceeds the threshold with a low headcount band', () => {
     const profile = buildProfile({ effectifCode: '01', turnover: 3_000_000 });
     const result = assessObligations(profile, withFlow);
-    expect(result.status).toBe('in_scope');
+    expect(result.status).toBe('undetermined');
     expect(result.basis[0]?.facts).toContainEqual({
-      kind: 'turnover',
-      amountEur: 3_000_000,
+      kind: 'sme-balance-sheet-unknown',
+      effectifCode: '01',
+      turnoverEur: 3_000_000,
       thresholdEur: 2_000_000,
     });
+  });
+
+  it('stays out_of_scope when turnover exceeds the threshold but no flow exists', () => {
+    const profile = buildProfile({ effectifCode: '01', turnover: 3_000_000 });
+    expect(assessObligations(profile, withoutFlow).status).toBe('out_of_scope');
+  });
+
+  it('treats turnover of exactly EUR 2M as within the exemption', () => {
+    const profile = buildProfile({ effectifCode: '01', turnover: 2_000_000 });
+    expect(assessObligations(profile, withFlow).status).toBe('out_of_scope');
   });
 
   it('is out_of_scope for lack of transactional flow despite a high headcount band', () => {

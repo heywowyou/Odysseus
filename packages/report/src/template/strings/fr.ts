@@ -1137,6 +1137,8 @@ export const fr: ReportStrings = {
       "La tranche d'effectif utilisée pour cet exemple est fictive : {label}.",
     legalCitationTurnoverFactTemplate:
       "Le chiffre d'affaires annuel enregistré est de {amount} ; le seuil publié est de {threshold}.",
+    legalCitationSmeBalanceSheetUnknownFactTemplate:
+      "Le répertoire indique la tranche d'effectif {effectifCode} et un chiffre d'affaires de {turnover}, supérieur à {threshold} ; le total de bilan n'était pas disponible pour le comparer à ce seuil.",
     legalCitationSmeFactTemplate:
       "Le répertoire indique la tranche d'effectif {effectifCode} et un chiffre d'affaires de {turnover}.",
     legalCitationSyntheticSmeFactTemplate:

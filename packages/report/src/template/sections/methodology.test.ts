@@ -285,6 +285,29 @@ describe('renderLegalCitationParagraph', () => {
     expect(html).not.toContain('ne relève pas de');
   });
 
+  it('says the balance sheet was unavailable when turnover alone exceeds the threshold', () => {
+    const assessment: ObligationAssessment = {
+      status: 'undetermined',
+      basis: [
+        {
+          regimeId: 'eaa-loi-2023-171',
+          facts: [
+            {
+              kind: 'sme-balance-sheet-unknown',
+              effectifCode: '01',
+              turnoverEur: 3_000_000,
+              thresholdEur: 2_000_000,
+            },
+          ],
+        },
+      ],
+    };
+    const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
+    expect(html).toContain('Données disponibles pour cet audit');
+    expect(html).toMatch(/3\s000\s000\s€/u);
+    expect(html).toContain('le total de bilan n’était pas disponible pour le comparer à ce seuil');
+  });
+
   it('renders the in_scope inputs without an exemption route or legal conclusion', () => {
     const assessment: ObligationAssessment = {
       status: 'in_scope',

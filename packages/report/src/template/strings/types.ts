@@ -1415,6 +1415,9 @@ export interface ReportStrings {
     legalCitationSyntheticEffectifFactTemplate: string;
     /** Template: {amount}, {threshold}, formatted currency amounts. */
     legalCitationTurnoverFactTemplate: string;
+    /** Under 10 staff, turnover above EUR 2M, no balance sheet available:
+     *  the exemption can be neither confirmed nor ruled out. */
+    legalCitationSmeBalanceSheetUnknownFactTemplate: string;
     /** Template: {effectifCode}, {turnover}. */
     legalCitationSmeFactTemplate: string;
     legalCitationSyntheticSmeFactTemplate: string;

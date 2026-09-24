@@ -76,8 +76,8 @@ const REGIME_DEFINITIONS: Record<string, RegimeDefinition> = {
       'Digital accessibility obligation under the European Accessibility Act',
     ),
     thresholdDescription: bilingual(
-      "S'applique aux entreprises de 10 salariés ou plus, ou dont le chiffre d'affaires ou le total de bilan annuel dépasse 2 000 000 €, lorsque le site propose un parcours transactionnel B2C de premier niveau (réservation, panier, paiement).",
-      'Applies to companies with 10 or more employees, or with annual turnover or balance sheet total above EUR 2,000,000, when the site offers a first party B2C transactional flow (booking, cart, checkout).',
+      "S'applique aux entreprises de 10 salariés ou plus, ainsi qu'à celles dont le chiffre d'affaires annuel et le total de bilan annuel dépassent tous deux 2 000 000 €, lorsque le site propose un parcours transactionnel B2C de premier niveau (réservation, panier, paiement).",
+      'Applies to companies with 10 or more employees, and to those whose annual turnover and annual balance sheet total both exceed EUR 2,000,000, when the site offers a first party B2C transactional flow (booking, cart, checkout).',
     ),
     authority: bilingual(
       'Direction générale de la concurrence, de la consommation et de la répression des fraudes (DGCCRF)',

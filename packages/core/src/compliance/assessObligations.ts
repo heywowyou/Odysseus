@@ -86,6 +86,8 @@ function undeterminedFact(profile: OperatorProfile): ObligationBasisFact | null 
 
 function checkSmeExemption(profile: OperatorProfile): {
   exempt: boolean;
+  /** The exemption could hold, but the data needed to decide is missing. */
+  undetermined?: true;
   fact: ObligationBasisFact;
 } {
   const band = profile.effectifBand.value;
@@ -108,18 +110,25 @@ function checkSmeExemption(profile: OperatorProfile): {
     return { exempt: false, fact: { kind: 'effectif-band', code: band.code, label: band.label } };
   }
 
-  if (turnover < SME_EXEMPTION_TURNOVER_THRESHOLD_EUR) {
+  // "n'excède pas deux millions d'euros": exactly EUR 2M is still exempt.
+  if (turnover <= SME_EXEMPTION_TURNOVER_THRESHOLD_EUR) {
     return {
       exempt: true,
       fact: { kind: 'sme-exemption', effectifCode: band.code, turnoverEur: turnover },
     };
   }
 
+  // The exemption holds while turnover OR the balance sheet total stays at
+  // or below EUR 2M (art. L412-13 code de la consommation). Turnover above
+  // it rules nothing out without the balance sheet, which no source here
+  // provides.
   return {
     exempt: false,
+    undetermined: true,
     fact: {
-      kind: 'turnover',
-      amountEur: turnover,
+      kind: 'sme-balance-sheet-unknown',
+      effectifCode: band.code,
+      turnoverEur: turnover,
       thresholdEur: SME_EXEMPTION_TURNOVER_THRESHOLD_EUR,
     },
   };
@@ -134,7 +143,11 @@ export function assessObligations(
     return { status: 'undetermined', basis: [{ regimeId: EAA_REGIME_ID, facts: [undetermined] }] };
   }
 
-  const { exempt, fact: exemptionFact } = checkSmeExemption(profile);
+  const {
+    exempt,
+    undetermined: exemptionUndetermined,
+    fact: exemptionFact,
+  } = checkSmeExemption(profile);
   const eaaFacts: ObligationBasisFact[] = [exemptionFact];
 
   // Issue #294 (haaitza.com): 'checkout-form' evidence alone is a form
@@ -151,7 +164,7 @@ export function assessObligations(
   const hasEngineEvidence = flowEvidence.some((e) => e.kind !== 'checkout-form');
   const hasFormOnlyEvidence = !hasEngineEvidence && flowEvidence.length > 0;
 
-  let eaaStatus: 'in_scope' | 'likely_in_scope' | 'out_of_scope';
+  let eaaStatus: 'in_scope' | 'likely_in_scope' | 'out_of_scope' | 'undetermined';
   if (exempt) {
     eaaStatus = 'out_of_scope';
   } else if (siteSignals === undefined) {
@@ -179,6 +192,11 @@ export function assessObligations(
   } else {
     eaaStatus = 'out_of_scope';
     eaaFacts.push({ kind: 'no-transactional-flow' });
+  }
+  // A flow keeps the question open only while the exemption might still
+  // hold; with no flow the regime is out of scope either way.
+  if (exemptionUndetermined === true && eaaStatus !== 'out_of_scope') {
+    eaaStatus = 'undetermined';
   }
 
   const basis: ObligationBasis[] = [{ regimeId: EAA_REGIME_ID, facts: eaaFacts }];

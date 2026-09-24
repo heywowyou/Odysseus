@@ -43,7 +43,7 @@ describe('buildOutreachFactsBlock', () => {
       {
         "heading": "Cadre réglementaire à vérifier",
         "paragraphs": [
-          "Obligation d'accessibilité numérique issue de l'European Accessibility Act. S'applique aux entreprises de 10 salariés ou plus, ou dont le chiffre d'affaires ou le total de bilan annuel dépasse 2 000 000 €, lorsque le site propose un parcours transactionnel B2C de premier niveau (réservation, panier, paiement). Référence : loi n° 2023-171 du 9 mars 2023, articles 16 à 19.",
+          "Obligation d'accessibilité numérique issue de l'European Accessibility Act. S'applique aux entreprises de 10 salariés ou plus, ainsi qu'à celles dont le chiffre d'affaires annuel et le total de bilan annuel dépassent tous deux 2 000 000 €, lorsque le site propose un parcours transactionnel B2C de premier niveau (réservation, panier, paiement). Référence : loi n° 2023-171 du 9 mars 2023, articles 16 à 19.",
           "Nous n'avons pas trouvé de donnée de registre publique suffisante pour rapprocher votre entreprise de ces critères.",
           "L'applicabilité de ces critères dépend de la situation de l'entreprise. Faites confirmer votre situation par votre conseil juridique.",
         ],
@@ -62,7 +62,7 @@ describe('buildOutreachFactsBlock', () => {
       {
         "heading": "Cadre réglementaire à vérifier",
         "paragraphs": [
-          "Obligation d'accessibilité numérique issue de l'European Accessibility Act. S'applique aux entreprises de 10 salariés ou plus, ou dont le chiffre d'affaires ou le total de bilan annuel dépasse 2 000 000 €, lorsque le site propose un parcours transactionnel B2C de premier niveau (réservation, panier, paiement). Référence : loi n° 2023-171 du 9 mars 2023, articles 16 à 19.",
+          "Obligation d'accessibilité numérique issue de l'European Accessibility Act. S'applique aux entreprises de 10 salariés ou plus, ainsi qu'à celles dont le chiffre d'affaires annuel et le total de bilan annuel dépassent tous deux 2 000 000 €, lorsque le site propose un parcours transactionnel B2C de premier niveau (réservation, panier, paiement). Référence : loi n° 2023-171 du 9 mars 2023, articles 16 à 19.",
           "Les données publiques du registre pour HOTEL EXEMPLE SAS indiquent un effectif de 10 à 19 salariés. Cette information est reprise telle qu’elle figure dans le registre public.",
           "L'applicabilité de ces critères dépend de la situation de l'entreprise. Faites confirmer votre situation par votre conseil juridique.",
         ],
@@ -81,7 +81,7 @@ describe('buildOutreachFactsBlock', () => {
       {
         "heading": "Regulatory framework to verify",
         "paragraphs": [
-          "Digital accessibility obligation under the European Accessibility Act. Applies to companies with 10 or more employees, or with annual turnover or balance sheet total above EUR 2,000,000, when the site offers a first party B2C transactional flow (booking, cart, checkout). Reference: French Law No. 2023-171 of 9 March 2023, articles 16 to 19.",
+          "Digital accessibility obligation under the European Accessibility Act. Applies to companies with 10 or more employees, and to those whose annual turnover and annual balance sheet total both exceed EUR 2,000,000, when the site offers a first party B2C transactional flow (booking, cart, checkout). Reference: French Law No. 2023-171 of 9 March 2023, articles 16 to 19.",
           "The public register identifies HOTEL EXEMPLE SAS, but does not publish a usable headcount band for this analysis.",
           "Whether these criteria apply depends on the circumstances of the organization. Confirm your position with your legal adviser.",
         ],
@@ -100,7 +100,7 @@ describe('buildOutreachFactsBlock', () => {
       {
         "heading": "Regulatory framework to verify",
         "paragraphs": [
-          "Digital accessibility obligation under the European Accessibility Act. Applies to companies with 10 or more employees, or with annual turnover or balance sheet total above EUR 2,000,000, when the site offers a first party B2C transactional flow (booking, cart, checkout). Reference: French Law No. 2023-171 of 9 March 2023, articles 16 to 19.",
+          "Digital accessibility obligation under the European Accessibility Act. Applies to companies with 10 or more employees, and to those whose annual turnover and annual balance sheet total both exceed EUR 2,000,000, when the site offers a first party B2C transactional flow (booking, cart, checkout). Reference: French Law No. 2023-171 of 9 March 2023, articles 16 to 19.",
           "We did not find enough public registry data to compare your organization with these criteria.",
           "Whether these criteria apply depends on the circumstances of the organization. Confirm your position with your legal adviser.",
         ],
