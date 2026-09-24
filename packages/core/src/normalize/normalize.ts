@@ -97,6 +97,7 @@ import {
 import { extractLlmsTxtCandidates, type LlmsTxtCheckInput } from './normalize-llms-txt.js';
 import {
   extractGeoCandidates,
+  readJsonLdNodes,
   readJsonLdTypes,
   QUESTION_HEADING_PATTERN,
   type GeoPageInput,
@@ -544,13 +545,14 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
     // additive judgment - see normalize-geo.ts's own header comment for
     // why this is not a re-extraction.
     const geoPages: GeoPageInput[] = pagesWithHeadMetadata.map((page) => {
-      const jsonLdTypes = page.headMetadata!.jsonLdBlocks.flatMap((block) =>
-        readJsonLdTypes(block.parsed),
+      const jsonLdNodes = page.headMetadata!.jsonLdBlocks.flatMap((block) =>
+        readJsonLdNodes(block.parsed),
       );
+      const jsonLdTypes = jsonLdNodes.flatMap((node) => readJsonLdTypes(node));
       return {
         pageUrl: page.url,
         jsonLdTypes,
-        jsonLdEntities: page.headMetadata!.jsonLdBlocks.map((block) => ({ parsed: block.parsed })),
+        jsonLdEntities: jsonLdNodes.map((node) => ({ parsed: node })),
         questionHeadingCount: page.headMetadata!.headings.filter((heading) =>
           QUESTION_HEADING_PATTERN.test(heading.text.trim()),
         ).length,

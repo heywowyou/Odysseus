@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   extractGeoCandidates,
+  readJsonLdNodes,
   readJsonLdTypes,
   findMissingEntityFields,
   STRUCTURED_DATA_ENTITY_MISSING_RULE_ID,
@@ -44,7 +45,40 @@ describe('readJsonLdTypes', () => {
   });
 });
 
+describe('readJsonLdNodes', () => {
+  it('reads the nodes of a Yoast @graph container, not the container itself', () => {
+    const graph = {
+      '@context': 'https://schema.org',
+      '@graph': [
+        { '@type': 'WebPage', name: 'Accueil' },
+        { '@type': 'WebSite', name: 'Grand Hôtel' },
+        { '@type': ['Hotel', 'FAQPage'], name: 'Grand Hôtel' },
+      ],
+    };
+    expect(readJsonLdNodes(graph).flatMap((node) => readJsonLdTypes(node))).toEqual([
+      'WebPage',
+      'WebSite',
+      'Hotel',
+      'FAQPage',
+    ]);
+  });
+
+  it('reads a top-level array of nodes and a single node the same way', () => {
+    expect(readJsonLdNodes([{ '@type': 'Hotel' }, { '@type': 'BreadcrumbList' }])).toHaveLength(2);
+    expect(readJsonLdNodes({ '@type': 'Hotel' })).toHaveLength(1);
+  });
+
+  it('ignores untyped values and unparsed blocks', () => {
+    expect(readJsonLdNodes({ '@context': 'https://schema.org' })).toEqual([]);
+    expect(readJsonLdNodes(null)).toEqual([]);
+  });
+});
+
 describe('findMissingEntityFields', () => {
+  it('does not judge a WebSite node, which never carries an address or telephone', () => {
+    expect(findMissingEntityFields({ '@type': 'WebSite', name: 'Grand Hôtel' })).toBeNull();
+  });
+
   it('returns null for a non-entity type (nothing for this check to judge)', () => {
     expect(findMissingEntityFields({ '@type': 'BreadcrumbList' })).toBeNull();
   });

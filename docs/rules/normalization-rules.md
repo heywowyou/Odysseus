@@ -526,3 +526,13 @@ is retained as annex evidence but excluded from primary totals, grade and
 outreach proof. Field metrics own a Core Web Vital when available; a lab
 metric is accepted only from a valid same-identity Lighthouse run and is
 diagnostic when field data exists.
+
+## Plan 075 Part H amendments
+
+JSON-LD is read node by node. A block may be one node, an array of nodes or a
+`@graph` container (the shape Yoast and Rank Math write); every typed node in
+it counts for `structured-data-entity-missing`, `entity-data-incomplete` and
+`faq-content-without-schema`, the same reading the scanner's structured-data
+check uses. `entity-data-incomplete` judges business entities only
+(Organization, LocalBusiness and its subtypes): a `WebSite` node proves an
+entity exists but is never expected to carry an address or telephone.

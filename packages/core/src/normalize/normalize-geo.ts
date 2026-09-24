@@ -34,6 +34,15 @@ export const FAQ_CONTENT_WITHOUT_SCHEMA_RULE_ID = 'faq-content-without-schema';
 const ENTITY_TYPE_PATTERN =
   /(organization|localbusiness|website|hotel|restaurant|store|corporation)$/i;
 
+/** The entity types that describe a business, so a missing address or
+ *  telephone is a real gap. WebSite anchors an entity for the existence
+ *  check above but never carries either field: Yoast writes a WebSite node
+ *  into the `@graph` of every page it serves, and judging it here made one
+ *  incomplete-entity finding per page on a site that is not missing
+ *  anything. */
+const BUSINESS_ENTITY_TYPE_PATTERN =
+  /(organization|localbusiness|hotel|restaurant|store|corporation)$/i;
+
 const REQUIRED_ENTITY_FIELDS = ['name', 'address', 'telephone'];
 
 /** A heading is treated as question-shaped only on this narrow textual
@@ -60,7 +69,30 @@ export interface GeoPageInput {
   hasFaqSchema: boolean;
 }
 
-/** Pure: reads @type off a parsed JSON-LD block, handling the single-type
+/** Pure: the typed nodes a parsed JSON-LD block declares. A block may be
+ *  one node, an array of nodes, or a `@graph` container whose members are
+ *  the nodes - the shape Yoast and Rank Math write on most WordPress sites,
+ *  and the one the scanner's structured-data-extract.ts already reads.
+ *  Reading only the top level made structured-data-entity-missing claim
+ *  "no page declares an Organization" on sites whose every page declared
+ *  one inside `@graph`. */
+export function readJsonLdNodes(parsed: unknown): unknown[] {
+  const nodes: unknown[] = [];
+  const visit = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      for (const entry of value) visit(entry);
+      return;
+    }
+    if (value === null || typeof value !== 'object') return;
+    const record = value as Record<string, unknown>;
+    if ('@graph' in record) visit(record['@graph']);
+    if ('@type' in record) nodes.push(record);
+  };
+  visit(parsed);
+  return nodes;
+}
+
+/** Pure: reads @type off a parsed JSON-LD node, handling the single-type
  *  string form and the array-of-types form schema.org also permits.
  *  Exported so scan-site-level aggregation (structured-data-entity-
  *  missing) and this module's own per-page checks share one reading of
@@ -85,7 +117,7 @@ export function readJsonLdTypes(parsed: unknown): string[] {
  *  does not judge. */
 export function findMissingEntityFields(parsed: unknown): string[] | null {
   const types = readJsonLdTypes(parsed);
-  if (!types.some((type) => ENTITY_TYPE_PATTERN.test(type))) return null;
+  if (!types.some((type) => BUSINESS_ENTITY_TYPE_PATTERN.test(type))) return null;
   if (parsed === null || typeof parsed !== 'object') return REQUIRED_ENTITY_FIELDS;
   const record = parsed as Record<string, unknown>;
   return REQUIRED_ENTITY_FIELDS.filter((field) => {

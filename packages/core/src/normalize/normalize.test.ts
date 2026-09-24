@@ -1174,3 +1174,57 @@ describe('noindex public evidence (plan 075, B2)', () => {
     expect([...(sitemap[0]?.pageUrls ?? [])].sort()).toEqual(galleries);
   });
 });
+
+describe('normalizeAudit JSON-LD inside a @graph container', () => {
+  const url = 'https://example.com/';
+  const yoastGraph = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      { '@type': 'WebPage', name: 'Accueil' },
+      { '@type': 'WebSite', name: 'Grand Hôtel' },
+      { '@type': ['Hotel', 'FAQPage'], name: 'Grand Hôtel' },
+    ],
+  };
+  const findings = normalizeAudit({
+    auditId: 'audit-1',
+    startedAt: STARTED_AT,
+    pages: [
+      buildNormalizePageInput({
+        url,
+        headMetadata: {
+          pageUrl: url,
+          title: 'A perfectly reasonable page title for SEO',
+          metaDescription: 'Une description suffisamment longue pour ce test.',
+          canonicalUrls: [url],
+          openGraphTags: { 'og:title': 't' },
+          jsonLdBlocks: [{ raw: JSON.stringify(yoastGraph), parsed: yoastGraph, selector: '#ld' }],
+          headings: [
+            { level: 1, text: 'Grand Hôtel', selector: 'h1' },
+            { level: 2, text: 'Le petit déjeuner est-il inclus ?', selector: 'h2:nth-of-type(1)' },
+            { level: 2, text: 'Y a-t-il un parking ?', selector: 'h2:nth-of-type(2)' },
+            { level: 2, text: 'Les animaux sont-ils acceptés ?', selector: 'h2:nth-of-type(3)' },
+          ],
+          hreflangLinks: [],
+          robotsMeta: null,
+        },
+      }),
+    ],
+    crawl: { startUrl: url, robotsTxtFound: true, pages: [{ url, status: 'visited' }] },
+  });
+  const ruleIds = findings.map((finding) => finding.ruleId);
+
+  it('sees the business entity a @graph declares', () => {
+    expect(ruleIds).not.toContain('structured-data-entity-missing');
+  });
+
+  it('sees the FAQPage a @graph declares', () => {
+    expect(ruleIds).not.toContain('faq-content-without-schema');
+  });
+
+  it('still judges the business entity inside the @graph for missing fields', () => {
+    const incomplete = findings.find((finding) => finding.ruleId === 'entity-data-incomplete');
+    expect(incomplete?.rawEvidence['perPage']).toEqual({
+      [url]: { missingFields: ['address', 'telephone'] },
+    });
+  });
+});
