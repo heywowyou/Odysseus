@@ -406,6 +406,42 @@ describe('crawlSite continuation-family guard wiring', () => {
   });
 });
 
+describe('crawlSite sitemap entries that answer 404', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('counts them as settled, not as pages the crawl failed to reach', async () => {
+    installFetchStub({
+      'https://example.com/robots.txt': `User-agent: *\nAllow: /\nSitemap: https://example.com/sitemap.xml\n`,
+      'https://example.com/sitemap.xml': [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+        '  <url><loc>https://example.com/</loc></url>',
+        '  <url><loc>https://example.com/en/rooms</loc></url>',
+        '  <url><loc>https://example.com/busy</loc></url>',
+        '</urlset>',
+      ].join('\n'),
+    });
+    const result = await crawlSite('https://example.com', {
+      browser: makeStatusFakeBrowser((url) =>
+        url.endsWith('/en/rooms') ? 404 : url.endsWith('/busy') ? 503 : 200,
+      ),
+      maxPages: 20,
+      maxDepth: 5,
+      delayMs: 0,
+      sitemapMode: 'supplement',
+    });
+
+    // The 503 stays a failure: only a definite "not found" settles an entry.
+    expect(result.sitemapCoverage).toMatchObject({
+      eligiblePageCount: 3,
+      scannedPageCount: 1,
+      settledUnscannedPageCount: 1,
+    });
+  });
+});
+
 describe('crawlSite on a site that upgrades http to https', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

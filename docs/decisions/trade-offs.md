@@ -5981,3 +5981,12 @@ local storage, but it drops the HTTP cache too, so the host would serve every
 image, script and stylesheet again for each page. Request volume is what
 banned the crawler in trade-off 114. Language state kept only in local
 storage is not covered; revisit if a real site shows it.
+
+Amended 2026-09-25. With the cookies cleared, the rerun still failed the
+gate: the site's sitemap lists 7 English URLs that answer 404, and the crawl
+deliberately skips the `/en` language homepage, so 14 of 22 sitemap entries
+were scanned (64%, under the 70% bar). Every entry had been reached. The
+crawl now records `settledUnscannedPageCount`, the sitemap entries that
+answered a definite 404 or 410 or that the crawl chose not to scan, and the
+gate leaves them out of its denominator. A 403, 429 or 5xx still counts
+against coverage, since those are how a site turns a crawler away.

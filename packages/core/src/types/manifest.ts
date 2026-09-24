@@ -158,6 +158,11 @@ export interface SitemapCoverageSummary {
    *  of sitemap-eligible pages whose crawl status was `visited`; use
    *  `PageAnalysisCoverage` for current pass-specific work. */
   scannedPageCount: number;
+  /** Sitemap-eligible URLs the crawl reached and settled without scanning:
+   *  a definite 404 or 410 (a stale sitemap entry, a fact about the site)
+   *  or a page the crawl chose not to scan. The coverage gate leaves them
+   *  out of its denominator. Absent on audits crawled before it existed. */
+  settledUnscannedPageCount?: number;
   filteredPageCount: number;
   capOmittedPageCount: number;
   failedSitemapCount: number;

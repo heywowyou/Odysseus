@@ -1736,6 +1736,14 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               pagesByUrl.get(page.redirectTargetUrl)?.status === 'visited'
             );
           }).length,
+          settledUnscannedPageCount: [...eligibleSitemapUrls].filter((url) => {
+            const page = pagesByUrl.get(url);
+            return (
+              page?.status === 'discovered-not-scanned' ||
+              (page?.status === 'http-error-status' &&
+                (page.httpStatus === 404 || page.httpStatus === 410))
+            );
+          }).length,
           filteredPageCount: filteredSitemapPageCount,
           capOmittedPageCount:
             sitemapMode === 'supplement'

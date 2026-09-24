@@ -40,7 +40,11 @@ function hasUnexplainedSitemapCoverageGap(sitemap: SitemapCoverageSummary | unde
   ) {
     return false;
   }
-  return sitemap.scannedPageCount / sitemap.eligiblePageCount < MIN_SITEMAP_SCANNED_SHARE;
+  // A sitemap entry that answered a definite 404 was reached: the stale
+  // entry is the site's fact, not the crawl being turned away.
+  const expectedPageCount = sitemap.eligiblePageCount - (sitemap.settledUnscannedPageCount ?? 0);
+  if (expectedPageCount <= 0) return false;
+  return sitemap.scannedPageCount / expectedPageCount < MIN_SITEMAP_SCANNED_SHARE;
 }
 
 /** Evaluates whether the crawl facts can support a full client report. The

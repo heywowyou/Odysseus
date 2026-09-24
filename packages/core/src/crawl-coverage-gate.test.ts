@@ -74,6 +74,26 @@ describe('crawl coverage gate', () => {
     expect(() => assertSufficientCrawlCoverage(input)).toThrow(/sitemap also shows/i);
   });
 
+  // Alexander Park: the sitemap lists 7 English URLs that answer 404, and
+  // the crawl deliberately skips the /en language homepage. Both were
+  // reached, so the 14 scanned pages cover everything the site really has.
+  it('leaves sitemap entries that answered 404 or were skipped by design out of the gap', () => {
+    const input = {
+      pages: pages(49, 7, 404),
+      sitemapCoverage: {
+        declaredPageCount: 22,
+        eligiblePageCount: 22,
+        scannedPageCount: 14,
+        settledUnscannedPageCount: 8,
+        filteredPageCount: 0,
+        capOmittedPageCount: 0,
+        failedSitemapCount: 0,
+      },
+    };
+
+    expect(assessCrawlCoverage(input).reasonCodes).toEqual([]);
+  });
+
   it('does not treat a sitemap gap explained by a crawl cap as a failure', () => {
     const input = {
       pages: pages(3, 0),

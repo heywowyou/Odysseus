@@ -97,6 +97,7 @@ const crawlStatsSchema = new Schema(
         declaredPageCount: { type: Number, required: true },
         eligiblePageCount: { type: Number, required: true },
         scannedPageCount: { type: Number, required: true },
+        settledUnscannedPageCount: { type: Number },
         filteredPageCount: { type: Number, required: true },
         capOmittedPageCount: { type: Number, required: true },
         failedSitemapCount: { type: Number, required: true },
