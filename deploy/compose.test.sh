@@ -137,6 +137,11 @@ for limit in pids_limit mem_limit cpus shm_size; do
   assert_contains "$SCAN_EFFECTIVE" "$limit" "scan service does not set $limit"
 done
 
+# 6b. The app runs every in-process audit's Chromium, so it carries a CPU cap
+#     too: without one a long audit gets the whole VPS throttled by the host.
+assert_contains "$APP_EFFECTIVE" 'cpus: ${ODYSSEUS_APP_CPUS:-' \
+  "app service does not set an overridable cpus cap"
+
 # 7. The crawl knobs are defined once in the anchor and merged into BOTH
 #    services, so the clamp ceiling cannot drift across the boundary
 #    (plan 059 section 2.1).
