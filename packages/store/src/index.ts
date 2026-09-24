@@ -337,6 +337,7 @@ export {
   findOutreachThreadById,
   findOutreachThreadByProspect,
   attachProviderThreadId,
+  replaceProviderThreadId,
   advanceThreadTouch,
   transitionOutreachThread,
   recordOutreachThreadTouchSent,

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@odysseus/store', () => ({
   advanceThreadTouch: vi.fn(),
   attachProviderThreadId: vi.fn(),
+  replaceProviderThreadId: vi.fn(),
   attachReferenceAuditDraft: vi.fn(),
   checkOutreachAction: vi.fn(),
   createAuditModel: vi.fn(),
@@ -59,6 +60,7 @@ import {
   openOutreachThread,
   recordFailedOutreachDraft,
   recordOutreachDraft,
+  replaceProviderThreadId,
   transitionOutreachThread,
 } from '@odysseus/store';
 import { assembleOutreachDraft } from './assemble-outreach-draft.js';
@@ -178,6 +180,22 @@ describe('createTouchOneDraft', () => {
       connection,
       expect.objectContaining({ threadId: 'thread-1', from: ['open'], to: 'e1-drafted' }),
     );
+  });
+
+  it('starts a new mailbox conversation when an earlier first draft was discarded', async () => {
+    vi.mocked(openOutreachThread).mockResolvedValue({
+      thread: thread('open', { providerThreadId: 'thread-of-discarded-draft' }),
+      created: false,
+    } as never);
+    const createDraft = vi.spyOn(mailbox, 'createDraft');
+
+    const result = await touchOne();
+
+    expect(result).toMatchObject({ created: true });
+    expect(createDraft.mock.calls[0]?.[0]).not.toHaveProperty('providerThreadId');
+    const newThreadId = mailbox.recorded()[0]?.providerThreadId;
+    expect(newThreadId).not.toBe('thread-of-discarded-draft');
+    expect(replaceProviderThreadId).toHaveBeenCalledWith(connection, 'thread-1', newThreadId);
   });
 
   it('keeps the canonical link when optional attribution configuration fails open', async () => {

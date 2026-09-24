@@ -10,7 +10,7 @@ import {
 } from '@odysseus/core';
 import {
   advanceThreadTouch,
-  attachProviderThreadId,
+  replaceProviderThreadId,
   checkOutreachAction,
   createAuditModel,
   createJobModel,
@@ -403,9 +403,9 @@ export async function createTouchOneDraft(
       subject: assembled.subject,
       body: assembled.body,
       htmlBody: assembled.htmlBody,
-      ...(thread.thread.providerThreadId === undefined
-        ? {}
-        : { providerThreadId: thread.thread.providerThreadId }),
+      // No providerThreadId: a first email always starts a new conversation.
+      // A stored one can only come from a discarded earlier draft, and Gmail
+      // deletes a conversation together with its only draft.
     });
   } catch (error) {
     logger.error({ err: error, prospectId, touch: 1 }, 'mailbox draft creation failed');
@@ -482,7 +482,7 @@ export async function createTouchOneDraft(
     );
   }
 
-  await attachProviderThreadId(connection, thread.thread.threadId, providerDraft.providerThreadId);
+  await replaceProviderThreadId(connection, thread.thread.threadId, providerDraft.providerThreadId);
   await advanceThreadTouch(connection, thread.thread.threadId, 1);
   await transitionOutreachThread(connection, {
     threadId: thread.thread.threadId,

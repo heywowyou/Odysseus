@@ -138,6 +138,22 @@ export async function attachProviderThreadId(
 }
 
 /**
+ * Point the thread at the Gmail conversation of a new first-touch draft.
+ * Unlike `attachProviderThreadId` this overwrites: a first email redrafted
+ * after a discard starts a new conversation, because Gmail deleted the old
+ * one together with its only draft, and follow-ups and mailbox sync must
+ * follow the new one.
+ */
+export async function replaceProviderThreadId(
+  connection: Connection,
+  threadId: string,
+  providerThreadId: string,
+): Promise<void> {
+  const ThreadModel = createOutreachThreadModel(connection);
+  await ThreadModel.updateOne({ threadId }, { $set: { providerThreadId, updatedAt: new Date() } });
+}
+
+/**
  * Move the thread to a touch, only ever forward.
  *
  * The guard is `$lt`, so a retry that already advanced the thread is a no-op
