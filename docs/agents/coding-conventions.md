@@ -225,26 +225,41 @@ the checker pin through the regex custom manager in `renovate.json`.
 
 ## Dependency maintenance
 
-Renovate (`renovate.json`, issue #252) opens grouped PRs on a weekday
-morning schedule: React/Next, TypeScript/ESLint, Playwright/browser
-tooling, and accessibility tooling each move as one reviewed group rather
-than one PR per package. Runtime `dependencies` and every `minor`/`major`
-update always land as a normal reviewed PR gated on CI; only a `devDependencies`
-`patch` update can automerge, and only after every required check passes.
+Renovate runs locally, never on GitHub (trade-off 113). `pnpm run deps:check`
+(`scripts/renovate-local.mjs`, needs Docker) runs Renovate's `local` platform
+against the committed `HEAD` and prints the updates `renovate.json` allows
+today, grouped the way Renovate would branch them. It pushes nothing, opens no
+PR or issue, and triggers no GitHub Actions run. The machine-readable list goes
+to `reports/dependency-updates.json` (gitignored).
 
-- OpenAI, Lighthouse, Mongoose, Next, Playwright, and pnpm majors are
-  excluded from automerge outright (`renovate/manual-major-review` label):
-  these are the packages where a major carries real behavior, cost, or
-  browser-compatibility risk, not just an API surface change.
-- `.codex/config.toml`'s Playwright MCP server is pinned to an exact
-  version (`@playwright/mcp@0.0.80`, not `@latest`) and tracked by a
-  Renovate custom manager, the same as any other dependency - a floating
-  `@latest` on agent tooling means the MCP server's behavior can change
-  under an agent without a diff to review.
-- To pause a noisy group temporarily, add a `matchPackageNames` rule above
-  the offending group's rule in `renovate.json` with `"enabled": false` and
-  a comment naming why and when to remove it, rather than disabling
-  Renovate entirely or ignoring its PRs.
+`renovate.json` stays the policy. Its groups (React/Next, TypeScript/ESLint,
+Playwright/browser tooling, accessibility tooling), the minimum release age of
+`config:best-practices`, and the custom managers for pinned tools all apply.
+Its schedule, automerge and PR-limit settings have no effect in local mode.
+
+Applying updates:
+
+- Work in a separate worktree or branch, one Renovate group per commit. Apply
+  the group with pnpm (`pnpm up -r <pkg>@<version>`, or `pnpm update -r <pkg>`
+  for a lockfile-only update), then run `pnpm run check` and `pnpm run test`.
+  Run `pnpm run test:e2e` when the group touches Playwright, Chromium,
+  Lighthouse, axe, or the report renderer, and `pnpm run test:deploy` when it
+  touches `deploy/`, the Dockerfile, or compose.
+- Patch, minor, pin and digest updates are routine. A major is its own
+  migration: read the changelog, and commit it separately after its own
+  verification. OpenAI, Lighthouse, Mongoose, Next, Playwright and pnpm majors
+  always get that dedicated review (`renovate/manual-major-review` in
+  `renovate.json`), because a major there carries behavior, cost, or browser
+  compatibility risk.
+- `.codex/config.toml`'s Playwright MCP server is pinned to an exact version
+  (`@playwright/mcp@0.0.80`, not `@latest`) and tracked by a Renovate custom
+  manager, like any other dependency: a floating `@latest` on agent tooling
+  means the MCP server can change under an agent with no diff to review.
+- To hold a group back, add a rule with `"enabled": false` above its group rule
+  in `renovate.json`, with a comment naming why and when to remove it.
+- The Mend-hosted Renovate GitHub App must stay uninstalled (or have this
+  repository deselected). If it ran, it would open PRs that each trigger the
+  full CI.
 
 ## Product writing
 

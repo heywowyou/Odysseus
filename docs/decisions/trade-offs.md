@@ -5843,3 +5843,33 @@ domains.
 
 The overseas-domain report handling (Plan 075 G2) stays as a defensive
 fallback for audits that predate this rule.
+
+### 113. Renovate runs locally in lookup mode; GitHub only tracks the repository (operator decision, 2026-09-24)
+
+Renovate was configured in `renovate.json` (issue #252) to open grouped PRs
+through the Mend-hosted GitHub App. The app was installed and received every
+push from 2026-09-23, yet never produced a PR, a branch or a Dependency
+Dashboard. The configuration itself validates with Renovate's own validator,
+so the fault sits on the hosted side. A one-off self-hosted run did open PRs,
+and that exposed the real cost: every Renovate PR starts the full CI workflow
+(`ci.yml` runs on `pull_request`), and the GitHub Actions allowance already
+blocks this project's work.
+
+The operator chose to keep GitHub for tracking only. `pnpm run deps:check`
+runs Renovate's Docker image with `platform=local` over a clean clone of the
+committed `HEAD`. That mode is a lookup: it reports the updates the policy
+allows and cannot push, open anything, or start a workflow. Updates are then
+applied with pnpm in a separate worktree, one Renovate group per commit, and
+verified with the local gates before they reach `main`.
+
+What stays: `renovate.json` as the single policy (groups, minimum release age,
+manual review for provider and engine majors, custom managers). What no longer
+applies: its schedule, automerge and PR limits, which only act on a platform.
+The runner pins its image (`scripts/renovate-local.mjs`), and a custom manager
+reports the next Renovate version like any other dependency.
+
+Rejected alternatives: fixing the hosted app (it still opens PRs and burns CI
+minutes), and a scheduled GitHub Actions workflow running Renovate (the same
+Actions allowance, plus a stored token). Revisit if CI moves off GitHub
+Actions or its allowance stops being a constraint.
+

@@ -102,6 +102,14 @@
       "datasourceTemplate": "npm"
     },
     {
+      "description": "The local Renovate runner pins its own image; Renovate reports its next version like any other dependency.",
+      "customType": "regex",
+      "managerFilePatterns": ["/^scripts\\/renovate-local\\.mjs$/"],
+      "matchStrings": ["ghcr\\.io/renovatebot/renovate:(?<currentValue>[0-9.]+)"],
+      "depNameTemplate": "ghcr.io/renovatebot/renovate",
+      "datasourceTemplate": "docker"
+    },
+    {
       "description": "The restic Docker image is pinned in deployment scripts; Renovate keeps backup tooling updates reviewable.",
       "customType": "regex",
       "managerFilePatterns": ["/^deploy\\/restic-(?:backup|check|restore-drill|maintain)\\.sh$/"],

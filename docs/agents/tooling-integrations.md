@@ -8,7 +8,7 @@ credentials remain opt-in and are never committed.
 | Recommendation | Status | Implementation |
 | --- | --- | --- |
 | dependency-cruiser | Implemented | `.dependency-cruiser.cjs`, `pnpm run architecture:check`, CI/pre-push |
-| Renovate | Implemented | `renovate.json` grouped dependency policy |
+| Renovate | Implemented, local only | `renovate.json` policy, `pnpm run deps:check` (Docker, `local` platform) |
 | Trivy | Implemented | CI filesystem/image scans, SBOM, `.trivyignore.yaml` |
 | Sentry | Implemented, opt-in | metadata-only job telemetry sink behind `SENTRY_DSN` |
 | fast-check | Implemented | deterministic property-test support and core property suites |
