@@ -315,6 +315,31 @@ describe('findings covering the same scope for one rule are one problem (issue #
     expect(findings[0]?.rawEvidence['resourceUrls']).toHaveLength(5);
   });
 
+  it('shows each distinct image among the examples of the site-wide finding', () => {
+    // Whistler Paris: the same four footer images on every page filled all 20
+    // examples with repeats, and three of its seven images were never shown.
+    const footer = [
+      { selector: 'a[aria-label="one"] > img', src: 'data:image/png;base64,AAAA' },
+      { selector: 'a[aria-label="two"] > img', src: 'data:image/png;base64,BBBB' },
+    ];
+    const pages = Array.from({ length: 25 }, (_, index) =>
+      imagePage(`https://example.com/page-${index}`, footer),
+    );
+    pages.push(
+      imagePage('https://example.com/last', [{ selector: '#rare > img', src: '/img/rare.jpg' }]),
+    );
+    const [finding] = normalize(pages).filter((f) => f.ruleId === 'image-alt');
+
+    expect(finding?.occurrences).toBe(51);
+    expect(new Set(finding?.elements.map((element) => element.snippet))).toEqual(
+      new Set([
+        '<img src="data:image/png;base64,AAAA">',
+        '<img src="data:image/png;base64,BBBB">',
+        '<img src="/img/rare.jpg">',
+      ]),
+    );
+  });
+
   it('collapses one rule split per control, where each control sits on the same pages', () => {
     // Haaitza: target-size reported thirty times, one per menu item
     // (.menu-item-8267 > a, .menu-item-7780 > a...), each on the same two

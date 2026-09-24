@@ -66,3 +66,11 @@ export interface FindingCandidate {
    *  into rawEvidence.perPage[pageUrl]. */
   rawEvidenceForPage: Record<string, unknown>;
 }
+
+/** The dedupe identity of a rule that is one finding for the whole site
+ *  (plan 075 Q5, trade-off 30), optionally prefixed by a frame origin. */
+export const SITE_WIDE_IDENTITY = 'site-wide';
+
+export function isSiteWideIdentity(identity: string): boolean {
+  return identity === SITE_WIDE_IDENTITY || identity.endsWith(`|${SITE_WIDE_IDENTITY}`);
+}

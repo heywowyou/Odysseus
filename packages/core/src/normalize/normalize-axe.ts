@@ -12,7 +12,7 @@ import { MAX_SNIPPET_LENGTH } from '../types/findings.js';
 import { severityFromAxe } from './severity.js';
 import { wcagCriteriaFromAxeTags } from './wcag-tags.js';
 import { classifyDocumentWall, extractHostSignalMarkers } from '../acquisition/host-signal.js';
-import type { FindingCandidate } from './candidate.js';
+import { SITE_WIDE_IDENTITY, type FindingCandidate } from './candidate.js';
 
 /** axe's real target type allows shadow-DOM-piercing nested arrays
  *  (CrossTreeSelector = string | string[]). Flattened into one selector
@@ -362,7 +362,7 @@ function siteWideIdentity(
 ): string | undefined {
   if (!SITE_WIDE_AXE_RULES.has(ruleId)) return undefined;
   const source = frameSource(selector, pageUrl, frameOriginsBySelector);
-  return source === undefined ? 'site-wide' : `frame:${source}|site-wide`;
+  return source === undefined ? SITE_WIDE_IDENTITY : `frame:${source}|${SITE_WIDE_IDENTITY}`;
 }
 
 /** axe puts the measured colour values in a check outcome's data. Those values are the

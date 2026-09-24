@@ -116,7 +116,7 @@ import {
   goodFieldMetrics,
   type CruxFieldDataCheckInput,
 } from './normalize-crux.js';
-import type { FindingCandidate } from './candidate.js';
+import { isSiteWideIdentity, type FindingCandidate } from './candidate.js';
 import type { RenderDiffResult } from '../types/findings.js';
 import { normalizeUrlIdentity } from './url-identity.js';
 import { COVERAGE_LIMITATION_RULE_IDS, type CoverageLimitationRuleId } from '../types/manifest.js';
@@ -639,7 +639,13 @@ function sampleElements(group: readonly FindingCandidate[]): FindingElement[] {
   const byIdentity = new Map<string, FindingElement[]>();
   for (const candidate of group) {
     if (candidate.element === null) continue;
-    const identity = candidate.dedupeIdentity ?? candidate.element.selector;
+    const dedupeIdentity = candidate.dedupeIdentity ?? candidate.element.selector;
+    // A site-wide finding is one identity by design, so its examples rotate
+    // through its distinct elements instead: Whistler Paris's 20 examples
+    // otherwise showed 4 of its 7 images, because each page repeats them.
+    const identity = isSiteWideIdentity(dedupeIdentity)
+      ? `${dedupeIdentity}|${candidate.element.resourceUrl ?? candidate.element.snippet ?? candidate.element.selector}`
+      : dedupeIdentity;
     const bucket = byIdentity.get(identity);
     if (bucket) bucket.push(candidate.element);
     else byIdentity.set(identity, [candidate.element]);
