@@ -58,6 +58,7 @@ export function createMongoMailboxReconciliationStore(
                 outstandingDraft: {
                   touch: outstanding.touch,
                   providerMessageId: outstanding.providerMessageId,
+                  draftedAt: outstanding.createdAt,
                 },
               }),
           ...(lastTouch === undefined ? {} : { lastConfirmedSentAt: lastTouch.sentAt }),

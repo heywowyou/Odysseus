@@ -162,6 +162,37 @@ describe('classifyMailboxThread', () => {
     });
   });
 
+  it('reports a send when the interface replaced the draft with a new sent message', () => {
+    const sentAt = new Date(NOW.getTime() + 60_000);
+    const result = classifyMailboxThread({
+      messages: [draftMessage({ providerMessageId: 'm2', labelIds: ['SENT'], at: sentAt })],
+      senderAddress: SENDER,
+      outstandingDraft: { touch: 1, providerMessageId: 'm1', draftedAt: NOW },
+    });
+    expect(result).toEqual({ kind: 'sent', touch: 1, providerMessageId: 'm2', sentAt });
+  });
+
+  it('does not take a sent message from before the draft, or from someone else, as its send', () => {
+    const before = new Date(NOW.getTime() - 60_000);
+    const after = new Date(NOW.getTime() + 60_000);
+    for (const message of [
+      draftMessage({ providerMessageId: 'old', labelIds: ['SENT'], at: before }),
+      draftMessage({
+        providerMessageId: 'theirs',
+        labelIds: ['SENT'],
+        at: after,
+        fromAddress: 'someone@else.example',
+      }),
+    ]) {
+      const result = classifyMailboxThread({
+        messages: [message],
+        senderAddress: SENDER,
+        outstandingDraft: { touch: 1, providerMessageId: 'm1', draftedAt: NOW },
+      });
+      expect(result.kind).not.toBe('sent');
+    }
+  });
+
   it('reports unchanged when the outstanding draft is still present and nothing else happened', () => {
     const result = classifyMailboxThread({
       messages: [draftMessage()],

@@ -8,12 +8,14 @@
  * (`packages/interface/src/outreach/reconcile-mailbox.ts`) asks this function
  * what a thread's metadata means, it never decides that itself.
  *
- * A send is a provider fact, not an absence. Gmail keeps a message's id when a
- * draft is sent, drops its `DRAFT` label and adds `SENT`. So the one draft
- * still outstanding for a thread (its most recently drafted, not yet
- * confirmed-sent touch) is "sent" exactly when that message id appears in the
- * thread carrying `SENT` and not `DRAFT` - never inferred from the draft
- * merely being gone, which is also what a manual deletion looks like.
+ * A send is a provider fact, not an absence. The one draft still outstanding
+ * for a thread (its most recently drafted, not yet confirmed-sent touch) is
+ * "sent" when its message id appears in the thread carrying `SENT` and not
+ * `DRAFT`. Sending from the Gmail interface can instead replace the draft
+ * with a new message id (observed 2026-09-24), so when the draft's id is gone
+ * a `SENT` message from our own address in the same thread, dated after the
+ * draft was created, is the send. It is never inferred from the draft merely
+ * being gone, which is also what a manual deletion looks like.
  *
  * Everything else is read from messages after the last confirmed send only,
  * so a reply to touch 1 is never re-detected as a reply to touch 2 once touch
@@ -41,6 +43,9 @@ export interface MailboxClassifierMessage {
 export interface OutstandingThreadDraft {
   touch: number;
   providerMessageId: string;
+  /** When the draft was created: a replacement sent message can only come
+   *  after it. Without it only the exact message id counts as a send. */
+  draftedAt?: Date;
 }
 
 export interface ClassifyMailboxThreadInput {
@@ -99,6 +104,32 @@ export function classifyMailboxThread(
         providerMessageId: sentMessage.providerMessageId,
         sentAt: sentMessage.at,
       };
+    }
+
+    const draftStillPresent = input.messages.some(
+      (message) => message.providerMessageId === outstanding.providerMessageId,
+    );
+    const draftedAt = outstanding.draftedAt;
+    if (!draftStillPresent && draftedAt !== undefined) {
+      const replacement = input.messages
+        .filter(
+          (message) =>
+            isFromConfiguredSender(message, input.senderAddress) &&
+            message.labelIds.includes('SENT') &&
+            !message.labelIds.includes('DRAFT') &&
+            message.at.getTime() >= draftedAt.getTime() &&
+            (input.lastConfirmedSentAt === undefined ||
+              message.at.getTime() > input.lastConfirmedSentAt.getTime()),
+        )
+        .sort((a, b) => a.at.getTime() - b.at.getTime())[0];
+      if (replacement !== undefined) {
+        return {
+          kind: 'sent',
+          touch: outstanding.touch,
+          providerMessageId: replacement.providerMessageId,
+          sentAt: replacement.at,
+        };
+      }
     }
   }
 
