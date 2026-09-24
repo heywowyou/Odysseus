@@ -1,6 +1,6 @@
 # Plan 075: Make the audit data clean and true before it reaches a report
 
-Status: IN PROGRESS. Reopened 2026-09-24 as a completion defect: sweep 7 found that the image identity of F6 and the list-shaped rules of C5 never shipped, plus five new defects (Part H). The earlier closure record stays below as history. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
+Status: IMPLEMENTED (2026-09-24). Reopened the same day as a completion defect: sweep 7 found that the image identity of F6 and the list-shaped rules of C5 never shipped, plus five new defects (Part H). Part H is committed and not deployed; closure needs the deploy, a refresh of the affected audits on the VPS and the next hunt sweep. The earlier closure record stays below as history. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
 
 ## Context
 
@@ -466,6 +466,33 @@ Checked and clean or already known in this sweep: 0 findings on non-visited page
   - Parse from the browser's serialized DOM with stray attributes dropped, or catch the tokenizer error per block and fall back to the JSON-LD and microdata read from the live DOM, so one bad attribute never loses the page.
   - Stored audits: the lost pages come back only on a rescan; not a reason to rescan on its own.
   - Tests: a structured-data unit test with `<i class="x" "="">` next to a valid JSON-LD block.
+
+#### Part H implementation record (2026-09-24, not deployed)
+
+Q5 answered by the operator: one site-wide `image-alt` finding. Commits: H5 `90fea00e` and `b5170978` (a PostalAddress object counts as an address), H1 `254533f4` and `0cd8deb9` (examples rotate through distinct images), H4 `809bd06f`, H3 `8f94f413`, H2 `1290a1b7`, H7 `55aa54a7`, H6 `1d157d2b` (one audit-wide French locale, trade-off 115).
+
+Measured by re-normalizing the 13 stored audits with the final local build (findings, critical/serious/moderate/minor). Occurrences are unchanged except where H5 removed false `entity-data-incomplete` entries (a `WebSite` node, or a structured address, read as missing fields):
+
+| Audit | Findings | Severity |
+|---|---|---|
+| whistlerparis | 118 → 50 | 59/21/17/21 → 1/13/16/20 |
+| villasfoch | 61 → 48 | 15/9/14/23 → 2/9/14/23 |
+| bellevigne-hotels | 77 → 48 | 6/43/5/23 → 1/19/5/23 |
+| hotelpointfrance | 104 → 94 | 10/34/27/33 → 10/24/26/34 |
+| grandhotelbellevue | 61 → 57 | 5/25/9/22 → 5/22/8/22 |
+| grandhotelchicago | 49 → 46 | 2/10/12/25 → 2/8/11/25 |
+| atlantichotel | 79 → 77 | 10/26/17/26 → 10/25/17/25 |
+| grand-hotel-opera | 67 → 66 | 4/19/11/33 → 3/19/11/33 |
+| haaitza | 56 → 55 | 6/17/6/27 → 6/16/6/27 |
+| hoteldegarlande | 60 → 59 | 4/12/20/24 → 4/12/20/23 |
+| grandhoteldesalpes | 67 → 68 | 3/21/16/27 → 3/22/15/28 |
+| capdantibes-beachhotel, lacoorniche | unchanged | unchanged |
+
+grandhoteldesalpes gains one `link-name` finding (6 → 7, same occurrences): two class orders of one portfolio item now merge across pages, which changes which positional groups share a page set. All seven are the same portfolio template; positional selectors stay unmerged by trade-off 3. grand-hotel-opera keeps 3 `button-name` findings, which are 3 real components (slider dots, slider arrows, back-to-top), so its target is met.
+
+Proof: core unit tests (1,016), scanner unit tests, the scanner e2e suite (the language-redirect fixture fails without the fix) and `pnpm run check` pass. Nine unit tests in `store` and `interface` fail on the clean tree as well, from `fb387775` (the audit-delete cascade reports more collections than its tests expect); they are not part of this plan.
+
+Still to do after deploy: refresh the 13 audits on the VPS so stored findings pick up H1 to H5; rescan grandhoteldesalpes only if it is to be contacted (H6); run hunt sweep 8.
 
 Minor, not a slice: whistlerparis writes external partner links without a scheme (`href="www.goodplanet.org/fr"`, and one `/fr/pagehttps://…`), so they resolve under `/fr/page/` and land on the homepage. No rule reports it; the pages are correctly excluded as redirects.
 
