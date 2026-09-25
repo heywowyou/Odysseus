@@ -1,69 +1,78 @@
 /**
- * A valid preview input, and the pieces to build variants of it.
+ * A valid v3 preview summary, for the renderer's tests.
  *
  * Kept beside the renderer rather than in `src/test-fixtures.ts`: that file
  * builds paid-report inputs, and putting the two in one module is the first
- * step towards someone spreading one into the other.
+ * step towards someone spreading one into the other. Issue #530 removed the
+ * v1 and v2 renderers, and their input fixtures with them.
  */
 
-import {
-  HOTEL_EVIDENCE_OBSERVATIONS,
-  buildOutreachFactsBlock,
-  type OutreachPreviewImage,
-  type OutreachPreviewInput,
-} from '@odysseus/core';
+import type { OutreachPreviewSummaryV3 } from '@odysseus/core';
 
-/** A one-pixel PNG. The renderer only ever base64s and embeds it, so a real
- *  screenshot would make the fixtures large without testing anything more. */
-const PREVIEW_TEST_PNG_BASE64 =
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-
-const PNG_BYTES = Buffer.from(PREVIEW_TEST_PNG_BASE64, 'base64').byteLength;
-
-const OBSERVATIONS = Object.values(HOTEL_EVIDENCE_OBSERVATIONS);
-
-export function previewTestImage(
-  overrides: Partial<OutreachPreviewImage> = {},
-): OutreachPreviewImage {
+export function previewSummaryV3(
+  overrides: Partial<OutreachPreviewSummaryV3> = {},
+): OutreachPreviewSummaryV3 {
   return {
-    kind: 'specific-failure',
-    base64: PREVIEW_TEST_PNG_BASE64,
-    byteSize: PNG_BYTES,
-    width: 1,
-    height: 1,
-    altText: {
-      fr: "Capture de la page d'accueil",
-      en: 'Capture of the homepage',
-    },
-    ...overrides,
-  };
-}
-
-export function previewTestInput(
-  overrides: Partial<OutreachPreviewInput> = {},
-): OutreachPreviewInput {
-  return {
+    contentVersion: 'v3',
     language: 'fr',
-    businessName: 'Hôtel Exemple',
+    recipient: {
+      businessName: 'Hôtel de la Plage',
+      dataOrigins: ['public-hotel-catalogue', 'public-website'],
+    },
     links: {
       offer: 'https://odysseusaudit.com/offre',
-      privacy: 'https://odysseusaudit.com/confidentialite',
+      privacy: 'https://odysseusaudit.com/confidentialite-prospection',
       optOut: 'https://odysseusaudit.com/desinscription',
     },
-    dataOrigins: ['public-hotel-catalogue', 'public-website'],
-    summaries: [0, 1, 2].map((index) => ({
-      observation: OBSERVATIONS[index] as { fr: string; en: string },
-      severity: 'serious' as const,
-      wcagCriteria: ['1.4.3'],
-      pageRole: 'homepage' as const,
-    })),
-    images: [previewTestImage()],
-    facts: buildOutreachFactsBlock({
-      assessment: undefined,
-      language: overrides.language ?? 'fr',
-      capabilities: { argumentB: true },
-    }),
-    observedAt: new Date('2026-08-29T09:00:00Z'),
+    coverage: {
+      inventoriedPageCount: 23,
+      contentCheckedPageCount: 23,
+      performanceMeasuredPageCount: 9,
+    },
+    distinctFindingCount: 5,
+    affectedPageCount: 11,
+    severityTotals: { critical: 1, serious: 1, moderate: 1, minor: 2 },
+    categoryTotals: {
+      accessibility: 2,
+      seo: 1,
+      geo: 0,
+      performance: 2,
+      rendering: 0,
+      privacy: 0,
+    },
+    priorityCards: [
+      {
+        rank: 1,
+        title: {
+          fr: 'Certains liens ne sont pas clairement nommés.',
+          en: 'Some links are not clearly named.',
+        },
+        category: 'accessibility',
+        severity: 'serious',
+        affectedPageCount: 6,
+      },
+      {
+        rank: 2,
+        title: {
+          fr: 'Certaines images ne sont pas décrites.',
+          en: 'Some images are not described.',
+        },
+        category: 'accessibility',
+        severity: 'moderate',
+        affectedPageCount: 4,
+      },
+      {
+        rank: 3,
+        title: {
+          fr: 'Certaines pages sont difficiles à indexer.',
+          en: 'Some pages are difficult to index.',
+        },
+        category: 'seo',
+        severity: 'minor',
+        affectedPageCount: 2,
+      },
+    ],
+    facts: { state: 'omitted' },
     ...overrides,
   };
 }

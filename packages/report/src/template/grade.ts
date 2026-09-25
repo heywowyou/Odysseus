@@ -87,29 +87,6 @@ export function computeSeverityGrade(
   return { grade: 'A', reason: 'clean' };
 }
 
-/** Deterministic three-point risk level (Faible/Moyen/Élevé) for surfaces
- *  that show the report's risk scale but have no live model judgment to
- *  draw on - the outreach preview, whose schema (`OutreachPreviewSummary`)
- *  carries no `overallRisk`-shaped field at all, by the same stricter
- *  no-model-content rule that keeps the rest of that document deterministic.
- *
- *  Mirrors `interface`'s `fallbackOverallRisk` cutoffs exactly (critical
- *  finding present -> high, serious finding present -> medium, else low):
- *  that function is the codebase's one existing precedent for "no model
- *  available" risk, already reviewed for the audit pipeline's own static
- *  fallback branch. Deliberately not reusing `computeSeverityGrade`'s
- *  cutoffs instead - the letter grade and this scale are two distinct
- *  signals in the report itself (renderScorecard's own doc comment), and
- *  giving them the same thresholds here would make one a disguised copy of
- *  the other rather than two readings of the same counts. */
-export function computeSeverityRiskLevel(
-  severityCounts: Readonly<Record<Severity, number>>,
-): 'low' | 'medium' | 'high' {
-  if (severityCounts.critical >= 1) return 'high';
-  if (severityCounts.serious >= 1) return 'medium';
-  return 'low';
-}
-
 /** UNCALIBRATED placeholder bands. `manifest.benchmarkPercentile`'s
  *  `percentile` is "share of the cohort that scored strictly better than
  *  this site" (@odysseus/core's own doc comment on

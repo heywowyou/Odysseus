@@ -20,16 +20,6 @@
 import { createQueryRecord } from 'crux-api';
 import type { CruxFieldDataResult } from '@odysseus/core';
 
-/** Google's own published "poor" thresholds for the three Core Web
- *  Vitals CrUX reports, in the CrUX API's native units (ms for LCP/INP,
- *  unitless for CLS). See
- *  https://web.dev/articles/defining-core-web-vitals-thresholds */
-export const CRUX_POOR_THRESHOLDS = {
-  lcp: 4000,
-  cls: 0.25,
-  inp: 500,
-};
-
 interface CruxRecordMetrics {
   largest_contentful_paint?: { percentiles?: { p75?: number | string } };
   cumulative_layout_shift?: { percentiles?: { p75?: number | string } };

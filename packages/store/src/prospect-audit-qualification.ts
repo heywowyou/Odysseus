@@ -20,7 +20,7 @@ export type ProspectAuditScanIntent = ScanIntent;
 
 /** Full scans, plus historical complete prospecting audits (including the
  *  older outreach-full-scan rows classified as such below). */
-export const OUTREACH_ELIGIBLE_SCAN_INTENTS: readonly ProspectAuditScanIntent[] = [
+const OUTREACH_ELIGIBLE_SCAN_INTENTS: readonly ProspectAuditScanIntent[] = [
   'prospecting-audit',
   'full-audit',
 ];

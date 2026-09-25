@@ -1,14 +1,7 @@
 export { REPORT_TEMPLATE_VERSION } from './constants.js';
-export type {
-  GenerateReportInput,
-  ReportRenderMetadata,
-  ReportTheme,
-  StoredAnalysis,
-  VerifiedStoredAnalysis,
-} from './types.js';
-export { DEFAULT_REPORT_THEME } from './types.js';
+export type { GenerateReportInput, StoredAnalysis, VerifiedStoredAnalysis } from './types.js';
 export { classifyReportFreshness, reportUsesCurrentTemplate } from './freshness.js';
-export type { ReportFreshness, ReportFreshnessMetadata } from './freshness.js';
+export type { ReportFreshness } from './freshness.js';
 /** Plan 032 (issue #162): re-exported so the interface analysis stage's
  *  static fallback analysis reads the exact same bilingual sentences the
  *  report template renders, instead of inlining a second copy that could
@@ -16,7 +9,7 @@ export type { ReportFreshness, ReportFreshnessMetadata } from './freshness.js';
 export { getStrings } from './template/strings/i18n.js';
 /** Plan 018 page-count warning decision shared with interface (report
  *  stage) and the CLI; the count itself is measured in pdf.ts. */
-export { REPORT_PAGE_COUNT_WARNING_THRESHOLD, reportPageCountWarning } from './pdf.js';
+export { reportPageCountWarning } from './pdf.js';
 export type { ReportPageCountWarning, RenderedPdfWithPageCount } from './pdf.js';
 /** Re-exported so packages/interface's job-completion gate (P0.1, 2026-08-21
  *  La Corniche feedback pass) can ask the same question the report itself
@@ -30,91 +23,44 @@ export {
 /** Plan 072: the render-bundle contract, shared by the interface (which
  *  assembles a bundle from Mongo) and the CLI finalizer (which parses one
  *  off disk with no database). See render-bundle.ts for why it lives here. */
-export { buildRenderBundle, parseRenderBundle } from './render-bundle.js';
+export { buildRenderBundle } from './render-bundle.js';
 /** Plan 072: applying an operator's override file to a bundle. Rebuilds the
  *  writing input the prose was generated from, so the correction is judged
  *  against the same evidence the writer was. */
-export {
-  applyOverridesToBundle,
-  findWritingInputRebuildIssue,
-  projectWritingOutput,
-  rebuildWritingInput,
-} from './finalize-bundle.js';
-export type { FinalizedBundle, RefusedBundle } from './finalize-bundle.js';
-export type { RenderBundle, RenderBundleLineage, ReportRenderInputs } from './render-bundle.js';
+export { applyOverridesToBundle, projectWritingOutput } from './finalize-bundle.js';
+export type { RenderBundle, ReportRenderInputs } from './render-bundle.js';
 import {
   REFERENCE_AUDIT_DATA_DISCLOSURE_FR,
   type ReferenceAuditShowcase,
 } from './reference-audit.js';
-export {
-  RENDER_BUNDLE_FILES,
-  readRenderBundleDir,
-  writeRenderBundleDir,
-} from './render-bundle-files.js';
+export { readRenderBundleDir } from './render-bundle-files.js';
 export { buildRenderedPriorities } from './template/rendered-priorities.js';
+export { primaryFindingFilter, primarySeverityRollup } from './template/unlinked-sitemap-pages.js';
 export {
-  primaryFindingFilter,
-  primarySeverityRollup,
-  unlinkedSitemapPageUrls,
-} from './template/unlinked-sitemap-pages.js';
-export type { RenderedPriority, PriorityEvidence } from './template/rendered-priorities.js';
-export {
-  detectFindingVendor,
-  detectVendor,
-  isConfinedToThirdParty,
   isConfinedToThirdPartyFrame,
-  isThirdPartyFinding,
   summarizeThirdPartyFindings,
 } from './template/third-party-attribution.js';
 export {
   assertReferenceAuditNoLeaks,
   buildReferenceAuditShowcase,
-  findReferenceAuditLeaks,
-  referenceAuditManifestDigest,
   renderInputsForReferenceAudit,
   REFERENCE_AUDIT_ANONYMIZER_VERSION,
-  REFERENCE_AUDIT_CANONICAL_PATH,
-  REFERENCE_AUDIT_DISCLOSURE_FR,
-  REFERENCE_AUDIT_DATA_DISCLOSURE_FR,
   REFERENCE_AUDIT_RELEASE_VERSION,
-  ReferenceAuditPublicationError,
 } from './reference-audit.js';
-export type {
-  ReferenceAuditLeakScanInput,
-  ReferenceAuditShowcase,
-  ReferenceAuditShowcaseBundle,
-  ReferenceAuditSource,
-} from './reference-audit.js';
+export type { ReferenceAuditShowcase, ReferenceAuditSource } from './reference-audit.js';
 
 /** The outreach preview. A separate document kind from the paid report, not a
  *  tier of it: synchronous, HTML only, no Chromium, and built from its own
  *  narrow input contract rather than from `GenerateReportInput`. Do not spread
  *  a report input into a preview input - the whole safety argument is that the
  *  unsafe fields have nowhere to go. */
-export { generateOutreachPreviewHtml } from './outreach-preview/render-html.js';
-export { generateOutreachPreviewHtmlV2 } from './outreach-preview/render-html-v2.js';
 export { generateOutreachPreviewHtmlV3 } from './outreach-preview/render-html-v3.js';
-export type { OutreachProofCardCopyEntry } from './outreach-preview/proof-card-copy.js';
-export {
-  OUTREACH_PROOF_CARD_CLIENT_COPY as OUTREACH_PROOF_CARD_COPY,
-  outreachProofCardCopy,
-} from './outreach-preview/proof-card-client-copy.js';
+export { OUTREACH_PROOF_CARD_CLIENT_COPY as OUTREACH_PROOF_CARD_COPY } from './outreach-preview/proof-card-client-copy.js';
 export { generateOutreachPreviewPdf } from './outreach-preview/pdf-v2.js';
-export { embedOutreachEvidenceAsset } from './outreach-preview/evidence-input.js';
-export type { OutreachEvidenceSlot } from './outreach-preview/evidence-input.js';
 export { MissingReviewedRemediationError, ReportIdentityUnconfirmedError } from './errors.js';
 export { findUnconfirmedIdentityFields } from './template/unconfirmed-fields.js';
 export type { UnconfirmedField } from './template/unconfirmed-fields.js';
-export {
-  lintOutreachPreviewHtml,
-  OutreachPreviewLintError,
-} from './outreach-preview/preview-lint.js';
-export type {
-  OutreachPreviewImage,
-  OutreachPreviewInput,
-  OutreachPreviewLanguage,
-  PublicFindingSummary,
-} from './outreach-preview/types.js';
+export { OutreachPreviewLintError } from './outreach-preview/preview-lint.js';
 
 import { launchBrowser } from '@odysseus/scanner';
 import { REPORT_PDF_CHROMIUM_ARGS, REPORT_TEMPLATE_VERSION } from './constants.js';
@@ -160,7 +106,6 @@ export { REPORT_PDF_CHROMIUM_ARGS } from './constants.js';
  *  instead of a mirror table drifting from it. */
 export { remediationFor } from './template/remediation/index.js';
 export { RULE_TRANSLATIONS_FR } from './template/rule-translations.js';
-export type { RuleTranslation } from './template/rule-translations.js';
 
 /** Issue: operator-reviewed overall grade override. Re-exported so the
  *  dashboard's grade-override route computes the exact same automatic grade
@@ -369,43 +314,25 @@ export async function renderReferenceAuditHtml(
   });
 }
 
-export {
-  REPORT_EMBEDDED_FONT_FAMILIES,
-  describeReportPdfIntegrityDefects,
-  findReportPdfIntegrityDefects,
-} from './pdf-integrity.js';
-
 // Plan 058 fail-closed report-quality primitives.
 export { canonicalJson, reportQualityDigest, bytesDigest } from './quality/digest.js';
 export {
   EvidenceBoundContentError,
-  sanitizeModelText,
-  assertNoFreehandExactScalar,
-  validateEvidenceBoundContent,
   resolveEvidenceBoundContent,
 } from './quality/evidence-bound-content.js';
 export {
   buildReportFactRegistry,
-  buildInitialCoverageLedger,
   buildReportEvidenceDossier,
   reconcileCoverageLedger,
   assertCoverageLedgerComplete,
   assertMandatoryDisclosures,
 } from './quality/dossier.js';
+export { assertSeniorReportPlan, deterministicProseViolations } from './quality/plan-guards.js';
 export {
-  assertSeniorReportPlan,
-  assertNoBlockingReviewIssues,
-  assertCoverageAndPlan,
-  deterministicProseViolations,
-  assertReauditComparabilityLanguage,
-} from './quality/plan-guards.js';
-export {
-  REQUIRED_PDF_TOOLS,
   preflightPdfQualityToolchain,
   canonicalPostProcessPdf,
   runExactPdfQa,
 } from './quality/pdf-quality.js';
-export type { PdfQualityToolVersions, ExactPdfQaResult } from './quality/pdf-quality.js';
 export {
   reportRendererAssetFingerprints,
   reportRendererCodeFingerprint,

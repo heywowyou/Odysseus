@@ -53,18 +53,3 @@ export function resolveReportVariant(
     ? { kind: 'unavailable', theme, reason: 'light-variant-unavailable' }
     : available('light', light);
 }
-
-export function reportVariantDigest(
-  report: Pick<ReportDocument, 'pdfDigest' | 'variants'>,
-  theme: ReportTheme,
-): string | undefined {
-  return theme === 'dark' ? report.pdfDigest : report.variants?.light?.pdfDigest;
-}
-
-export function reportLightVariant(
-  report: Pick<ReportDocument, 'variants'>,
-): ReportVariantDocument | undefined {
-  return report.variants?.light;
-}
-
-export type { ReportVariantDocument };

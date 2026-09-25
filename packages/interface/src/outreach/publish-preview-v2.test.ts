@@ -3,7 +3,7 @@
  * retaining deterministic public copy and v2 live-link compatibility.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { AnalysisDocument, AuditDocumentFields } from '@odysseus/store';
 import type { Finding } from '@odysseus/core';
 import { OUTREACH_PROOF_CARD_COPY } from '@odysseus/report';
@@ -451,7 +451,6 @@ describe('resolvePublishedPreviewForDraft', () => {
             ...(source.analysisId === undefined ? {} : { selectedFrAnalysisId: source.analysisId }),
           },
         }),
-      findingsForAudit: vi.fn(() => Promise.resolve(FINDINGS)),
       prospectId: 'prospect-1',
       previewToken: TOKEN,
       publicBaseUrl: BASE_URL,
@@ -459,7 +458,7 @@ describe('resolvePublishedPreviewForDraft', () => {
     };
   }
 
-  it('uses the exact stored v3 facts without recomputing findings', async () => {
+  it('uses the exact stored v3 facts', async () => {
     const h = v3Harness();
     const result = await resolvePublishedPreviewForDraft(h);
     expect(result).toMatchObject({
@@ -468,7 +467,6 @@ describe('resolvePublishedPreviewForDraft', () => {
       severityTotals: facts.severityTotals,
       proofCardCategories: ['seo', 'accessibility', 'performance'],
     });
-    expect(h.findingsForAudit).not.toHaveBeenCalled();
   });
 
   it('marks a v3 publication stale when the selected French analysis changes', async () => {
@@ -485,7 +483,7 @@ describe('resolvePublishedPreviewForDraft', () => {
     expect(result).toEqual({ refusal: 'preview-stale' });
   });
 
-  it('keeps a live v2 publication compatible', async () => {
+  it('refuses to draft from a live v2 publication until it is republished (issue #530)', async () => {
     const result = await resolvePublishedPreviewForDraft({
       ...v3Harness(),
       findByTokenHash: () =>
@@ -499,10 +497,6 @@ describe('resolvePublishedPreviewForDraft', () => {
           publicExpiresAt: new Date('2026-10-19T09:00:00.000Z'),
         }),
     });
-    expect(result).toMatchObject({
-      previewId: 'preview-v2',
-      distinctFindingCount: 3,
-      affectedPageCount: 3,
-    });
+    expect(result).toEqual({ refusal: 'preview-not-published' });
   });
 });

@@ -12,7 +12,6 @@ import {
   containsProhibitedPreviewContent,
   coverageFactsFromAudit,
   outreachPreviewSummaryV3Schema,
-  selectOutreachProofCards,
   summarizeAuditCoverage,
   type AuditManifest,
   type Finding,
@@ -346,12 +345,6 @@ export interface ResolvedPublishedPreview {
   proofCardCategories: OutreachProofCard['category'][];
 }
 
-function v2ProofCardCategoriesFor(findings: readonly Finding[]): OutreachProofCard['category'][] {
-  return selectOutreachProofCards(findings, (ruleId) => OUTREACH_PROOF_CARD_COPY[ruleId])
-    .slice(0, 3)
-    .map((card) => card.category);
-}
-
 /** V3 uses the exact bounded facts persisted at publication. V2 remains
  * resolvable for historical live links and keeps its old recomputation rule. */
 export async function resolvePublishedPreviewForDraft(options: {
@@ -378,7 +371,6 @@ export async function resolvePublishedPreviewForDraft(options: {
       }
     | { state: 'refused' }
   >;
-  findingsForAudit: (auditId: string) => Promise<readonly Finding[]>;
   prospectId: string;
   previewToken: string;
   publicBaseUrl: string;
@@ -425,18 +417,10 @@ export async function resolvePublishedPreviewForDraft(options: {
     };
   }
 
-  if (record.previewContentVersion !== 'v2') return { refusal: 'preview-not-published' };
-
-  const findings = await options.findingsForAudit(resolution.audit.auditId);
-  const proofCardCategories = v2ProofCardCategoriesFor(findings);
-  if (proofCardCategories.length !== 3) return { refusal: 'preview-wrong-audit' };
-  return {
-    previewId: record.previewId,
-    url: previewUrl(options.publicBaseUrl, options.previewToken),
-    publicExpiresAt: record.publicExpiresAt,
-    ...aggregateFacts(findings),
-    proofCardCategories,
-  };
+  // Issue #530: only v3 previews are read. An older published row (v1 or
+  // v2) keeps its public page in the bucket, but its facts were counted from
+  // unfiltered findings; drafting from it refuses until it is republished.
+  return { refusal: 'preview-not-published' };
 }
 
 export async function publishPreviewV3(

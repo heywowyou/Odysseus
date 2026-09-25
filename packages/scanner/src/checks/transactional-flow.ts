@@ -120,8 +120,7 @@ const OUTBOUND_BOOKING_HOSTS = [
  *  file uses to spot an off-site one. Exported rather than copied: two
  *  drifting definitions of "this link starts a booking" would make the
  *  page a prescan measures and the funnel a full audit reports disagree. */
-export const BOOKING_INTENT_TEXT_PATTERN =
-  /r[ée]serv|\bbook(ing)?\b|\bcheck-?in\b|disponibilit|availab/i;
+const BOOKING_INTENT_TEXT_PATTERN = /r[ée]serv|\bbook(ing)?\b|\bcheck-?in\b|disponibilit|availab/i;
 
 /** Signals a destination page is a marketplace/aggregator rather than one
  *  operator's own booking engine: a multi-property or multi-destination

@@ -8,7 +8,7 @@ import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
 import { appendProspectEvent } from './prospect-hub.js';
 import { isSuppressed } from './suppression.js';
 
-export const REFERENCE_AUDIT_ATTRIBUTION_DAYS = 90;
+const REFERENCE_AUDIT_ATTRIBUTION_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface CreateReferenceAuditLinkInput {

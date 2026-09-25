@@ -137,7 +137,6 @@ export const issueAdjudicationOutputSchema = z
     ),
   })
   .strict();
-export type IssueAdjudicationOutput = z.infer<typeof issueAdjudicationOutputSchema>;
 
 export const editorOutputSchema = z
   .object({
@@ -160,7 +159,6 @@ export const finalArbiterOutputSchema = z
     issues: z.array(issueProposalSchema),
   })
   .strict();
-export type FinalArbiterOutput = z.infer<typeof finalArbiterOutputSchema>;
 
 export const SENIOR_PLAN_JSON_SCHEMA = {
   type: 'object',

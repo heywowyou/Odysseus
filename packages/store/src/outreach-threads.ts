@@ -326,27 +326,6 @@ export async function closeOutreachThreadsForDomain(
   return { closed: result.modifiedCount };
 }
 
-export interface ListOutreachThreadsOptions {
-  state?: OutreachThreadState;
-  domain?: string;
-  prospectId?: string;
-  limit?: number;
-}
-
-export async function listOutreachThreads(
-  connection: Connection,
-  options: ListOutreachThreadsOptions = {},
-): Promise<OutreachThreadDocument[]> {
-  const ThreadModel = createOutreachThreadModel(connection);
-  const query: Record<string, unknown> = {};
-  if (options.state !== undefined) query['state'] = options.state;
-  if (options.domain !== undefined) query['domain'] = normalizeDomainForHash(options.domain);
-  if (options.prospectId !== undefined) query['prospectId'] = options.prospectId;
-  const cursor = ThreadModel.find(query).sort({ createdAt: -1 });
-  if (options.limit !== undefined) cursor.limit(options.limit);
-  return cursor.lean();
-}
-
 /** Returns the most recent provider reconciliation timestamp without exposing
  *  a thread or any mailbox identity. The inbox uses this as freshness
  *  context; absence means no successful sync has stamped a thread yet. */

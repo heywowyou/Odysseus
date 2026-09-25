@@ -2337,6 +2337,17 @@ in a sales document, and the paid report keeps both. The v3 summary drops
 than a renderer merely skipping it.
 
 
+
+**Amended 2026-09-25, issue #530: v3 is the only preview contract.** The
+v1 prescan renderer, the v2 scorecard renderer, `embedOutreachEvidenceAsset`,
+the v2 summary builder, `OutreachPreviewInput` and the hotel prescan
+evidence schema had no caller outside their own tests, and the v2 draft read
+path counted facts from unfiltered findings. All are removed. A previously
+published v1 or v2 page stays served from the bucket, since the site reads
+the stored object and never re-renders it; drafting an email from such a row
+now refuses (`preview-not-published`) until the preview is republished as
+v3. The approved observation vocabulary (`HOTEL_EVIDENCE_OBSERVATIONS`) stays,
+because the proof-card copy reuses its sentences verbatim.
 ### 43. A preview is served by hashing the visitor's own token, and the public site never learns anything else
 
 Plan 008 could render a preview and nothing could put one in front of a hotel.

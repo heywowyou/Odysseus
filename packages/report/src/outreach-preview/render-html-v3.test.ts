@@ -1,74 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { outreachPreviewSummaryV3Schema, type OutreachPreviewSummaryV3 } from '@odysseus/core';
+import { outreachPreviewSummaryV3Schema } from '@odysseus/core';
 import { formatFullAuditPrice } from '@odysseus/core';
 import { generateOutreachPreviewHtmlV3 } from './render-html-v3.js';
 import { lintOutreachPreviewHtml } from './preview-lint.js';
-
-function summary(overrides: Partial<OutreachPreviewSummaryV3> = {}): OutreachPreviewSummaryV3 {
-  return {
-    contentVersion: 'v3',
-    language: 'fr',
-    recipient: {
-      businessName: 'Hôtel de la Plage',
-      dataOrigins: ['public-hotel-catalogue', 'public-website'],
-    },
-    links: {
-      offer: 'https://odysseusaudit.com/offre',
-      privacy: 'https://odysseusaudit.com/confidentialite-prospection',
-      optOut: 'https://odysseusaudit.com/desinscription',
-    },
-    coverage: {
-      inventoriedPageCount: 23,
-      contentCheckedPageCount: 23,
-      performanceMeasuredPageCount: 9,
-    },
-    distinctFindingCount: 5,
-    affectedPageCount: 11,
-    severityTotals: { critical: 1, serious: 1, moderate: 1, minor: 2 },
-    categoryTotals: {
-      accessibility: 2,
-      seo: 1,
-      geo: 0,
-      performance: 2,
-      rendering: 0,
-      privacy: 0,
-    },
-    priorityCards: [
-      {
-        rank: 1,
-        title: {
-          fr: 'Certains liens ne sont pas clairement nommés.',
-          en: 'Some links are not clearly named.',
-        },
-        category: 'accessibility',
-        severity: 'serious',
-        affectedPageCount: 6,
-      },
-      {
-        rank: 2,
-        title: {
-          fr: 'Certaines images ne sont pas décrites.',
-          en: 'Some images are not described.',
-        },
-        category: 'accessibility',
-        severity: 'moderate',
-        affectedPageCount: 4,
-      },
-      {
-        rank: 3,
-        title: {
-          fr: 'Certaines pages sont difficiles à indexer.',
-          en: 'Some pages are difficult to index.',
-        },
-        category: 'seo',
-        severity: 'minor',
-        affectedPageCount: 2,
-      },
-    ],
-    facts: { state: 'omitted' },
-    ...overrides,
-  };
-}
+import { previewSummaryV3 as summary } from './test-fixtures.js';
 
 describe('generateOutreachPreviewHtmlV3', () => {
   it('renders the report-aligned hierarchy and no independent grade or risk hero', () => {

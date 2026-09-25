@@ -43,21 +43,6 @@ export function reportOrigin(report: Pick<ReportDocument, 'origin'>): 'pipeline'
   return report.origin === 'finalized' ? 'finalized' : 'pipeline';
 }
 
-/**
- * The report a finalization corrected, or null when this audit has none in
- * that language.
- *
- * The finalized row carries the id rather than this being inferred from
- * timestamps: a regeneration between the operator's read and their upload
- * would make a "latest pipeline row" guess point at a render nobody read.
- */
-export async function getReportById(
-  connection: Connection,
-  reportId: string,
-): Promise<ReportDocument | null> {
-  return createReportModel(connection).findOne({ reportId }).lean<ReportDocument>();
-}
-
 /** Latest pipeline-generated report for an audit and language, ignoring any
  *  finalization layered on top of it. Backs the dashboard's link to the
  *  original generated PDF. */

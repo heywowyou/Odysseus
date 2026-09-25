@@ -6,7 +6,7 @@
  * repository-owned, per docs/rules/llm-layer-rules.md.
  */
 
-export type LlmPass = 'structure' | 'writing' | 'review' | 'correction-review';
+type LlmPass = 'structure' | 'writing' | 'review' | 'correction-review';
 
 /**
  * The writing pass's content guards, named so a rejection is measurable.

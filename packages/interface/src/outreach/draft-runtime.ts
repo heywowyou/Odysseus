@@ -18,7 +18,6 @@ import {
   findLiveOutreachDraft,
   findOutreachPreviewByTokenHash,
   findOutreachThreadByProspect,
-  getFindingsForAudit,
   getProspectHub,
   listOutreachDrafts,
   loadOutreachReportReadiness,
@@ -204,7 +203,6 @@ async function resolvePreview(connection: Connection, prospectId: string, token:
         },
       };
     },
-    findingsForAudit: (auditId) => getFindingsForAudit(connection, auditId),
     prospectId,
     previewToken: token,
     publicBaseUrl: getPreviewPublicBaseUrl(),

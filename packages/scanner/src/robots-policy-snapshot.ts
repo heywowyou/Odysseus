@@ -32,7 +32,7 @@ import { canonicalDigest } from '@odysseus/core';
 import { createHash } from 'node:crypto';
 import { isAllowedByRobots, robotsProductToken, type RobotsRules } from './robots.js';
 
-export const ROBOTS_POLICY_SNAPSHOT_VERSION = 'robots-policy-v1';
+const ROBOTS_POLICY_SNAPSHOT_VERSION = 'robots-policy-v1';
 
 export interface RobotsPolicySnapshot {
   version: typeof ROBOTS_POLICY_SNAPSHOT_VERSION;

@@ -124,7 +124,7 @@ export interface Page<T> {
   total: number;
 }
 
-export const PROSPECT_RESULT_STATUSES = [
+const PROSPECT_RESULT_STATUSES = [
   'contacted',
   'follow-up',
   'replied',
@@ -453,7 +453,7 @@ export interface UpdateProspectOptions {
  *  `directoryRef`), lifecycle (`status`, `archivedAt`), and bookkeeping
  *  (`fieldOrigins`, timestamps) have their own dedicated writers, so a patch
  *  naming them could only ever undo those writers' work. */
-export const EDITABLE_PROSPECT_FIELDS = [
+const EDITABLE_PROSPECT_FIELDS = [
   'sector',
   'name',
   'websites',
@@ -1427,8 +1427,6 @@ export async function recordProspectOutcome(
   );
   return prospect;
 }
-
-export const updateProspectRecord = updateProspect;
 
 /**
  * Issue #289: fill the prospect's identity fields (SIREN, trading name,

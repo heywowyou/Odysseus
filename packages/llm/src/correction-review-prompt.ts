@@ -1,8 +1,6 @@
 import type { CorrectionReviewInput } from './correction-review-schema.js';
 import { SCANNER_EVIDENCE_NOTICE } from './untrusted-evidence.js';
 
-export const CORRECTION_REVIEW_PROMPT_VERSION = '033-v2';
-
 export function buildCorrectionReviewSystemPrompt(): string {
   return `You are an advisory copy-review pass for Odysseus, a web audit tool. You receive exactly the structured input shown to the writing pass and its accepted prose output. Return one structured record for every eligible prose field.
 

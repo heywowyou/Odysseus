@@ -49,7 +49,7 @@ import type { OutreachThreadState } from '@odysseus/core';
  *  used one. */
 export type OutreachLanguageSource = 'operator';
 
-export const OUTREACH_THREAD_STATES: readonly OutreachThreadState[] = [
+const OUTREACH_THREAD_STATES: readonly OutreachThreadState[] = [
   'open',
   'e1-drafted',
   'e1-sent',

@@ -17,7 +17,7 @@
 import { isValidSiren, isValidSiret } from '@odysseus/core';
 import type { AuditManualFields, Prospect, ProvenancedField } from '@odysseus/core';
 
-export const PROSPECT_IDENTITY_FIELDS = ['siren', 'tradingName', 'legalName'] as const;
+const PROSPECT_IDENTITY_FIELDS = ['siren', 'tradingName', 'legalName'] as const;
 export type ProspectIdentityField = (typeof PROSPECT_IDENTITY_FIELDS)[number];
 
 export type ProspectIdentityValues = Partial<Record<ProspectIdentityField, string | undefined>>;

@@ -49,7 +49,7 @@ export interface ReportIntegrityFs {
   read(filePath: string): Promise<Buffer>;
 }
 
-export const nodeReportIntegrityFs: ReportIntegrityFs = {
+const nodeReportIntegrityFs: ReportIntegrityFs = {
   exists: (filePath) =>
     fs.stat(filePath).then(
       () => true,

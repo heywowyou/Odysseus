@@ -439,7 +439,7 @@ export async function replaceDetectedManualFields(
  * Fields the prospect has not confirmed are left alone. Returns the fields
  * written.
  */
-export async function applyConfirmedProspectIdentity(
+async function applyConfirmedProspectIdentity(
   connection: Connection,
   auditId: string,
   confirmed: AuditIdentityValues,

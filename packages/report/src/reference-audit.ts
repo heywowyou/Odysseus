@@ -26,7 +26,6 @@ import type { StoredAnalysis } from './types.js';
 
 export const REFERENCE_AUDIT_ANONYMIZER_VERSION = 'reference-anonymizer-v1';
 export const REFERENCE_AUDIT_RELEASE_VERSION = 'reference-release-v1';
-export const REFERENCE_AUDIT_CANONICAL_PATH = '/exemple-audit';
 export const REFERENCE_AUDIT_DISCLOSURE_FR =
   "Exemple de rapport. L'identité de l'établissement, son site et ses données administratives ont été remplacés. Les constats et mesures proviennent d'un audit anonymisé et servent uniquement à illustrer le livrable ; ils ne décrivent pas l'établissement fictif présenté ici.";
 export const REFERENCE_AUDIT_DATA_DISCLOSURE_FR =
@@ -67,7 +66,7 @@ export interface ReferenceAuditShowcase {
   sourceDenylist: readonly string[];
 }
 
-export class ReferenceAuditPublicationError extends Error {
+class ReferenceAuditPublicationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'ReferenceAuditPublicationError';
@@ -717,16 +716,6 @@ export function assertReferenceAuditNoLeaks(input: ReferenceAuditLeakScanInput):
       `reference audit refused: source identity survived publication projection (${leaks.join(', ')})`,
     );
   }
-}
-
-export function referenceAuditManifestDigest(bundle: ReferenceAuditShowcaseBundle): string {
-  return canonicalDigest({
-    releaseVersion: bundle.releaseVersion,
-    anonymizerVersion: bundle.anonymizerVersion,
-    manifest: bundle.manifest,
-    findings: bundle.findings,
-    analysis: bundle.analysis,
-  });
 }
 
 export function renderInputsForReferenceAudit(bundle: ReferenceAuditShowcaseBundle): RenderBundle {

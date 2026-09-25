@@ -31,7 +31,7 @@ export interface SessionRouteOptions {
  *  attacker rotates the header per attempt and never enters lockout.
  *  Direct access without a proxy sends no forwarded header at all, so the
  *  socket address stays the fallback. */
-export function clientIpFor(req: IncomingMessage): string {
+function clientIpFor(req: IncomingMessage): string {
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string') {
     const entries = forwarded.split(',');

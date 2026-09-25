@@ -16,8 +16,6 @@ export const WRITING_CRITIC_CATEGORIES = [
   'unexplained-jargon',
 ] as const;
 
-export type WritingCriticCategory = (typeof WRITING_CRITIC_CATEGORIES)[number];
-
 export const MAX_WRITING_CRITIC_ISSUES = 12;
 const MAX_CRITIC_PROBLEM_CHARS = 400;
 
