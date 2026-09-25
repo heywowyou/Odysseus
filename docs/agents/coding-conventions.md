@@ -254,10 +254,15 @@ Applying updates:
   always get that dedicated review (`renovate/manual-major-review` in
   `renovate.json`), because a major there carries behavior, cost, or browser
   compatibility risk.
-- `.codex/config.toml`'s Playwright MCP server is pinned to an exact version
-  (`@playwright/mcp@0.0.80`, not `@latest`) and tracked by a Renovate custom
-  manager, like any other dependency: a floating `@latest` on agent tooling
-  means the MCP server can change under an agent with no diff to review.
+- The Playwright MCP server, in `.mcp.json` and `.codex/config.toml`, is
+  pinned to an exact version (`@playwright/mcp@0.0.80`, not `@latest`) and
+  tracked by a Renovate custom manager, like any other dependency: a floating
+  `@latest` on agent tooling means the MCP server can change under an agent
+  with no diff to review, and this one browses untrusted prospect sites.
+- Agent sessions do not inherit `.env` (issue #485): `scripts/dev.sh` no
+  longer exports it, MCP launchers pass on only the variable their server
+  needs, and shared `.claude/settings.json` does not pre-approve the
+  production deploy.
 - To hold a group back, add a rule with `"enabled": false` above its group rule
   in `renovate.json`, with a comment naming why and when to remove it.
 - The Mend-hosted Renovate GitHub App must stay uninstalled (or have this

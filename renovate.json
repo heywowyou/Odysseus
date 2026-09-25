@@ -84,9 +84,9 @@
   ],
   "customManagers": [
     {
-      "description": "Issue #252: .codex/config.toml pins the Playwright MCP server's own npm version instead of floating on @latest (docs/agents/coding-conventions.md, 'Dependency maintenance'). Renovate reads/writes that pin the same way it would a package.json dependency.",
+      "description": "Issues #252 and #485: .mcp.json and .codex/config.toml pin the Playwright MCP server's own npm version instead of floating on @latest (docs/agents/coding-conventions.md, 'Dependency maintenance'). That server browses untrusted prospect sites. Renovate reads/writes that pin the same way it would a package.json dependency.",
       "customType": "regex",
-      "managerFilePatterns": ["/^\\.codex/config\\.toml$/"],
+      "managerFilePatterns": ["/^\\.codex/config\\.toml$/", "/^\\.mcp\\.json$/"],
       "matchStrings": ["\"@playwright/mcp@(?<currentValue>[^\"]+)\""],
       "depNameTemplate": "@playwright/mcp",
       "datasourceTemplate": "npm"

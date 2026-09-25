@@ -322,7 +322,7 @@ odysseus report <artifacts-dir> --all
 
 Omitting `--max-pages` is not by itself enough to be uncapped locally.
 `getMaxPages()` reads a `MAX_PAGES` environment variable
-(`packages/scanner/src/config.ts`) and `codysseus` sources `.env`, so a cap
+(`packages/scanner/src/config.ts`), which loads `.env` itself, so a cap
 left there applies silently to a run this skill believes is uncapped.
 Confirm it is unset before starting. `report --all` prints the written PDF
 path per language; note both, step 4 reads them. Before analyzing, check
