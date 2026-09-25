@@ -788,8 +788,17 @@ export function ProspectHubDetailPage(): JSX.Element {
           ? `${baseNotice} ${copy.mailboxDeletionWarning.replace('{count}', String(pending))}`
           : baseNotice,
       );
-    } catch {
-      setOutreachNotice(copy.actionFailed);
+    } catch (error) {
+      // Issue #478: the server keeps the draft when the mailbox no longer
+      // has it (it was probably sent) or could not be checked.
+      const status = error instanceof ApiError ? error.status : undefined;
+      setOutreachNotice(
+        status === 409
+          ? copy.draftNotInMailbox
+          : status === 502
+            ? copy.draftMailboxCheckFailed
+            : copy.actionFailed,
+      );
     } finally {
       setOutreachBusy(null);
       refreshAll();

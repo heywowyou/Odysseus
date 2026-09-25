@@ -313,6 +313,8 @@ export interface ProspectHubStrings {
     draftDiscardedPreviewLive: string;
     draftMailboxDeletePending: string;
     mailboxDeletionWarning: string;
+    draftNotInMailbox: string;
+    draftMailboxCheckFailed: string;
     noDraft: string;
     auditState: string;
     /** `{date}` and `{age}`, the latter one of the scanAge* phrases. */
@@ -753,6 +755,10 @@ export const prospectHub = {
         'La suppression dans la boîte mail est en attente. Une nouvelle tentative sera faite automatiquement ; ne l’envoyez pas.',
       mailboxDeletionWarning:
         '{count} brouillon(s) n’ont pas pu être supprimés de la boîte mail. Une nouvelle tentative sera faite automatiquement ; ne les envoyez pas.',
+      draftNotInMailbox:
+        'Ce brouillon n’est plus dans la boîte mail : il a peut-être été envoyé. Rien n’a été supprimé. Une synchronisation est lancée ; rechargez la page dans un instant.',
+      draftMailboxCheckFailed:
+        'La boîte mail n’a pas pu être vérifiée. Rien n’a été supprimé ; réessayez.',
       noDraft: 'Aucun brouillon en attente.',
       auditState: 'État de l’audit : {state}',
       scanDate: 'Scanné le {date}, {age}',
@@ -1291,6 +1297,10 @@ export const prospectHub = {
         'Mailbox deletion is pending. The system will retry automatically; do not send this draft.',
       mailboxDeletionWarning:
         '{count} draft(s) could not be deleted from the mailbox. The system will retry automatically; do not send them.',
+      draftNotInMailbox:
+        'This draft is no longer in the mailbox; it may have been sent. Nothing was discarded. A sync has started; reload the page in a moment.',
+      draftMailboxCheckFailed:
+        'The mailbox could not be checked. Nothing was discarded; try again.',
       noDraft: 'No pending draft.',
       auditState: 'Audit state: {state}',
       scanDate: 'Scanned {date}, {age}',

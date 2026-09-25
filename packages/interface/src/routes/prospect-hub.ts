@@ -559,11 +559,33 @@ export function registerProspectHubRoutes(
       sendError(res, 404, 'pending draft not found');
       return;
     }
+    // Issue #478: Gmail answers 404 for a draft that was sent, and deleting a
+    // missing draft counts as success, so a discard clicked after sending
+    // from Gmail (and before the next sync) would erase the only record of
+    // the send and take its preview offline. The draft must still be in the
+    // mailbox to be discarded; otherwise nothing changes and a sync runs.
+    const mailbox = createConfiguredMailboxDraftAdapter();
+    if (mailbox !== null && draft.providerDraftId !== undefined) {
+      let inMailbox: boolean;
+      try {
+        inMailbox = (await mailbox.getDraft(draft.providerDraftId)) !== null;
+      } catch {
+        sendError(res, 502, 'mailbox-check-failed');
+        return;
+      }
+      if (!inMailbox) {
+        // Records the send, if that is what happened, before the operator
+        // looks again. A sync failure is logged by the poller's next tick.
+        syncMailbox(connection).catch(() => undefined);
+        sendError(res, 409, 'draft-not-in-mailbox');
+        return;
+      }
+    }
     await markOutreachDraftDeletionPending(connection, draft.draftId, 'skipped');
     const mailboxDraftsNotRemoved = await deletePendingMailboxDraftRows(
       connection,
       [draft],
-      createConfiguredMailboxDraftAdapter(),
+      mailbox,
     );
     const mailboxWarning = mailboxDraftDeletionWarningFields(mailboxDraftsNotRemoved);
     // The preview exists only to be linked from this draft, so discarding the
