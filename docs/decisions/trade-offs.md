@@ -6064,3 +6064,20 @@ delivered audit whole (the delivered report needs its findings, not 50 MB
 of per-page scan output); compressing `scan.json` on disk (every reader
 would change, for less than dropping bytes nothing reads); an env knob for
 the grace period (one more setting to get wrong for no operator need).
+
+### 118. Node 24 before Node 22 leaves security support (build decision, issue #527, 2026-09-25)
+
+Node 22 stops receiving security fixes on 2027-04-30, and the image's digest
+pin means the local Renovate report never proposes a new major line on its
+own. The engines floor (`>=24.11`, the first Node 24 LTS release), the three
+Dockerfile stages (`node:24-bookworm-slim`, pinned by digest), CI, `.nvmrc`
+and both `@types/node` pins (root and site, which had drifted to 20) move
+together, so no environment runs a different major than the others.
+
+Checked on 2026-09-25 with Node 24.21.0: `pnpm run check`, the unit and e2e
+suites (the failures seen are the same on Node 22), and inside the built
+image a Full-audit scan of `fixtures/hotel-demo` (6 pages, axe and
+Lighthouse on each) and the runbook's in-container PDF render (35 pages).
+
+Rejected alternative: staying on 22 until its end of life, which would turn
+a routine upgrade into a deadline.

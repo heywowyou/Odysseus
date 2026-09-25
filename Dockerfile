@@ -1,11 +1,11 @@
-# Odysseus deploy image: multi-stage, final base node:22-bookworm-slim.
+# Odysseus deploy image: multi-stage, final base node:24-bookworm-slim.
 # Three stages: deps (manifests + pnpm install), build (full source +
 # tsc/vite build), runtime (whole workspace + Playwright Chromium, then a
 # non-root user runs `odysseus serve`).
 
 # pnpm is never fetched from a floating tag: corepack reads the exact
 # version and hash pinned in package.json's packageManager field.
-FROM node:22-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c AS deps
+FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS deps
 WORKDIR /app
 # Manifests first, so pnpm install's layer cache survives unrelated source
 # changes. Every workspace importer must be present (including
@@ -25,7 +25,7 @@ COPY packages/store/package.json packages/store/package.json
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 RUN corepack enable && pnpm install --frozen-lockfile
 
-FROM node:22-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c AS build
+FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS build
 WORKDIR /app
 RUN corepack enable
 COPY --from=deps /app ./
@@ -35,7 +35,7 @@ COPY . .
 # packages/interface/dist/public.
 RUN pnpm --filter @odysseus/cli... run build
 
-FROM node:22-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c
+FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6
 WORKDIR /app
 COPY --from=build /app ./
 

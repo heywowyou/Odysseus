@@ -19,7 +19,7 @@ writing consistent between agents. Read the charter and
 
 ## Prerequisites
 
-- Node 22
+- Node 24
 - pnpm (version pinned via `packageManager` in `package.json`; run
   `corepack enable` to get it automatically)
 - Docker, for the local MongoDB used by `packages/store`'s integration

@@ -32,7 +32,7 @@ Have all of these before starting:
 - A Scaleway account able to create a VPS.
 - DNS control for `odysseusaudit.com` (wherever its nameservers live).
 - Atlas project admin access, to add the VPS IP to the network allowlist.
-- A checkout of this repository on your local machine, with Node 22
+- A checkout of this repository on your local machine, with Node 24
   installed (needed once, to generate the dashboard password hash).
 - Local Docker, for the local smoke in section 10.
 

@@ -111,7 +111,7 @@ override current canonical docs.
 
 ## Package boundaries
 
-Node 22, TypeScript strict, pnpm workspace, ESM.
+Node 24, TypeScript strict, pnpm workspace, ESM.
 
 - `core`: contracts and pure normalization; no infrastructure I/O.
 - `scanner`: crawl, Chromium lifecycle, render diff, axe, Lighthouse, scan
