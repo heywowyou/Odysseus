@@ -37,6 +37,10 @@ import { addSuppressionEntry } from './suppression.js';
 /** Operational retention, per docs/rules/prospect-qualification.md section 7. */
 const OUTREACH_THREAD_RETENTION_DAYS = 90;
 
+/** States in which nothing has been sent yet, so reopening the thread for a
+ *  new first email may replace its language, recipient and preview. */
+const REOPENABLE_STATES: readonly OutreachThreadState[] = ['open', 'e1-drafted'];
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface OpenOutreachThreadInput {
@@ -64,7 +68,30 @@ export async function openOutreachThread(
   await ThreadModel.init();
 
   const existing = await ThreadModel.findOne({ prospectId: input.prospectId }).lean();
-  if (existing !== null) return { thread: existing, created: false };
+  if (existing !== null) {
+    // Issue #482: before the first email is sent, a redraft (after the
+    // operator discarded E1) may change the language, recipient or preview,
+    // and follow-ups and sequence completion read them from the thread. Once
+    // E1 has gone out they are what the prospect received and never change.
+    // Callers refuse a redraft while an E1 draft is still live.
+    if (REOPENABLE_STATES.includes(existing.state)) {
+      const refreshed = await ThreadModel.findOneAndUpdate(
+        { threadId: existing.threadId, state: { $in: REOPENABLE_STATES } },
+        {
+          $set: {
+            language: input.language,
+            languageSource: 'operator',
+            roleAddress: input.roleAddress,
+            previewId: input.previewId,
+            updatedAt: input.openedAt,
+          },
+        },
+        { new: true },
+      ).lean();
+      return { thread: refreshed ?? existing, created: false };
+    }
+    return { thread: existing, created: false };
+  }
 
   const thread: OutreachThreadDocument = {
     threadId: randomUUID(),
