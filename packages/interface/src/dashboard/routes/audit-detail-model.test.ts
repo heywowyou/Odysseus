@@ -46,9 +46,10 @@ function finding(overrides: Partial<FindingResponse>): FindingResponse {
     title: 'Low contrast text',
     description: 'Foreground and background colors are too close.',
     pageUrls: ['https://example.fr/'],
+    pageUrlCount: 1,
     occurrences: 1,
     elements: [],
-    rawEvidence: {},
+    elementCount: 0,
     dedupeKey: 'dedupe-1',
     firstSeenAt: '2026-08-30T10:00:00.000Z',
     lastSeenAt: '2026-08-30T10:00:00.000Z',
@@ -164,14 +165,15 @@ describe('finding counts', () => {
     expect(countOccurrences(finding({ occurrences: 14 }))).toBe(14);
   });
 
-  it('counts unique page URLs only', () => {
+  it("reads the server's unique page count, not the eight-page preview (issue #510)", () => {
     expect(
       countPages(
         finding({
-          pageUrls: ['https://example.fr/', 'https://example.fr/', 'https://example.fr/menu'],
+          pageUrls: Array.from({ length: 8 }, (_, index) => `https://example.fr/page-${index}`),
+          pageUrlCount: 23,
         }),
       ),
-    ).toBe(2);
+    ).toBe(23);
   });
 });
 
@@ -351,20 +353,28 @@ describe('finding display copy (issue 93)', () => {
   it('expands pages and elements with the hidden counts beyond the preview', () => {
     const manyPages = finding({
       ruleId: 'button-name',
-      pageUrls: Array.from({ length: 12 }, (_, index) => `https://exemple.fr/page-${index}`),
+      pageUrls: Array.from({ length: 8 }, (_, index) => `https://exemple.fr/page-${index}`),
+      pageUrlCount: 12,
+      elements: Array.from({ length: 5 }, (_, index) => ({
+        pageUrl: 'https://exemple.fr/',
+        selector: `button:nth-of-type(${index + 1})`,
+        snippet: '<button></button>',
+      })),
+      elementCount: 9,
     });
     const view = findingExpansionView(manyPages, ruleCopy, 'fr');
     expect(view.pages).toHaveLength(8);
     expect(view.hiddenPageCount).toBe(4);
     expect(view.remediation).toBe('Ajoutez un texte visible dans chaque bouton.');
     expect(view.gloss).toBe('Un bouton sans texte lisible ne dit pas à quoi il sert.');
-    expect(view.elements).toEqual([]);
-    expect(view.hiddenElementCount).toBe(0);
+    expect(view.elements).toHaveLength(5);
+    expect(view.hiddenElementCount).toBe(4);
   });
 
   it('deduplicates pageUrls in the expansion', () => {
     const duplicated = finding({
       pageUrls: ['https://exemple.fr/', 'https://exemple.fr/', 'https://exemple.fr/contact'],
+      pageUrlCount: 2,
     });
     const view = findingExpansionView(duplicated, undefined, 'en');
     expect(view.pages).toEqual(['https://exemple.fr/', 'https://exemple.fr/contact']);

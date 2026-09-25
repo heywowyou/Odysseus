@@ -19,7 +19,7 @@
  */
 
 import type { Connection } from 'mongoose';
-import { buildFindingsProvenance, type Finding } from '@odysseus/core';
+import { buildFindingsProvenance } from '@odysseus/core';
 import {
   getAuditManualFields,
   getAuditRuntimeFields,
@@ -83,16 +83,12 @@ export { findingsAreStale } from './audit-evidence.js';
  *  the manifest refreshed but this pair old (it failed or was interrupted
  *  during the analysis passes); the manifest check alone would then skip
  *  the refresh on every retry and render a pair the report stage refuses. */
-async function selectedPairIsStale(
-  connection: Connection,
-  auditId: string,
-  findings: Finding[],
-): Promise<boolean> {
+async function selectedPairIsStale(connection: Connection, auditId: string): Promise<boolean> {
   const resolution = await resolveSelectedAnalysisPairForAudit(connection, auditId);
   if (resolution.kind === 'none') return false;
   return (
-    findingsAreStale(resolution.fr.findingsProvenance, findings) ||
-    (resolution.en !== undefined && findingsAreStale(resolution.en.findingsProvenance, findings))
+    findingsAreStale(resolution.fr.findingsProvenance) ||
+    (resolution.en !== undefined && findingsAreStale(resolution.en.findingsProvenance))
   );
 }
 
@@ -195,20 +191,20 @@ async function produceReports(
 
   let findingsWereRefreshed = false;
   try {
-    const { manifest, findings } = await readAuditArtifacts(
+    const { manifest } = await readAuditArtifacts(
       auditDir,
       hostname,
       audit.startedAt,
       artifactStore,
     );
-    if (findingsAreStale(manifest.findingsProvenance, findings)) {
+    if (findingsAreStale(manifest.findingsProvenance)) {
       markReportProductionStage(auditId, 'writing');
       await renormalizeAudit(auditDir, artifactStore);
       await backfillAuditRow(auditDir, connection);
       await syncAuditDirToBucket(artifactStore, auditDir, hostname, audit.startedAt);
       await refreshWritingCandidate(connection, auditDir, audit, artifactStore);
       findingsWereRefreshed = true;
-    } else if (await selectedPairIsStale(connection, auditId, findings)) {
+    } else if (await selectedPairIsStale(connection, auditId)) {
       markReportProductionStage(auditId, 'writing');
       await refreshWritingCandidate(connection, auditDir, audit, artifactStore);
       findingsWereRefreshed = true;

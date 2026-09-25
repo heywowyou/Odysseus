@@ -77,6 +77,7 @@ import {
   primarySeverityRollup,
 } from '@odysseus/report';
 import { getPreviewPublicBaseUrl } from '../config.js';
+import { toAuditPageFinding } from './audit-finding-response.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
 import { createMongoOutreachPreviewStoreV3 } from '../outreach/mongo-outreach-preview-store-v2.js';
 import {
@@ -569,7 +570,8 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       activeQualityBundle,
       latestQualityRun,
     ] = await Promise.all([
-      getFindingsForAudit(connection, auditId),
+      // Issue #510: nothing below reads rawEvidence, and it is half the bytes.
+      getFindingsForAudit(connection, auditId, { rawEvidence: false }),
       listReportLanguages(connection, auditId),
       resolveSelectedAnalysisPairForAudit(connection, auditId),
       getLatestReportApproval(connection, auditId),
@@ -795,7 +797,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       coverageSummary: summarizeAuditCoverage(audit),
       severityRollup,
       thirdPartySeverityRollup: thirdParty.severityRollup,
-      findings,
+      // Issue #510: trimmed to what the page shows, after every count above
+      // was taken from the full list.
+      findings: findings.map(toAuditPageFinding),
       thirdPartyFindings: thirdParty.byFindingId,
       // Issue #93: reviewed FR/EN copy per rule id referenced by the
       // findings above.
@@ -812,7 +816,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       analysisPair: selectedPair.kind,
       analysisLanguages:
         selectedPair.kind === 'none' ? [] : selectedPair.en === undefined ? ['fr'] : ['fr', 'en'],
-      findingsStale: findingsAreStale(audit.findingsProvenance, findings),
+      findingsStale: findingsAreStale(audit.findingsProvenance),
       analysisIsStaticFallback,
       approval: approved ? approval : null,
       manualFields: audit.manualFields,

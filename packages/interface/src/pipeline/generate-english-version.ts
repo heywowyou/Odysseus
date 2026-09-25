@@ -97,7 +97,7 @@ export async function generateEnglishVersion(
       artifactStore,
     );
     const findingsProvenance = buildFindingsProvenance(findings);
-    if (findingsAreStale(selectedFrench.findingsProvenance, findings)) {
+    if (findingsAreStale(selectedFrench.findingsProvenance)) {
       throw new EnglishGenerationUnavailableError(
         'odysseus: the selected French report is out of date; regenerate French before generating English',
       );

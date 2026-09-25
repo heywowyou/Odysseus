@@ -53,9 +53,9 @@ describe('stale audit evidence refresh', () => {
   it('recognizes missing or old provenance without treating a changed digest as a pre-flight stale signal', () => {
     const current = buildFindingsProvenance([]);
 
-    expect(findingsAreStale(undefined, [])).toBe(true);
-    expect(findingsAreStale({ ...current, normalizationFingerprint: 'old' }, [])).toBe(true);
-    expect(findingsAreStale({ ...current, findingsDigest: 'sha256:other' }, [])).toBe(false);
+    expect(findingsAreStale(undefined)).toBe(true);
+    expect(findingsAreStale({ ...current, normalizationFingerprint: 'old' })).toBe(true);
+    expect(findingsAreStale({ ...current, findingsDigest: 'sha256:other' })).toBe(false);
   });
 
   it('renormalizes, backfills, syncs, and rereads a stale manifest before analysis uses it', async () => {

@@ -9,7 +9,8 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import {
-  buildFindingsProvenance,
+  FINDINGS_SCHEMA_VERSION,
+  NORMALIZATION_FINGERPRINT,
   type AuditManifest,
   type Finding,
   type FindingsProvenance,
@@ -36,15 +37,14 @@ export interface RefreshedAuditEvidence extends AuditEvidence {
  * current normalization rules. The digest is deliberately not part of this
  * pre-flight check: renormalizeAudit is the operation that recomputes the
  * digest from the stored scan evidence and writes the authoritative stamp. */
-export function findingsAreStale(
-  stamped: FindingsProvenance | undefined,
-  findings: Finding[],
-): boolean {
-  const current = buildFindingsProvenance(findings);
+export function findingsAreStale(stamped: FindingsProvenance | undefined): boolean {
+  // Both compared values are constants of the running build: hashing the
+  // findings to read them back cost the audit page a full digest per poll
+  // (issue #510).
   return (
     stamped === undefined ||
-    stamped.findingsSchemaVersion !== current.findingsSchemaVersion ||
-    stamped.normalizationFingerprint !== current.normalizationFingerprint
+    stamped.findingsSchemaVersion !== FINDINGS_SCHEMA_VERSION ||
+    stamped.normalizationFingerprint !== NORMALIZATION_FINGERPRINT
   );
 }
 
@@ -88,7 +88,7 @@ export async function refreshStaleAuditEvidence(
   artifactStore: ArtifactStore | undefined,
 ): Promise<RefreshedAuditEvidence> {
   let evidence = await readAuditEvidence(audit);
-  if (!findingsAreStale(evidence.manifest.findingsProvenance, evidence.findings)) {
+  if (!findingsAreStale(evidence.manifest.findingsProvenance)) {
     return { ...evidence, findingsWereRefreshed: false };
   }
 

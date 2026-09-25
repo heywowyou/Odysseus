@@ -6,7 +6,7 @@ import {
   type FindingsDeltaCoverage,
   type Finding,
 } from '@odysseus/core';
-import { getAudit } from './audits.js';
+import { getAudit, getFindingsForAudit } from './audits.js';
 import { findAuditEvidenceCoverage } from './findings-delta-baseline.js';
 import { persistAudit } from './persist-audit.js';
 import { getStoredPrimarySeverityRollups } from './severity-rollup.js';
@@ -155,6 +155,23 @@ describe.skipIf(!mongoAvailable)('persistAudit', () => {
     // A persist that brings no rollup leaves none behind for the new findings.
     await persistAudit(connection!, manifest, []);
     expect((await getStoredPrimarySeverityRollups(connection!, ['persist-rollup'])).size).toBe(0);
+  });
+
+  it('reads findings without their raw evidence when asked (issue #510)', async () => {
+    const manifest = buildManifest({ auditId: 'persist-no-raw' });
+    await persistAudit(connection!, manifest, [
+      buildFinding({
+        auditId: 'persist-no-raw',
+        rawEvidence: { perPage: { big: 'x'.repeat(100) } },
+      }),
+    ]);
+
+    const [full] = await getFindingsForAudit(connection!, 'persist-no-raw');
+    const [slim] = await getFindingsForAudit(connection!, 'persist-no-raw', { rawEvidence: false });
+
+    expect(full!.rawEvidence).toEqual({ perPage: { big: 'x'.repeat(100) } });
+    expect(slim!.rawEvidence).toEqual({});
+    expect(slim!.findingId).toBe(full!.findingId);
   });
 
   it('is idempotent: persisting the same auditId twice does not duplicate documents', async () => {
