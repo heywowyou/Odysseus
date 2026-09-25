@@ -843,6 +843,10 @@ export const prospectHub = {
         'preview-wrong-audit': 'aperçu rattaché à un autre audit',
         'thread-not-eligible':
           'la relance n’est possible qu’après l’envoi confirmé du premier email ; envoyez le brouillon depuis la boîte mail puis synchronisez-la',
+        'follow-up-not-due':
+          'la relance n’est pas encore due : elle part 4 jours après le premier email, puis 7 jours après la relance',
+        'thread-needs-review':
+          'ce fil attend une vérification (réponse automatique ou état de la boîte mail inexpliqué) ; ouvrez-le dans la boîte mail avant toute relance',
         'thread-closed':
           'le fil de conversation est clos (réponse, désinscription ou séquence terminée)',
         'prospect-unknown': 'prospect introuvable ; rechargez la page',
@@ -1382,6 +1386,10 @@ export const prospectHub = {
         'preview-wrong-audit': 'preview belongs to another audit',
         'thread-not-eligible':
           'a follow-up is only possible once the first email is confirmed sent; send the draft from the mailbox, then sync it',
+        'follow-up-not-due':
+          'the follow-up is not due yet: it goes 4 days after the first email, then 7 days after the follow-up',
+        'thread-needs-review':
+          'this thread needs a check (automated answer or an unexplained mailbox state); open it in the mailbox before any follow-up',
         'thread-closed': 'the conversation is closed (reply, opt-out or finished sequence)',
         'prospect-unknown': 'prospect not found; reload the page',
         'previous-draft-missing': 'the previous draft is missing; draft the first email again',

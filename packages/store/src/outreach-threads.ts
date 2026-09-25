@@ -359,6 +359,25 @@ export async function getLatestOutreachSyncAt(connection: Connection): Promise<D
   return row?.lastSyncedAt ?? null;
 }
 
+/**
+ * When the next follow-up of a thread in `e1-sent` or `e2-sent` becomes due:
+ * the previous touch's confirmed `sentAt` plus the thread's own spacing
+ * snapshot. Undefined in any other state, or before that touch's send is
+ * recorded. The one formula the due list, the To-do list and the follow-up
+ * guard share (issue #479).
+ */
+export function followUpDueAt(
+  thread: Pick<OutreachThreadDocument, 'state' | 'touches' | 'spacing'>,
+): Date | undefined {
+  const lastTouch = thread.state === 'e1-sent' ? 1 : thread.state === 'e2-sent' ? 2 : undefined;
+  if (lastTouch === undefined) return undefined;
+  const sent = thread.touches.find((touch) => touch.touch === lastTouch);
+  if (sent === undefined) return undefined;
+  const afterDays =
+    lastTouch === 1 ? thread.spacing.touch2AfterDays : thread.spacing.touch3AfterDays;
+  return new Date(new Date(sent.sentAt).getTime() + afterDays * DAY_MS);
+}
+
 export interface ListThreadsDueForFollowUpOptions {
   now: Date;
   limit?: number;
@@ -385,12 +404,8 @@ export async function listThreadsDueForFollowUp(
 
   const due: OutreachThreadDocument[] = [];
   for (const thread of candidates) {
-    const lastTouch = thread.state === 'e1-sent' ? 1 : 2;
-    const sentRecord = thread.touches.find((touch) => touch.touch === lastTouch);
-    if (sentRecord === undefined) continue;
-    const afterDays =
-      lastTouch === 1 ? thread.spacing.touch2AfterDays : thread.spacing.touch3AfterDays;
-    const dueAt = new Date(new Date(sentRecord.sentAt).getTime() + afterDays * DAY_MS);
+    const dueAt = followUpDueAt(thread);
+    if (dueAt === undefined) continue;
     if (dueAt.getTime() <= options.now.getTime()) due.push(thread);
     if (options.limit !== undefined && due.length >= options.limit) break;
   }

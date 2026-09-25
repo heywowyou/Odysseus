@@ -17,6 +17,7 @@ import {
   createOutreachThreadModel,
   type OutreachThreadDocument,
 } from './schemas/outreach-thread.schema.js';
+import { followUpDueAt } from './outreach-threads.js';
 import { findSuppressionMatches } from './suppression.js';
 import {
   auditDataVersionState,
@@ -195,7 +196,6 @@ export type NewestQualifyingAuditResult =
       state: Exclude<ProspectAuditQualificationState, 'qualifying'>;
     };
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const TERMINAL_PROSPECT_STATUSES = new Set<Prospect['status']>(['won', 'lost', 'opted-out']);
 
 /** The one closed reason the report-quality attention kind carries today:
@@ -412,8 +412,8 @@ export function deriveProspectWork(
   ) {
     const touch = threadState === 'e1-sent' ? 1 : 2;
     const sent = thread.touches.find((candidate) => candidate.touch === touch);
-    const afterDays = touch === 1 ? thread.spacing.touch2AfterDays : thread.spacing.touch3AfterDays;
-    if (sent !== undefined && asTime(sent.sentAt) + afterDays * DAY_MS <= now.getTime()) {
+    const dueAt = followUpDueAt({ ...thread, state: threadState });
+    if (sent !== undefined && dueAt !== undefined && dueAt.getTime() <= now.getTime()) {
       items.push({
         kind: 'follow-up',
         subject: prospect.name,

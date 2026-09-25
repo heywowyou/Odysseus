@@ -16,7 +16,8 @@ vi.mock('./schemas/job.schema.js', () => ({
 vi.mock('./schemas/prospect-event.schema.js', () => ({
   createProspectEventModel: vi.fn(),
 }));
-vi.mock('./outreach-threads.js', () => ({
+vi.mock('./outreach-threads.js', async (importOriginal) => ({
+  followUpDueAt: (await importOriginal<typeof import('./outreach-threads.js')>()).followUpDueAt,
   findOutreachThreadByProspect: vi.fn(),
 }));
 vi.mock('./schemas/outreach-preview.schema.js', () => ({
@@ -40,6 +41,22 @@ import { createProspectEventModel } from './schemas/prospect-event.schema.js';
 import { loadOutreachReportReadiness } from './outreach-report-readiness.js';
 
 const fakeConnection = {} as never;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const SPACING = { touch2AfterDays: 4, touch3AfterDays: 7, replyWindowDays: 14 };
+
+/** A thread whose touches were all sent `sentDaysAgo` days ago, so a
+ *  follow-up is due unless a test says otherwise. */
+function threadIn(state: string, sentDaysAgo = 30, extra: Record<string, unknown> = {}) {
+  const sentAt = new Date(Date.now() - sentDaysAgo * DAY_MS);
+  return {
+    threadId: 'thread-1',
+    state,
+    spacing: SPACING,
+    touches: [1, 2].map((touch) => ({ touch, providerMessageId: `m${touch}`, sentAt })),
+    ...extra,
+  } as never;
+}
 
 const vendorHostedProspect = {
   prospectId: '6c00b0c7-6f37-4e98-a8d3-95f94db9f7a3',
@@ -114,35 +131,44 @@ describe('central prospect guards', () => {
   it('refuses a follow-up the draft runtime would refuse', async () => {
     const check = () =>
       checkOutreachAction(fakeConnection, { prospect: vendorHostedProspect, action: 'follow-up' });
-    vi.mocked(findOutreachThreadByProspect).mockResolvedValue({
-      threadId: 'thread-1',
-      state: 'e1-sent',
-    } as never);
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValue(threadIn('e1-sent'));
 
     vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce(null);
     await expect(check()).resolves.toEqual({ allowed: false, refusal: 'thread-unknown' });
 
-    vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce({
-      threadId: 'thread-1',
-      state: 'e1-drafted',
-    } as never);
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce(threadIn('e1-drafted'));
     await expect(check()).resolves.toEqual({ allowed: false, refusal: 'thread-not-eligible' });
 
     vi.mocked(findLiveOutreachDraft).mockResolvedValueOnce({ draftId: 'd' } as never);
     await expect(check()).resolves.toEqual({ allowed: false, refusal: 'draft-already-live' });
 
     // A discarded touch-two draft leaves the thread drafted; touch two is due again.
-    vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce({
-      threadId: 'thread-1',
-      state: 'e2-drafted',
-    } as never);
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce(threadIn('e2-drafted'));
     await expect(check()).resolves.toEqual({ allowed: true });
 
-    vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce({
-      threadId: 'thread-1',
-      state: 'opted-out',
-    } as never);
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce(threadIn('opted-out'));
     await expect(check()).resolves.toEqual({ allowed: false, refusal: 'thread-closed' });
+  });
+
+  it('refuses a follow-up before it is due or while the thread needs review (issue #479)', async () => {
+    const check = () =>
+      checkOutreachAction(fakeConnection, { prospect: vendorHostedProspect, action: 'follow-up' });
+
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValue(threadIn('e1-sent', 1));
+    await expect(check()).resolves.toEqual({ allowed: false, refusal: 'follow-up-not-due' });
+
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValue(threadIn('e1-sent', 5));
+    await expect(check()).resolves.toEqual({ allowed: true });
+
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValue(threadIn('e2-sent', 5));
+    await expect(check()).resolves.toEqual({ allowed: false, refusal: 'follow-up-not-due' });
+
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValue(
+      threadIn('e1-sent', 5, {
+        needsReview: { reason: 'automated-response', detectedAt: new Date() },
+      }),
+    );
+    await expect(check()).resolves.toEqual({ allowed: false, refusal: 'thread-needs-review' });
   });
 
   it('accepts a vendor-hosted website as a valid scan target', async () => {
@@ -178,10 +204,7 @@ describe('central prospect guards', () => {
   });
 
   it('does not block a follow-up merely because the prospect is vendor-hosted', async () => {
-    vi.mocked(findOutreachThreadByProspect).mockResolvedValue({
-      threadId: 'thread-1',
-      state: 'e1-sent',
-    } as never);
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValue(threadIn('e1-sent'));
     await expect(
       checkOutreachAction(fakeConnection, { prospect: vendorHostedProspect, action: 'follow-up' }),
     ).resolves.toEqual({ allowed: true });
@@ -348,10 +371,7 @@ describe('central prospect guards', () => {
       state: 'not-ready',
       reason: 'stale',
     });
-    vi.mocked(findOutreachThreadByProspect).mockResolvedValue({
-      threadId: 'thread-1',
-      state: 'e1-sent',
-    } as never);
+    vi.mocked(findOutreachThreadByProspect).mockResolvedValue(threadIn('e1-sent'));
     await expect(
       checkOutreachAction(fakeConnection, { prospect: vendorHostedProspect, action: 'follow-up' }),
     ).resolves.toEqual({ allowed: true });

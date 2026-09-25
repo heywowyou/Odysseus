@@ -345,6 +345,7 @@ export {
   closeOutreachThreadsForDomain,
   getLatestOutreachSyncAt,
   listOutreachThreads,
+  followUpDueAt,
   listThreadsDueForFollowUp,
   completeOutreachSequence,
   listThreadsToSync,
