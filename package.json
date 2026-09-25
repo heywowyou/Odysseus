@@ -22,7 +22,7 @@
     "test:all": "vitest run",
     "test:deploy": "bash deploy/release.test.sh && bash deploy/render-server-compose.test.sh && bash deploy/compose.test.sh && bash deploy/odysseus-deploy.test.sh && bash deploy/restic-scripts.test.sh && bash -n deploy/equal-access-ci.sh",
     "test:watch": "vitest --project unit",
-    "typecheck": "tsc -b --pretty && tsc -p packages/interface/tsconfig.dashboard.json --noEmit",
+    "typecheck": "tsc -b --pretty && tsc -p packages/interface/tsconfig.dashboard.json --noEmit && pnpm --filter @odysseus/site exec next typegen >/dev/null && tsc -p packages/site/tsconfig.json --noEmit",
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "test:store:up": "docker compose up -d --wait mongo-test",
