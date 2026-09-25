@@ -6180,3 +6180,26 @@ threads and outcomes keep their 90-day retention.
 
 Rejected alternative: running the experiment as designed, which the operator
 approved in part before choosing simplicity over weak evidence.
+
+### 122. The operator may accept blocked content pages as a report limit (operator decision, 2026-09-25)
+
+Plan 075 made any blocked content page block the report, so bad coverage could
+not reach a report without the operator seeing it. Hotel 37 bis showed where
+that blocks a sound report. 68 of 70 pages were analysed, the homepage included.
+The two booking-engine pages served a bot challenge on every attempt, at 333 ms
+and again at 10 s with backoff to 40 s. A slower scan could not reach them, so
+the only outcomes were no report or a lost prospect.
+
+The operator can now accept the blocked pages on the audit page. The acceptance
+stores the exact URL set (`audits.blockedPagesAcknowledgment`) and lifts the
+block only while the audit's blocked pages are that set. A renormalization or
+rescan that blocks other pages is blocked again. A homepage without usable
+evidence can never be accepted. The client limitation then says how many pages
+were not analysed, and that the report has no findings for them, instead of
+"the report is blocked". Nothing else changes: blocked pages already gave no
+findings, and absence checks that depended on them were already undetermined
+(plan 075 E12).
+
+Rejected alternatives: removing the page-level block (it would bring back
+reports built over unseen coverage holes), and a blanket override with no URL
+set (a later scan with different gaps would pass without review).

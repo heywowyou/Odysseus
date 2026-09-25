@@ -284,6 +284,7 @@ export function AuditDetailPage(): JSX.Element {
             failure={data.failure}
             lifecycle={data.lifecycle}
             reportBlocked={data.evidence?.reportBlocked === true}
+            blockedPagesAcknowledgeable={data.evidence?.blockedPagesAcknowledgeable === true}
           />
         ) : null}
         {/* Constats first (approved IA): the findings are what the audit
@@ -305,7 +306,7 @@ export function AuditDetailPage(): JSX.Element {
         {/* Plan 059 step 37: the evidence graph's verdict and stages, where
             the graph exists. Absent for quick checks, prospecting scans and
             pre-059 audits, which keep rendering exactly as before. */}
-        <EvidenceQualityCard detail={data} />
+        <EvidenceQualityCard detail={data} onBusy={setIsBusy} refresh={refresh} />
         {scanIntent === 'full-audit' ? (
           <ReportQualityReviewCard auditId={data.auditId} onBusy={setIsBusy} refresh={refresh} />
         ) : null}

@@ -34,7 +34,11 @@ import {
   type AnalysisDocumentFields,
   type ReportDocumentFields,
 } from '@odysseus/store';
-import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
+import {
+  buildAuditDir,
+  EVIDENCE_QUALITY_ASSESSMENT_PATH,
+  getArtifactsRoot,
+} from '@odysseus/scanner';
 import { Router } from '../router.js';
 import { registerAuditRoutes } from './audits.js';
 import { operatorSnapshotSchema } from '../operator/contract.js';
@@ -455,6 +459,78 @@ describe.skipIf(!mongoAvailable)('audit routes against real mongo', () => {
     );
     expect(deleteResponse.statusCode).toBe(200);
     expect(JSON.parse(deleteResponse.body as string)).toEqual({ cleared: true });
+  });
+
+  it('accepts exactly the blocked content pages, lifting the report block until withdrawn', async () => {
+    // Its own host: the other chains share example.com's audit directory,
+    // and the evidence file written here must not leak into them.
+    const auditId = `route-integration-blocked-${randomUUID()}`;
+    const home = `https://${auditId}.example/`;
+    const booking = `${home}fr/reservation.html`;
+    const defaults = buildManifest();
+    const manifest = buildManifest({
+      auditId,
+      siteUrl: home,
+      crawl: { ...defaults.crawl, startUrl: home },
+    });
+    await persistAudit(connection!, manifest, []);
+    seededAuditIds.push(auditId);
+    const auditDir = buildAuditDir(
+      getArtifactsRoot(),
+      new URL(manifest.siteUrl).hostname,
+      new Date(manifest.startedAt),
+    );
+    await fs.mkdir(auditDir, { recursive: true });
+    const completed = { outcome: 'completed' };
+    await fs.writeFile(
+      path.join(auditDir, 'manifest.json'),
+      JSON.stringify({
+        ...manifest,
+        pages: [
+          {
+            url: home,
+            status: 'visited',
+            analysisCoverage: {
+              passes: { rendered: completed, axe: completed, extended: completed },
+            },
+          },
+          { url: booking, status: 'blocked' },
+        ],
+      }),
+    );
+    const qualityPath = path.join(auditDir, EVIDENCE_QUALITY_ASSESSMENT_PATH);
+    await fs.mkdir(path.dirname(qualityPath), { recursive: true });
+    await fs.writeFile(qualityPath, JSON.stringify({}));
+
+    const router = new Router();
+    registerAuditRoutes(router, connection!);
+    const endpoint = `/api/audits/${auditId}/blocked-pages-acknowledgment`;
+    const evidenceOf = async (): Promise<Record<string, unknown>> => {
+      const detail = await getDetailViaRoute(auditId);
+      return (JSON.parse(detail.body as string) as { evidence: Record<string, unknown> }).evidence;
+    };
+
+    expect(await evidenceOf()).toMatchObject({
+      reportBlocked: true,
+      blockedPageUrls: [booking],
+      blockedPagesAcknowledgeable: true,
+    });
+
+    const stale = fakeRes();
+    await router.handle(jsonReq(endpoint, { blockedPageUrls: [home, booking] }, 'PUT'), stale);
+    expect(stale.statusCode).toBe(409);
+
+    const accepted = fakeRes();
+    await router.handle(jsonReq(endpoint, { blockedPageUrls: [booking] }, 'PUT'), accepted);
+    expect(accepted.statusCode).toBe(200);
+    const afterAccept = await evidenceOf();
+    expect(afterAccept['reportBlocked']).toBe(false);
+    expect(afterAccept['blockedPagesAcknowledgedAt']).toEqual(expect.any(String));
+
+    const withdrawn = fakeRes();
+    await router.handle(jsonReq(endpoint, {}, 'DELETE'), withdrawn);
+    expect(withdrawn.statusCode).toBe(200);
+    expect((await evidenceOf())['reportBlocked']).toBe(true);
   });
 
   it('refuses a render bundle for a language with no selected analysis', async () => {

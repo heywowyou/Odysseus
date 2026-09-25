@@ -46,6 +46,7 @@ const documentOnlyKeys = [
   'manualFields',
   'reportPreparation',
   'gradeOverride',
+  'blockedPagesAcknowledgment',
   'evidenceCoverage',
   'retention',
   'primarySeverityRollup',

@@ -22,6 +22,7 @@ import type { DashboardStrings } from '../i18n/types';
 import { fetchWithTimeout, postEmpty } from '../lib/api';
 import { failureReasonKind, fallbackNoticeText, hasPageCountWarning } from './audit-detail-model';
 import { canApproveReportPair } from './audit-report-panel-model';
+import { EVIDENCE_QUALITY_ANCHOR } from './evidence-quality-section';
 import type {
   AuditDetailResponse,
   AuditFailureResponse,
@@ -62,12 +63,14 @@ export function FailureCard(props: {
   failure: AuditFailureResponse;
   lifecycle: AuditLifecycle;
   reportBlocked?: boolean;
+  blockedPagesAcknowledgeable?: boolean;
 }): JSX.Element {
   const { failure, lifecycle } = props;
   const { strings } = useI18n();
   const kind = failureReasonKind(failure, props.reportBlocked === true);
   const isIdentity = kind === 'identity-confirmation';
   const isBlocked = kind === 'acquisition-blocked';
+  const isAcceptable = isBlocked && props.blockedPagesAcknowledgeable === true;
   const scanHref = `/scans/${encodeURIComponent(failure.jobId)}`;
   const hasPairToRegenerate = lifecycle !== 'scanned';
   const awaitingFields = failure.needsInputFields ?? [];
@@ -96,11 +99,13 @@ export function FailureCard(props: {
       <p className="text-sm text-ink-soft">
         {isIdentity
           ? strings.auditDetail.failureHintIdentity
-          : isBlocked
-            ? strings.auditDetail.failureHintBlockedPages
-            : hasPairToRegenerate
-              ? strings.auditDetail.failureHintReportStage
-              : strings.auditDetail.failureHintAnalysisStage}
+          : isAcceptable
+            ? strings.auditDetail.failureHintBlockedPagesAcceptable
+            : isBlocked
+              ? strings.auditDetail.failureHintBlockedPages
+              : hasPairToRegenerate
+                ? strings.auditDetail.failureHintReportStage
+                : strings.auditDetail.failureHintAnalysisStage}
       </p>
       {failure.error !== '' ? (
         <div className="mt-3">
@@ -122,9 +127,20 @@ export function FailureCard(props: {
             {strings.auditDetail.failureScrollToFields}
           </Button>
         ) : isBlocked ? (
-          <Link to={scanHref} className={buttonStyles('secondary', 'sm')}>
-            {strings.auditDetail.failureRelaunchFromScan}
-          </Link>
+          <>
+            {isAcceptable ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => scrollToAnchor(EVIDENCE_QUALITY_ANCHOR)}
+              >
+                {strings.auditDetail.failureScrollToBlockedPages}
+              </Button>
+            ) : null}
+            <Link to={scanHref} className={buttonStyles('secondary', 'sm')}>
+              {strings.auditDetail.failureRelaunchFromScan}
+            </Link>
+          </>
         ) : hasPairToRegenerate ? (
           <Button
             variant="secondary"

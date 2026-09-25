@@ -1,6 +1,10 @@
 export { connectToMongo, disconnectFromMongo } from './connection.js';
 export { createAuditModel } from './schemas/audit.schema.js';
-export type { AuditDocument, AuditDocumentFields } from './schemas/audit.schema.js';
+export type {
+  AuditDocument,
+  AuditDocumentFields,
+  BlockedPagesAcknowledgment,
+} from './schemas/audit.schema.js';
 export { persistAudit } from './persist-audit.js';
 export type { AnalysisDocument, AnalysisDocumentFields } from './schemas/analysis.schema.js';
 export { persistAnalysis } from './persist-analysis.js';
@@ -75,6 +79,9 @@ export {
   getAuditGradeOverride,
   setAuditGradeOverride,
   clearAuditGradeOverride,
+  getAuditBlockedPagesAcknowledgment,
+  setAuditBlockedPagesAcknowledgment,
+  clearAuditBlockedPagesAcknowledgment,
   listAuditStorageIdentities,
 } from './audits.js';
 export { ArchivedProspectAttachmentError } from './audits.js';

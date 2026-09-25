@@ -263,6 +263,9 @@ const auditEvidenceQualitySchema = z.object({
   ),
   reportBlocked: z.boolean().optional(),
   blockingReasons: z.array(z.string()).optional(),
+  blockedPageUrls: z.array(z.string()).optional(),
+  blockedPagesAcknowledgeable: z.boolean().optional(),
+  blockedPagesAcknowledgedAt: z.string().optional(),
 });
 
 /** GET /api/audits/:auditId/report-quality. The endpoint deliberately

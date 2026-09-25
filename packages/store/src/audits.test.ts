@@ -1,6 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
-import { clearAuditGradeOverride, getAuditGradeOverride, setAuditGradeOverride } from './audits.js';
+import {
+  clearAuditBlockedPagesAcknowledgment,
+  clearAuditGradeOverride,
+  getAuditBlockedPagesAcknowledgment,
+  getAuditGradeOverride,
+  setAuditBlockedPagesAcknowledgment,
+  setAuditGradeOverride,
+} from './audits.js';
 import { probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
@@ -83,5 +90,42 @@ describe.skipIf(!mongoAvailable)('audit grade override persistence', () => {
     await expect(clearAuditGradeOverride(connection!, auditId)).rejects.toThrow(
       `odysseus: audit ${auditId} not found`,
     );
+  });
+});
+
+describe.skipIf(!mongoAvailable)('audit blocked-pages acknowledgment persistence', () => {
+  it('stores the accepted URLs sorted and deduplicated, then clears them', async () => {
+    const auditId = `blocked-pages-${randomUUID()}`;
+    const audits = connection!.db!.collection('audits');
+    await insertAudit(auditId);
+    try {
+      await expect(
+        getAuditBlockedPagesAcknowledgment(connection!, auditId),
+      ).resolves.toBeUndefined();
+
+      const saved = await setAuditBlockedPagesAcknowledgment(connection!, auditId, [
+        'https://grade-override.example/fr/reservation.html',
+        'https://grade-override.example/en/booking.html',
+        'https://grade-override.example/fr/reservation.html',
+      ]);
+      expect(saved).toMatchObject({
+        blockedPageUrls: [
+          'https://grade-override.example/en/booking.html',
+          'https://grade-override.example/fr/reservation.html',
+        ],
+        acknowledgedBy: 'operator',
+      });
+      expect(saved.acknowledgedAt).toBeInstanceOf(Date);
+      await expect(getAuditBlockedPagesAcknowledgment(connection!, auditId)).resolves.toEqual(
+        saved,
+      );
+
+      await clearAuditBlockedPagesAcknowledgment(connection!, auditId);
+      await expect(
+        getAuditBlockedPagesAcknowledgment(connection!, auditId),
+      ).resolves.toBeUndefined();
+    } finally {
+      await audits.deleteOne({ auditId });
+    }
   });
 });

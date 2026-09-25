@@ -13,7 +13,11 @@ import {
   type Grade,
   type GradeOverride,
 } from '@odysseus/core';
-import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
+import {
+  createAuditModel,
+  type AuditDocument,
+  type BlockedPagesAcknowledgment,
+} from './schemas/audit.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
 import { createFindingModel, type FindingDocument } from './schemas/finding.schema.js';
 import {
@@ -284,6 +288,59 @@ export async function setAuditGradeOverride(
     throw new Error(`odysseus: audit ${auditId} not found`);
   }
   return updated.gradeOverride;
+}
+
+/** The operator's acceptance of blocked content pages, or undefined until
+ *  one is saved. */
+export async function getAuditBlockedPagesAcknowledgment(
+  connection: Connection,
+  auditId: string,
+): Promise<BlockedPagesAcknowledgment | undefined> {
+  const AuditModel = createAuditModel(connection);
+  const audit = await AuditModel.findOne({ auditId }, { blockedPagesAcknowledgment: 1 }).lean<
+    Pick<AuditDocument, 'blockedPagesAcknowledgment'>
+  >();
+  return audit?.blockedPagesAcknowledgment;
+}
+
+/** Records the operator's acceptance of exactly these blocked pages,
+ *  replacing any earlier one with a fresh stamp. The caller checks the URLs
+ *  against the audit's current blocked pages; the store only persists. */
+export async function setAuditBlockedPagesAcknowledgment(
+  connection: Connection,
+  auditId: string,
+  blockedPageUrls: readonly string[],
+): Promise<BlockedPagesAcknowledgment> {
+  const AuditModel = createAuditModel(connection);
+  const blockedPagesAcknowledgment: BlockedPagesAcknowledgment = {
+    blockedPageUrls: [...new Set(blockedPageUrls)].sort(),
+    acknowledgedAt: new Date(),
+    acknowledgedBy: 'operator',
+  };
+  const updated = await AuditModel.findOneAndUpdate(
+    { auditId },
+    { $set: { blockedPagesAcknowledgment } },
+    { new: true, projection: { blockedPagesAcknowledgment: 1 } },
+  ).lean<Pick<AuditDocument, 'blockedPagesAcknowledgment'>>();
+  if (!updated?.blockedPagesAcknowledgment) {
+    throw new Error(`odysseus: audit ${auditId} not found`);
+  }
+  return updated.blockedPagesAcknowledgment;
+}
+
+/** Withdraws the acceptance, so the coverage block applies again. */
+export async function clearAuditBlockedPagesAcknowledgment(
+  connection: Connection,
+  auditId: string,
+): Promise<void> {
+  const AuditModel = createAuditModel(connection);
+  const result = await AuditModel.updateOne(
+    { auditId },
+    { $unset: { blockedPagesAcknowledgment: '' } },
+  );
+  if (result.matchedCount === 0) {
+    throw new Error(`odysseus: audit ${auditId} not found`);
+  }
 }
 
 /** Removes the operator's grade override, reverting the audit to its

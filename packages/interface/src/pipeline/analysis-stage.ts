@@ -48,7 +48,12 @@ import {
   type WritingCriticSidecar,
   type WritingInput,
 } from '@odysseus/llm';
-import { getAnalysisById, persistAnalysis } from '@odysseus/store';
+import {
+  getAnalysisById,
+  getAuditBlockedPagesAcknowledgment,
+  persistAnalysis,
+  type BlockedPagesAcknowledgment,
+} from '@odysseus/store';
 import {
   buildTrustedRemediationsByTheme,
   buildWritingPerformanceEvidence,
@@ -142,6 +147,9 @@ export async function buildStageWritingInput(args: {
   siteContext: SiteContextInput;
   language: ReportLanguage;
   obligationAssessment: ObligationAssessment;
+  /** The operator's acceptance of blocked pages, so the writer sees the
+   *  coverage disclosure rather than the "report blocked" wording. */
+  blockedPagesAcknowledgment?: BlockedPagesAcknowledgment | undefined;
 }): Promise<WritingInput> {
   const { auditDir, manifest, allFindings, forModel, language, obligationAssessment } = args;
   // siteStats is computed from allFindings (unfiltered), not forModel, so
@@ -153,6 +161,7 @@ export async function buildStageWritingInput(args: {
     hostname: new URL(manifest.siteUrl).hostname,
     startedAt: new Date(manifest.startedAt),
     store: createConfiguredArtifactStore(),
+    blockedPagesAcknowledgment: args.blockedPagesAcknowledgment,
   });
   const performanceEvidence = buildWritingPerformanceEvidence(
     manifest,
@@ -501,6 +510,10 @@ export async function runAnalysisStage(
       siteContext: writingSiteContext,
       language: options.language,
       obligationAssessment,
+      blockedPagesAcknowledgment: await getAuditBlockedPagesAcknowledgment(
+        connection,
+        manifest.auditId,
+      ),
     });
     const generatedAt = new Date();
     const expectedThemeKeys = doc.themes.map((t) => t.themeKey);

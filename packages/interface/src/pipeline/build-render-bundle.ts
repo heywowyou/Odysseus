@@ -32,6 +32,7 @@ import type { ReportRenderInputs, StoredAnalysis } from '@odysseus/report';
 import {
   findAuditEvidenceCoverage,
   findDeltaBaseline,
+  getAuditBlockedPagesAcknowledgment,
   getAuditGradeOverride,
   getAuditManualFields,
   getReportPreparation,
@@ -125,6 +126,10 @@ export async function resolveRenderInputs(args: {
     hostname: new URL(manifest.siteUrl).hostname,
     startedAt: new Date(manifest.startedAt),
     store: args.artifactStore,
+    blockedPagesAcknowledgment: await getAuditBlockedPagesAcknowledgment(
+      connection,
+      manifest.auditId,
+    ),
   });
   if (diagnostics.reportBlocked === true) {
     throw new Error(

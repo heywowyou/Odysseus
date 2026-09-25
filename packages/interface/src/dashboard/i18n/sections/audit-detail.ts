@@ -131,6 +131,10 @@ export interface AuditDetailStrings {
    *  scan page's slower relaunch instead of promising a regeneration. */
   failureHintBlockedPages: string;
   failureRelaunchFromScan: string;
+  /** The same block when only content pages are blocked and the homepage
+   *  was analysed: the operator may accept them instead of rescanning. */
+  failureHintBlockedPagesAcceptable: string;
+  failureScrollToBlockedPages: string;
   /** A failed audit whose lifecycle is still `scanned`: no canonical
    *  French analysis exists, so the failure card points at the Prepare
    *  report card instead of offering a regenerate that always 409s. */
@@ -224,6 +228,17 @@ export interface AuditDetailStrings {
     /** {count} is the number of evidence references behind the item. */
     referenceCount: string;
     reportBlocked: string;
+    /** The operator's acceptance of blocked content pages as a report
+     *  limit. {date} is the acceptance time. */
+    blockedPagesHeading: string;
+    blockedPagesAcceptHint: string;
+    blockedPagesAcceptButton: string;
+    blockedPagesAcceptedNote: string;
+    blockedPagesWithdrawButton: string;
+    blockedPagesAcceptSuccess: string;
+    blockedPagesAcceptError: string;
+    blockedPagesWithdrawSuccess: string;
+    blockedPagesWithdrawError: string;
     operationalHeading: string;
     operationalWarnings: Record<string, string>;
     /** {code} is the raw stable warning code. */
@@ -469,6 +484,9 @@ export const auditDetail = {
     failureHintBlockedPages:
       'Le site a refusé ou n’a pas servi certaines pages, même après une nouvelle tentative. Ce résultat appartient au scan : régénérer le rapport échouera de la même façon. Relancez le scan plus lentement depuis sa page de détail.',
     failureRelaunchFromScan: 'Relancer plus lentement depuis le scan',
+    failureHintBlockedPagesAcceptable:
+      'Le site a refusé certaines pages de contenu à chaque tentative, mais la page d’accueil a été analysée. Relancez le scan plus lentement ou, si ces pages restent bloquées, acceptez-les comme limite du rapport dans la carte « Qualité des données du scan », puis régénérez le rapport.',
+    failureScrollToBlockedPages: 'Aller aux pages bloquées',
     failureHintAnalysisStage:
       'Le scan est terminé, mais aucune analyse française n’a encore été enregistrée : il n’y a donc aucun rapport à régénérer. Lancez la rédaction à l’étape « Rédiger » ci-dessous, puis approuvez le candidat.',
     failureJobLink: 'Voir le détail du scan',
@@ -653,6 +671,16 @@ export const auditDetail = {
       operationalHeading: 'Diagnostics d’exploitation',
       reportBlocked:
         'La production du rapport est bloquée jusqu’à récupération des preuves manquantes.',
+      blockedPagesHeading: 'Pages bloquées',
+      blockedPagesAcceptHint:
+        'Seules ces pages de contenu sont restées bloquées ; la page d’accueil a bien été analysée. Si un scan plus lent ne les obtient pas, acceptez-les comme limite du rapport : le rapport est produit sans constat sur ces pages et le signale au client.',
+      blockedPagesAcceptButton: 'Accepter ces pages comme limite du rapport',
+      blockedPagesAcceptedNote: 'Pages bloquées acceptées comme limite du rapport le {date}.',
+      blockedPagesWithdrawButton: 'Retirer l’acceptation',
+      blockedPagesAcceptSuccess: 'Pages bloquées acceptées. Vous pouvez régénérer le rapport.',
+      blockedPagesAcceptError: 'Impossible d’accepter les pages bloquées',
+      blockedPagesWithdrawSuccess: 'Acceptation retirée. Le rapport est de nouveau bloqué.',
+      blockedPagesWithdrawError: 'Impossible de retirer l’acceptation',
       operationalWarnings: {
         'network-safety-preflight-failed':
           'Le contrôle préalable de sécurité réseau du scanner a signalé un problème d’environnement. Cela ne modifie pas les constats déjà observés.',
@@ -817,6 +845,9 @@ export const auditDetail = {
     failureHintBlockedPages:
       'The site refused or did not serve some pages, even after a retry. This result belongs to the scan: regenerating the report will fail the same way. Relaunch the scan more slowly from its details page.',
     failureRelaunchFromScan: 'Relaunch more slowly from the scan',
+    failureHintBlockedPagesAcceptable:
+      'The site refused some content pages on every attempt, but the homepage was analysed. Relaunch the scan more slowly or, if these pages stay blocked, accept them as a report limit in the “Scan data quality” card, then regenerate the report.',
+    failureScrollToBlockedPages: 'Go to the blocked pages',
     failureHintAnalysisStage:
       'The scan finished, but no French analysis was stored yet, so there is no report to regenerate. Run the writing in the “Write” step below, then approve the candidate.',
     failureJobLink: 'View scan details',
@@ -993,6 +1024,16 @@ export const auditDetail = {
       operationalHeading: 'Operational diagnostics',
       reportBlocked:
         'Report generation is blocked until the missing acquisition evidence is recovered.',
+      blockedPagesHeading: 'Blocked pages',
+      blockedPagesAcceptHint:
+        'Only these content pages stayed blocked; the homepage was analysed. If a slower scan cannot reach them, accept them as a report limit: the report is produced with no findings for these pages and tells the client so.',
+      blockedPagesAcceptButton: 'Accept these pages as a report limit',
+      blockedPagesAcceptedNote: 'Blocked pages accepted as a report limit on {date}.',
+      blockedPagesWithdrawButton: 'Withdraw acceptance',
+      blockedPagesAcceptSuccess: 'Blocked pages accepted. You can regenerate the report.',
+      blockedPagesAcceptError: 'Could not accept the blocked pages',
+      blockedPagesWithdrawSuccess: 'Acceptance withdrawn. The report is blocked again.',
+      blockedPagesWithdrawError: 'Could not withdraw the acceptance',
       operationalWarnings: {
         'network-safety-preflight-failed':
           'The scanner network-safety preflight reported an environment issue. This does not change findings already observed.',

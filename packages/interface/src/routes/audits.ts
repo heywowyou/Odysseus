@@ -18,6 +18,7 @@ import {
   type StatSector,
 } from '@odysseus/core';
 import {
+  clearAuditBlockedPagesAcknowledgment,
   clearAuditGradeOverride,
   createJobModel,
   createReportQualityRunModel,
@@ -44,6 +45,7 @@ import {
   resolveReportVariant,
   resolveSelectedAnalysisPairForAudit,
   saveLinkedAuditIdentity,
+  setAuditBlockedPagesAcknowledgment,
   setAuditGradeOverride,
   setAuditManualFields,
   type ActiveReportBundleDocument,
@@ -119,6 +121,7 @@ import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import {
   readAuditEvidenceDiagnostics,
+  sameUrlSet,
   type AuditEvidenceDiagnostics,
 } from '../pipeline/audit-evidence-diagnostics.js';
 import { refuseSlimmedAudit } from '../retention/slimmed-audit-guard.js';
@@ -758,6 +761,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
             hostname,
             startedAt: audit.startedAt,
             store: artifactStore,
+            blockedPagesAcknowledgment: audit.blockedPagesAcknowledgment,
           });
     // Plan 047: prospect provenance and current preview state come from the
     // durable prospect identity; no legacy candidate link is consulted.
@@ -1057,6 +1061,86 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         res,
         400,
         error instanceof Error ? error.message : 'could not clear grade override',
+      );
+    }
+  });
+
+  // The operator accepts the content pages the crawl left blocked as a
+  // disclosed coverage limit. The body names the exact URLs the operator
+  // saw; they must equal the audit's current blocked pages, so a stale page
+  // cannot accept a set it never showed. A homepage without usable evidence
+  // is never acceptable.
+  router.put('/api/audits/:auditId/blocked-pages-acknowledgment', async ({ req, res, params }) => {
+    const auditId = params['auditId']!;
+    const audit = await getAudit(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+
+    const body = await readJsonBodyOrRespond(req, res);
+    if (body === jsonBodyNotRead) return;
+    const urls =
+      body !== null && typeof body === 'object'
+        ? (body as Record<string, unknown>)['blockedPageUrls']
+        : undefined;
+    if (
+      !Array.isArray(urls) ||
+      urls.length === 0 ||
+      !urls.every((url): url is string => typeof url === 'string')
+    ) {
+      sendError(res, 400, 'blockedPageUrls must be a non-empty array of strings');
+      return;
+    }
+
+    const hostname = new URL(audit.siteUrl).hostname;
+    const diagnostics = await readAuditEvidenceDiagnostics({
+      auditDir: buildAuditDir(getArtifactsRoot(), hostname, audit.startedAt),
+      hostname,
+      startedAt: audit.startedAt,
+      store: artifactStore,
+    });
+    if (diagnostics.reportBlocked !== true || diagnostics.blockedPagesAcknowledgeable !== true) {
+      sendError(res, 409, 'this audit has no blocked content pages the operator can accept');
+      return;
+    }
+    if (!sameUrlSet(urls, diagnostics.blockedPageUrls ?? [])) {
+      sendError(res, 409, 'the blocked pages changed since this page was loaded; reload it');
+      return;
+    }
+
+    try {
+      const blockedPagesAcknowledgment = await setAuditBlockedPagesAcknowledgment(
+        connection,
+        auditId,
+        urls,
+      );
+      sendJson(res, 200, { blockedPagesAcknowledgment });
+    } catch (error) {
+      sendError(
+        res,
+        400,
+        error instanceof Error ? error.message : 'could not save the blocked-pages acknowledgment',
+      );
+    }
+  });
+
+  router.delete('/api/audits/:auditId/blocked-pages-acknowledgment', async ({ res, params }) => {
+    const auditId = params['auditId']!;
+    const audit = await getAuditRuntimeFields(connection, auditId);
+    if (!audit) {
+      sendError(res, 404, 'audit not found');
+      return;
+    }
+
+    try {
+      await clearAuditBlockedPagesAcknowledgment(connection, auditId);
+      sendJson(res, 200, { cleared: true });
+    } catch (error) {
+      sendError(
+        res,
+        400,
+        error instanceof Error ? error.message : 'could not clear the blocked-pages acknowledgment',
       );
     }
   });

@@ -20,6 +20,12 @@ import type {
 } from '@odysseus/core';
 import { WRITING_SANITIZATION_WARNING_CODES } from '@odysseus/core';
 
+export interface BlockedPagesAcknowledgment {
+  blockedPageUrls: string[];
+  acknowledgedAt: Date;
+  acknowledgedBy: 'operator';
+}
+
 export interface AuditDocumentFields extends Omit<
   AuditManifest,
   'startedAt' | 'finishedAt' | 'renormalizedAt'
@@ -48,6 +54,11 @@ export interface AuditDocumentFields extends Omit<
    *  operator saves an override; cleared, not defaulted back to the
    *  automatic grade, when the operator removes it. */
   gradeOverride?: GradeOverride;
+  /** The operator's acceptance of the content pages the crawl left blocked
+   *  as a disclosed coverage limit, DB-only like manualFields. It lifts the
+   *  report's coverage block only while the audit's blocked pages are
+   *  exactly `blockedPageUrls`. Absent until the operator accepts them. */
+  blockedPagesAcknowledgment?: BlockedPagesAcknowledgment;
   /** Plan 059 step 35: this run's evidence coverage signature in the shape
    *  the findings delta compares, DB-only like manualFields above. The
    *  stored shape is core's FindingsDeltaCoverage verbatim. Absent for
@@ -673,6 +684,15 @@ const gradeOverrideSchema = new Schema(
   { _id: false },
 );
 
+const blockedPagesAcknowledgmentSchema = new Schema(
+  {
+    blockedPageUrls: { type: [String], required: true },
+    acknowledgedAt: { type: Date, required: true },
+    acknowledgedBy: { type: String, required: true, enum: ['operator'] },
+  },
+  { _id: false },
+);
+
 const retentionSchema = new Schema({ slimmedAt: { type: Date, required: true } }, { _id: false });
 
 // Exported for schemas/audit.schema.test.ts's AuditManifest-vs-paths diff
@@ -712,6 +732,7 @@ export const auditSchema = new Schema<AuditDocument>(
     manualFields: { type: manualFieldsSchema },
     reportPreparation: { type: reportPreparationSchema },
     gradeOverride: { type: gradeOverrideSchema },
+    blockedPagesAcknowledgment: { type: blockedPagesAcknowledgmentSchema },
     // Mixed: the delta coverage record is a closed core contract re-read
     // verbatim by the findings delta, never queried by field (same
     // reasoning as report-quality.schema.ts's modelCalls).

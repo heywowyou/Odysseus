@@ -1,8 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { afterAll, describe, expect, it } from 'vitest';
 import { canonicalDigest } from '@odysseus/core';
+import { AUDIT_EVIDENCE_SNAPSHOT_PATH, EVIDENCE_QUALITY_ASSESSMENT_PATH } from '@odysseus/scanner';
 import {
   EVIDENCE_REASON_CLASSIFICATION,
+  readAuditEvidenceDiagnostics,
   summarizeAuditEvidenceDiagnostics,
+  type BlockedPagesAcknowledgmentInput,
 } from './audit-evidence-diagnostics.js';
 
 const ROOT_BODY = {
@@ -145,5 +151,102 @@ describe('Plan 068 evidence diagnostics', () => {
         auditRoot: ROOT,
       }).status,
     ).toBe('unavailable');
+  });
+});
+
+describe('blocked content pages and the operator acknowledgment', () => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), 'odysseus-blocked-pages-'));
+  afterAll(() => rmSync(tempRoot, { recursive: true, force: true }));
+
+  const HOME = 'https://hotel.example/';
+  const BOOKING_FR = 'https://hotel.example/fr/reservation.html';
+  const BOOKING_EN = 'https://hotel.example/en/booking.html';
+  const completedPasses = {
+    passes: {
+      rendered: { outcome: 'completed' },
+      axe: { outcome: 'completed' },
+      extended: { outcome: 'completed' },
+    },
+  };
+  let auditCounter = 0;
+
+  function writeAudit(pages: unknown[]): { auditDir: string; startedAt: Date } {
+    auditCounter += 1;
+    const auditDir = path.join(tempRoot, `audit-${auditCounter}`);
+    const write = (relativePath: string, body: unknown): void => {
+      mkdirSync(path.dirname(path.join(auditDir, relativePath)), { recursive: true });
+      writeFileSync(path.join(auditDir, relativePath), JSON.stringify(body));
+    };
+    write(EVIDENCE_QUALITY_ASSESSMENT_PATH, quality([]));
+    write(AUDIT_EVIDENCE_SNAPSHOT_PATH, ROOT);
+    write('manifest.json', { crawl: { startUrl: HOME }, pages });
+    // A distinct start time per audit keeps the diagnostics cache apart.
+    return { auditDir, startedAt: new Date(Date.UTC(2026, 8, 25, 0, 0, auditCounter)) };
+  }
+
+  function read(
+    audit: { auditDir: string; startedAt: Date },
+    blockedPagesAcknowledgment?: BlockedPagesAcknowledgmentInput,
+  ) {
+    return readAuditEvidenceDiagnostics({
+      ...audit,
+      hostname: 'hotel.example',
+      store: undefined,
+      blockedPagesAcknowledgment,
+    });
+  }
+
+  const acceptedAt = new Date('2026-09-25T15:00:00.000Z');
+  const bookingPages = [
+    { url: HOME, status: 'visited', analysisCoverage: completedPasses },
+    { url: BOOKING_FR, status: 'blocked' },
+    { url: BOOKING_EN, status: 'blocked' },
+  ];
+
+  it('blocks the report and names the blocked pages as acceptable when the homepage was analysed', async () => {
+    const diagnostics = await read(writeAudit(bookingPages));
+    expect(diagnostics.reportBlocked).toBe(true);
+    expect(diagnostics.blockedPageUrls).toEqual([BOOKING_EN, BOOKING_FR]);
+    expect(diagnostics.blockedPagesAcknowledgeable).toBe(true);
+    expect(diagnostics.blockedPagesAcknowledgedAt).toBeUndefined();
+  });
+
+  it('lifts the block and discloses the uncovered pages when exactly those pages were accepted', async () => {
+    const diagnostics = await read(writeAudit(bookingPages), {
+      blockedPageUrls: [BOOKING_FR, BOOKING_EN],
+      acknowledgedAt: acceptedAt,
+    });
+    expect(diagnostics.reportBlocked).toBe(false);
+    expect(diagnostics.blockingReasons).toEqual([]);
+    expect(diagnostics.blockedPagesAcknowledgedAt).toBe(acceptedAt.toISOString());
+    const limitation = diagnostics.clientLimitations.find(
+      (item) => item.limitationId === 'limitation:operator-resolution-required',
+    );
+    expect(limitation?.evidenceRefs).toEqual([BOOKING_EN, BOOKING_FR]);
+    expect(limitation?.summary.fr).toBe(
+      'Le site a présenté une vérification anti-robot à chaque tentative sur 2 pages, qui n’ont pas pu être analysées. Le rapport ne contient aucun constat sur ces pages.',
+    );
+    expect(limitation?.summary.fr).not.toMatch(/bloqué/u);
+  });
+
+  it('keeps the block when the accepted set differs from the pages blocked now', async () => {
+    const diagnostics = await read(writeAudit(bookingPages), {
+      blockedPageUrls: [BOOKING_FR],
+      acknowledgedAt: acceptedAt,
+    });
+    expect(diagnostics.reportBlocked).toBe(true);
+    expect(diagnostics.blockedPagesAcknowledgedAt).toBeUndefined();
+  });
+
+  it('never lifts the block when the homepage has no usable evidence', async () => {
+    const diagnostics = await read(
+      writeAudit([
+        { url: HOME, status: 'blocked' },
+        { url: BOOKING_FR, status: 'blocked' },
+      ]),
+      { blockedPageUrls: [BOOKING_FR, HOME], acknowledgedAt: acceptedAt },
+    );
+    expect(diagnostics.reportBlocked).toBe(true);
+    expect(diagnostics.blockedPagesAcknowledgeable).toBe(false);
   });
 });

@@ -19,6 +19,23 @@ export interface AuditEvidenceDiagnostics {
    *  evidence, so no client-facing report may be rendered from it. */
   reportBlocked?: boolean;
   blockingReasons?: string[];
+  /** The content pages the crawl inventoried as blocked, sorted. Present
+   *  whenever the block names at least one. */
+  blockedPageUrls?: string[];
+  /** True when blocked content pages are the only blocking reason, so the
+   *  operator may accept them as a disclosed coverage limit. A homepage
+   *  without usable evidence can never be accepted. */
+  blockedPagesAcknowledgeable?: boolean;
+  /** Set when the operator's acceptance of exactly `blockedPageUrls` lifted
+   *  the block. */
+  blockedPagesAcknowledgedAt?: string;
+}
+
+/** The operator's acceptance of a set of blocked content pages as a
+ *  coverage limit, as stored on the audit. */
+export interface BlockedPagesAcknowledgmentInput {
+  blockedPageUrls: readonly string[];
+  acknowledgedAt: Date;
 }
 
 type ReasonClass = 'client' | 'operational' | 'unavailable';
@@ -276,6 +293,11 @@ function applyManifestCoverageBlock(
       const outcome = isRecord(passes[pass]) ? passes[pass]['outcome'] : undefined;
       return outcome === 'completed' || outcome === 'partial';
     });
+  const blockedPageUrls = [
+    ...new Set(
+      blockedPages.flatMap((page) => (typeof page['url'] === 'string' ? [page['url']] : [])),
+    ),
+  ].sort();
   const reasons: string[] = [];
   if (blockedPages.length > 0) reasons.push(`${blockedPages.length} blocked content page(s)`);
   if (!homepageSucceeded) reasons.push('homepage content checks did not succeed');
@@ -289,10 +311,7 @@ function applyManifestCoverageBlock(
       en: 'Report generation is blocked: the homepage or some content pages did not provide usable evidence after bot-protection recovery.',
     },
     reportDestination: REPORT_DESTINATION,
-    evidenceRefs: [
-      ...(homepageUrl !== undefined ? [homepageUrl] : []),
-      ...blockedPages.flatMap((page) => (typeof page['url'] === 'string' ? [page['url']] : [])),
-    ],
+    evidenceRefs: [...(homepageUrl !== undefined ? [homepageUrl] : []), ...blockedPageUrls],
   };
   const merged = new Map(diagnostics.clientLimitations.map((item) => [item.limitationId, item]));
   mergeLimitation(merged, limitation);
@@ -302,7 +321,68 @@ function applyManifestCoverageBlock(
     clientLimitations: [...merged.values()],
     reportBlocked: true,
     blockingReasons: reasons,
+    ...(blockedPageUrls.length > 0 ? { blockedPageUrls } : {}),
+    blockedPagesAcknowledgeable: homepageSucceeded && blockedPageUrls.length > 0,
   };
+}
+
+function acknowledgedBlockedPagesLimitation(blockedPageUrls: string[]): EvidenceLimitation {
+  const count = blockedPageUrls.length;
+  return {
+    limitationId: 'limitation:operator-resolution-required',
+    code: 'operator-resolution-required',
+    summary:
+      count === 1
+        ? {
+            fr: 'Le site a présenté une vérification anti-robot à chaque tentative sur 1 page, qui n’a pas pu être analysée. Le rapport ne contient aucun constat sur cette page.',
+            en: 'The site served a bot-protection check on every attempt for 1 page, which could not be analysed. The report contains no findings for this page.',
+          }
+        : {
+            fr: `Le site a présenté une vérification anti-robot à chaque tentative sur ${count} pages, qui n’ont pas pu être analysées. Le rapport ne contient aucun constat sur ces pages.`,
+            en: `The site served a bot-protection check on every attempt for ${count} pages, which could not be analysed. The report contains no findings for these pages.`,
+          },
+    reportDestination: REPORT_DESTINATION,
+    evidenceRefs: blockedPageUrls,
+  };
+}
+
+/**
+ * Lifts the coverage block when the operator accepted exactly the content
+ * pages that are blocked now. The acceptance is tied to that URL set: a
+ * rescan or renormalization that blocks a different set is blocked again,
+ * and a homepage without usable evidence is never lifted. The client
+ * limitation is rewritten from "the report is blocked" to a disclosure of
+ * the pages the report does not cover.
+ */
+function applyBlockedPagesAcknowledgment(
+  diagnostics: AuditEvidenceDiagnostics,
+  acknowledgment: BlockedPagesAcknowledgmentInput | undefined,
+): AuditEvidenceDiagnostics {
+  const blockedPageUrls = diagnostics.blockedPageUrls ?? [];
+  if (
+    acknowledgment === undefined ||
+    diagnostics.reportBlocked !== true ||
+    diagnostics.blockedPagesAcknowledgeable !== true ||
+    !sameUrlSet(acknowledgment.blockedPageUrls, blockedPageUrls)
+  ) {
+    return diagnostics;
+  }
+  const limitation = acknowledgedBlockedPagesLimitation(blockedPageUrls);
+  return {
+    ...diagnostics,
+    clientLimitations: diagnostics.clientLimitations.map((item) =>
+      item.limitationId === limitation.limitationId ? limitation : item,
+    ),
+    reportBlocked: false,
+    blockingReasons: [],
+    blockedPagesAcknowledgedAt: acknowledgment.acknowledgedAt.toISOString(),
+  };
+}
+
+export function sameUrlSet(a: readonly string[], b: readonly string[]): boolean {
+  const left = [...new Set(a)].sort();
+  const right = [...new Set(b)].sort();
+  return left.length === right.length && left.every((url, index) => url === right[index]);
 }
 
 export function summarizeAuditEvidenceDiagnostics(input: {
@@ -358,7 +438,24 @@ export function summarizeAuditEvidenceDiagnostics(input: {
 
 const diagnosticCache = new Map<string, Promise<AuditEvidenceDiagnostics>>();
 
+/** The artifact-derived diagnostics are cached per audit; the operator's
+ *  blocked-pages acknowledgment is read from the database by the caller and
+ *  applied on every call, so accepting or withdrawing it takes effect at
+ *  once. */
 export async function readAuditEvidenceDiagnostics(input: {
+  auditDir: string;
+  hostname: string;
+  startedAt: Date;
+  store: ArtifactStore | undefined;
+  blockedPagesAcknowledgment?: BlockedPagesAcknowledgmentInput | undefined;
+}): Promise<AuditEvidenceDiagnostics> {
+  return applyBlockedPagesAcknowledgment(
+    await readArtifactDiagnostics(input),
+    input.blockedPagesAcknowledgment,
+  );
+}
+
+function readArtifactDiagnostics(input: {
   auditDir: string;
   hostname: string;
   startedAt: Date;

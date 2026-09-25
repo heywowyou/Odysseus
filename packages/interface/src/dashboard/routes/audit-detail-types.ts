@@ -234,6 +234,9 @@ export interface AuditEvidenceQualityResponse {
   operationalWarnings: { code: string; referenceCount: number }[];
   reportBlocked?: boolean;
   blockingReasons?: string[];
+  blockedPageUrls?: string[];
+  blockedPagesAcknowledgeable?: boolean;
+  blockedPagesAcknowledgedAt?: string;
 }
 
 /** The whole GET /api/audits/:auditId body. */
