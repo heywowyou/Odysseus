@@ -4,11 +4,14 @@ import { z } from 'zod';
  *  treats as absent. The core report-quality contracts use plain optional
  *  fields, so accept null and normalize it away — never pass a null
  *  optional through as a value. */
-function absentable<T extends z.ZodTypeAny>(schema: T) {
-  return z.preprocess(
-    (value) => (value === null ? undefined : value),
-    schema.optional(),
-  ) as z.ZodType<z.infer<T> | undefined>;
+/** A field the model may omit or send as null; both read as absent. The
+ *  outer optional marks the key itself optional: zod 4 derives a key's
+ *  optionality from its schema, so a preprocess alone would make it
+ *  required. */
+function absentable<T extends z.ZodType>(schema: T) {
+  return z
+    .preprocess((value) => (value === null ? undefined : value), schema.optional())
+    .optional();
 }
 
 const evidenceBoundSegmentSchema = z.discriminatedUnion('kind', [

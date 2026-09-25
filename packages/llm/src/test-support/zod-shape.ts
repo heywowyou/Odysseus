@@ -7,7 +7,7 @@ export interface ObjectShapeInfo {
   arrayStringFields: string[];
 }
 
-/** Introspects a zod v3 ZodObject generically. Only unwraps ZodOptional -
+/** Introspects a zod ZodObject generically. Only unwraps ZodOptional -
  *  none of this package's schemas have a ZodDefault/ZodNullable field
  *  today. If one is added later, this function's job is to make a
  *  shape-consistency test fail rather than silently misclassify the new
@@ -27,7 +27,7 @@ export function describeZodShape(schema: ZodObject<Record<string, ZodTypeAny>>):
 
     const unwrapped = isOptional ? field.unwrap() : field;
     if (unwrapped instanceof ZodEnum) {
-      enumsByKey[key] = [...unwrapped.options].sort();
+      enumsByKey[key] = unwrapped.options.map(String).sort();
     }
     if (unwrapped instanceof ZodArray && unwrapped.element.constructor.name === 'ZodString') {
       arrayStringFields.push(key);
