@@ -925,6 +925,16 @@ sudo -u deploy sh -c 'umask 077; cat > /srv/odysseus/.restic-password'
 # type/paste a long random password, then Ctrl-D
 ```
 
+Store a second copy of that password off the server (the operator's password
+manager). Snapshots cannot be restored without it, and a server copy alone is
+lost with the server.
+
+Both files live next to the rsynced checkout but are not in it.
+`deploy/odysseus-deploy.sh` excludes `/.restic.env`, `/.restic-password` and
+`/.env.smoke` from its `rsync --delete`, and `odysseus-deploy.test.sh` asserts
+it (issue #484). A new server-only file in `/srv/odysseus` needs the same
+exclude, or the next deploy deletes it.
+
 Initialize the repository once:
 
 ```sh
@@ -1060,6 +1070,8 @@ docker compose -f deploy/compose.yaml -f deploy/compose.smoke.yaml up -d --build
 `.env.smoke` (gitignored by convention, deleted in the teardown below)
 overrides your real `.env` for this run: test Mongo on port 27018, a stub
 dashboard hash whose plaintext is `odysseus-smoke-only`, fake bucket values.
+Only the smoke overlay loads it; `deploy/compose.yaml` never names it, and the
+deploy script never copies it to the server.
 
 Through Caddy, on http://localhost:
 

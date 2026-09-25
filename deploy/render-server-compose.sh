@@ -22,7 +22,6 @@ REMOTE_PATH="$1"
 GENERATED="$(
   sed \
     -e "s#context: \\.\\.\$#context: ${REMOTE_PATH}#" \
-    -e "s#\\.\\./\\.env\\.smoke\$#${REMOTE_PATH}/.env.smoke#" \
     -e "s#\\.\\./\\.env\$#${REMOTE_PATH}/.env#" \
     -e "s#\\./Caddyfile:#${REMOTE_PATH}/deploy/Caddyfile:#"
 )"

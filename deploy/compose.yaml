@@ -57,14 +57,12 @@ services:
     # Automated releases set this to the verified Git commit. Local and legacy
     # deployments keep the existing latest tag.
     image: odysseus-app:${ODYSSEUS_IMAGE_TAG:-latest}
-    # Server deployments create /srv/odysseus/.env (runbook section 4). The
-    # smoke file, when present next to it, is applied last and wins, which
-    # is what the runbook's local smoke procedure relies on. Both optional
-    # so the same file serves the server and the local smoke.
+    # Server deployments create /srv/odysseus/.env (runbook section 4).
+    # Optional so a local smoke without a real .env still starts. The smoke
+    # file is loaded only by compose.smoke.yaml (issue #484): listing it here
+    # would let a stray /srv/odysseus/.env.smoke override production.
     env_file:
       - path: ../.env
-        required: false
-      - path: ../.env.smoke
         required: false
     environment:
       # Shared crawl-clamp ceilings, defined once in the anchor above so the

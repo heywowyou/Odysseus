@@ -65,12 +65,20 @@ ssh "${SSH_OPTS[@]}" "$ODYSSEUS_DEPLOY_HOST" \
   <"$GENERATED_COMPOSE_FILE"
 
 log "syncing $REPO_ROOT/ to $ODYSSEUS_DEPLOY_HOST:$ODYSSEUS_DEPLOY_REMOTE_PATH/"
+# --delete removes anything on the server that is not in the checkout, so
+# every server-only file must be excluded here (issue #484): the restic
+# credentials (runbook section 8.1) live next to the checkout and are never
+# committed, and a local .env.smoke (runbook section 10) must never reach the
+# server at all.
 rsync -az --delete \
   --exclude .git \
   --exclude node_modules \
   --exclude /artifacts \
   --exclude /data \
   --exclude .env \
+  --exclude /.env.smoke \
+  --exclude /.restic.env \
+  --exclude /.restic-password \
   --exclude /deploy/.deploy.local.env \
   -e "ssh ${SSH_OPTS[*]}" \
   "$REPO_ROOT/" "$ODYSSEUS_DEPLOY_HOST:$ODYSSEUS_DEPLOY_REMOTE_PATH/"

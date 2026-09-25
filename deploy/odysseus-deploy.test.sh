@@ -59,6 +59,12 @@ PATH="$TEST_ROOT/bin:$PATH" \
   "$REPO_ROOT/deploy/odysseus-deploy.sh" >/dev/null
 
 assert_contains "$FAKE_RSYNC_LOG" '/srv/odysseus/'
+# rsync --delete removes server-only files unless they are excluded (#484):
+# the restic credentials live next to the checkout, and a local smoke env
+# file must never be copied into production.
+for server_only in /.env.smoke /.restic.env /.restic-password; do
+  assert_contains "$FAKE_RSYNC_LOG" "--exclude $server_only"
+done
 assert_contains "$FAKE_SSH_LOG" 'docker compose -p '\''odysseus'\'' -f '\''/docker/odysseus/docker-compose.yml'\'' build app'
 assert_contains "$FAKE_SSH_LOG" 'docker image prune -f && docker builder prune -f -a --keep-storage '\''4GB'\'''
 assert_appears_after "$FAKE_SSH_LOG" 'printenv ODYSSEUS_BUILD_ID' 'docker builder prune -f -a'

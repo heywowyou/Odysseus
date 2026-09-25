@@ -6,6 +6,13 @@
 
 services:
   app:
+    # Compose appends env_file entries from an overlay after the base file's,
+    # so .env.smoke is applied last and wins over the real .env. It is loaded
+    # here and never in compose.yaml, so a production server can never read it
+    # (issue #484).
+    env_file:
+      - path: ../.env.smoke
+        required: true
     # Lets the container reach the repo's test Mongo on host port 27018
     # through host.docker.internal.
     extra_hosts:
