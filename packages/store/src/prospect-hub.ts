@@ -46,7 +46,12 @@ import { createReferenceAuditLinkModel } from './schemas/reference-audit-link.sc
 import { transitionOutreachThread } from './outreach-threads.js';
 import { deleteAuditCascade, type AuditCascadeCounts } from './delete-audit.js';
 import { addSuppressionEntry } from './suppression.js';
-import { loadProspectWork, type ProspectTodoRow } from './prospect-work.js';
+import {
+  loadProspectWork,
+  PROSPECT_WORK_PROJECTION,
+  type ProspectTodoRow,
+  type ProspectWorkProspect,
+} from './prospect-work.js';
 import { decideAutomaticStatus } from './prospect-status-policy.js';
 import {
   DETECTED_IDENTITY_ORIGIN,
@@ -401,6 +406,21 @@ export async function listProspects(
   return { rows, page, pageSize, total, statusCounts, archivedCount };
 }
 
+/** Issue #514: the To-do summary's two totals, without listProspects'
+ *  page, status-group and archive queries. The same filters listProspects
+ *  applies for no filter and for status `audited`. */
+export async function countActiveAndAuditedProspects(
+  connection: Connection,
+): Promise<{ active: number; audited: number }> {
+  const Model = createProspectHubModel(connection);
+  const query = queryForProspects({});
+  const [active, audited] = await Promise.all([
+    Model.countDocuments(query),
+    Model.countDocuments({ ...query, status: 'audited' }),
+  ]);
+  return { active, audited };
+}
+
 function queryForStatusCounts(query: Record<string, unknown>): Record<string, unknown> {
   const { status: _status, ...baseQuery } = query;
   return baseQuery;
@@ -413,8 +433,9 @@ export async function listProspectTodo(connection: Connection): Promise<Prospect
   // attached collection query bounded with `$in` and narrow projections.
   const prospects = await createProspectHubModel(connection)
     .find(ACTIVE_PROSPECT_QUERY)
+    .select(PROSPECT_WORK_PROJECTION)
     .sort({ name: 1, prospectId: 1 })
-    .lean<ProspectHubDocument[]>();
+    .lean<ProspectWorkProspect[]>();
   const work = await loadProspectWork(connection, prospects);
   return work
     .flatMap((result) => result.items)

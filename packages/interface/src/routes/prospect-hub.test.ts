@@ -37,6 +37,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   listProspectEvents: vi.fn(),
   listProspectTodo: vi.fn(),
   listProspects: vi.fn(),
+  countActiveAndAuditedProspects: vi.fn(),
   loadProspectWork: vi.fn(),
   markOutreachDraftDeletionPending: vi.fn(),
   markOutreachDraftDeleted: vi.fn(),
@@ -119,6 +120,7 @@ import {
   listProspectTodo,
   loadProspectWork,
   listProspects,
+  countActiveAndAuditedProspects,
   markOutreachDraftDeletionPending,
   markOutreachDraftDeleted,
   revokeOutreachPreview,
@@ -203,6 +205,7 @@ beforeEach(() => {
   getMailboxDraft.mockResolvedValue({ providerDraftId: 'g-1' });
   syncMailbox.mockResolvedValue({ configured: true });
   vi.mocked(listProspects).mockResolvedValue(emptyPage as never);
+  vi.mocked(countActiveAndAuditedProspects).mockResolvedValue({ active: 0, audited: 0 });
   vi.mocked(listDirectory).mockResolvedValue(emptyPage as never);
   vi.mocked(setProspectStatus).mockResolvedValue({ status: 'audited' } as never);
   vi.mocked(applyAutomaticProspectStatus).mockResolvedValue({ status: 'opted-out' } as never);
@@ -353,6 +356,10 @@ describe('prospect hub routes', () => {
       },
     });
     expect(listProspectTodo).toHaveBeenCalledWith(fakeConnection);
+    // Issue #514: the two totals come from one count helper, not two full
+    // listProspects pages.
+    expect(countActiveAndAuditedProspects).toHaveBeenCalledTimes(1);
+    expect(listProspects).not.toHaveBeenCalled();
   });
 
   it('forwards directory facets and rejects invalid status values', async () => {

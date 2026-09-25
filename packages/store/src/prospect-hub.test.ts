@@ -12,10 +12,12 @@ import {
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
 import {
+  countActiveAndAuditedProspects,
   createProspectHub,
   directoryEntryToProspectInput,
   fillMissingProspectIdentity,
   getProspectHub,
+  listProspects,
   listProspectScopeJobIds,
   recordProspectOutcome,
   setProspectStatus,
@@ -399,6 +401,28 @@ describe.skipIf(!mongoAvailable)('prospect hub persistence', () => {
     await expect(
       updateProspect(connection!, created.prospectId, { stakeholders: [{ name: '  ' }] }),
     ).rejects.toThrow();
+  });
+});
+
+describe.skipIf(!mongoAvailable)('To-do summary totals (issue #514)', () => {
+  it('counts what listProspects reports for no filter and for status audited', async () => {
+    const audited = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Totals Fixture',
+      websites: [],
+    });
+    await setProspectStatus(connection!, audited.prospectId, 'audited');
+
+    const totals = await countActiveAndAuditedProspects(connection!);
+    const all = await listProspects(connection!, { page: 1, pageSize: 1 });
+    const auditedPage = await listProspects(connection!, {
+      status: 'audited',
+      page: 1,
+      pageSize: 1,
+    });
+
+    expect(totals).toEqual({ active: all.total, audited: auditedPage.total });
+    expect(totals.audited).toBeGreaterThanOrEqual(1);
   });
 });
 

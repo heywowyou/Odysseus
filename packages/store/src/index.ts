@@ -183,6 +183,7 @@ export {
   findProspectsByDomain,
   findProspectsByEmail,
   listDirectory,
+  countActiveAndAuditedProspects,
   listProspectTodo,
   listProspectEvents,
   listProspectAudits,

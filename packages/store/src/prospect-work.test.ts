@@ -791,13 +791,14 @@ describe('prospect work model', () => {
     // Both load tests assert absolute call counts, so each starts from a
     // clean slate.
     vi.clearAllMocks();
-    const auditCursor = chain([audit()]);
+    const newest = audit({ auditId: 'audit-new', startedAt: new Date('2026-09-10T10:00:00.000Z') });
+    const auditCursor = chain([audit(), newest]);
+    const pageCursor = chain([{ auditId: 'audit-new', pages: newest.pages }]);
+    const auditFind = vi.fn().mockReturnValueOnce(auditCursor).mockReturnValueOnce(pageCursor);
     const draftCursor = chain([]);
     const threadCursor = chain([]);
     const jobCursor = chain([]);
-    vi.mocked(createAuditModel).mockReturnValue({
-      find: vi.fn().mockReturnValue(auditCursor),
-    } as never);
+    vi.mocked(createAuditModel).mockReturnValue({ find: auditFind } as never);
     vi.mocked(createOutreachDraftModel).mockReturnValue({
       find: vi.fn().mockReturnValue(draftCursor),
     } as never);
@@ -822,7 +823,10 @@ describe('prospect work model', () => {
       { ...prospect, prospectId: 'p-2' },
     ]);
     expect(work).toHaveLength(2);
-    expect(createAuditModel).toHaveBeenCalledTimes(1);
+    // Issue #514: the audit rows, then the pages of the newest eligible audit
+    // only; it qualifies, so no older audit's pages are read.
+    expect(createAuditModel).toHaveBeenCalledTimes(2);
+    expect(auditFind.mock.calls[1]?.[0]).toEqual({ auditId: { $in: ['audit-new'] } });
     expect(createOutreachDraftModel).toHaveBeenCalledTimes(1);
     expect(createOutreachThreadModel).toHaveBeenCalledTimes(1);
     expect(createJobModel).toHaveBeenCalledTimes(1);
@@ -834,9 +838,15 @@ describe('prospect work model', () => {
       ['_id', 'analysisId', 'auditId', 'findingsProvenance', 'generatedAt', 'language'].sort(),
     );
     const auditProjection = auditCursor.select.mock.calls[0]?.[0] as Record<string, unknown>;
-    // Only the per-page fields qualification reads, never the whole manifest.
-    expect(auditProjection).not.toHaveProperty('pages');
-    expect(auditProjection).toMatchObject({ 'pages.status': 1, 'pages.httpStatus': 1 });
+    // No page arrays on the audit rows; the qualification step reads only
+    // the per-page fields it needs.
+    expect(Object.keys(auditProjection).some((key) => key.startsWith('pages'))).toBe(false);
+    expect(pageCursor.select.mock.calls[0]?.[0]).toEqual({
+      _id: 0,
+      auditId: 1,
+      'pages.status': 1,
+      'pages.httpStatus': 1,
+    });
     expect(auditProjection).not.toHaveProperty('findings');
     expect(auditProjection).not.toHaveProperty('analysis');
   });

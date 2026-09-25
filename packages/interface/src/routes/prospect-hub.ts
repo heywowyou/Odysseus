@@ -16,6 +16,7 @@ import {
   listOutreachDrafts,
   listDirectory,
   loadProspectWork,
+  countActiveAndAuditedProspects,
   listProspectTodo,
   PROSPECT_TODO_KINDS,
   listProspectAudits,
@@ -216,10 +217,9 @@ export function registerProspectHubRoutes(
     // not the length of a client-side array. The summary deliberately keeps
     // audited prospects separate from actionable rows: one prospect may have
     // no current action, while another may open more than one row.
-    const [rows, activeProspects, auditedProspects, lastSyncedAt] = await Promise.all([
+    const [rows, totals, lastSyncedAt] = await Promise.all([
       listProspectTodo(connection),
-      listProspects(connection, { page: 1, pageSize: 1 }),
-      listProspects(connection, { status: 'audited', page: 1, pageSize: 1 }),
+      countActiveAndAuditedProspects(connection),
       getLatestOutreachSyncAt(connection),
     ]);
     const kindCounts = Object.fromEntries(PROSPECT_TODO_KINDS.map((kind) => [kind, 0])) as Record<
@@ -232,8 +232,8 @@ export function registerProspectHubRoutes(
       rows,
       attentionCount,
       summary: {
-        activeProspects: activeProspects.total,
-        auditedProspects: auditedProspects.total,
+        activeProspects: totals.active,
+        auditedProspects: totals.audited,
         actionableItems: rows.length,
         actionableProspects: new Set(rows.map((row) => row.prospectId)).size,
         kindCounts,

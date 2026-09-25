@@ -5,6 +5,7 @@ import { Brand } from './brand';
 import { BuildRevision } from './build-revision';
 import { DashboardErrorBoundary } from './error-boundary';
 import { LanguageSwitcher } from './language-switcher';
+import { TodoPollProvider } from './todo-poll';
 import { Badge } from '../components/ui/badge';
 import { useI18n } from '../i18n/provider';
 import { cn } from '../lib/cn';
@@ -26,13 +27,16 @@ export function AppShell() {
 
   // Plan 047 addendum: the shell badge and the To-do page consume the same
   // endpoint. Plan 060 §8: the count is server-provided, not the length of a
-  // client-side array. No polling: the count refreshes when the shell
-  // remounts. Hidden on error or zero, so the badge never invents work.
+  // client-side array. Hidden on error or zero, so the badge never invents
+  // work. Issue #514: this is the one To-do poll; the page reads it through
+  // TodoPollProvider, and it runs at the page's 10 s list pace while the
+  // page is open, 15 s elsewhere.
   const todoFetcher = useCallback(
     (signal: AbortSignal) => fetchJson<TodoPage>('/api/prospect-hub/todo', { signal }),
     [],
   );
-  const todo = usePolling<TodoPage>(todoFetcher, 15_000);
+  const onTodoPage = pathname === '/a-traiter' || pathname.startsWith('/a-traiter/');
+  const todo = usePolling<TodoPage>(todoFetcher, onTodoPage ? 10_000 : 15_000);
   const referenceAudit = useApi<ReferenceAuditStatus>('/api/reference-audit/status');
   const inboxCount = todo.data?.summary.actionableItems ?? 0;
   const refreshTodo = todo.refresh;
@@ -221,7 +225,9 @@ export function AppShell() {
             and replays the entrance animation. */}
         <main key={pathname} className="animate-page-in px-4 pb-16 pt-16 md:px-8 md:pt-10">
           <DashboardErrorBoundary>
-            <Outlet />
+            <TodoPollProvider value={todo}>
+              <Outlet />
+            </TodoPollProvider>
           </DashboardErrorBoundary>
         </main>
       </div>

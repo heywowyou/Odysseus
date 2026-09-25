@@ -19,14 +19,11 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
-import { ApiError, fetchJson, sendJson } from '../lib/api';
+import { ApiError, sendJson } from '../lib/api';
 import { formatDateTime, formatRelativeTime } from '../lib/format';
-import { usePolling } from '../lib/use-polling';
-import type { AttentionTodoRow, TodoPage, TodoRow, TodoRowKind } from '../lib/api-types';
+import { useTodoPoll } from '../app/todo-poll';
+import type { AttentionTodoRow, TodoRow, TodoRowKind } from '../lib/api-types';
 
-// Plan 040 poll policy: lists refresh every 10s (usePolling also pauses
-// every poll while the tab is hidden).
-const POLL_INTERVAL_MS = 10_000;
 const SKELETON_ROW_COUNT = 6;
 
 const KIND_TONE: Record<TodoRowKind, BadgeTone> = {
@@ -51,13 +48,8 @@ function isAttentionRow(row: TodoRow): row is AttentionTodoRow {
 export function ATraiterPage(): JSX.Element {
   const { strings, language } = useI18n();
   const navigate = useNavigate();
-  const { data, error, refresh } = usePolling(
-    (signal) => fetchJson<TodoPage>('/api/prospect-hub/todo', { signal }),
-    POLL_INTERVAL_MS,
-    {
-      key: 'a-traiter:todo',
-    },
-  );
+  // Issue #514: the shell's To-do poll, not a second one of our own.
+  const { data, error, refresh } = useTodoPoll();
 
   const [syncing, setSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
