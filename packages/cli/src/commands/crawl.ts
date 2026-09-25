@@ -1,6 +1,6 @@
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
-import { crawlSite, launchBrowser } from '@odysseus/scanner';
+import { crawlSite, launchBrowser, PUBLIC_SITE_NETWORK_POLICY } from '@odysseus/scanner';
 
 function parsePositiveInt(value: string): number {
   const parsed = Number.parseInt(value, 10);
@@ -27,10 +27,13 @@ export function registerCrawlCommand(program: Command): void {
         return;
       }
 
-      const { browser } = await launchBrowser();
+      // Issue #488: the same private-address guard as a queued audit.
+      const networkPolicy = PUBLIC_SITE_NETWORK_POLICY;
+      const { browser } = await launchBrowser({ networkPolicy });
       try {
         const result = await crawlSite(url, {
           browser,
+          networkPolicy,
           ...(opts.maxPages !== undefined ? { maxPages: opts.maxPages } : {}),
           ...(opts.maxDepth !== undefined ? { maxDepth: opts.maxDepth } : {}),
         });

@@ -23,6 +23,7 @@ import {
 } from './host-request-scheduler.js';
 import {
   checkNetworkTarget,
+  withDefaultNetworkPolicy,
   type NetworkSafetyDisposition,
   type NetworkTargetPolicy,
 } from './network-target-policy.js';
@@ -2358,8 +2359,9 @@ async function closeTemporalWindow(
 
 export async function scanSite(
   startUrl: string,
-  options: ScanSiteOptions,
+  scanOptions: ScanSiteOptions,
 ): Promise<SiteScanResult> {
+  const options = withDefaultNetworkPolicy(scanOptions);
   if (options.writePagesAsScanned && options.auditDir === undefined) {
     throw new Error('scanSite: writePagesAsScanned requires auditDir to be set.');
   }

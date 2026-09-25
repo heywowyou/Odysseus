@@ -27,7 +27,11 @@ import {
   installBrowserNetworkSafety,
   type NetworkSafetyBlockHandler,
 } from './browser-network-safety.js';
-import { checkNetworkTarget, type NetworkTargetPolicy } from './network-target-policy.js';
+import {
+  checkNetworkTarget,
+  withDefaultNetworkPolicy,
+  type NetworkTargetPolicy,
+} from './network-target-policy.js';
 import {
   globToRegExp,
   isLanguageHomepagePath,
@@ -507,7 +511,11 @@ function robotsTarget(url: string): string {
  * fire immediately at a site that may be rejecting crawls. Without
  * `frontier` the behavior is unchanged.
  */
-export async function crawlSite(startUrl: string, options: CrawlOptions): Promise<CrawlResult> {
+export async function crawlSite(
+  startUrl: string,
+  crawlOptions: CrawlOptions,
+): Promise<CrawlResult> {
+  const options = withDefaultNetworkPolicy(crawlOptions);
   const maxPages = options.maxPages ?? getMaxPages();
   const maxDepth = options.maxDepth ?? getMaxCrawlDepth();
   const delayMs = options.delayMs ?? getCrawlDelayMs();

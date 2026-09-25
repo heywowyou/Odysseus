@@ -7,6 +7,7 @@ import {
   getLighthouseTimeoutMs,
   getPageTimeoutMs,
   launchBrowser,
+  PUBLIC_SITE_NETWORK_POLICY,
   renderDiff,
   writeAuditArtifacts,
 } from '@odysseus/scanner';
@@ -35,13 +36,15 @@ export function registerRenderDiffCommand(program: Command): void {
       }
 
       const startedAt = new Date();
-      const { browser } = await launchBrowser();
+      // Issue #488: the same private-address guard as a queued audit.
+      const networkPolicy = PUBLIC_SITE_NETWORK_POLICY;
+      const { browser } = await launchBrowser({ networkPolicy });
       try {
         const hostname = new URL(url).hostname;
         const auditDir = buildAuditDir(getArtifactsRoot(), hostname, startedAt);
         const screenshotDir = path.join(auditDir, 'pages');
 
-        const result = await renderDiff(browser, url, { screenshotDir });
+        const result = await renderDiff(browser, url, { screenshotDir, networkPolicy });
 
         const crawl: CrawlResult = {
           startUrl: url,
