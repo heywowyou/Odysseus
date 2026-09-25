@@ -17,10 +17,12 @@ import {
   createOutreachThreadModel,
   type OutreachThreadDocument,
 } from './schemas/outreach-thread.schema.js';
+import { followUpDueAt } from './outreach-threads.js';
 import { findSuppressionMatches } from './suppression.js';
 import {
   auditDataVersionState,
   effectiveAuditScanIntent,
+  hasOutreachEligibleScanIntent,
   isOutreachQualifyingAudit,
   type AuditDataVersionState,
   type AuditIntentSourceJob,
@@ -28,11 +30,16 @@ import {
 import { createReportModel } from './schemas/report.schema.js';
 import { displayJobIntent } from './scan-intents.js';
 import {
+  READINESS_ANALYSIS_PROJECTION,
   READINESS_REPORT_PROJECTION,
   resolveOutreachReportReadiness,
+  selectedFrenchAnalysisIds,
   type OutreachReportReadiness,
+  type ReadinessAnalysis,
+  type ReadinessAuditRow,
   type ReadinessReport,
 } from './outreach-report-readiness.js';
+import { createAnalysisModel } from './schemas/analysis.schema.js';
 import { listNewestReportQualityRuns, type NewestReportQualityRun } from './report-quality.js';
 
 export type ProspectTodoKind =
@@ -107,6 +114,23 @@ export type ProspectWorkAudit = Pick<
   | 'findingsProvenance'
 >;
 
+/** The prospect fields the work derivation reads (issue #514): the To-do
+ *  poll loads every active prospect, so it reads only these. */
+export type ProspectWorkProspect = Pick<
+  Prospect,
+  'prospectId' | 'name' | 'status' | 'archivedAt' | 'websites' | 'emails'
+>;
+
+export const PROSPECT_WORK_PROJECTION = {
+  _id: 0,
+  prospectId: 1,
+  name: 1,
+  status: 1,
+  archivedAt: 1,
+  websites: 1,
+  emails: 1,
+} as const;
+
 export type ProspectWorkDraft = Pick<
   OutreachDraftDocument,
   'draftId' | 'prospectId' | 'threadId' | 'touch' | 'status' | 'createdAt' | 'providerDraftId'
@@ -143,6 +167,10 @@ export interface ProspectWorkSources {
   failedJobs: readonly ProspectWorkJob[];
   /** Report rows of the prospect's audits (readiness projection only). */
   reports: readonly ProspectWorkReport[];
+  /** Issue #509: the selected French analysis of each audit, by auditId
+   *  (null: no usable selection). Readiness requires the newest French
+   *  report to come from it; absent entries skip that check. */
+  selectedFrAnalyses?: ReadonlyMap<string, string | null>;
   /** Plan 060 §7.1: the newest Plan-058 quality run of each of the
    *  prospect's audits, whatever its state, so the derivation can prove
    *  which run — if any — genuinely needs an operator review. */
@@ -195,7 +223,6 @@ export type NewestQualifyingAuditResult =
       state: Exclude<ProspectAuditQualificationState, 'qualifying'>;
     };
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const TERMINAL_PROSPECT_STATUSES = new Set<Prospect['status']>(['won', 'lost', 'opted-out']);
 
 /** The one closed reason the report-quality attention kind carries today:
@@ -222,10 +249,7 @@ function asTime(value: Date | string): number {
 export function selectNewestQualifyingAudit(
   audits: readonly ProspectWorkAudit[],
 ): NewestQualifyingAuditResult {
-  const ordered = [...audits].sort((left, right) => {
-    const byStartedAt = asTime(right.startedAt) - asTime(left.startedAt);
-    return byStartedAt !== 0 ? byStartedAt : right.auditId.localeCompare(left.auditId);
-  });
+  const ordered = [...audits].sort(newestFirst);
   const qualifyingAudit = ordered.find((audit) => isOutreachQualifyingAudit(audit));
   if (qualifyingAudit !== undefined) {
     return {
@@ -250,7 +274,7 @@ function suppressedAddressSet(values: ReadonlySet<string>): Set<string> {
 }
 
 function prospectContactSuppression(
-  prospect: Prospect,
+  prospect: ProspectWorkProspect,
   sources: ProspectWorkSources,
 ): { websiteSuppressed: boolean; emailSuppressed: boolean } {
   const domains = suppressedDomainSet(sources.suppressedDomains);
@@ -269,7 +293,7 @@ function prospectContactSuppression(
 }
 
 function recommendation(
-  prospect: Prospect,
+  prospect: ProspectWorkProspect,
   item: ProspectTodoRow | undefined,
   auditState: ProspectAuditQualificationState,
   websiteSuppressed: boolean,
@@ -318,7 +342,7 @@ function recommendation(
  * allowed here: a caller cannot quietly recalculate only one side of the hub
  * contract by adding a bespoke per-prospect query. */
 export function deriveProspectWork(
-  prospect: Prospect,
+  prospect: ProspectWorkProspect,
   sources: ProspectWorkSources,
   now = new Date(),
 ): ProspectWorkResult {
@@ -412,8 +436,8 @@ export function deriveProspectWork(
   ) {
     const touch = threadState === 'e1-sent' ? 1 : 2;
     const sent = thread.touches.find((candidate) => candidate.touch === touch);
-    const afterDays = touch === 1 ? thread.spacing.touch2AfterDays : thread.spacing.touch3AfterDays;
-    if (sent !== undefined && asTime(sent.sentAt) + afterDays * DAY_MS <= now.getTime()) {
+    const dueAt = followUpDueAt({ ...thread, state: threadState });
+    if (sent !== undefined && dueAt !== undefined && dueAt.getTime() <= now.getTime()) {
       items.push({
         kind: 'follow-up',
         subject: prospect.name,
@@ -433,10 +457,15 @@ export function deriveProspectWork(
   const reportReadiness =
     qualification.audit === undefined
       ? undefined
-      : resolveOutreachReportReadiness(qualification.audit, sources.reports, [
-          ...needsInputJobs.map((job) => ({ ...job, status: 'needs-input' as const })),
-          ...failedJobs.map((job) => ({ ...job, status: 'failed' as const })),
-        ]);
+      : resolveOutreachReportReadiness(
+          qualification.audit,
+          sources.reports,
+          [
+            ...needsInputJobs.map((job) => ({ ...job, status: 'needs-input' as const })),
+            ...failedJobs.map((job) => ({ ...job, status: 'failed' as const })),
+          ],
+          sources.selectedFrAnalyses?.get(qualification.audit.auditId),
+        );
   if (
     qualification.audit !== undefined &&
     reportReadiness !== undefined &&
@@ -530,12 +559,57 @@ export function deriveProspectWork(
   };
 }
 
-function primaryWebsiteDomain(prospect: Prospect): string | undefined {
+function primaryWebsiteDomain(prospect: ProspectWorkProspect): string | undefined {
   return primaryWebsite(prospect.websites)?.registrableDomain;
 }
 
 function unique(values: readonly (string | undefined)[]): string[] {
   return [...new Set(values.filter((value): value is string => value !== undefined))];
+}
+
+function newestFirst(left: ProspectWorkAudit, right: ProspectWorkAudit): number {
+  const byStartedAt = asTime(right.startedAt) - asTime(left.startedAt);
+  return byStartedAt !== 0 ? byStartedAt : right.auditId.localeCompare(left.auditId);
+}
+
+/**
+ * Issue #514: gives page arrays to exactly the audits
+ * selectNewestQualifyingAudit has to look at, instead of loading every
+ * audit's pages. Per prospect it walks the eligible-purpose audits newest
+ * first, one batched query per step, and stops at the first with complete
+ * coverage; usually one step. An audit left with no pages is either older
+ * than the one that qualified or of an ineligible purpose, so the selection
+ * reaches the same answer as with every page loaded.
+ */
+async function withQualificationPages(
+  connection: Connection,
+  audits: ProspectWorkAudit[],
+): Promise<ProspectWorkAudit[]> {
+  const pagesByAuditId = new Map<string, ProspectWorkAudit['pages']>();
+  const pending = [
+    ...groupByProspect(
+      audits.filter((audit) => hasOutreachEligibleScanIntent(audit)),
+      (audit) => audit.prospectId,
+    ).values(),
+  ].map((candidates) => [...candidates].sort(newestFirst));
+  while (pending.length > 0) {
+    const batch = pending.map((candidates) => candidates[0]!);
+    const rows = await createAuditModel(connection)
+      .find({ auditId: { $in: batch.map((audit) => audit.auditId) } })
+      .select({ _id: 0, auditId: 1, 'pages.status': 1, 'pages.httpStatus': 1 })
+      .lean<Pick<ProspectWorkAudit, 'auditId' | 'pages'>[]>();
+    for (const row of rows) pagesByAuditId.set(row.auditId, row.pages ?? []);
+    for (let index = pending.length - 1; index >= 0; index -= 1) {
+      const [candidate, ...rest] = pending[index]!;
+      const pages = pagesByAuditId.get(candidate!.auditId) ?? [];
+      if (isOutreachQualifyingAudit({ ...candidate!, pages }) || rest.length === 0) {
+        pending.splice(index, 1);
+      } else {
+        pending[index] = rest;
+      }
+    }
+  }
+  return audits.map((audit) => ({ ...audit, pages: pagesByAuditId.get(audit.auditId) ?? [] }));
 }
 
 /**
@@ -545,7 +619,7 @@ function unique(values: readonly (string | undefined)[]): string[] {
  */
 export async function loadProspectWork(
   connection: Connection,
-  prospects: readonly Prospect[],
+  prospects: readonly ProspectWorkProspect[],
   now = new Date(),
 ): Promise<ProspectWorkResult[]> {
   if (prospects.length === 0) return [];
@@ -572,14 +646,15 @@ export async function loadProspectWork(
         kind: 1,
         startedAt: 1,
         finishedAt: 1,
-        // Qualification reads only each page's status and HTTP code. The full
-        // page manifest of every audit (Full scans have no page cap) would
-        // otherwise travel on every to-do poll.
-        'pages.status': 1,
-        'pages.httpStatus': 1,
+        // No pages here (issue #514): qualification needs them only for the
+        // few audits withQualificationPages asks about, and every audit's
+        // page array (Full scans have no page cap) would otherwise travel on
+        // every to-do poll.
         'crawl.sitemapCoverage': 1,
         // Whole provenance: report readiness compares every field of it.
         findingsProvenance: 1,
+        // Issue #509: readiness also checks the report against the selection.
+        'reportPreparation.writingSelection': 1,
       })
       .sort({ startedAt: -1, auditId: -1 })
       .lean<ProspectWorkAudit[]>(),
@@ -644,20 +719,29 @@ export async function loadProspectWork(
   const sourceJobs = scanJobs.filter(
     (job): job is ProspectWorkJob & AuditIntentSourceJob => job.type !== undefined,
   );
-  const classifiedAudits = audits.map((audit) => {
-    const scanIntent = effectiveAuditScanIntent(audit, sourceJobs);
-    return scanIntent === undefined ? audit : { ...audit, scanIntent };
-  });
+  const classifiedAudits = await withQualificationPages(
+    connection,
+    audits.map((audit) => {
+      const scanIntent = effectiveAuditScanIntent(audit, sourceJobs);
+      return scanIntent === undefined ? audit : { ...audit, scanIntent };
+    }),
+  );
   const needsInputJobs = scanJobs.filter((job) => job.status === 'needs-input');
   const failedJobs = scanJobs.filter((job) => job.status === 'failed');
   const activeJobs = scanJobs.filter((job) => job.status === 'queued' || job.status === 'running');
-  const [reports, qualityRunMap] = await Promise.all([
+  const [reports, analyses, qualityRunMap] = await Promise.all([
     auditIds.length === 0
       ? Promise.resolve([])
       : createReportModel(connection)
           .find({ auditId: { $in: auditIds } })
           .select(READINESS_REPORT_PROJECTION)
           .lean<ProspectWorkReport[]>(),
+    auditIds.length === 0
+      ? Promise.resolve([])
+      : createAnalysisModel(connection)
+          .find({ auditId: { $in: auditIds } })
+          .select(READINESS_ANALYSIS_PROJECTION)
+          .lean<ReadinessAnalysis[]>(),
     listNewestReportQualityRuns(connection, auditIds),
   ]);
 
@@ -668,6 +752,7 @@ export async function loadProspectWork(
     needsInputJobs,
     failedJobs,
     reports,
+    selectedFrAnalyses: selectedFrenchAnalysisIds(audits as readonly ReadinessAuditRow[], analyses),
     qualityRuns: [...qualityRunMap.values()],
     activeJobs,
     suppressedDomains: suppression.domains,

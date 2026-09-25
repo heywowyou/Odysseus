@@ -6,7 +6,7 @@
  */
 
 import type { Connection } from 'mongoose';
-import type { AuditManifest, FindingsDeltaCoverage, Finding } from '@odysseus/core';
+import type { AuditManifest, FindingsDeltaCoverage, Finding, Severity } from '@odysseus/core';
 import { createAuditModel, type AuditDocumentFields } from './schemas/audit.schema.js';
 import { createFindingModel } from './schemas/finding.schema.js';
 
@@ -29,22 +29,37 @@ export async function persistAudit(
    *  assembled, which leaves the audit without a stored signature and the
    *  re-audit delta with nothing to claim observability from. */
   evidenceCoverage?: FindingsDeltaCoverage,
+  /** Issue #508: the report's primary-population severity counts for these
+   *  findings, stored with them for the Audits list. The caller computes
+   *  it (@odysseus/report's primarySeverityRollup); without it, or without
+   *  a findings digest to key it to, any older rollup is removed. */
+  primarySeverityRollup?: Record<Severity, number>,
 ): Promise<void> {
   const AuditModel = createAuditModel(connection);
   const FindingModel = createFindingModel(connection);
 
+  const findingsDigest = manifest.findingsProvenance?.findingsDigest;
+  const storedRollup =
+    primarySeverityRollup !== undefined && findingsDigest !== undefined
+      ? { ...primarySeverityRollup, findingsDigest }
+      : undefined;
+  /* A retried stage that re-persists without a graph removes any
+   * signature from an earlier assembly: an audit whose record claims
+   * observability its surviving evidence cannot show would hand the
+   * re-audit delta a comparability nobody can verify. */
+  const unset = {
+    ...(evidenceCoverage === undefined ? { evidenceCoverage: 1 } : {}),
+    ...(storedRollup === undefined ? { primarySeverityRollup: 1 } : {}),
+  };
   await AuditModel.findOneAndUpdate(
     { auditId: manifest.auditId },
     {
       $set: {
         ...toAuditDocumentFields(manifest),
         ...(evidenceCoverage !== undefined ? { evidenceCoverage } : {}),
+        ...(storedRollup !== undefined ? { primarySeverityRollup: storedRollup } : {}),
       },
-      /* A retried stage that re-persists without a graph removes any
-       * signature from an earlier assembly: an audit whose record claims
-       * observability its surviving evidence cannot show would hand the
-       * re-audit delta a comparability nobody can verify. */
-      ...(evidenceCoverage === undefined ? { $unset: { evidenceCoverage: 1 } } : {}),
+      ...(Object.keys(unset).length > 0 ? { $unset: unset } : {}),
     },
     { upsert: true },
   );

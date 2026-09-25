@@ -9,6 +9,15 @@ import tseslint from 'typescript-eslint';
 
 const sourceFiles = ['**/*.{js,mjs,ts,tsx,mts}'];
 
+/** @returns {import('eslint').Linter.RulesRecord} */
+function typeAwarePromiseRules() {
+  return {
+    '@typescript-eslint/no-floating-promises': 'error',
+    '@typescript-eslint/no-misused-promises': 'error',
+    '@typescript-eslint/await-thenable': 'error',
+  };
+}
+
 export default defineConfig(
   globalIgnores([
     '**/node_modules/**',
@@ -77,6 +86,30 @@ export default defineConfig(
         },
       ],
     },
+  },
+  // Issue #517: an un-awaited promise in a route or poller becomes an
+  // unhandled rejection, and Node exits on one, taking every running audit
+  // with the single server. These rules need type information, so they run
+  // on package sources only; scripts and config files stay untyped.
+  {
+    files: ['packages/*/src/**/*.{ts,tsx}'],
+    ignores: ['packages/interface/src/dashboard/**'],
+    languageOptions: {
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+    },
+    rules: typeAwarePromiseRules(),
+  },
+  {
+    // The dashboard compiles under its own config, which the project
+    // service would not find from packages/interface/tsconfig.json.
+    files: ['packages/interface/src/dashboard/**/*.{ts,tsx}'],
+    languageOptions: {
+      parserOptions: {
+        project: ['./packages/interface/tsconfig.dashboard.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    rules: typeAwarePromiseRules(),
   },
   {
     files: ['packages/interface/src/dashboard/**/*.{ts,tsx}'],

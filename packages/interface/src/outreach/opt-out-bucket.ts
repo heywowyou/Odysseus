@@ -19,7 +19,7 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { AwsClient } from 'aws4fetch';
+import { createS3Bucket, type S3BucketOptions } from '../s3-bucket.js';
 import { createPreviewToken, hashPreviewToken } from './preview-token.js';
 
 const OPT_OUT_LINK_PREFIX = 'opt-out-links/';
@@ -75,38 +75,11 @@ export async function storeOptOutLink(
   await bucket.putJson(deriveOptOutLinkKey(hashPreviewToken(token)), value);
 }
 
-export interface ScalewayOptOutBucketOptions {
-  bucket: string;
-  endpoint: string;
-  region: string;
-  accessKeyId: string;
-  secretAccessKey: string;
-  fetchImpl?: typeof globalThis.fetch;
-}
-
-function decodeXml(value: string): string {
-  return value
-    .replace(/&lt;/gu, '<')
-    .replace(/&gt;/gu, '>')
-    .replace(/&quot;/gu, '"')
-    .replace(/&apos;/gu, "'")
-    .replace(/&amp;/gu, '&');
-}
+export type ScalewayOptOutBucketOptions = S3BucketOptions;
 
 export function createScalewayOptOutBucket(options: ScalewayOptOutBucketOptions): OptOutBucket {
-  const client = new AwsClient({
-    accessKeyId: options.accessKeyId,
-    secretAccessKey: options.secretAccessKey,
-    service: 's3',
-    region: options.region,
-  });
-  const doFetch = options.fetchImpl ?? globalThis.fetch;
-  const endpoint = new URL(options.endpoint);
-  const origin = `${endpoint.protocol}//${options.bucket}.${endpoint.host}`;
-  const objectUrl = (key: string): string =>
-    `${origin}/${key.split('/').map(encodeURIComponent).join('/')}`;
-  const send = async (url: string, init: RequestInit): Promise<Response> =>
-    doFetch(await client.sign(url, init));
+  const bucket = createS3Bucket(options);
+  const { objectUrl, send } = bucket;
 
   return {
     async putJson(key, value) {
@@ -125,12 +98,8 @@ export function createScalewayOptOutBucket(options: ScalewayOptOutBucketOptions)
         throw new Error(`opt-out object read failed with status ${response.status}`);
       return JSON.parse(await response.text()) as unknown;
     },
-    async list(prefix) {
-      const url = `${origin}/?list-type=2&prefix=${encodeURIComponent(prefix)}`;
-      const response = await send(url, { method: 'GET' });
-      if (!response.ok) throw new Error(`opt-out listing failed with status ${response.status}`);
-      const xml = await response.text();
-      return [...xml.matchAll(/<Key>([^<]*)<\/Key>/gu)].map((match) => decodeXml(match[1]!));
+    list(prefix) {
+      return bucket.listKeys(prefix, 'opt-out');
     },
     async delete(key) {
       const response = await send(objectUrl(key), { method: 'DELETE' });

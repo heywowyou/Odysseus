@@ -1,13 +1,13 @@
 import path from 'node:path';
 import { ensureEnvLoaded, findWorkspaceRoot, readOdysseusBuildId } from '@odysseus/scanner';
-import { OUTREACH_CONTACT } from '@odysseus/core';
+import { FIRST_OUTREACH_CAMPAIGN_VERSION, OUTREACH_CONTACT } from '@odysseus/core';
 
-export const DEFAULT_INTERFACE_PORT = 4600;
+const DEFAULT_INTERFACE_PORT = 4600;
 /** Binds to loopback only by default: this is what makes the dashboard a
  *  *private* interface rather than the "public web interface" CLAUDE.md
  *  says isn't being built. Reachable from another machine only if the
  *  operator deliberately tunnels to it themselves. */
-export const DEFAULT_INTERFACE_HOST = '127.0.0.1';
+const DEFAULT_INTERFACE_HOST = '127.0.0.1';
 /** Each concurrent job needs its own Chromium + Lighthouse CDP pairing
  *  (see browser.ts); default 1 is the safe floor for a solo operator's
  *  own machine, per CLAUDE.md's "cap concurrency, provision for what the
@@ -35,12 +35,6 @@ export const PROSPECTING_MAX_DEPTH = 1;
  *  many *jobs* run at once): this is concurrency *within* one prospecting
  *  job's own URL list. */
 export const PROSPECTING_JOB_CONCURRENCY = 3;
-
-/** Milestone 9a: one prospect-ingestion job processes one bounded batch
- *  of AFNIC candidates, resuming from a persisted checkpoint - not one
- *  unbounded job. See packages/interface/src/queue/pipeline/
- *  run-prospect-ingestion-job.ts. */
-export const DEFAULT_PROSPECT_BATCH_SIZE = 2_000;
 /** Timeout for each of the prospecting cheap-fetch stage's plain HTTP
  *  requests (homepage, mentions-legales) - not the scanner's Chromium
  *  page timeout, which this stage never uses. */
@@ -73,13 +67,6 @@ export function getProspectFetchAllowlist(): ReadonlySet<string> {
       .filter((entry) => entry !== ''),
   );
 }
-
-/** How often (in candidates processed) run-prospect-ingestion-job.ts
- *  persists its resume checkpoint, plus once more at batch end. A crash
- *  mid-batch loses at most this many candidates' worth of re-fetching,
- *  not the whole batch - a deliberate trade-off of extra Mongo writes
- *  for crash resilience. */
-export const PROSPECT_CHECKPOINT_WRITE_INTERVAL = 100;
 /** How often (in URLs completed) run-prospecting-job.ts writes its
  *  progress document, plus once more at job end via completeJob. Progress
  *  writes replace the entire urlResults array (see UrlResult and
@@ -150,17 +137,6 @@ export function getQueueConcurrency(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_QUEUE_CONCURRENCY;
 }
 
-/** Multi-gigabyte, operator-downloaded source files (AFNIC ~0.45GB,
- *  Sirene stock several GB) - a top-level, gitignored data/ directory,
- *  kept separate from artifacts/ (already gitignored) since these are
- *  operator-placed *inputs*, not tool-generated output. */
-export function getAfnicFichierAPath(): string {
-  ensureEnvLoaded();
-  const configured = process.env['ODYSSEUS_AFNIC_FILE_PATH'];
-  if (configured) return path.resolve(findWorkspaceRoot(), configured);
-  return path.join(findWorkspaceRoot(), 'data', 'afnic', 'fichier-a.csv');
-}
-
 export function getSireneStockPath(): string {
   ensureEnvLoaded();
   const configured = process.env['ODYSSEUS_SIRENE_STOCK_PATH'];
@@ -179,10 +155,6 @@ export function getAtoutFranceExportPath(): string {
   return path.join(findWorkspaceRoot(), 'data', 'atout-france', 'hebergements_classes.csv');
 }
 
-export function getSireneStockIndexCachePath(): string {
-  return path.join(findWorkspaceRoot(), 'data', 'sirene', 'stock-index-cache.jsonl');
-}
-
 /** A separate cache file for milestone 10's benchmark cohort, built under a
  *  benchmark-scoped NAF filter (division 47, not the outreach allowlist).
  *  Never the same path as getSireneStockIndexCachePath(): the cache is
@@ -190,14 +162,6 @@ export function getSireneStockIndexCachePath(): string {
  *  built it, so sharing a path would silently mix the two row sets. */
 export function getBenchmarkSireneStockIndexCachePath(): string {
   return path.join(findWorkspaceRoot(), 'data', 'sirene', 'benchmark-stock-index-cache.jsonl');
-}
-
-export function getProspectBatchSize(): number {
-  ensureEnvLoaded();
-  const raw = process.env['ODYSSEUS_PROSPECT_BATCH_SIZE'];
-  if (!raw) return DEFAULT_PROSPECT_BATCH_SIZE;
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_PROSPECT_BATCH_SIZE;
 }
 
 /** Milestone 9c plan 012: the canonical touch spacing, per
@@ -229,6 +193,17 @@ export function getOutreachTouch3AfterDays(): number {
 
 export function getOutreachReplyWindowDays(): number {
   return positiveIntEnv('ODYSSEUS_OUTREACH_REPLY_WINDOW_DAYS', DEFAULT_OUTREACH_REPLY_WINDOW_DAYS);
+}
+
+/** Issue #533: the campaign a newly opened outreach thread is stamped with.
+ *  Set a new value when a new batch starts or anything the prospect receives
+ *  changes (email template, preview content, evidence version, spacing). */
+export function getOutreachCampaignVersion(): string {
+  ensureEnvLoaded();
+  const configured = process.env['ODYSSEUS_OUTREACH_CAMPAIGN_VERSION']?.trim();
+  return configured === undefined || configured === ''
+    ? FIRST_OUTREACH_CAMPAIGN_VERSION
+    : configured;
 }
 
 /** Anchored to the workspace root (not to this module's own depth on
@@ -376,7 +351,7 @@ export function getReferenceAuditReceiptBucketSecretKey(): string {
   return requiredReferenceReceiptEnv('ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_SECRET_KEY');
 }
 
-export function isReferenceAuditReceiptBucketConfigured(): boolean {
+function isReferenceAuditReceiptBucketConfigured(): boolean {
   ensureEnvLoaded();
   return (
     Boolean(process.env['ODYSSEUS_REFERENCE_AUDIT_RECEIPT_BUCKET_ENDPOINT']) &&
@@ -476,7 +451,7 @@ export function isArtifactsBucketConfigured(): boolean {
  * one address while its body names another would tell the prospect to object
  * to a mailbox the campaign does not read.
  */
-export const MAILBOX_ENV_VARS = [
+const MAILBOX_ENV_VARS = [
   'ODYSSEUS_MAILBOX_CLIENT_ID',
   'ODYSSEUS_MAILBOX_CLIENT_SECRET',
   'ODYSSEUS_MAILBOX_REFRESH_TOKEN',
@@ -488,16 +463,6 @@ export function isMailboxConfigured(): boolean {
   return MAILBOX_ENV_VARS.every((name) => {
     const value = process.env[name];
     return value !== undefined && value !== '';
-  });
-}
-
-/** Which of the four are missing, so the operator is told what to set rather
- *  than that "the mailbox" is unconfigured. Never reports a value. */
-export function missingMailboxEnvVars(): string[] {
-  ensureEnvLoaded();
-  return MAILBOX_ENV_VARS.filter((name) => {
-    const value = process.env[name];
-    return value === undefined || value === '';
   });
 }
 

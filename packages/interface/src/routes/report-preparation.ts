@@ -10,9 +10,8 @@
  */
 
 import path from 'node:path';
-import { promises as fs } from 'node:fs';
 import type { Connection } from 'mongoose';
-import type { Finding } from '@odysseus/core';
+import type { Finding, HookFamilyFinding } from '@odysseus/core';
 import {
   buildReportPreparationPreview,
   parseReportPreparationPatch,
@@ -25,6 +24,7 @@ import { buildAuditDir, getArtifactsRoot } from '@odysseus/scanner';
 import type { Router } from '../router.js';
 import { jsonBodyNotRead, readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
+import { createFileVersionCache } from '../pipeline/file-version-cache.js';
 import { isReportProductionInFlight } from '../pipeline/report-production-lock.js';
 import {
   generateEnglishVersion,
@@ -59,6 +59,20 @@ interface PreparationView {
   production: ReportProductionState;
 }
 
+/**
+ * The category and severity of each on-disk finding, the only fields the
+ * preview's hook family reads (issue #511), kept per findings.json version:
+ * the panel polls this view every five seconds during report work, and
+ * parsing a large findings.json each time blocked the event loop for 150 to
+ * 300 ms. Undefined when the file is missing or unreadable.
+ */
+const readHookFamilyFindings = createFileVersionCache((bytes): HookFamilyFinding[] =>
+  (JSON.parse(bytes.toString('utf-8')) as Finding[]).map(({ category, severity }) => ({
+    category,
+    severity,
+  })),
+);
+
 /** The one place assembling the preparation view: preparation plus its
  *  resolved preparation preview, computed from the on-disk findings. Artifacts
  *  are optional here (unlike regeneration): missing findings degrade the
@@ -75,12 +89,7 @@ async function buildPreparationView(
     audit.startedAt,
   );
 
-  let findings: Finding[] | undefined;
-  try {
-    findings = JSON.parse(await fs.readFile(path.join(auditDir, 'findings.json'), 'utf-8'));
-  } catch {
-    findings = undefined;
-  }
+  const findings = await readHookFamilyFindings(path.join(auditDir, 'findings.json'));
 
   const preview = buildReportPreparationPreview({
     preparation,

@@ -41,7 +41,7 @@ export function registerServeCommand(program: Command): void {
         console.log(`odysseus serve: listening at ${handle.url}`);
 
         let shuttingDown = false;
-        const shutdown = async (signal: string): Promise<void> => {
+        const shutdown = async (signal: string, exitCode = 0): Promise<void> => {
           if (shuttingDown) return;
           shuttingDown = true;
           console.log(`\nodysseus serve: received ${signal}, shutting down`);
@@ -50,11 +50,21 @@ export function registerServeCommand(program: Command): void {
           } finally {
             await disconnectFromMongo(mongoConnection);
           }
-          process.exit(0);
+          process.exit(exitCode);
         };
 
         process.on('SIGINT', () => void shutdown('SIGINT'));
         process.on('SIGTERM', () => void shutdown('SIGTERM'));
+        // Issue #517: Node exits at once on an unhandled rejection, skipping
+        // the queue's own shutdown. Log it with its stack, close the server
+        // and the queue as a signal would, and exit non-zero so the
+        // container's restart policy brings a clean process back.
+        process.on('unhandledRejection', (reason) => {
+          console.error('odysseus serve: unhandled promise rejection', reason);
+          // A close that hangs must not keep a broken process serving.
+          setTimeout(() => process.exit(1), 30_000).unref();
+          void shutdown('unhandledRejection', 1);
+        });
       } catch (error) {
         const err = error as NodeJS.ErrnoException;
         if (err.code === 'EADDRINUSE') {

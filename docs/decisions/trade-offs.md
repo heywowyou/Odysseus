@@ -2337,6 +2337,17 @@ in a sales document, and the paid report keeps both. The v3 summary drops
 than a renderer merely skipping it.
 
 
+
+**Amended 2026-09-25, issue #530: v3 is the only preview contract.** The
+v1 prescan renderer, the v2 scorecard renderer, `embedOutreachEvidenceAsset`,
+the v2 summary builder, `OutreachPreviewInput` and the hotel prescan
+evidence schema had no caller outside their own tests, and the v2 draft read
+path counted facts from unfiltered findings. All are removed. A previously
+published v1 or v2 page stays served from the bucket, since the site reads
+the stored object and never re-renders it; drafting an email from such a row
+now refuses (`preview-not-published`) until the preview is republished as
+v3. The approved observation vocabulary (`HOTEL_EVIDENCE_OBSERVATIONS`) stays,
+because the proof-card copy reuses its sentences verbatim.
 ### 43. A preview is served by hashing the visitor's own token, and the public site never learns anything else
 
 Plan 008 could render a preview and nothing could put one in front of a hotel.
@@ -5222,12 +5233,21 @@ could supply would let the deployment attest to itself.
 2026-09-22 Haaitza run exposed that a false pushback permanently ratcheted the
 delay to 60 seconds, even after the host resumed answering normally. After 20
 consecutive request starts without a pushback and outside any `Retry-After`
-window, the shared scheduler halves the delay, stopping at the configured
-floor. From 60 seconds to a 10-second floor that is 60 → 30 → 15 → 10 seconds.
+window, the shared scheduler halves the delay, stopping at the floor: the
+larger of the configured delay and the robots.txt `Crawl-delay` (issue #489;
+the robots raise lifts the floor one way, a `Retry-After` raise lifts only the
+delay). From 60 seconds to a 10-second floor that is 60 → 30 → 15 → 10 seconds.
 A fresh pushback resets the clean-start counter. The delay recovers; concurrency
 still only decreases, because the shared global start spacing already controls
 request pressure while more lanes only overlap local work. Recovery events are
 persisted beside pushback events so the operator sees the actual pace.
+
+**Amended for issue #490: a `Retry-After` wait is capped.** The scheduler waits
+at most its backoff cap (60 seconds) for one `Retry-After`, however long the
+site asks for. The pushback event keeps the value the site sent and records
+`retryAfterCapped: true`, and the crawl watchdog budgets the remaining window.
+A day-long header therefore slows the run to the slowest pace it can reach
+instead of stalling every request until the watchdogs fail the audit.
 
 **Plan 076 samples diagnostic surfaces by template family.** Mobile and
 consent-rejected surfaces provide diagnostics and link discovery, not client
@@ -5360,6 +5380,21 @@ as the in-process path is today: every audit stays
 `environment-unapproved`, production approved-evidence stays blocked, and
 trade-off 92's accepted risk still covers the app container's PDF-render
 Chromium.
+
+**Amended 2026-09-25 (issue #525): the service is removed from compose.** Its
+command, `node packages/cli/dist/index.js scan-service`, never existed: plan
+059's slices 1 to 3 (the service command and the app-side dispatch client)
+were never built. Deploys start only `app`, so production was unaffected,
+but a full `docker compose up` crash-looped the container, and the runbook
+described enabling a service that could not run. The `scan` block, its smoke
+overlay entry, the commented `ODYSSEUS_SCAN_SERVICE_*` lines on `app` and the
+runbook's enablement and deployment-gate procedures are gone; the design and
+its checklist stay in `plans/archive/059-scan-container-design.md`.
+`deploy/compose.test.sh` now fails if any compose service runs a CLI
+subcommand `packages/cli/src` does not define, so the service can return only
+together with its command. Nothing else changes: every scan runs in-process,
+trade-off 92's accepted risk still covers it, and audits stay
+`environment-unapproved`. The crawl-knob anchor stays, used by `app` alone.
 
 ### 102. GPT-5.6 Luna at the highest reasoning effort writes the paid report (operator decision, 2026-09-18)
 
@@ -6040,3 +6075,46 @@ delivered audit whole (the delivered report needs its findings, not 50 MB
 of per-page scan output); compressing `scan.json` on disk (every reader
 would change, for less than dropping bytes nothing reads); an env knob for
 the grace period (one more setting to get wrong for no operator need).
+
+### 118. Node 24 before Node 22 leaves security support (build decision, issue #527, 2026-09-25)
+
+Node 22 stops receiving security fixes on 2027-04-30, and the image's digest
+pin means the local Renovate report never proposes a new major line on its
+own. The engines floor (`>=24.11`, the first Node 24 LTS release), the three
+Dockerfile stages (`node:24-bookworm-slim`, pinned by digest), CI, `.nvmrc`
+and both `@types/node` pins (root and site, which had drifted to 20) move
+together, so no environment runs a different major than the others.
+
+Checked on 2026-09-25 with Node 24.21.0: `pnpm run check`, the unit and e2e
+suites (the failures seen are the same on Node 22), and inside the built
+image a Full-audit scan of `fixtures/hotel-demo` (6 pages, axe and
+Lighthouse on each) and the runbook's in-container PDF render (35 pages).
+
+Rejected alternative: staying on 22 until its end of life, which would turn
+a routine upgrade into a deadline.
+
+### 119. Dependency majors of 2026-09-25, and TypeScript 7 held back (build decision, issue #529, 2026-09-25)
+
+Issue #529 listed the majors a routine patch flow would not reach. Each got
+its own commit and full verification on Node 24:
+
+- vite 6 to 8 and `@vitejs/plugin-react` 4 to 6: no config change; the
+  dashboard and `fixtures/spa-demo` build, and vitest shares the same vite.
+- zod 3.25 to 4.6: one real break. zod 4 derives a key's optionality from
+  its schema, so a preprocess cast to a plain `ZodType` made optional model
+  fields required; `absentable()` now ends in `.optional()`.
+- vitest 4 to 5: no change needed; unit and e2e results are identical.
+
+TypeScript 7.0.2 was tried and not adopted. It builds the workspace in
+8.4 s against 26.3 s for 5.9.3, and needs `"types": ["node"]` because it no
+longer includes `@types/node` on its own. But typescript-eslint 8.70 accepts
+TypeScript below 6.1 only, and TypeScript 7 ships no JavaScript compiler API:
+the type-aware promise rules (issue #517) and one architecture test that
+parses imports with `ts.createSourceFile` both need that API. `renovate.json`
+holds the major until typescript-eslint supports it.
+
+Left for their own changes: commander 13 to 15 and `@sentry/node` 10 to 11,
+which the issue named only as available.
+
+Rejected alternative: TypeScript 7 for `tsc -b` beside 5.9 for ESLint, which
+would type-check the same code with two compilers that can disagree.

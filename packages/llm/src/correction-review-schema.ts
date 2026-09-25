@@ -6,13 +6,13 @@ const MAX_CORRECTION_REASON_CHARS = 500;
 /** An address is deliberately a small closed grammar, not a prose label the
  * model can repurpose. Correlation below narrows the grammar to the exact
  * fields accepted from this particular writing pass. */
-export const correctionFieldSchema = z
+const correctionFieldSchema = z
   .string()
   .regex(
     /^(?:executiveSummary|notes|themes\([A-Za-z0-9_-]+\)\.(?:businessImpact|recommendedActions\[\d+\]))$/u,
   );
 
-export const correctionCheckSchema = z.enum([
+const correctionCheckSchema = z.enum([
   'unsupported-specific-claim',
   'unhedged-causality',
   'language-quality',
@@ -29,7 +29,7 @@ const correctionProposalBase = {
 /** A correction proposal is an advisory artifact, never an edit. The
  * discriminated shapes make a replacement impossible unless the model has
  * explicitly proposed a change, and forbid it otherwise. */
-export const correctionProposalSchema = z.discriminatedUnion('verdict', [
+const correctionProposalSchema = z.discriminatedUnion('verdict', [
   z.object({ ...correctionProposalBase, verdict: z.literal('keep') }).strict(),
   z
     .object({

@@ -1,5 +1,6 @@
 import { getCrawlerUserAgent } from './config.js';
 import type { NetworkSafetyDisposition, NetworkTargetPolicy } from './network-target-policy.js';
+import { isServedPlainTextFile, readTextPrefix, ROBOTS_TXT_MAX_BYTES } from './bounded-body.js';
 import { fetchWithNetworkPolicy, NetworkSafetyBlockedError } from './safe-fetch.js';
 
 export interface RobotsRules {
@@ -17,8 +18,45 @@ export interface RobotsRules {
 }
 
 /**
- * Translates a robots.txt path pattern into a matcher. Supports the
- * commonly-relied-on subset: literal prefix matching, '*' as a wildcard
+ * RFC 9309 section 2.2.2: rules and URL paths are compared in their
+ * percent-encoded forms. Browsers and `URL` percent-encode non-ASCII path
+ * characters, while a site writes `Disallow: /réservation` as text, so both
+ * sides are brought to one form (issue #492): non-ASCII characters (and
+ * spaces) are UTF-8 percent-encoded and existing `%xx` escapes are
+ * upper-cased. Everything else, `*` and `$` included, is left as written.
+ */
+export function normalizeRobotsPath(value: string): string {
+  let result = '';
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index]!;
+    if (char === '%' && /^[0-9a-fA-F]{2}$/u.test(value.slice(index + 1, index + 3))) {
+      result += `%${value.slice(index + 1, index + 3).toUpperCase()}`;
+      index += 2;
+      continue;
+    }
+    const code = char.charCodeAt(0);
+    if (code > 0x7e || code <= 0x20) {
+      // A surrogate pair is one code point; encode it whole.
+      const codePoint = value.codePointAt(index)!;
+      const whole = String.fromCodePoint(codePoint);
+      result += encodeURIComponent(whole);
+      index += whole.length - 1;
+      continue;
+    }
+    result += char;
+  }
+  return result;
+}
+
+/** A rule in its comparison form: percent-encoding normalized as for paths,
+ *  runs of `*` collapsed (they match the same thing as one). */
+function normalizeRobotsPattern(pattern: string): string {
+  return normalizeRobotsPath(pattern.replace(/\*+/gu, '*'));
+}
+
+/**
+ * Translates a normalized robots.txt path pattern into a matcher. Supports
+ * the commonly-relied-on subset: literal prefix matching, '*' as a wildcard
  * for any sequence of characters, and a trailing '$' as an end-of-string
  * anchor.
  */
@@ -139,16 +177,21 @@ export function parseRobotsTxt(text: string, userAgent: string): RobotsRules {
  * robots-disallow-broad check needs to know *which* disallow pattern is
  * actually responsible for blocking a given page, not just that it is
  * blocked, so it can tally matches per pattern.
+ *
+ * Both sides are compared in their normalized percent-encoded form, and the
+ * longest-match rule uses the encoded length (issue #492).
  */
 export function findBlockingPattern(rules: RobotsRules, pathname: string): string | undefined {
   let bestLength = -1;
   let bestDisallowPattern: string | undefined;
+  const target = normalizeRobotsPath(pathname);
 
   const consider = (pattern: string, isAllow: boolean): void => {
-    if (pattern.length < bestLength) return;
-    if (!patternToRegExp(pattern).test(pathname)) return;
-    if (pattern.length > bestLength) {
-      bestLength = pattern.length;
+    const normalized = normalizeRobotsPattern(pattern);
+    if (normalized.length < bestLength) return;
+    if (!patternToRegExp(normalized).test(target)) return;
+    if (normalized.length > bestLength) {
+      bestLength = normalized.length;
       bestDisallowPattern = isAllow ? undefined : pattern;
     } else if (isAllow) {
       bestDisallowPattern = undefined;
@@ -190,8 +233,8 @@ export async function fetchRobotsText(
   userAgent: string = getCrawlerUserAgent(),
   options: RobotsFetchOptions = {},
 ): Promise<string | null> {
+  const url = new URL('/robots.txt', origin).href;
   try {
-    const url = new URL('/robots.txt', origin).href;
     const request = {
       headers: { 'user-agent': userAgent },
       signal: AbortSignal.timeout(timeoutMs),
@@ -205,8 +248,16 @@ export async function fetchRobotsText(
               ? { onBlocked: options.onNetworkSafetyBlocked }
               : {}),
           });
-    if (!response.ok) return null;
-    return await response.text();
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined);
+      return null;
+    }
+    // Bounded (issue #486): content past RFC 9309's 500 KiB may be ignored.
+    const text = await readTextPrefix(response, ROBOTS_TXT_MAX_BYTES);
+    // Issue #495: a redirect to the homepage or an SPA's index.html answers
+    // 200 but is not a robots.txt, and parsing it as one records a file
+    // with no rules.
+    return isServedPlainTextFile(url, response, text) ? text : null;
   } catch (error) {
     if (error instanceof NetworkSafetyBlockedError) throw error;
     const message = error instanceof Error ? error.message : String(error);

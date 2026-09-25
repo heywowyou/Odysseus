@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { contentTypeForPath, resolveStaticPath } from './static.js';
+import { cacheControlForPath, contentTypeForPath, resolveStaticPath } from './static.js';
 import { isHtmlContentType, SPA_CONTENT_SECURITY_POLICY } from '../security-headers.js';
 
 let publicDir: string;
@@ -153,5 +153,26 @@ describe('SPA shell content security policy', () => {
   it('keeps the policy scoped to self-hosted assets with no framing', () => {
     expect(SPA_CONTENT_SECURITY_POLICY).toContain("script-src 'self'");
     expect(SPA_CONTENT_SECURITY_POLICY).toContain("frame-ancestors 'none'");
+  });
+});
+
+describe('cache headers (issue #512)', () => {
+  it('lets the browser keep content-hashed assets for a year', () => {
+    expect(cacheControlForPath('/srv/public', '/srv/public/assets/index-3f9a1c.js')).toBe(
+      'public, max-age=31536000, immutable',
+    );
+  });
+
+  it('revalidates the HTML shell and every other unhashed file', () => {
+    expect(cacheControlForPath('/srv/public', '/srv/public/index.html')).toBe('no-cache');
+    expect(cacheControlForPath('/srv/public', '/srv/public/favicon.ico')).toBe('no-cache');
+    // A root file merely named like the directory is not a hashed asset.
+    expect(cacheControlForPath('/srv/public', '/srv/public/assets')).toBe('no-cache');
+  });
+
+  it('reuses the fixed-name report fonts for a day', () => {
+    expect(cacheControlForPath('/srv/public', '/srv/public/fonts/AvenirNextCyr-Bold.woff2')).toBe(
+      'public, max-age=86400',
+    );
   });
 });

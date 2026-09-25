@@ -2,15 +2,18 @@
 
 Initial provisioning commands are meant to be run as shown, in order, by the
 operator with an assistant walking through them. Do not skip the STOP boxes.
-Sections 1 through 6 are the historical record of the original Scaleway box.
+Sections 1 to 3, 5 and 6 are the historical record of the original Scaleway
+box. Section 4 is current: the server's secrets list and the permanent
+reference-audit release workflow apply to the Hostinger box today.
 Routine production deployment is section 7B: run `deploy/odysseus-deploy.sh`
 from the operator's machine against the Hostinger box. Section 7A stays as
 reference for the disabled workflow mechanism.
 
 ## 1. What this stack is
 
-> Sections 1 through 6 describe the original 2025-08 provisioning on the
-> retired Scaleway VPS and are kept as history. Production now runs on the
+> Sections 1 to 3, 5 and 6 describe the original 2025-08 provisioning on the
+> retired Scaleway VPS and are kept as history. Section 4 (secrets on the
+> server, reference-audit releases) is current. Production now runs on the
 > Hostinger box; see section 7B.
 
 One Scaleway VPS runs two containers: the Odysseus app (built from this
@@ -29,7 +32,7 @@ Have all of these before starting:
 - A Scaleway account able to create a VPS.
 - DNS control for `odysseusaudit.com` (wherever its nameservers live).
 - Atlas project admin access, to add the VPS IP to the network allowlist.
-- A checkout of this repository on your local machine, with Node 22
+- A checkout of this repository on your local machine, with Node 24
   installed (needed once, to generate the dashboard password hash).
 - Local Docker, for the local smoke in section 10.
 
@@ -102,6 +105,9 @@ Alternatively, `git clone` the repository to `/srv/odysseus` as `deploy`.
 
 ## 4. Secrets on the server
 
+> Current, not history: this list and the reference-audit workflow below
+> apply to the Hostinger box.
+
 The server reads one file: `/srv/odysseus/.env`. Create it BY HAND, with the
 operator present, from a copy of `.env.example`:
 
@@ -139,9 +145,10 @@ Fill in exactly these, leave everything else as shipped:
 - Optional `OPENAI_BASE_URL`: leave unset for the standard endpoint. Set it to
   the organization's enabled EU regional endpoint when EU data residency is
   required; regional processing carries a 10 percent uplift.
-- The application intentionally requests the generic `gpt-5.4-mini` alias.
-  Recheck report quality after OpenAI changes the alias target; the operator
-  explicitly prefers automatic minor upgrades over a dated snapshot pin.
+- The model is pinned in code, not configured here: `OPENAI_MODEL` in
+  `packages/llm/src/constants.ts` (trade-offs 102 and its 2026-09-23 GPT-6
+  Luna amendment). Changing it is a code change and a deploy; before one,
+  re-run the saved-audit comparison trade-off 102 describes.
 - The `ODYSSEUS_PREVIEW_BUCKET_*` block: the same Scaleway bucket values the
   local `.env` already uses.
   The server's `serve` process also polls the bucket's `opt-out-requests/`
@@ -632,7 +639,7 @@ editing the compose file and deploying:
 If Chromium fails to start after a change here, every scan and PDF fails;
 roll back by restoring the flag.
 
-### Isolation preflight and the scan container (plan 059)
+### Isolation preflight (plan 059)
 
 `assessBrowserIsolation` in `packages/scanner` refuses to start a scan when
 Chromium's sandbox is disabled and no evaluated container isolation profile is
@@ -643,152 +650,27 @@ content.
 
 Trade-off 92 records that the app container's Chromium runs as the same
 unprivileged user, in the same container, as the process holding every secret.
-Plan 059 built the first remedy: `deploy/compose.yaml` now defines a `scan`
-service - same image as the app, `scan-service` command, no published ports,
-the shared `artifacts` volume, no `env_file`, and an explicit environment
-allow-list (`ODYSSEUS_ARTIFACTS_ROOT`, the Chromium flags, the isolation
-profile, the scan-service token and address, the shared crawl knobs, and the
-flagged `CRUX_API_KEY` exception). Nothing credential-shaped beyond that list
-may be added to it; a proposal to do so is a deployment-review stop, not a
-pattern to extend (trade-off 101).
-
-Deploying that container changes nothing on its own. The app's
-`ODYSSEUS_SCAN_SERVICE_URL` is commented out in `deploy/compose.yaml`, so
-every scan keeps running in-process exactly as before, and the preflight
-stays assessed-but-not-asserted on that path - deliberately, until the
-container is the way scans actually run. The enablement procedure below, and
-the deployment-gate checklist after it, are what make setting the flag
-truthful.
-
-#### Enabling the scan container
-
-1. Generate the shared token and write it where compose interpolation finds
-   it. On the server:
-
-   ```sh
-   (umask 177; printf 'ODYSSEUS_SCAN_SERVICE_TOKEN=%s\n' "$(openssl rand -hex 32)" \
-     >/docker/odysseus/.env)
-   ls -l /docker/odysseus/.env
-   ```
-
-   The `ls` must show `-rw-------`. The token is a random 64-hex-character
-   value; it is never typed by a person, never passed as a CLI argument
-   (arguments land in shell history and process lists), and the `printf`
-   form keeps it out of the shell history too. The file location is
-   load-bearing: compose reads `<project-directory>/.env` for variable
-   interpolation, the server compose file lives in `/docker/odysseus`
-   (section 7B), so every compose invocation through it - including
-   `deploy/odysseus-deploy.sh`'s, which passes no `--env-file` - resolves
-   the token identically for the app and the scan service. The operator
-   `.env` at `/srv/odysseus/.env` is an env_file into the app container only
-   and is never read by the scan service; the scan container must never
-   receive it.
-
-2. If CrUX field data should keep flowing after the cut-over (the compose
-   default degrades to no CrUX data, exactly like any machine without the
-   key), add the same key the app already uses to that file:
-
-   ```sh
-   grep '^CRUX_API_KEY=' /srv/odysseus/.env >>/docker/odysseus/.env
-   chmod 600 /docker/odysseus/.env
-   ```
-
-   This is trade-off 101's recorded exception: a read-only public-data key
-   that `buildSanitizedBrowserEnv` strips from the browser process like every
-   other `_KEY` name.
-
-3. Uncomment `ODYSSEUS_SCAN_SERVICE_URL` and `ODYSSEUS_SCAN_SERVICE_TOKEN` in
-   `deploy/compose.yaml` (in the repository), then deploy by section 7B.
-   Optionally rehearse the whole procedure locally first: the smoke overlay
-   (section 10) carries a fake smoke token, and uncommenting the same two
-   lines in `deploy/compose.smoke.yaml` flips a local smoke onto the
-   dispatch path.
-
-4. Create the scan container. The routine rollout updates only `app`, so run
-   once by hand on the server:
-
-   ```sh
-   docker compose -p odysseus -f /docker/odysseus/docker-compose.yml up -d
-   ```
-
-   The same command is how the scan container picks up a new image after
-   later deploys; run it during a quiet window, because a restart kills an
-   in-flight acquisition (which requeues and resumes from the crawl
-   checkpoint). Rotating the token later means regenerating step 1's file and
-   re-running this command.
-
-Rolling back: comment the two app lines again and deploy; scans return to the
-in-process path. The scan container can keep running - it is inert unless
-called.
-
-#### Deployment gate (run on the real host before trusting the profile)
-
-The compose file ships the hardening; only the host can prove it. Run every
-check below after step 4, before declaring
-`ODYSSEUS_BROWSER_ISOLATION_PROFILE=secretless-scan-container` attested for
-the deployment, and add a dated line to the log at the end of this subsection
-recording the run. Until then, scans that dispatch to the container run
-unattested exactly as in-process scans do, and the dormant Plan-058 compatibility path still cannot produce
-`ApprovedAuditEvidence`. Plan 068 deliberately does **not** use that artifact
-as a normal report gate: the same environment condition is surfaced as an
-operational scan diagnostic, separate from client-facing evidence limitations.
-
-- [ ] Runs as uid 10001, never root:
-      `docker compose -p odysseus -f /docker/odysseus/docker-compose.yml exec scan id`
-      prints `uid=10001(odysseus)`.
-- [ ] No `.env` in the image, no `env_file` on the service, and the
-      environment is the compose allow-list plus the image's own variables
-      and nothing else: diff `docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}'`
-      against the service's `environment:` in `docker compose config`, the
-      Dockerfile `ENV` entries (`PATH`, `PLAYWRIGHT_BROWSERS_PATH`,
-      `ODYSSEUS_BUILD_ID`, `ODYSSEUS_BUILT_AT`,
-      `ODYSSEUS_ARTIFACTS_ROOT`), and the container runtime's own additions.
-      Anything else is a failure.
-- [ ] Only secret-shaped names present are `ODYSSEUS_SCAN_SERVICE_TOKEN`
-      and, if adopted, `CRUX_API_KEY`:
-      `docker compose ... exec scan printenv | grep -E '_KEY$|TOKEN|SECRET|PASSWORD|URI'`
-      lists only those, and neither appears in a launched Chromium
-      environment (`buildSanitizedBrowserEnv` strips them; verify against one
-      real scan's recorded launch environment).
-- [ ] No Docker socket, no `/var/run` mounts, no host paths beyond the named
-      `artifacts` volume, and the hardening is live, not just committed:
-      `docker inspect --format '{{.HostConfig.CapDrop}} {{.HostConfig.SecurityOpt}} {{.HostConfig.PidsLimit}} {{.HostConfig.Memory}} {{.HostConfig.NanoCpus}}'`
-      shows `[ALL]`, `no-new-privileges`, and the configured limits.
-- [ ] Limits hold under a real scan: start one Full scan and watch
-      `docker stats`, then adjust `mem_limit` / `cpus` / `pids_limit` in
-      `deploy/compose.yaml` from what a Lighthouse page actually costs. The
-      service must not starve the host.
-- [ ] The service port is unpublished and rejects unauthenticated calls:
-      nothing listens on host port 4700 (`ss -ltn | grep 4700` is empty), and
-      from inside the app container
-      `node -e "fetch('http://scan:4700/scan',{method:'POST'}).then(r=>console.log(r.status))"`
-      prints `401` (a wrong or missing token never reaches a scan).
-- [ ] With the entire service environment leaked, an attacker obtains
-      nothing that opens any production system: no database, bucket, model
-      or mailbox credential is in the list.
-
-Deployment-gate log (add one dated line per run, never delete old ones):
-
-- (none yet - the container has not been enabled in production)
-
-What stays blocked regardless of this section, until the gate above has
-actually passed on the production host: the preflight stays unwired on the
-in-process path (local dev, CLI, and any deployment that has not enabled the
-container keep assess-without-assert); the dormant Plan-058
-`ApprovedAuditEvidence` path stays blocked, and audits still record
-`environment-unapproved` while scans run beside secrets; and the app
-container keeps trade-off 92's accepted risk for its own Chromium, which still
-renders the PDFs. **Plan 068 changes the product consequence, not the security
-fact:** `environment-unapproved` is an operational warning in the normal
-Plan-067 report workflow and does not invalidate normalized findings or block a
-client report. The isolation work remains necessary on its own security merits.
+Plan 059 designed the remedy, a secretless `scan` container that would run the
+audit browser with no database, bucket, model or mailbox credential. Its
+compose service shipped but the `scan-service` command it ran was never built,
+so it was removed rather than left to crash-loop on a full `docker compose up`
+(issue #525, trade-off 101's amendment). The design, the environment
+allow-list and the deployment-gate checklist remain in
+`plans/archive/059-scan-container-design.md` for whoever builds it. Until
+then every scan runs in-process in the app container, the preflight stays
+assessed-but-not-asserted, audits record `environment-unapproved`, and the
+dormant Plan-058 `ApprovedAuditEvidence` path stays blocked. **Plan 068
+changes the product consequence, not the security fact:**
+`environment-unapproved` is an operational warning in the normal Plan-067
+report workflow and does not invalidate normalized findings or block a client
+report.
 
 Chromium is already launched with credential-shaped environment variables
 stripped (`buildSanitizedBrowserEnv`), so the browser process no longer carries
 `MONGODB_URI`, the model key or the bucket keys. That narrows the blast radius
 of a renderer exploit; in the app container it does not close it, since the
-same uid can still read `/srv/odysseus/.env` - which is what the scan
-container exists to stop carrying at all.
+same uid can still read `/srv/odysseus/.env` - which is what the designed
+scan container would stop carrying at all.
 
 ## 8. Backups
 
@@ -930,6 +812,16 @@ sudo -u deploy sh -c 'umask 077; cat > /srv/odysseus/.restic-password'
 # type/paste a long random password, then Ctrl-D
 ```
 
+Store a second copy of that password off the server (the operator's password
+manager). Snapshots cannot be restored without it, and a server copy alone is
+lost with the server.
+
+Both files live next to the rsynced checkout but are not in it.
+`deploy/odysseus-deploy.sh` excludes `/.restic.env`, `/.restic-password` and
+`/.env.smoke` from its `rsync --delete`, and `odysseus-deploy.test.sh` asserts
+it (issue #484). A new server-only file in `/srv/odysseus` needs the same
+exclude, or the next deploy deletes it.
+
 Initialize the repository once:
 
 ```sh
@@ -1065,6 +957,8 @@ docker compose -f deploy/compose.yaml -f deploy/compose.smoke.yaml up -d --build
 `.env.smoke` (gitignored by convention, deleted in the teardown below)
 overrides your real `.env` for this run: test Mongo on port 27018, a stub
 dashboard hash whose plaintext is `odysseus-smoke-only`, fake bucket values.
+Only the smoke overlay loads it; `deploy/compose.yaml` never names it, and the
+deploy script never copies it to the server.
 
 Through Caddy, on http://localhost:
 
@@ -1095,30 +989,6 @@ curl -si -X POST http://localhost/api/session/login \
 
 Expected: `HTTP/1.1 204` plus a `set-cookie` header. A wrong password
 returns `401` with a JSON error.
-
-The compose file also defines the plan 059 `scan` service. Check it came up:
-
-```sh
-docker compose -f deploy/compose.yaml -f deploy/compose.smoke.yaml ps scan
-```
-
-Expected: the `scan` container `Up`. If the image predates plan 059 slices
-1-3 (the `scan-service` CLI command), it exits and restarts instead; that is
-expected and harmless while those slices are unmerged, and the rest of the
-smoke is unaffected. Once it is `Up`, confirm the service rejects calls
-without the bearer token - the negative half of the section 7C token check:
-
-```sh
-docker compose -f deploy/compose.yaml -f deploy/compose.smoke.yaml exec app \
-  node -e "fetch('http://scan:4700/scan',{method:'POST'}).then(r=>console.log(r.status))"
-```
-
-Expected: `401`. A `404`, `200` or a connection error while `scan` is `Up`
-means the token gate is not what the deployment gate requires; stop and
-investigate. (To rehearse the full dispatch path locally, uncomment the two
-`ODYSSEUS_SCAN_SERVICE_*` lines in the smoke overlay's `app` block and repeat
-the smoke; the default smoke rehearses the production default, which has the
-flag unset.)
 
 Teardown, exactly, so nothing survives on the host:
 

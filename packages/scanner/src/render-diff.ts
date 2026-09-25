@@ -20,7 +20,7 @@ import {
   installBrowserNetworkSafety,
   type NetworkSafetyBlockHandler,
 } from './browser-network-safety.js';
-import type { NetworkTargetPolicy } from './network-target-policy.js';
+import { withDefaultNetworkPolicy, type NetworkTargetPolicy } from './network-target-policy.js';
 import type { HostRequestScheduler } from './host-request-scheduler.js';
 import {
   observeRenderedReadiness,
@@ -121,8 +121,9 @@ export interface RenderDiffOptions {
 export async function renderDiff(
   browser: Browser,
   url: string,
-  options: RenderDiffOptions,
+  renderOptions: RenderDiffOptions,
 ): Promise<RenderDiffOutcome> {
+  const options = withDefaultNetworkPolicy(renderOptions);
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const settleTimeoutMs = options.settleTimeoutMs ?? getRenderSettleTimeoutMs();
   const userAgent = options.userAgent ?? getCrawlerUserAgent();

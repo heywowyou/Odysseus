@@ -73,7 +73,7 @@ export interface BrowserIsolationPreflightResult {
  * scan until trade-off 92's own first remedy - a scan container holding no
  * secrets - is actually built.
  */
-export const APPROVED_ISOLATION_PROFILES: readonly string[] = [
+const APPROVED_ISOLATION_PROFILES: readonly string[] = [
   // Trade-off 92's preferred remedy: scanning and PDF rendering in their own
   // container, with the artifacts volume and a narrow job channel and none of
   // the mailbox, bucket, model or database credentials. This removes the blast

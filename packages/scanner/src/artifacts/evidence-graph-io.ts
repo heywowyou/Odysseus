@@ -134,22 +134,6 @@ export function writeAuditEvidenceGraph(auditDir: string, graph: AuditEvidenceGr
   writeJsonAtomic(path.join(evidenceDir, EVIDENCE_QUALITY_ASSESSMENT_FILENAME), graph.quality);
 }
 
-/** The evidence files, relative to the audit directory, that a reader must
- *  get back byte for byte before an approval may stand next to them. */
-export const EVIDENCE_READ_BACK_PATHS: readonly string[] = [
-  CHECK_ATTEMPT_LEDGER_FILENAME,
-  EVIDENCE_COVERAGE_LEDGER_FILENAME,
-  READINESS_RECORDS_FILENAME,
-  FRAME_COVERAGE_RECORDS_FILENAME,
-  AUDIT_SIGNALS_FILENAME,
-  PAGE_SEMANTIC_PROFILES_FILENAME,
-  PATTERN_EVIDENCE_FILENAME,
-  RAW_EVIDENCE_SNAPSHOT_FILENAME,
-  OBSERVATION_LEDGER_FILENAME,
-  AUDIT_EVIDENCE_SNAPSHOT_FILENAME,
-  EVIDENCE_QUALITY_ASSESSMENT_FILENAME,
-].map((name) => path.join(EVIDENCE_GRAPH_DIRNAME, name));
-
 /** The approval file, relative to the audit directory. */
 export const APPROVED_AUDIT_EVIDENCE_PATH = path.join(
   EVIDENCE_GRAPH_DIRNAME,

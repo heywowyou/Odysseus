@@ -19,14 +19,12 @@ import {
   TableRow,
 } from '../components/ui/table';
 import { useI18n } from '../i18n/provider';
-import { ApiError, fetchJson, sendJson } from '../lib/api';
+import { ApiError, sendJson } from '../lib/api';
 import { formatDateTime, formatRelativeTime } from '../lib/format';
-import { usePolling } from '../lib/use-polling';
-import type { AttentionTodoRow, TodoPage, TodoRow, TodoRowKind } from '../lib/api-types';
+import { useTodoPoll } from '../app/todo-poll';
+import type { AttentionTodoRow, OutreachFunnelPage, TodoRow, TodoRowKind } from '../lib/api-types';
+import { useApi } from '../lib/use-api';
 
-// Plan 040 poll policy: lists refresh every 10s (usePolling also pauses
-// every poll while the tab is hidden).
-const POLL_INTERVAL_MS = 10_000;
 const SKELETON_ROW_COUNT = 6;
 
 const KIND_TONE: Record<TodoRowKind, BadgeTone> = {
@@ -51,13 +49,11 @@ function isAttentionRow(row: TodoRow): row is AttentionTodoRow {
 export function ATraiterPage(): JSX.Element {
   const { strings, language } = useI18n();
   const navigate = useNavigate();
-  const { data, error, refresh } = usePolling(
-    (signal) => fetchJson<TodoPage>('/api/prospect-hub/todo', { signal }),
-    POLL_INTERVAL_MS,
-    {
-      key: 'a-traiter:todo',
-    },
-  );
+  // Issue #514: the shell's To-do poll, not a second one of our own.
+  const { data, error, refresh } = useTodoPoll();
+  // Issue #533: fetched once per visit and after a mailbox sync, not polled.
+  const funnel = useApi<OutreachFunnelPage>('/api/outreach/funnel');
+  const campaigns = funnel.data?.campaigns ?? [];
 
   const [syncing, setSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
@@ -79,6 +75,7 @@ export function ATraiterPage(): JSX.Element {
           .replace('{review}', String(result.review)),
       );
       refresh();
+      funnel.refresh();
     } catch (syncError) {
       setSyncNotice(
         syncError instanceof ApiError && syncError.status === 503
@@ -145,7 +142,7 @@ export function ATraiterPage(): JSX.Element {
                 ? strings.attention.kinds[row.kind]
                 : strings.aTraiter.kinds[row.kind];
               return (
-                <TableRow key={`${row.kind}-${row.href}`} onClick={() => navigate(row.href)}>
+                <TableRow key={`${row.kind}-${row.href}`} onClick={() => void navigate(row.href)}>
                   <TableCell>
                     <span className="mb-1 inline-block">
                       {isAttentionRow(row) ? (
@@ -267,6 +264,31 @@ export function ATraiterPage(): JSX.Element {
                 </Badge>
               ))}
           </div>
+        </Card>
+      ) : null}
+      {campaigns.length > 0 ? (
+        <Card title={strings.aTraiter.funnel.heading} className="mb-4">
+          {campaigns.map((campaign) => (
+            <div key={campaign.campaignVersion} className="mb-4">
+              <p className="mb-2 text-xs text-ink-muted">
+                {strings.aTraiter.funnel.campaign.replace('{campaign}', campaign.campaignVersion)}
+              </p>
+              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                <OverviewMetric
+                  label={strings.aTraiter.funnel.firstTouchSent}
+                  value={campaign.firstTouchSent}
+                />
+                <OverviewMetric label={strings.aTraiter.funnel.replied} value={campaign.replied} />
+                <OverviewMetric label={strings.aTraiter.funnel.bounced} value={campaign.bounced} />
+                <OverviewMetric
+                  label={strings.aTraiter.funnel.optedOut}
+                  value={campaign.optedOut}
+                />
+                <OverviewMetric label={strings.aTraiter.funnel.won} value={campaign.won} />
+              </div>
+            </div>
+          ))}
+          <p className="text-xs text-ink-muted">{strings.aTraiter.funnel.note}</p>
         </Card>
       ) : null}
       <p

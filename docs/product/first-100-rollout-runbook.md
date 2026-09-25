@@ -89,6 +89,14 @@ ruling recorded in the decision log below before the pilot starts.
    The leftover plan 030 manual real-hotel dashboard pass is still due before
    the pilot.
 
+5. **Before 2026-12-23**, export the first campaign's funnel with
+   `node packages/cli/dist/index.js outreach-funnel --json` and keep the
+   output with the experiment record: the first threads and outcomes expire
+   on their 90-day TTL that day (issue #533,
+   `docs/product/outreach-experiment-design.md` section 4). The decisions D2
+   (how the 100 are chosen) and D3 (response window and freeze date) remain
+   open and are the operator's to rule.
+
 ## Pilot domain list (plan 014 Step 4), identified 2026-09-08
 
 The `hotel-outreach-v2` cohort algorithm (`selectOutreachCohort`: top ability

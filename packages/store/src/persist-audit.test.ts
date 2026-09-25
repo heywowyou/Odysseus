@@ -6,9 +6,10 @@ import {
   type FindingsDeltaCoverage,
   type Finding,
 } from '@odysseus/core';
-import { getAudit } from './audits.js';
+import { getAudit, getFindingsForAudit } from './audits.js';
 import { findAuditEvidenceCoverage } from './findings-delta-baseline.js';
 import { persistAudit } from './persist-audit.js';
+import { getStoredPrimarySeverityRollups } from './severity-rollup.js';
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createFindingModel } from './schemas/finding.schema.js';
 import { probeMongoAvailability } from './test-support.js';
@@ -131,6 +132,46 @@ describe.skipIf(!mongoAvailable)('persistAudit', () => {
     await persistAudit(connection!, manifest, []);
     expect(await findAuditEvidenceCoverage(connection!, 'persist-coverage')).toBeUndefined();
     expect(await findAuditEvidenceCoverage(connection!, 'persist-test-1')).toBeUndefined();
+  });
+
+  it('stores the primary severity rollup keyed to the findings digest (issue #508)', async () => {
+    const manifest = buildManifest({
+      auditId: 'persist-rollup',
+      findingsProvenance: {
+        findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
+        normalizationFingerprint: 'fp',
+        findingsDigest: 'digest-a',
+      },
+    });
+    const rollup = { critical: 1, serious: 0, moderate: 2, minor: 0 };
+
+    await persistAudit(connection!, manifest, [], undefined, rollup);
+    expect(
+      (await getStoredPrimarySeverityRollups(connection!, ['persist-rollup'])).get(
+        'persist-rollup',
+      ),
+    ).toEqual(rollup);
+
+    // A persist that brings no rollup leaves none behind for the new findings.
+    await persistAudit(connection!, manifest, []);
+    expect((await getStoredPrimarySeverityRollups(connection!, ['persist-rollup'])).size).toBe(0);
+  });
+
+  it('reads findings without their raw evidence when asked (issue #510)', async () => {
+    const manifest = buildManifest({ auditId: 'persist-no-raw' });
+    await persistAudit(connection!, manifest, [
+      buildFinding({
+        auditId: 'persist-no-raw',
+        rawEvidence: { perPage: { big: 'x'.repeat(100) } },
+      }),
+    ]);
+
+    const [full] = await getFindingsForAudit(connection!, 'persist-no-raw');
+    const [slim] = await getFindingsForAudit(connection!, 'persist-no-raw', { rawEvidence: false });
+
+    expect(full!.rawEvidence).toEqual({ perPage: { big: 'x'.repeat(100) } });
+    expect(slim!.rawEvidence).toEqual({});
+    expect(slim!.findingId).toBe(full!.findingId);
   });
 
   it('is idempotent: persisting the same auditId twice does not duplicate documents', async () => {

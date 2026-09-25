@@ -52,22 +52,44 @@ const TVA_PATTERN = /\bFR\s?[0-9A-Z]{2}\s?\d{9}\b/i;
 // page (e.g. both /mentions-legales/ and /cgu/), the first one encountered
 // in crawl order wins - not revisited here since no real site scanned so
 // far has exercised that case.
-const MENTIONS_LEGALES_PATH_PATTERN =
-  /mentions?-legales?|mentions?-(?:et-)?(?:credits|informations)|informations?-legales?|conditions-generales|\bcgu\b|\bcgv\b|legal-notices?|\blegals\b/i;
-
-function legalPageRank(url: string): number {
+/** Issue #496: the path as a reader would type it. Decoded (an accented
+ *  slug arrives percent-encoded), stripped of diacritics, lower-cased, and
+ *  with `_` read as `-`, so `/mentions_legales`, `/mentions-l%C3%A9gales`
+ *  and `/mentions-legales` are one page family. */
+function legalPathKey(url: string): string | undefined {
   let pathname: string;
   try {
-    pathname = new URL(url).pathname.toLowerCase();
+    pathname = new URL(url).pathname;
   } catch {
-    return Number.MAX_SAFE_INTEGER;
+    return undefined;
   }
-  if (/mentions?-legales?/u.test(pathname)) return 0;
-  if (/informations?-legales?/u.test(pathname)) return 1;
-  if (/legal-notices?|\blegals\b/u.test(pathname)) return 2;
-  if (/mentions?-(?:et-)?(?:credits|informations)/u.test(pathname)) return 3;
-  if (/conditions-generales|\bcgu\b|\bcgv\b/u.test(pathname)) return 4;
-  return Number.MAX_SAFE_INTEGER;
+  let decoded = pathname;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    // A malformed escape: match the path as it came.
+  }
+  return decoded.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replaceAll('_', '-');
+}
+
+/** Ranked legal-page families. Words may be joined by `-` or by nothing
+ *  (`/mentionslegales`). A bare `mentions` path segment (Wix names its legal
+ *  notice `/mentions`) ranks below every real legal-notice name. Bare `legal`
+ *  stays excluded, for the wrong-lock reason above. */
+const LEGAL_PAGE_FAMILIES: readonly RegExp[] = [
+  /mentions?-?legales?/u,
+  /informations?-?legales?/u,
+  /legal-?notices?|\blegals\b/u,
+  /mentions?-?(?:et-?)?(?:credits|informations)/u,
+  /(?:^|\/)mentions?(?:\/|\.html?|$)/u,
+  /conditions-?generales|\bcgu\b|\bcgv\b/u,
+];
+
+function legalPageRank(url: string): number {
+  const key = legalPathKey(url);
+  if (key === undefined) return Number.MAX_SAFE_INTEGER;
+  const rank = LEGAL_PAGE_FAMILIES.findIndex((family) => family.test(key));
+  return rank === -1 ? Number.MAX_SAFE_INTEGER : rank;
 }
 
 /** Resolved legal-page candidates, ranked so direct legal notices win over
@@ -75,13 +97,7 @@ function legalPageRank(url: string): number {
  *  examined: hostnames such as "hotel-cgv.example" cannot select a page. */
 export function findMentionsLegalesUrls(pageUrls: readonly string[]): string[] {
   return pageUrls
-    .filter((url) => {
-      try {
-        return MENTIONS_LEGALES_PATH_PATTERN.test(new URL(url).pathname);
-      } catch {
-        return false;
-      }
-    })
+    .filter((url) => legalPageRank(url) !== Number.MAX_SAFE_INTEGER)
     .sort((left, right) => legalPageRank(left) - legalPageRank(right) || left.localeCompare(right));
 }
 

@@ -64,9 +64,10 @@ export interface FindingElementResponse {
   resourceUrl?: string;
 }
 
-/** A row of the findings collection (packages/core Finding) over JSON:
- *  every field the locked findings contract persists, with timestamps as
- *  ISO strings. */
+/** A row of the findings collection (packages/core Finding) over JSON, as
+ *  the audit page receives it (issue #510): no rawEvidence, at most eight
+ *  unique pages and five elements, with the full counts beside them, and
+ *  timestamps as ISO strings. */
 export interface FindingResponse {
   findingId: string;
   auditId: string;
@@ -80,9 +81,12 @@ export interface FindingResponse {
   description: string;
   helpUrl?: string;
   pageUrls: string[];
+  /** Unique affected pages; pageUrls lists the first eight. */
+  pageUrlCount: number;
   occurrences: number;
   elements: FindingElementResponse[];
-  rawEvidence: Record<string, unknown>;
+  /** Captured elements; elements lists the first five. */
+  elementCount: number;
   dedupeKey: string;
   firstSeenAt: string;
   lastSeenAt: string;

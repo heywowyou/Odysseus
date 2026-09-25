@@ -105,6 +105,19 @@ produces a `minor` rendering finding that says nothing is wrong. The
 measured percentage is recorded in the manifest for every page regardless,
 so nothing is lost.
 
+**Cookie classification is normalization, not scanning (issue #493).** The
+scanner records every cookie with its domain; `classify-cookie.ts` in `core`
+decides which ones belong to a measurement or advertising product, and
+`normalizeCookieConsent` re-classifies the stored `nonEssentialCookies` on
+every normalize, so a correction reaches stored audits on their next refresh.
+Distinctive vendor prefixes (`_ga`, `_fbp`, `_hj`) match by prefix on any
+domain. Short or generic names (`fr`, `ide`, `test_cookie`, `muid`,
+`personalization_id`, LinkedIn's `lidc`, `bcookie`, `bscookie`, `li_sugr`)
+match only exactly and only on the vendor's own registrable domain; Mixpanel
+matches only its documented `mp_<32 hex>_mixpanel` shape. Prefix-matching `fr`
+once reported Magento's first-party `frontend` cookie as a Meta cookie set
+before consent.
+
 **Both category exclusions and the audit suppression list are revisited in
 milestone 8**, where custom checks arrive and a deliberate per-audit-id
 mapping table can be built. Do not re-enable either category before then
@@ -514,6 +527,12 @@ real Villas Foch audit - **the anchor is the content-checked page closest
 to the homepage**: shallowest crawl depth first, ties broken by URL
 ascending so the choice is deterministic regardless of page order (a live
 run normalizes in crawl order, `normalize <dir>` in directory read order).
+Since issue #503, `normalizeAudit` also puts its pages in URL order
+(code-unit, never `localeCompare`) before anything else, and the refresh
+reads page folders sorted, so a merged finding's title, description and
+element sample never depend on the path or the machine. Descriptions of
+page-scoped rules that merge across pages carry no per-page count; each
+page's count stays in its raw evidence.
 The depths come from the crawl inventory through `CrawlPageInput.depth`.
 
 A site-level fact is never attributed to a page no scanner ran on, and is
@@ -524,6 +543,13 @@ could still violate it. The report's executive-summary page count is the
 union of findings' own pageUrls, so the anchor rule is what keeps that
 count inside the analyzed scope; the count itself is deliberately not
 independently filtered.
+
+The crawl's `homepageUrl`, when recorded, is preferred over the start URL.
+The live audit and every refresh build `normalizeAudit`'s input through one
+function, `buildNormalizeAuditInput` in
+`packages/interface/src/pipeline/normalize-audit-input.ts` (issue #502), so a
+refresh can no longer drop `homepageUrl` and move site-level findings, and
+their identities, to another page.
 
 ## Plan 075 amendments to sections 1, 2, 5 and 5a
 

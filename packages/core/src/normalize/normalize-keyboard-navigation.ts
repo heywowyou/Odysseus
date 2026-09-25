@@ -83,7 +83,8 @@ export function extractKeyboardNavigationCandidates(
       severity: severityFromCustom(FOCUS_ORDER_MISMATCH_RULE_ID),
       wcagCriteria: ['2.4.3'],
       title: 'Tab order does not follow the page structure',
-      description: `Tabbing through this page jumped backward past an earlier element ${inversions} time(s) rather than moving through the content in order. This usually comes from an explicit positive tabindex, and can leave keyboard users disoriented about where focus went.`,
+      // Page-independent (issue #503): the per-page count is in the evidence.
+      description: `Tabbing through this page jumps backward past an earlier element rather than moving through the content in order. This usually comes from an explicit positive tabindex, and can leave keyboard users disoriented about where focus went.`,
       pageUrl,
       element: null,
       rawEvidenceForPage: { inversions, tabbableCount: input.tabbableCount },

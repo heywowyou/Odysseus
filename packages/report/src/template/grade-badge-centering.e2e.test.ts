@@ -1,6 +1,7 @@
 /**
- * The grade letter must sit in the middle of its circle in both documents
- * that show it. Centering text by its font line box leaves the capital low,
+ * The grade letter must sit in the middle of its circle in the full report,
+ * the one document that shows it since the v2 outreach preview was retired
+ * (issue #530). Centering text by its font line box leaves the capital low,
  * so the badge draws each letter as an outline cropped to its ink
  * (grade-glyphs.ts). This measures that ink box against the circle in real
  * Chromium, with each document's real stylesheet, for every grade.
@@ -10,13 +11,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser, Page } from 'playwright';
 import { launchBrowser } from '@odysseus/scanner';
-import {
-  buildOutreachFactsBlock,
-  GRADES,
-  type Grade,
-  type OutreachPreviewSummary,
-} from '@odysseus/core';
-import { generateOutreachPreviewHtmlV2 } from '../outreach-preview/render-html-v2.js';
+import { GRADES, type Grade } from '@odysseus/core';
 import { renderHtml } from './render-html.js';
 import { resolveRenderDiffEvidence } from '../screenshots.js';
 import {
@@ -27,62 +22,6 @@ import {
 
 /** Sub-pixel: anything visible to the eye is well above this. */
 const TOLERANCE_PX = 0.5;
-
-function summary(language: 'fr' | 'en', withFacts: boolean): OutreachPreviewSummary {
-  return {
-    contentVersion: 'v2',
-    auditId: 'audit-1',
-    observedAt: new Date('2026-09-11T00:00:00.000Z'),
-    language,
-    recipient: {
-      businessName: language === 'fr' ? 'Hôtel de la Plage' : 'Beach Hotel',
-      dataOrigins: ['public-hotel-catalogue', 'public-website'],
-    },
-    links: {
-      offer: 'https://odysseusaudit.com/offre',
-      privacy: 'https://odysseusaudit.com/confidentialite-prospection',
-      optOut: 'https://odysseusaudit.com/desinscription',
-    },
-    coverage: {
-      inventoriedPageCount: 23,
-      contentCheckedPageCount: 23,
-      performanceMeasuredPageCount: 9,
-    },
-    distinctFindingCount: 5,
-    affectedPageCount: 11,
-    severityTotals: { critical: 1, serious: 1, moderate: 1, minor: 2 },
-    proofCards: [
-      {
-        title: {
-          fr: 'La navigation au clavier reste bloquée.',
-          en: 'Keyboard navigation is trapped.',
-        },
-        category: 'accessibility',
-        severity: 'critical',
-        affectedPageCount: 4,
-      },
-      {
-        title: { fr: 'Des pages n’ont pas de titre.', en: 'Some pages have no title.' },
-        category: 'seo',
-        severity: 'serious',
-        affectedPageCount: 6,
-      },
-      {
-        title: { fr: 'Des images sont trop lourdes.', en: 'Some images are too heavy.' },
-        category: 'performance',
-        severity: 'minor',
-        affectedPageCount: 2,
-      },
-    ],
-    facts: withFacts
-      ? buildOutreachFactsBlock({
-          assessment: undefined,
-          language,
-          capabilities: { argumentB: true },
-        })
-      : { state: 'omitted' },
-  };
-}
 
 async function inkOffset(page: Page, scope: string): Promise<{ dx: number; dy: number }> {
   return page.evaluate((selector) => {
@@ -112,20 +51,6 @@ describe('the grade letter is centered in its circle', () => {
 
   afterAll(async () => {
     await browser?.close();
-  });
-
-  it.each(GRADES)('centers %s on the outreach preview', async (grade: Grade) => {
-    const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
-    try {
-      await page.setContent(
-        generateOutreachPreviewHtmlV2({ ...summary('fr', true), gradeOverride: grade }),
-        { waitUntil: 'load' },
-      );
-      await page.evaluate(() => document.fonts.ready);
-      expectCentered(await inkOffset(page, '.preview-scorecard'), `preview ${grade}`);
-    } finally {
-      await page.close();
-    }
   });
 
   it.each(GRADES)('centers %s on the full report', async (grade: Grade) => {

@@ -49,7 +49,7 @@ import type { OutreachThreadState } from '@odysseus/core';
  *  used one. */
 export type OutreachLanguageSource = 'operator';
 
-export const OUTREACH_THREAD_STATES: readonly OutreachThreadState[] = [
+const OUTREACH_THREAD_STATES: readonly OutreachThreadState[] = [
   'open',
   'e1-drafted',
   'e1-sent',
@@ -124,6 +124,10 @@ export interface OutreachThreadDocumentFields {
    *  operator records one; never written by a sync or a model. */
   currentOutcome?: string;
   spacing: OutreachThreadSpacing;
+  /** Issue #533: the campaign this thread was opened under, written once at
+   *  open and never changed. Absent on threads opened before the field
+   *  existed, which the funnel counts as FIRST_OUTREACH_CAMPAIGN_VERSION. */
+  campaignVersion?: string;
   createdAt: Date;
   updatedAt: Date;
   expiresAt: Date;
@@ -177,6 +181,7 @@ const outreachThreadSchema = new Schema<OutreachThreadDocument>(
     needsReview: { type: outreachThreadReviewFlagSchema },
     currentOutcome: { type: String },
     spacing: { type: outreachThreadSpacingSchema, required: true },
+    campaignVersion: { type: String },
     createdAt: { type: Date, required: true },
     updatedAt: { type: Date, required: true },
     expiresAt: { type: Date, required: true },

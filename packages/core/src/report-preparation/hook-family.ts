@@ -17,9 +17,12 @@ const HOOK_FAMILY_CATEGORIES: Record<Exclude<HookFamily, 'mixed'>, readonly Find
   privacy: ['privacy'],
 };
 
+/** The only finding fields the hook reads. */
+export type HookFamilyFinding = Pick<Finding, 'category' | 'severity'>;
+
 const weightedTotal = (
   family: Exclude<HookFamily, 'mixed'>,
-  findings: readonly Finding[],
+  findings: readonly HookFamilyFinding[],
 ): number =>
   HOOK_FAMILY_CATEGORIES[family].reduce(
     (total, category) =>
@@ -54,7 +57,7 @@ export interface HookFamilyResolution {
  * findings the report renders, and minor findings contribute weight 1, so a
  * long tail cannot outvote a concentration of critical findings.
  */
-export function resolveHookFamily(findings: readonly Finding[]): HookFamilyResolution {
+export function resolveHookFamily(findings: readonly HookFamilyFinding[]): HookFamilyResolution {
   const weightedTotals = {
     accessibility: weightedTotal('accessibility', findings),
     'speed-and-booking': weightedTotal('speed-and-booking', findings),

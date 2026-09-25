@@ -72,7 +72,12 @@ describe('backfillAuditRow', () => {
 
     const result = await backfillAuditRow(auditDir, fakeConnection);
 
-    expect(persistAudit).toHaveBeenCalledWith(fakeConnection, manifest, []);
+    expect(persistAudit).toHaveBeenCalledWith(fakeConnection, manifest, [], undefined, {
+      critical: 0,
+      serious: 0,
+      moderate: 0,
+      minor: 0,
+    });
     expect(result).toMatchObject({
       auditId: 'audit-1',
       siteUrl: 'https://example.com/',

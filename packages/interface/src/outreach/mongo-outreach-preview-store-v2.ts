@@ -12,7 +12,7 @@ import {
   getLatestReport,
   getProspectHub,
   isSuppressed,
-  listLivePreviewsForDomain,
+  listOutreachPreviews,
   loadOutreachReportReadiness,
   recordOutreachPreview,
   resolveSelectedAnalysisPairForAudit,
@@ -99,7 +99,6 @@ export function createMongoOutreachPreviewStoreV3(
         audit === null ||
         selected.kind === 'none' ||
         frReport === null ||
-        frReport.analysisId !== selected.fr.analysisId ||
         !findingsProvenanceMatches(selected.fr.findingsProvenance, audit.findingsProvenance) ||
         !findingsProvenanceMatches(frReport.findingsProvenance, audit.findingsProvenance) ||
         audit.findingsProvenance?.findingsDigest === undefined
@@ -145,8 +144,8 @@ export function createMongoOutreachPreviewStoreV3(
         : { recorded: false };
     },
 
-    async listLivePreviews(domain: string) {
-      const rows = await listLivePreviewsForDomain(connection, domain);
+    async listLivePreviewsForProspect(prospectId: string) {
+      const rows = await listOutreachPreviews(connection, { prospectId, status: 'live' });
       return rows.map((row) => ({ previewId: row.previewId, objectKey: row.objectKey }));
     },
 

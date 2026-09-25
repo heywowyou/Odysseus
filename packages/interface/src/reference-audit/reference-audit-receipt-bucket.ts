@@ -1,4 +1,4 @@
-import { AwsClient } from 'aws4fetch';
+import { createS3Bucket, type S3BucketOptions } from '../s3-bucket.js';
 
 export const REFERENCE_AUDIT_RECEIPT_PREFIX = 'reference-audit-receipts/';
 
@@ -8,40 +8,13 @@ export interface ReferenceAuditReceiptBucket {
   delete(key: string): Promise<void>;
 }
 
-export interface ScalewayReferenceAuditReceiptBucketOptions {
-  bucket: string;
-  endpoint: string;
-  region: string;
-  accessKeyId: string;
-  secretAccessKey: string;
-  fetchImpl?: typeof globalThis.fetch;
-}
-
-function decodeXml(value: string): string {
-  return value
-    .replace(/&lt;/gu, '<')
-    .replace(/&gt;/gu, '>')
-    .replace(/&quot;/gu, '"')
-    .replace(/&apos;/gu, "'")
-    .replace(/&amp;/gu, '&');
-}
+export type ScalewayReferenceAuditReceiptBucketOptions = S3BucketOptions;
 
 export function createScalewayReferenceAuditReceiptBucket(
   options: ScalewayReferenceAuditReceiptBucketOptions,
 ): ReferenceAuditReceiptBucket {
-  const client = new AwsClient({
-    accessKeyId: options.accessKeyId,
-    secretAccessKey: options.secretAccessKey,
-    service: 's3',
-    region: options.region,
-  });
-  const doFetch = options.fetchImpl ?? globalThis.fetch;
-  const endpoint = new URL(options.endpoint);
-  const origin = `${endpoint.protocol}//${options.bucket}.${endpoint.host}`;
-  const objectUrl = (key: string): string =>
-    `${origin}/${key.split('/').map(encodeURIComponent).join('/')}`;
-  const send = async (url: string, init: RequestInit): Promise<Response> =>
-    doFetch(await client.sign(url, init));
+  const bucket = createS3Bucket(options);
+  const { objectUrl, send } = bucket;
 
   return {
     async getJson(key) {
@@ -51,15 +24,8 @@ export function createScalewayReferenceAuditReceiptBucket(
         throw new Error(`reference receipt read failed with status ${response.status}`);
       return JSON.parse(await response.text()) as unknown;
     },
-    async list(prefix) {
-      const response = await send(`${origin}/?list-type=2&prefix=${encodeURIComponent(prefix)}`, {
-        method: 'GET',
-      });
-      if (!response.ok)
-        throw new Error(`reference receipt listing failed with status ${response.status}`);
-      return [...(await response.text()).matchAll(/<Key>([^<]*)<\/Key>/gu)].map((match) =>
-        decodeXml(match[1]!),
-      );
+    list(prefix) {
+      return bucket.listKeys(prefix, 'reference receipt');
     },
     async delete(key) {
       const response = await send(objectUrl(key), { method: 'DELETE' });

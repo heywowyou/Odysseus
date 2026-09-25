@@ -7,6 +7,7 @@
  * rather than left as accepted duplication.
  */
 
+import { primarySeverityRollup } from '@odysseus/report';
 import * as fs from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
@@ -40,7 +41,6 @@ import {
 import {
   normalizeAudit,
   buildFindingsProvenance,
-  deriveCoverageLimitations,
   type AuditConfigSnapshot,
   type AuditManifest,
   type Finding,
@@ -67,6 +67,7 @@ import { buildRunAuditScope } from './audit-scope-stage.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
 import { logger } from '../logger.js';
+import { buildNormalizeAuditInput } from './normalize-audit-input.js';
 
 export interface RunAuditStageOptions {
   /** Durable prospect hub link for scans launched from the prospect page. */
@@ -368,80 +369,18 @@ export async function runAuditStage(
       options.siteSignalOverrides,
     );
 
-    const sitemapRedirectedUrls = artifacts.manifest.pages
-      .filter(
-        (page) =>
-          page.status === 'redirect-interstitial' || page.status === 'skipped-external-redirect',
-      )
-      .map((page) => page.url);
-    const pagesForNormalization =
-      sitemapRedirectedUrls.length === 0
-        ? artifacts.pages
-        : artifacts.pages.map((page) =>
-            page.sitemapCheck === undefined
-              ? page
-              : {
-                  ...page,
-                  sitemapCheck: {
-                    ...page.sitemapCheck,
-                    redirectedUrls: [
-                      ...new Set([
-                        ...(page.sitemapCheck.redirectedUrls ?? []),
-                        ...sitemapRedirectedUrls,
-                      ]),
-                    ],
-                  },
-                },
-          );
-
-    const findings = normalizeAudit({
-      // B2 (2026-08-24): collapses language-variant duplicates. Absent
-      // on manifests predating the field, which simply yields no
-      // collapsing - the behaviour before this existed.
-      ...(artifacts.manifest.translationClusters !== undefined
-        ? { translationClusters: artifacts.manifest.translationClusters }
-        : {}),
-      // Re-derived rather than read back: a persisted copy may come from an
-      // older, broader derivation that silenced absence rules on redirects.
-      coverageLimitations: deriveCoverageLimitations(artifacts.manifest.pages, {
-        ...(artifacts.manifest.crawl.homepageUrl !== undefined
-          ? { homepageUrl: artifacts.manifest.crawl.homepageUrl }
+    const findings = normalizeAudit(
+      buildNormalizeAuditInput({
+        auditId: artifacts.auditId,
+        startedAt,
+        manifest: artifacts.manifest,
+        manifestPages: artifacts.manifest.pages,
+        pages: artifacts.pages,
+        ...(artifacts.manifest.translationClusters !== undefined
+          ? { translationClusters: artifacts.manifest.translationClusters }
           : {}),
-        capOmittedPageCount: artifacts.manifest.crawl.sitemapCoverage?.capOmittedPageCount ?? 0,
       }),
-      auditId: artifacts.auditId,
-      startedAt,
-      pages: pagesForNormalization,
-      crawl: {
-        startUrl: artifacts.manifest.crawl.startUrl,
-        ...(artifacts.manifest.crawl.homepageUrl !== undefined
-          ? { homepageUrl: artifacts.manifest.crawl.homepageUrl }
-          : {}),
-        robotsTxtFound: artifacts.manifest.crawl.robotsTxtFound,
-        pages: artifacts.manifest.pages.map((page) => ({
-          url: page.url,
-          status: page.status,
-          ...(page.depth !== undefined ? { depth: page.depth } : {}),
-          ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
-          ...(page.discoveredFrom !== undefined ? { discoveredFrom: page.discoveredFrom } : {}),
-        })),
-        ...(artifacts.manifest.crawl.robotsDisallowMatches !== undefined
-          ? { robotsDisallowMatches: artifacts.manifest.crawl.robotsDisallowMatches }
-          : {}),
-        ...(artifacts.manifest.crawl.aiCrawlerBlocks !== undefined
-          ? { aiCrawlerBlocks: artifacts.manifest.crawl.aiCrawlerBlocks }
-          : {}),
-        ...(artifacts.manifest.crawl.sitemapUrls !== undefined
-          ? { sitemapUrls: artifacts.manifest.crawl.sitemapUrls }
-          : {}),
-        ...(artifacts.manifest.relativeLinkNestingSummary !== undefined
-          ? { relativeLinkNestingSummary: artifacts.manifest.relativeLinkNestingSummary }
-          : {}),
-      },
-      ...(artifacts.manifest.cruxFieldData !== undefined
-        ? { cruxFieldData: artifacts.manifest.cruxFieldData }
-        : {}),
-    });
+    );
     await holdClaim();
     await writeFindingsFile(artifacts.auditDir, findings);
     const manifest: AuditManifest = {
@@ -516,7 +455,13 @@ export async function runAuditStage(
     // persisted record, so a later re-audit's delta can judge what each
     // run could observe. No graph, no signature: the delta then degrades
     // to unknown-legacy instead of inventing comparability.
-    await persistAudit(connection, manifest, findings, evidenceGraph?.deltaCoverage);
+    await persistAudit(
+      connection,
+      manifest,
+      findings,
+      evidenceGraph?.deltaCoverage,
+      primarySeverityRollup(manifest, findings),
+    );
 
     // Plan 002 (issue #132): no checkpoint deletion here. The checkpoint
     // must survive until the JOB reaches its terminal state, because a

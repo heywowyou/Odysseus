@@ -29,6 +29,12 @@ import { createHash } from 'node:crypto';
  * Array order is preserved, never sorted. Order is content: a seed list the
  * operator gave in a different order is a different scope, and silently
  * sorting would hide that.
+ *
+ * Known limitation (issue #504): keys are ordered with `localeCompare`, whose
+ * ICU collation can differ from code-unit order and between ICU versions.
+ * Changing it changes every stored evidence digest, so it waits for the next
+ * evidence schema version bump; the findings digest
+ * (normalize/findings-provenance.ts) already uses code-unit order.
  */
 export function canonicalize(value: unknown): unknown {
   if (value instanceof Date) return value.toISOString();

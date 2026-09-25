@@ -5,6 +5,7 @@ import {
   MAX_PROSE_TOKEN_LENGTH,
   fillTemplate,
   formatDate,
+  formatElapsedDuration,
   formatCappedFindingIdLinks,
   formatCappedFindingIdRefs,
   formatCappedList,
@@ -40,6 +41,26 @@ describe('formatDate', () => {
   it('formats in English for en', () => {
     const date = new Date('2026-08-02T12:00:00Z');
     expect(formatDate(date, 'en')).toContain('2026');
+  });
+
+  it('dates the document in Paris time, whatever the server clock (issue #506)', () => {
+    const lateEveningUtc = new Date('2026-09-24T23:30:00Z');
+    expect(formatDate(lateEveningUtc, 'fr')).toBe('25 septembre 2026');
+    expect(formatDate(lateEveningUtc, 'en')).toBe('25 September 2026');
+  });
+});
+
+describe('formatElapsedDuration in Paris time (issue #506)', () => {
+  it('counts calendar months on Paris dates', () => {
+    // 31 July 23:30 UTC is already 1 August in Paris: exactly two months
+    // before 1 October in Paris, not one.
+    expect(
+      formatElapsedDuration(
+        new Date('2026-07-31T23:30:00Z'),
+        new Date('2026-10-01T10:00:00Z'),
+        'fr',
+      ),
+    ).toBe('2 mois');
   });
 });
 

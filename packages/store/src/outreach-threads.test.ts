@@ -46,6 +46,7 @@ async function threadIn(
     language: 'fr',
     openedAt: new Date(firstSent.getTime() - DAY_MS),
     spacing,
+    campaignVersion: 'test-campaign',
   });
   await createOutreachThreadModel(connection!).updateOne(
     { threadId: thread.threadId },
@@ -262,5 +263,64 @@ describe.skipIf(!available)('outreach preview recording', () => {
       previewInput('shared.example', 'hash-shared'),
     );
     expect(result.outcome).toBe('recorded');
+  });
+
+  describe.skipIf(!available)('openOutreachThread on an existing thread (issue #482)', () => {
+    const input = (language: 'fr' | 'en', roleAddress: string, previewId: string) => ({
+      prospectId,
+      previewId,
+      domain: 'hotel-reopen.example',
+      roleAddress,
+      language,
+      openedAt: firstSent,
+      spacing,
+      campaignVersion: 'test-campaign',
+    });
+    let prospectId: string;
+
+    beforeEach(() => {
+      prospectId = randomUUID();
+    });
+
+    it('takes the new language, recipient and preview before the first email is sent', async () => {
+      const first = await openOutreachThread(
+        connection!,
+        input('fr', 'a@hotel-reopen.example', 'p1'),
+      );
+      const again = await openOutreachThread(
+        connection!,
+        input('en', 'b@hotel-reopen.example', 'p2'),
+      );
+
+      expect(again.created).toBe(false);
+      expect(again.thread.threadId).toBe(first.thread.threadId);
+      expect(again.thread).toMatchObject({
+        language: 'en',
+        roleAddress: 'b@hotel-reopen.example',
+        previewId: 'p2',
+      });
+      expect(await findOutreachThreadById(connection!, first.thread.threadId)).toMatchObject({
+        language: 'en',
+        roleAddress: 'b@hotel-reopen.example',
+      });
+    });
+
+    it('leaves the thread alone once the first email has been sent', async () => {
+      const first = await openOutreachThread(
+        connection!,
+        input('en', 'b@hotel-reopen.example', 'p1'),
+      );
+      await createOutreachThreadModel(connection!).updateOne(
+        { threadId: first.thread.threadId },
+        { $set: { state: 'e1-sent' } },
+      );
+
+      const again = await openOutreachThread(
+        connection!,
+        input('fr', 'a@hotel-reopen.example', 'p2'),
+      );
+
+      expect(again.thread).toMatchObject({ language: 'en', roleAddress: 'b@hotel-reopen.example' });
+    });
   });
 });

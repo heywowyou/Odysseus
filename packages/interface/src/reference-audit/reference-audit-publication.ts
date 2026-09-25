@@ -9,8 +9,8 @@
 import { createHash } from 'node:crypto';
 
 export const REFERENCE_AUDIT_CURRENT_KEY = 'reference-audit/current.json';
-export const REFERENCE_AUDIT_PDF_PREFIX = 'reference-audit/';
-export const REFERENCE_AUDIT_MANIFEST_SCHEMA_VERSION = 'reference-audit-v1' as const;
+const REFERENCE_AUDIT_PDF_PREFIX = 'reference-audit/';
+const REFERENCE_AUDIT_MANIFEST_SCHEMA_VERSION = 'reference-audit-v1' as const;
 
 export interface ReferenceAuditCurrentManifest {
   schemaVersion: typeof REFERENCE_AUDIT_MANIFEST_SCHEMA_VERSION;
@@ -66,7 +66,7 @@ function copyBytes(bytes: Uint8Array): Uint8Array {
   return new Uint8Array(bytes);
 }
 
-export function referenceAuditPdfKey(
+function referenceAuditPdfKey(
   pdfSha256: string,
 ): `${typeof REFERENCE_AUDIT_PDF_PREFIX}${string}.pdf` {
   if (!isSha256(pdfSha256))
@@ -74,7 +74,7 @@ export function referenceAuditPdfKey(
   return `${REFERENCE_AUDIT_PDF_PREFIX}${pdfSha256}.pdf`;
 }
 
-export function parseReferenceAuditManifest(value: unknown): ReferenceAuditCurrentManifest {
+function parseReferenceAuditManifest(value: unknown): ReferenceAuditCurrentManifest {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     throw new ReferenceAuditPublicationError('reference current manifest is not an object');
   }

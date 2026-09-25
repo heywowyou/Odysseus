@@ -11,8 +11,13 @@ Use the narrowest authority for each concern:
 
 1. Prettier owns source layout. Do not hand-tune whitespace that Prettier will
    replace.
-2. ESLint owns static code-quality rules that do not require project type
-   information.
+2. ESLint owns static code-quality rules. Only the promise rules
+   (`no-floating-promises`, `no-misused-promises`, `await-thenable`) use
+   project type information, on `packages/*/src` (issue #517): an unhandled
+   rejection exits the single server. They took `pnpm run lint` from about 18 s
+   to about 76 s on 2026-09-25 and peak at about 3.3 GB, above Node's default
+   heap on an 8 to 9 GB machine, so the `lint` script runs ESLint with a 4 GB
+   heap. Mark a deliberately unawaited promise with `void`.
 3. TypeScript owns types and cross-package compile-time contracts.
 4. Tests own behavior.
 5. The charter and focused documents own product meaning, legal wording, and
@@ -254,10 +259,15 @@ Applying updates:
   always get that dedicated review (`renovate/manual-major-review` in
   `renovate.json`), because a major there carries behavior, cost, or browser
   compatibility risk.
-- `.codex/config.toml`'s Playwright MCP server is pinned to an exact version
-  (`@playwright/mcp@0.0.80`, not `@latest`) and tracked by a Renovate custom
-  manager, like any other dependency: a floating `@latest` on agent tooling
-  means the MCP server can change under an agent with no diff to review.
+- The Playwright MCP server, in `.mcp.json` and `.codex/config.toml`, is
+  pinned to an exact version (`@playwright/mcp@0.0.80`, not `@latest`) and
+  tracked by a Renovate custom manager, like any other dependency: a floating
+  `@latest` on agent tooling means the MCP server can change under an agent
+  with no diff to review, and this one browses untrusted prospect sites.
+- Agent sessions do not inherit `.env` (issue #485): `scripts/dev.sh` no
+  longer exports it, MCP launchers pass on only the variable their server
+  needs, and shared `.claude/settings.json` does not pre-approve the
+  production deploy.
 - To hold a group back, add a rule with `"enabled": false` above its group rule
   in `renovate.json`, with a comment naming why and when to remove it.
 - The Mend-hosted Renovate GitHub App must stay uninstalled (or have this

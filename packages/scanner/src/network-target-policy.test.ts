@@ -9,6 +9,8 @@ import {
   PUBLIC_SITE_NETWORK_POLICY_ID,
   resolveNetworkTargetPolicyForJob,
   TEST_ONLY_LOOPBACK_NETWORK_POLICY_ID,
+  withDefaultNetworkPolicy,
+  type NetworkTargetPolicy,
 } from './network-target-policy.js';
 
 function resolvesTo(...addresses: string[]) {
@@ -196,5 +198,44 @@ describe('the loopback profile', () => {
     expect(verdict.kind).toBe('refused');
     if (verdict.kind !== 'refused') return;
     expect(verdict.disposition.reason).toBe('forbidden-scheme');
+  });
+});
+
+describe('withDefaultNetworkPolicy (issue #488)', () => {
+  interface EntryOptions {
+    timeoutMs?: number;
+    networkPolicy?: NetworkTargetPolicy;
+  }
+
+  function outsideTestRunner<T>(run: () => T): T {
+    const saved = { VITEST: process.env.VITEST, NODE_ENV: process.env.NODE_ENV };
+    delete process.env.VITEST;
+    delete process.env.NODE_ENV;
+    try {
+      return run();
+    } finally {
+      if (saved.VITEST !== undefined) process.env.VITEST = saved.VITEST;
+      if (saved.NODE_ENV !== undefined) process.env.NODE_ENV = saved.NODE_ENV;
+    }
+  }
+
+  it('applies the public-site policy when a production caller names none', () => {
+    const resolved = outsideTestRunner(() =>
+      withDefaultNetworkPolicy<EntryOptions>({ timeoutMs: 1 }),
+    );
+    expect(resolved.networkPolicy).toBe(PUBLIC_SITE_NETWORK_POLICY);
+    expect(resolved.timeoutMs).toBe(1);
+  });
+
+  it('keeps a policy the caller named', () => {
+    const loopback = createTestOnlyLoopbackPolicy();
+    expect(
+      outsideTestRunner(() => withDefaultNetworkPolicy<EntryOptions>({ networkPolicy: loopback }))
+        .networkPolicy,
+    ).toBe(loopback);
+  });
+
+  it('leaves the policy unset under the test runner', () => {
+    expect(withDefaultNetworkPolicy<EntryOptions>({}).networkPolicy).toBeUndefined();
   });
 });

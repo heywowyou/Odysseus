@@ -8,27 +8,23 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    services:
-      mongo-test:
-        image: mongo:7.0.43@sha256:9854f7139445d766a9523571d6f047530c45547460ffcf8259eb2bf4264632ca
-        ports:
-          - 27018:27017
-        # The job waits for a healthy service before its first step, so the
-        # Mongo-backed suites never race a still-starting database.
-        options: >-
-          --health-cmd "mongosh --quiet --eval 'db.runCommand({ ping: 1 }).ok'"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      # A single-node replica set, like production's Atlas cluster and the
+      # local docker-compose service, so the report-bundle activation
+      # transaction runs in CI instead of being skipped (issue #515). Service
+      # containers take no command, hence docker compose. The job waits for a
+      # primary, so the Mongo-backed suites never race a starting database.
+      - name: Start test MongoDB (single-node replica set)
+        run: docker compose up -d --wait mongo-test
 
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies

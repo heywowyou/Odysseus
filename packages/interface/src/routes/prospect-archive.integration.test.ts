@@ -133,6 +133,7 @@ describe.skipIf(!mongoAvailable)('prospect archive and restore through the route
         language: 'fr',
         openedAt: now,
         spacing: { touch2AfterDays: 4, touch3AfterDays: 10, replyWindowDays: 21 },
+        campaignVersion: 'test-campaign',
       });
 
       // One stored audit with a local artifact folder.

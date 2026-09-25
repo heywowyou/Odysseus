@@ -32,7 +32,7 @@ export function syncMailbox(connection: Connection, now = new Date()): Promise<M
     const { results } = await reconcileMailbox({
       mailbox,
       senderAddress: getMailboxSenderAddress(),
-      store: createMongoMailboxReconciliationStore(connection),
+      store: createMongoMailboxReconciliationStore(connection, mailbox),
       now,
     });
     const count = (kinds: readonly string[]): number =>

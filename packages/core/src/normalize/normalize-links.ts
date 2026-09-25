@@ -232,7 +232,8 @@ export function extractLinkCandidates(
       severity: severityFromCustom(LINK_TEXT_RULE_ID),
       wcagCriteria: [],
       title: 'Links do not have descriptive text',
-      description: `${genericLinks.length} link(s) on this page use generic text such as "read more" that says nothing about the destination. Descriptive link text helps search engines understand the linked content.`,
+      // Page-independent (issue #503): the links are listed in the evidence.
+      description: `Links on this page use generic text such as "read more" that says nothing about the destination. Descriptive link text helps search engines understand the linked content.`,
       pageUrl,
       element: null,
       rawEvidenceForPage: {

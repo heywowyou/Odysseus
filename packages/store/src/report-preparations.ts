@@ -46,12 +46,24 @@ export async function getReportPreparation(
   return withStoredDefaults(audit?.reportPreparation);
 }
 
+/** Inputs retired from preparation. Writes set single fields, so these
+ *  legacy keys would otherwise stay on old audit rows, stakeholder names
+ *  included. Mongoose strips unknown paths from an update, so they are
+ *  unset through the driver. */
+const RETIRED_PREPARATION_FIELDS = {
+  'reportPreparation.context': '',
+  'reportPreparation.stakeholders': '',
+  'reportPreparation.journeyDecisions': '',
+  'reportPreparation.turnover': '',
+};
+
 async function persistPreparation(
   connection: Connection,
   auditId: string,
   update: { set: Record<string, unknown>; unset?: readonly string[] },
 ): Promise<ReportPreparation> {
   const AuditModel = createAuditModel(connection);
+  await AuditModel.collection.updateOne({ auditId }, { $unset: RETIRED_PREPARATION_FIELDS });
   const updated = await AuditModel.findOneAndUpdate(
     { auditId },
     {

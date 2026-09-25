@@ -3,7 +3,7 @@
  * retaining deterministic public copy and v2 live-link compatibility.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { AnalysisDocument, AuditDocumentFields } from '@odysseus/store';
 import type { Finding } from '@odysseus/core';
 import { OUTREACH_PROOF_CARD_COPY } from '@odysseus/report';
@@ -151,14 +151,14 @@ function harness(
   overrides: {
     suppressed?: boolean;
     recordPreview?: boolean;
-    previous?: { previewId: string; objectKey: string };
+    previous?: { previewId: string; objectKey: string; prospectId?: string };
     failPreviousDelete?: boolean;
     row?: OutreachPublicationRowV3;
   } = {},
 ) {
   const publisher = createInMemoryPreviewPublisher();
   const recorded: unknown[] = [];
-  const previews: { previewId: string; objectKey: string }[] = [];
+  const previews: { previewId: string; objectKey: string; prospectId: string }[] = [];
   const revoked: string[] = [];
   const operations: string[] = [];
   const store: OutreachPreviewStorePortV3 & { recorded: unknown[] } = {
@@ -168,15 +168,23 @@ function harness(
     recordPreview: (input) => {
       recorded.push(input);
       if (overrides.recordPreview === false) return Promise.resolve({ recorded: false as const });
-      previews.push({ previewId: 'preview-1', objectKey: input.objectKey });
+      previews.push({
+        previewId: 'preview-1',
+        objectKey: input.objectKey,
+        prospectId: input.prospectId,
+      });
       return Promise.resolve({
         recorded: true as const,
         previewId: 'preview-1',
         publicExpiresAt: new Date('2026-10-19T09:00:00.000Z'),
       });
     },
-    listLivePreviews: () =>
-      Promise.resolve([...(overrides.previous ? [overrides.previous] : []), ...previews]),
+    listLivePreviewsForProspect: (prospectId) =>
+      Promise.resolve(
+        [...(overrides.previous ? [overrides.previous] : []), ...previews]
+          .filter((preview) => (preview.prospectId ?? prospectId) === prospectId)
+          .map(({ previewId, objectKey }) => ({ previewId, objectKey })),
+      ),
     revokePreview: (previewId) => {
       operations.push(`revoke:${previewId}`);
       revoked.push(previewId);
@@ -290,6 +298,34 @@ describe('publishPreviewV3', () => {
     );
     expect(h.publisher.keys()).not.toContain(previous.objectKey);
     expect(h.revoked).toContain(previous.previewId);
+  });
+
+  it("never revokes another prospect's live preview on the same domain (issue #480)", async () => {
+    const otherProspect = {
+      previewId: 'preview-hotel-a',
+      objectKey: 'hotel-a.html',
+      prospectId: 'prospect-hotel-a',
+    };
+    const h = harness({ previous: otherProspect });
+    await h.publisher.put({
+      objectKey: otherProspect.objectKey,
+      html: '<p>hotel A</p>',
+      publicExpiresAt: new Date('2026-10-19T09:00:00.000Z'),
+    });
+
+    const result = await publishPreviewV3({
+      store: h.store,
+      publisher: h.publisher,
+      publicBaseUrl: BASE_URL,
+      prospectId: 'prospect-1',
+      language: 'fr',
+      dryRun: false,
+      now: NOW,
+    });
+
+    expect(result.published).toBe(true);
+    expect(h.revoked).not.toContain(otherProspect.previewId);
+    expect(h.publisher.keys()).toContain(otherProspect.objectKey);
   });
 
   it('keeps a previous link live and cleans up the replacement when old-object deletion fails', async () => {
@@ -415,7 +451,6 @@ describe('resolvePublishedPreviewForDraft', () => {
             ...(source.analysisId === undefined ? {} : { selectedFrAnalysisId: source.analysisId }),
           },
         }),
-      findingsForAudit: vi.fn(() => Promise.resolve(FINDINGS)),
       prospectId: 'prospect-1',
       previewToken: TOKEN,
       publicBaseUrl: BASE_URL,
@@ -423,7 +458,7 @@ describe('resolvePublishedPreviewForDraft', () => {
     };
   }
 
-  it('uses the exact stored v3 facts without recomputing findings', async () => {
+  it('uses the exact stored v3 facts', async () => {
     const h = v3Harness();
     const result = await resolvePublishedPreviewForDraft(h);
     expect(result).toMatchObject({
@@ -432,7 +467,6 @@ describe('resolvePublishedPreviewForDraft', () => {
       severityTotals: facts.severityTotals,
       proofCardCategories: ['seo', 'accessibility', 'performance'],
     });
-    expect(h.findingsForAudit).not.toHaveBeenCalled();
   });
 
   it('marks a v3 publication stale when the selected French analysis changes', async () => {
@@ -449,7 +483,7 @@ describe('resolvePublishedPreviewForDraft', () => {
     expect(result).toEqual({ refusal: 'preview-stale' });
   });
 
-  it('keeps a live v2 publication compatible', async () => {
+  it('refuses to draft from a live v2 publication until it is republished (issue #530)', async () => {
     const result = await resolvePublishedPreviewForDraft({
       ...v3Harness(),
       findByTokenHash: () =>
@@ -463,10 +497,6 @@ describe('resolvePublishedPreviewForDraft', () => {
           publicExpiresAt: new Date('2026-10-19T09:00:00.000Z'),
         }),
     });
-    expect(result).toMatchObject({
-      previewId: 'preview-v2',
-      distinctFindingCount: 3,
-      affectedPageCount: 3,
-    });
+    expect(result).toEqual({ refusal: 'preview-not-published' });
   });
 });

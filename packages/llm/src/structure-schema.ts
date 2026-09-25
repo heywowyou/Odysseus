@@ -36,8 +36,6 @@ export const structurePassOutputSchema = z
     overallRisk: z.enum(['low', 'medium', 'high']),
   })
   .strict();
-
-export type StructureTheme = z.infer<typeof structureThemeSchema>;
 export type StructurePassOutput = z.infer<typeof structurePassOutputSchema>;
 
 /** A structureTheme plus a synthetic, code-assigned correlation id. Never

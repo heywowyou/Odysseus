@@ -19,7 +19,7 @@ writing consistent between agents. Read the charter and
 
 ## Prerequisites
 
-- Node 22
+- Node 24
 - pnpm (version pinned via `packageManager` in `package.json`; run
   `corepack enable` to get it automatically)
 - Docker, for the local MongoDB used by `packages/store`'s integration
@@ -67,7 +67,6 @@ variable in `.env` at another path:
 | --- | --- | --- | --- |
 | Atout France classified accommodation export (CSV) | `data/atout-france/hebergements_classes.csv` | `ODYSSEUS_ATOUT_FRANCE_FILE_PATH` | `odysseus prospect directory-import` |
 | INSEE Sirene stock of legal units (CSV) | `data/sirene/stock-unite-legale.csv` | `ODYSSEUS_SIRENE_STOCK_PATH` | benchmark qualification |
-| AFNIC open data Fichier A, `.fr` domain names (CSV) | `data/afnic/fichier-a.csv` | `ODYSSEUS_AFNIC_FILE_PATH` | domain-first prospecting research |
 
 `directory-import` also accepts `--file <path>` for a one-off import. Sources,
 licences, and encodings are described in `docs/rules/prospect-qualification.md`.
@@ -75,7 +74,7 @@ licences, and encodings are described in `docs/rules/prospect-qualification.md`.
 ## Running tests
 
 ```bash
-pnpm run test:store:up    # starts the local mongo-test container
+pnpm run test:store:up    # starts the local mongo-test replica set and waits for its primary
 pnpm run test             # runs the unit Vitest project (excludes browser e2e)
 pnpm run test:e2e         # runs the e2e and e2e-serial projects; needs Chromium (below) and mongo-test
 pnpm run test:all         # runs all three projects (unit, e2e, e2e-serial); this is what CI gates on
@@ -85,6 +84,11 @@ pnpm run test:store:down  # stops it again
 Mongo-backed integration suites skip when the test database is unreachable,
 so a machine without Docker still runs the rest. In CI, or locally with
 `REQUIRE_MONGO_TESTS=1`, an unreachable database fails the run instead.
+`mongo-test` is a single-node replica set, as production's Atlas cluster is,
+so the report-bundle activation transaction runs in tests; with
+`REQUIRE_MONGO_TESTS=1` a database without transactions fails the run too.
+A volume created before this change keeps its data: the healthcheck
+initiates the replica set on the next start.
 
 The `test:e2e` and `test:all` commands are what drive a real Chromium via
 Playwright. Some tests spin up the `fixtures/spa-demo` fixture themselves;

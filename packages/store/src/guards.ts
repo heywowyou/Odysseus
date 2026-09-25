@@ -27,7 +27,7 @@ import {
   effectiveOutreachThreadState,
 } from '@odysseus/core';
 import { findLiveOutreachDraft } from './outreach-drafts.js';
-import { findOutreachThreadByProspect } from './outreach-threads.js';
+import { findOutreachThreadByProspect, followUpDueAt } from './outreach-threads.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
 import {
   loadOutreachReportReadiness,
@@ -44,6 +44,8 @@ export type OutreachActionRefusal =
   | 'thread-closed'
   | 'thread-unknown'
   | 'thread-not-eligible'
+  | 'follow-up-not-due'
+  | 'thread-needs-review'
   | 'thread-already-started'
   | 'preview-already-live'
   | 'prospect-outreach-already-started';
@@ -113,7 +115,7 @@ export async function checkScanLaunch(
 
 export async function checkOutreachAction(
   connection: Connection,
-  input: { prospect: Prospect; action: OutreachAction },
+  input: { prospect: Prospect; action: OutreachAction; now?: Date },
 ): Promise<OutreachActionCheck> {
   const website = primaryWebsite(input.prospect.websites);
   const domain = website?.registrableDomain;
@@ -157,6 +159,16 @@ export async function checkOutreachAction(
     if (touch === undefined) return { allowed: false, refusal: 'thread-not-eligible' };
     if ((await findLiveOutreachDraft(connection, thread.threadId, touch)) !== null) {
       return { allowed: false, refusal: 'draft-already-live' };
+    }
+    // Issue #479: the same rules the due list and To-do apply. An automated
+    // answer or an unexplained mailbox state waits for a person, and the
+    // spacing (day +4, then +7) is part of the outreach rules.
+    if (thread.needsReview !== undefined) {
+      return { allowed: false, refusal: 'thread-needs-review' };
+    }
+    const dueAt = followUpDueAt({ ...thread, state });
+    if (dueAt === undefined || dueAt.getTime() > (input.now ?? new Date()).getTime()) {
+      return { allowed: false, refusal: 'follow-up-not-due' };
     }
     return { allowed: true };
   }

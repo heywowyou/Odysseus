@@ -23,6 +23,7 @@ import {
 } from './host-request-scheduler.js';
 import {
   checkNetworkTarget,
+  withDefaultNetworkPolicy,
   type NetworkSafetyDisposition,
   type NetworkTargetPolicy,
 } from './network-target-policy.js';
@@ -610,6 +611,9 @@ interface StagedScanContext {
   mentionsLegalesSearchedUrls: string[] | undefined;
   mentionsLegalesHomepageFallback: boolean;
   redirectHostCache: RedirectHostCache;
+  /** Issue #501: the same run-wide canonical-target cache the legacy lane
+   *  uses, so a canonical shared by many pages is fetched once per audit. */
+  canonicalTargetCache: Map<string, Promise<CanonicalTargetCheckResult | null>>;
   homepageUrl: string | undefined;
   sitemapCheck:
     (SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[] }) | undefined;
@@ -727,6 +731,7 @@ async function analyzePageInTurn(
         stateSurfaces: context.stateSurfaces,
         exclusionPatterns: context.exclusionPatterns,
         redirectHostCache: context.redirectHostCache,
+        canonicalTargetCache: context.canonicalTargetCache,
         guard: pageGuard,
         signal: pageAbortController.signal,
         ...(timeoutMs !== undefined ? { timeoutMs } : {}),
@@ -1033,13 +1038,18 @@ function toPlanProfile(page: CrawledPage): PageAuditProfile {
  * artifact: the planner replay needs every page's cost profile, so such a
  * page is treated as pending and re-measured rather than trusted with an
  * incomplete input. Pure: the caller supplies the disk read.
+ *
+ * Issue #500: only a slim record of each reused page is kept for the rest of
+ * the stage. Its axe, Lighthouse and evidence payloads stay on disk; on a
+ * large site they were gigabytes of heap held after exactly the events that
+ * cause a resume, and an out-of-memory crash then caused the same resume.
  */
 export function partitionPagesForResume(
   pagesToScan: readonly CrawledPage[],
   readExisting: (url: string) => PageScanResult | undefined,
   binding?: EvidenceBinding,
-): { completedByUrl: Map<string, PageScanResult>; pending: CrawledPage[] } {
-  const completedByUrl = new Map<string, PageScanResult>();
+): { completedByUrl: Map<string, ResumedPageRecord>; pending: CrawledPage[] } {
+  const completedByUrl = new Map<string, ResumedPageRecord>();
   const pending: CrawledPage[] = [];
   for (const page of pagesToScan) {
     const existing = readExisting(page.url);
@@ -1048,12 +1058,37 @@ export function partitionPagesForResume(
       existing.renderedCostProfile !== undefined &&
       (binding === undefined || isBoundToEvidence(existing, binding))
     ) {
-      completedByUrl.set(page.url, existing);
+      completedByUrl.set(page.url, slimResumedPage(existing));
     } else {
       pending.push(page);
     }
   }
   return { completedByUrl, pending };
+}
+
+/** What a resumed stage reads from a page an earlier attempt finished. */
+export interface ResumedPageRecord {
+  checkOutcomes?: PageScanResult['checkOutcomes'];
+  renderedCostProfile?: PageScanResult['renderedCostProfile'];
+  surfaceLinks?: PageScanResult['surfaceLinks'];
+  acquisitionAttempts?: PageScanResult['acquisitionAttempts'];
+  /** scan.json records a Lighthouse result or a Lighthouse error. */
+  hasLighthouseOutcome: boolean;
+}
+
+export function slimResumedPage(scanJson: PageScanResult): ResumedPageRecord {
+  return {
+    ...(scanJson.checkOutcomes !== undefined ? { checkOutcomes: scanJson.checkOutcomes } : {}),
+    ...(scanJson.renderedCostProfile !== undefined
+      ? { renderedCostProfile: scanJson.renderedCostProfile }
+      : {}),
+    ...(scanJson.surfaceLinks !== undefined ? { surfaceLinks: scanJson.surfaceLinks } : {}),
+    ...(scanJson.acquisitionAttempts !== undefined
+      ? { acquisitionAttempts: scanJson.acquisitionAttempts }
+      : {}),
+    hasLighthouseOutcome:
+      scanJson.lighthouse !== undefined || scanJson.lighthouseError !== undefined,
+  };
 }
 
 /** The scope and epoch a resumed run's evidence must belong to. */
@@ -1088,12 +1123,11 @@ function isBoundToEvidence(scanJson: PageScanResult, binding: EvidenceBinding): 
  * something a resume retries). Only a selected page whose scan.json
  * carries neither field still needs its Lighthouse pass.
  */
-export function needsLighthouseRun(decision: PageAuditDecision, scanJson: PageScanResult): boolean {
-  return (
-    decision.plannedPasses.includes('lighthouse') &&
-    scanJson.lighthouse === undefined &&
-    scanJson.lighthouseError === undefined
-  );
+export function needsLighthouseRun(
+  decision: PageAuditDecision,
+  resumed: Pick<ResumedPageRecord, 'hasLighthouseOutcome'>,
+): boolean {
+  return decision.plannedPasses.includes('lighthouse') && !resumed.hasLighthouseOutcome;
 }
 
 interface RecoveryPageStore {
@@ -1573,7 +1607,7 @@ async function runStagedFullAuditScan(
             : undefined,
         )
       : undefined;
-  const completedByUrl = resumePartition?.completedByUrl ?? new Map<string, PageScanResult>();
+  const completedByUrl = resumePartition?.completedByUrl ?? new Map<string, ResumedPageRecord>();
   const pendingPages = resumePartition?.pending ?? pagesToScan;
 
   // A resumed run whose content stage already finished (every crawled page
@@ -2139,15 +2173,15 @@ async function runStagedFullAuditScan(
     ) {
       // Plan 035: the scan.json already records this page's Lighthouse
       // outcome (completed or failed); replay it into coverage only and
-      // never re-run the pass.
+      // never re-run the pass. Read from disk here, one page at a time,
+      // since the resume keeps only a slim record (issue #500).
+      const persisted = readPageScanJson(context.screenshotDir, url);
       emit(
         url,
         {
-          ...(reusedScanJson.lighthouse !== undefined
-            ? { lighthouse: reusedScanJson.lighthouse }
-            : {}),
-          ...(reusedScanJson.lighthouseError !== undefined
-            ? { lighthouseError: reusedScanJson.lighthouseError }
+          ...(persisted?.lighthouse !== undefined ? { lighthouse: persisted.lighthouse } : {}),
+          ...(persisted?.lighthouseError !== undefined
+            ? { lighthouseError: persisted.lighthouseError }
             : {}),
         },
         false,
@@ -2325,8 +2359,9 @@ async function closeTemporalWindow(
 
 export async function scanSite(
   startUrl: string,
-  options: ScanSiteOptions,
+  scanOptions: ScanSiteOptions,
 ): Promise<SiteScanResult> {
+  const options = withDefaultNetworkPolicy(scanOptions);
   if (options.writePagesAsScanned && options.auditDir === undefined) {
     throw new Error('scanSite: writePagesAsScanned requires auditDir to be set.');
   }
@@ -2872,6 +2907,7 @@ export async function scanSite(
         crawl.mentionsLegalesCandidateUrls ?? crawl.mentionsLegalesSearchedUrls,
       mentionsLegalesHomepageFallback,
       redirectHostCache,
+      canonicalTargetCache,
       homepageUrl: homepageUrlForScan,
       sitemapCheck,
       llmsTxtCheck: llmsTxtCheckForScan,

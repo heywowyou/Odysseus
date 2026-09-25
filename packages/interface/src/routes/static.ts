@@ -24,6 +24,24 @@ export function contentTypeForPath(filePath: string): string {
   return CONTENT_TYPES[path.extname(filePath)] ?? 'application/octet-stream';
 }
 
+/** Vite writes every bundle under /assets/ with a content hash in its name,
+ *  so a URL there never serves different bytes: the browser may keep it for
+ *  a year without asking (issue #512). */
+const IMMUTABLE_ASSET_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+/** The self-hosted report fonts keep fixed names; they change only with a
+ *  font update, so a day's reuse is safe. */
+const FONT_CACHE_CONTROL = 'public, max-age=86400';
+
+/** The Cache-Control for a served file. Everything without a content hash,
+ *  the HTML shell above all, is revalidated on each load, so a deploy
+ *  reaches the browser at once. */
+export function cacheControlForPath(publicDir: string, filePath: string): string {
+  const relative = path.relative(publicDir, filePath).split(path.sep);
+  if (relative.length > 1 && relative[0] === 'assets') return IMMUTABLE_ASSET_CACHE_CONTROL;
+  if (relative.length > 1 && relative[0] === 'fonts') return FONT_CACHE_CONTROL;
+  return 'no-cache';
+}
+
 const APP_ROUTE_PATTERN = new RegExp(`^/(${APP_ROUTE_PREFIXES.join('|')})(/|$)`);
 
 export type StaticResolution =
@@ -107,6 +125,7 @@ export function registerStaticFallback(router: Router): void {
     const contentType = contentTypeForPath(resolution.filePath);
     res.statusCode = 200;
     res.setHeader('content-type', contentType);
+    res.setHeader('cache-control', cacheControlForPath(publicDir, resolution.filePath));
     // The CSP belongs on the SPA shell only; hashed assets and unknown
     // binaries keep their bare content type.
     if (isHtmlContentType(contentType)) {

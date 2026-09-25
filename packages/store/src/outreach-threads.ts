@@ -37,6 +37,10 @@ import { addSuppressionEntry } from './suppression.js';
 /** Operational retention, per docs/rules/prospect-qualification.md section 7. */
 const OUTREACH_THREAD_RETENTION_DAYS = 90;
 
+/** States in which nothing has been sent yet, so reopening the thread for a
+ *  new first email may replace its language, recipient and preview. */
+const REOPENABLE_STATES: readonly OutreachThreadState[] = ['open', 'e1-drafted'];
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface OpenOutreachThreadInput {
@@ -47,6 +51,8 @@ export interface OpenOutreachThreadInput {
   language: 'fr' | 'en';
   openedAt: Date;
   spacing: OutreachThreadSpacing;
+  /** Issue #533: stamped on a new thread only; a reopened one keeps its own. */
+  campaignVersion: string;
 }
 
 export interface OpenedOutreachThread {
@@ -64,7 +70,30 @@ export async function openOutreachThread(
   await ThreadModel.init();
 
   const existing = await ThreadModel.findOne({ prospectId: input.prospectId }).lean();
-  if (existing !== null) return { thread: existing, created: false };
+  if (existing !== null) {
+    // Issue #482: before the first email is sent, a redraft (after the
+    // operator discarded E1) may change the language, recipient or preview,
+    // and follow-ups and sequence completion read them from the thread. Once
+    // E1 has gone out they are what the prospect received and never change.
+    // Callers refuse a redraft while an E1 draft is still live.
+    if (REOPENABLE_STATES.includes(existing.state)) {
+      const refreshed = await ThreadModel.findOneAndUpdate(
+        { threadId: existing.threadId, state: { $in: REOPENABLE_STATES } },
+        {
+          $set: {
+            language: input.language,
+            languageSource: 'operator',
+            roleAddress: input.roleAddress,
+            previewId: input.previewId,
+            updatedAt: input.openedAt,
+          },
+        },
+        { new: true },
+      ).lean();
+      return { thread: refreshed ?? existing, created: false };
+    }
+    return { thread: existing, created: false };
+  }
 
   const thread: OutreachThreadDocument = {
     threadId: randomUUID(),
@@ -82,6 +111,7 @@ export async function openOutreachThread(
     stateEnteredAt: input.openedAt,
     touches: [],
     spacing: input.spacing,
+    campaignVersion: input.campaignVersion,
     createdAt: input.openedAt,
     updatedAt: input.openedAt,
     expiresAt: new Date(input.openedAt.getTime() + OUTREACH_THREAD_RETENTION_DAYS * DAY_MS),
@@ -299,27 +329,6 @@ export async function closeOutreachThreadsForDomain(
   return { closed: result.modifiedCount };
 }
 
-export interface ListOutreachThreadsOptions {
-  state?: OutreachThreadState;
-  domain?: string;
-  prospectId?: string;
-  limit?: number;
-}
-
-export async function listOutreachThreads(
-  connection: Connection,
-  options: ListOutreachThreadsOptions = {},
-): Promise<OutreachThreadDocument[]> {
-  const ThreadModel = createOutreachThreadModel(connection);
-  const query: Record<string, unknown> = {};
-  if (options.state !== undefined) query['state'] = options.state;
-  if (options.domain !== undefined) query['domain'] = normalizeDomainForHash(options.domain);
-  if (options.prospectId !== undefined) query['prospectId'] = options.prospectId;
-  const cursor = ThreadModel.find(query).sort({ createdAt: -1 });
-  if (options.limit !== undefined) cursor.limit(options.limit);
-  return cursor.lean();
-}
-
 /** Returns the most recent provider reconciliation timestamp without exposing
  *  a thread or any mailbox identity. The inbox uses this as freshness
  *  context; absence means no successful sync has stamped a thread yet. */
@@ -330,6 +339,25 @@ export async function getLatestOutreachSyncAt(connection: Connection): Promise<D
     .select({ _id: 0, lastSyncedAt: 1 })
     .lean<{ lastSyncedAt?: Date } | null>();
   return row?.lastSyncedAt ?? null;
+}
+
+/**
+ * When the next follow-up of a thread in `e1-sent` or `e2-sent` becomes due:
+ * the previous touch's confirmed `sentAt` plus the thread's own spacing
+ * snapshot. Undefined in any other state, or before that touch's send is
+ * recorded. The one formula the due list, the To-do list and the follow-up
+ * guard share (issue #479).
+ */
+export function followUpDueAt(
+  thread: Pick<OutreachThreadDocument, 'state' | 'touches' | 'spacing'>,
+): Date | undefined {
+  const lastTouch = thread.state === 'e1-sent' ? 1 : thread.state === 'e2-sent' ? 2 : undefined;
+  if (lastTouch === undefined) return undefined;
+  const sent = thread.touches.find((touch) => touch.touch === lastTouch);
+  if (sent === undefined) return undefined;
+  const afterDays =
+    lastTouch === 1 ? thread.spacing.touch2AfterDays : thread.spacing.touch3AfterDays;
+  return new Date(new Date(sent.sentAt).getTime() + afterDays * DAY_MS);
 }
 
 export interface ListThreadsDueForFollowUpOptions {
@@ -358,12 +386,8 @@ export async function listThreadsDueForFollowUp(
 
   const due: OutreachThreadDocument[] = [];
   for (const thread of candidates) {
-    const lastTouch = thread.state === 'e1-sent' ? 1 : 2;
-    const sentRecord = thread.touches.find((touch) => touch.touch === lastTouch);
-    if (sentRecord === undefined) continue;
-    const afterDays =
-      lastTouch === 1 ? thread.spacing.touch2AfterDays : thread.spacing.touch3AfterDays;
-    const dueAt = new Date(new Date(sentRecord.sentAt).getTime() + afterDays * DAY_MS);
+    const dueAt = followUpDueAt(thread);
+    if (dueAt === undefined) continue;
     if (dueAt.getTime() <= options.now.getTime()) due.push(thread);
     if (options.limit !== undefined && due.length >= options.limit) break;
   }

@@ -1,10 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
-  getSeverityRollups: vi.fn(),
+  getStoredPrimarySeverityRollups: vi.fn(),
+  loadSeverityPopulationInputs: vi.fn(async () => []),
+  storePrimarySeverityRollup: vi.fn(async () => undefined),
 }));
 
-import { getSeverityRollups, type SeverityRollup } from '@odysseus/store';
+import {
+  getStoredPrimarySeverityRollups,
+  loadSeverityPopulationInputs,
+  storePrimarySeverityRollup,
+  type SeverityRollup,
+} from '@odysseus/store';
 import {
   getSeverityRollupsForPoll,
   resetSeverityRollupCacheForTests,
@@ -19,9 +26,9 @@ let fetchCount = 0;
 
 beforeEach(() => {
   resetSeverityRollupCacheForTests();
-  vi.mocked(getSeverityRollups).mockReset();
+  vi.mocked(getStoredPrimarySeverityRollups).mockReset();
   fetchCount = 0;
-  vi.mocked(getSeverityRollups).mockImplementation(async (_connection, auditIds) => {
+  vi.mocked(getStoredPrimarySeverityRollups).mockImplementation(async (_connection, auditIds) => {
     fetchCount += 1;
     const result = new Map<string, SeverityRollup>();
     for (const auditId of auditIds) {
@@ -43,33 +50,42 @@ describe('getSeverityRollupsForPoll', () => {
       now: () => t + 500,
     });
 
-    expect(getSeverityRollups).toHaveBeenCalledTimes(1);
+    expect(getStoredPrimarySeverityRollups).toHaveBeenCalledTimes(1);
     expect(second.get('audit-a')).toEqual(first.get('audit-a'));
     expect(second.get('audit-a')).toEqual({ critical: 1, serious: 0, moderate: 0, minor: 0 });
   });
 
   it('refetches an entry once the poll clock moves past the TTL', async () => {
     const t = 0;
-    await getSeverityRollupsForPoll(fakeConnection, ['audit-b'], { ttlMs: 1000, now: () => t });
+    await getSeverityRollupsForPoll(fakeConnection, ['audit-b'], {
+      ttlMs: 1000,
+      now: () => t,
+    });
     const second = await getSeverityRollupsForPoll(fakeConnection, ['audit-b'], {
       ttlMs: 1000,
       now: () => t + 1001,
     });
 
-    expect(getSeverityRollups).toHaveBeenCalledTimes(2);
+    expect(getStoredPrimarySeverityRollups).toHaveBeenCalledTimes(2);
     expect(second.get('audit-b')).toEqual({ critical: 2, serious: 0, moderate: 0, minor: 0 });
   });
 
   it('drops every cached entry when the poll auditId set changes, even inside the TTL', async () => {
     const t = 0;
-    await getSeverityRollupsForPoll(fakeConnection, ['audit-c'], { ttlMs: 1000, now: () => t });
+    await getSeverityRollupsForPoll(fakeConnection, ['audit-c'], {
+      ttlMs: 1000,
+      now: () => t,
+    });
     const second = await getSeverityRollupsForPoll(fakeConnection, ['audit-c', 'audit-d'], {
       ttlMs: 1000,
       now: () => t + 100,
     });
 
-    expect(getSeverityRollups).toHaveBeenCalledTimes(2);
-    expect(vi.mocked(getSeverityRollups).mock.calls[1]?.[1]).toEqual(['audit-c', 'audit-d']);
+    expect(getStoredPrimarySeverityRollups).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(getStoredPrimarySeverityRollups).mock.calls[1]?.[1]).toEqual([
+      'audit-c',
+      'audit-d',
+    ]);
     expect(second.get('audit-d')).toEqual({ critical: 2, serious: 0, moderate: 0, minor: 0 });
   });
 
@@ -81,7 +97,7 @@ describe('getSeverityRollupsForPoll', () => {
     });
 
     expect(result.size).toBe(0);
-    expect(getSeverityRollups).not.toHaveBeenCalled();
+    expect(getStoredPrimarySeverityRollups).not.toHaveBeenCalled();
   });
 
   it('never aliases one fetch rollup object into a later refetch result', async () => {
@@ -102,5 +118,37 @@ describe('getSeverityRollupsForPoll', () => {
 
     expect(second.get('audit-e')).not.toBe(held);
     expect(second.get('audit-e')).toEqual({ critical: 2, serious: 0, moderate: 0, minor: 0 });
+  });
+
+  it('computes an audit without a stored rollup from the primary population and stores it (issue #508)', async () => {
+    vi.mocked(getStoredPrimarySeverityRollups).mockImplementation(async () => new Map());
+    vi.mocked(loadSeverityPopulationInputs).mockResolvedValueOnce([
+      {
+        auditId: 'audit-legacy',
+        findingsDigest: 'digest-1',
+        pages: [],
+        findings: [
+          { severity: 'serious', pageUrls: ['https://example.com/'], elements: [] },
+          {
+            severity: 'critical',
+            pageUrls: ['https://example.com/'],
+            elements: [{ selector: 'iframe >>> button' } as never],
+          },
+        ],
+      },
+    ]);
+
+    const result = await getSeverityRollupsForPoll(fakeConnection, ['audit-legacy']);
+
+    // The third-party-frame finding is outside the primary population, as
+    // on the audit page.
+    const expected = { critical: 0, serious: 1, moderate: 0, minor: 0 };
+    expect(result.get('audit-legacy')).toEqual(expected);
+    expect(storePrimarySeverityRollup).toHaveBeenCalledWith(
+      fakeConnection,
+      'audit-legacy',
+      'digest-1',
+      expected,
+    );
   });
 });

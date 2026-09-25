@@ -16,6 +16,8 @@ import {
   listOutreachDrafts,
   listDirectory,
   loadProspectWork,
+  aggregateOutreachFunnel,
+  countActiveAndAuditedProspects,
   listProspectTodo,
   PROSPECT_TODO_KINDS,
   listProspectAudits,
@@ -211,15 +213,21 @@ export function registerProspectHubRoutes(
     return audits.some((audit) => isReportProductionInFlight(audit.auditId));
   }
 
+  // Issue #533: the outreach funnel per campaign, counts only, for the To do
+  // page's campaign tile. Read-only; the CLI's outreach-funnel exports the
+  // same numbers before the threads expire.
+  router.get('/api/outreach/funnel', async ({ res }) => {
+    sendJson(res, 200, { campaigns: await aggregateOutreachFunnel(connection) });
+  });
+
   router.get('/api/prospect-hub/todo', async ({ res }) => {
     // Plan 060 §8: the sidebar badge is the server-provided attention count,
     // not the length of a client-side array. The summary deliberately keeps
     // audited prospects separate from actionable rows: one prospect may have
     // no current action, while another may open more than one row.
-    const [rows, activeProspects, auditedProspects, lastSyncedAt] = await Promise.all([
+    const [rows, totals, lastSyncedAt] = await Promise.all([
       listProspectTodo(connection),
-      listProspects(connection, { page: 1, pageSize: 1 }),
-      listProspects(connection, { status: 'audited', page: 1, pageSize: 1 }),
+      countActiveAndAuditedProspects(connection),
       getLatestOutreachSyncAt(connection),
     ]);
     const kindCounts = Object.fromEntries(PROSPECT_TODO_KINDS.map((kind) => [kind, 0])) as Record<
@@ -232,8 +240,8 @@ export function registerProspectHubRoutes(
       rows,
       attentionCount,
       summary: {
-        activeProspects: activeProspects.total,
-        auditedProspects: auditedProspects.total,
+        activeProspects: totals.active,
+        auditedProspects: totals.audited,
         actionableItems: rows.length,
         actionableProspects: new Set(rows.map((row) => row.prospectId)).size,
         kindCounts,
@@ -559,11 +567,33 @@ export function registerProspectHubRoutes(
       sendError(res, 404, 'pending draft not found');
       return;
     }
+    // Issue #478: Gmail answers 404 for a draft that was sent, and deleting a
+    // missing draft counts as success, so a discard clicked after sending
+    // from Gmail (and before the next sync) would erase the only record of
+    // the send and take its preview offline. The draft must still be in the
+    // mailbox to be discarded; otherwise nothing changes and a sync runs.
+    const mailbox = createConfiguredMailboxDraftAdapter();
+    if (mailbox !== null && draft.providerDraftId !== undefined) {
+      let inMailbox: boolean;
+      try {
+        inMailbox = (await mailbox.getDraft(draft.providerDraftId)) !== null;
+      } catch {
+        sendError(res, 502, 'mailbox-check-failed');
+        return;
+      }
+      if (!inMailbox) {
+        // Records the send, if that is what happened, before the operator
+        // looks again. A sync failure is logged by the poller's next tick.
+        syncMailbox(connection).catch(() => undefined);
+        sendError(res, 409, 'draft-not-in-mailbox');
+        return;
+      }
+    }
     await markOutreachDraftDeletionPending(connection, draft.draftId, 'skipped');
     const mailboxDraftsNotRemoved = await deletePendingMailboxDraftRows(
       connection,
       [draft],
-      createConfiguredMailboxDraftAdapter(),
+      mailbox,
     );
     const mailboxWarning = mailboxDraftDeletionWarningFields(mailboxDraftsNotRemoved);
     // The preview exists only to be linked from this draft, so discarding the

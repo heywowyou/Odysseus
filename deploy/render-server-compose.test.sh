@@ -28,7 +28,9 @@ assert_not_contains() {
 OUTPUT="$("$SCRIPT" /srv/odysseus <"$REPO_ROOT/deploy/compose.yaml")"
 assert_contains "$OUTPUT" 'context: /srv/odysseus'
 assert_contains "$OUTPUT" 'path: /srv/odysseus/.env'
-assert_contains "$OUTPUT" 'path: /srv/odysseus/.env.smoke'
+# The smoke env file is loaded only by the local smoke overlay (#484); a
+# '- path: ../.env.smoke' entry would also trip the '../.env' check below.
+assert_not_contains "$OUTPUT" 'path: /srv/odysseus/.env.smoke'
 assert_contains "$OUTPUT" '/srv/odysseus/deploy/Caddyfile:/etc/caddy/Caddyfile:ro'
 assert_not_contains "$OUTPUT" 'context: ..'
 assert_not_contains "$OUTPUT" '../.env'

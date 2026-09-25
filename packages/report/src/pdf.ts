@@ -16,6 +16,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import type { Browser, Page } from 'playwright';
+import { cutOffNetwork } from './offline-render-context.js';
 
 const require = createRequire(import.meta.url);
 
@@ -1303,6 +1304,7 @@ export async function renderPdfWithPageCountFromHtml(
 ): Promise<RenderedPdfWithPageCount> {
   const pagedjsSource = await readPagedjsSource();
   const context = await browser.newContext();
+  await cutOffNetwork(context);
   const page = await context.newPage();
   try {
     let pagedjsLayoutFailure: string | undefined;
@@ -1351,7 +1353,11 @@ export async function renderPdfWithPageCountFromHtml(
         const previewer = new Paged.Previewer();
         await previewer.preview();
       });
-      if (debugNodePromise) await debugNodePromise;
+      // The console handler assigns this while the preview runs; TypeScript
+      // cannot see an assignment in a callback and still narrows it to the
+      // undefined set above, hence the explicit type.
+      const pendingDebugNode = debugNodePromise as Promise<void> | undefined;
+      if (pendingDebugNode) await pendingDebugNode;
       if (pagedjsLayoutFailure !== undefined) {
         throw new Error(
           `Report generation aborted: Paged.js hit its own layout-repeated guard and stopped ` +

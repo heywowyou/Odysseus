@@ -142,6 +142,9 @@ describe.skipIf(!mongoAvailable)('prospect contact corrections', () => {
       .lean();
     expect(stored?.status).toBe('mailbox-delete-pending');
     expect(await isSuppressed(connection!, 'other.example', 'wrong@other.example')).toBe(true);
+    // Issue #481: only the address, never its whole domain.
+    expect(await isSuppressed(connection!, 'other.example', 'colleague@other.example')).toBe(false);
+    expect(await isSuppressed(connection!, 'other.example')).toBe(false);
 
     const events = await listProspectEvents(connection!, created.prospectId);
     const removal = events.find((e) => e.payload['action'] === 'email-removed');

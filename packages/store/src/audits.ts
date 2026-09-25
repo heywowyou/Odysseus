@@ -439,7 +439,7 @@ export async function replaceDetectedManualFields(
  * Fields the prospect has not confirmed are left alone. Returns the fields
  * written.
  */
-export async function applyConfirmedProspectIdentity(
+async function applyConfirmedProspectIdentity(
   connection: Connection,
   auditId: string,
   confirmed: AuditIdentityValues,
@@ -510,7 +510,19 @@ export async function saveLinkedAuditIdentity(
 export async function getFindingsForAudit(
   connection: Connection,
   auditId: string,
+  options: {
+    /** false leaves each finding's rawEvidence out of the read (it comes
+     *  back as `{}`): the audit page never shows it, and on a large audit it
+     *  is half of the findings' bytes (issue #510). Only for callers that
+     *  never read rawEvidence. */
+    rawEvidence?: boolean;
+  } = {},
 ): Promise<FindingDocument[]> {
   const FindingModel = createFindingModel(connection);
-  return FindingModel.find({ auditId }).lean<FindingDocument[]>();
+  if (options.rawEvidence !== false)
+    return FindingModel.find({ auditId }).lean<FindingDocument[]>();
+  const findings = await FindingModel.find({ auditId })
+    .select({ rawEvidence: 0 })
+    .lean<Omit<FindingDocument, 'rawEvidence'>[]>();
+  return findings.map((finding) => ({ ...finding, rawEvidence: {} }));
 }

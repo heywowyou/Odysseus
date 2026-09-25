@@ -159,7 +159,7 @@ export async function listActiveJobsForProspect(
  *  Quick Check, occupy the host slot. Shared/vendor hosts allow distinct
  *  attached prospects, but an unattached job (or the same prospect) remains
  *  conservative because tenancy cannot be proven. */
-export async function findActiveBrowserHeavyHostConflict(
+async function findActiveBrowserHeavyHostConflict(
   connection: Connection,
   _kind: CurrentScanIntent,
   domain: string,

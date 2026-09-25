@@ -274,14 +274,6 @@ export async function findLiveOutreachDraft(
   }).lean();
 }
 
-export async function findOutreachDraftById(
-  connection: Connection,
-  draftId: string,
-): Promise<OutreachDraftDocument | null> {
-  const DraftModel = createOutreachDraftModel(connection);
-  return DraftModel.findOne({ draftId }).lean();
-}
-
 export interface MarkOutreachDraftDeletedResult {
   /** False when the draft was already deleted, so a caller can stay quiet on a
    *  repeat rather than reporting a second deletion that did not happen. */
@@ -312,44 +304,6 @@ export async function markOutreachDraftDeletionPending(
       $set: {
         status: 'mailbox-delete-pending',
         ...(reviewOutcome !== undefined ? { reviewOutcome, reviewedAt: now } : {}),
-      },
-    },
-  );
-  return { changed: result.modifiedCount === 1 };
-}
-
-export interface RecordOutreachDraftReviewResult {
-  /** False when the draft was already reviewed or discarded, so a repeat
-   *  stays quiet and, crucially, never overwrites the first outcome: the
-   *  filter only matches a `created` row, so the recorded decision is the
-   *  first one the operator made. */
-  changed: boolean;
-}
-
-/**
- * Record the operator's review of a draft (issue #96).
- *
- * The status transition is exactly `markOutreachDraftDeleted`'s - approve and
- * skip both end the draft's life in the review flow, and neither sends,
- * edits, or creates anything. What this adds is the outcome: the field that
- * lets plan 014's campaign analysis tell an approved draft from a discarded
- * one months later. Reviewing never touches the Gmail draft itself.
- */
-export async function recordOutreachDraftReview(
-  connection: Connection,
-  draftId: string,
-  outcome: OutreachDraftReviewOutcome,
-): Promise<RecordOutreachDraftReviewResult> {
-  const DraftModel = createOutreachDraftModel(connection);
-  const now = new Date();
-  const result = await DraftModel.updateOne(
-    { draftId, status: 'created' },
-    {
-      $set: {
-        status: 'deleted',
-        deletedAt: now,
-        reviewOutcome: outcome,
-        reviewedAt: now,
       },
     },
   );

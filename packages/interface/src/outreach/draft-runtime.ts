@@ -18,7 +18,6 @@ import {
   findLiveOutreachDraft,
   findOutreachPreviewByTokenHash,
   findOutreachThreadByProspect,
-  getFindingsForAudit,
   getProspectHub,
   listOutreachDrafts,
   loadOutreachReportReadiness,
@@ -37,6 +36,7 @@ import {
 import type { OutreachActionRefusal } from '@odysseus/store';
 import type { Connection } from 'mongoose';
 import {
+  getOutreachCampaignVersion,
   getOutreachReplyWindowDays,
   getOutreachTouch2AfterDays,
   getOutreachTouch3AfterDays,
@@ -204,7 +204,6 @@ async function resolvePreview(connection: Connection, prospectId: string, token:
         },
       };
     },
-    findingsForAudit: (auditId) => getFindingsForAudit(connection, auditId),
     prospectId,
     previewToken: token,
     publicBaseUrl: getPreviewPublicBaseUrl(),
@@ -268,6 +267,7 @@ export async function createTouchOneDraft(
       touch3AfterDays: getOutreachTouch3AfterDays(),
       replyWindowDays: getOutreachReplyWindowDays(),
     },
+    campaignVersion: getOutreachCampaignVersion(),
   });
   if (isTerminalOutreachThreadState(thread.thread.state)) {
     return { configured: true, created: false, refusal: 'thread-closed' };

@@ -25,6 +25,7 @@ vi.mock('@odysseus/store', () => ({
 }));
 vi.mock('../config.js', () => ({
   getOutreachReplyWindowDays: () => 14,
+  getOutreachCampaignVersion: () => 'first-100-2026-09',
   getOutreachTouch2AfterDays: () => 4,
   getOutreachTouch3AfterDays: () => 7,
   getPreviewPublicBaseUrl: () => 'https://odysseus.example',

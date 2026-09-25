@@ -17,7 +17,6 @@ import {
   buildFindingsProvenance,
   attributableCoreWebVitals,
   unstableLabMetricsOf,
-  deriveCoverageLimitations,
   isBlockedRender,
   lighthouseFinalUrl,
   lighthouseLandedOffSite,
@@ -34,6 +33,7 @@ import {
 } from '@odysseus/scanner';
 import { resolveArtifactFile } from '../artifacts/resolve-artifact.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
+import { buildNormalizeAuditInput } from './normalize-audit-input.js';
 
 /** Issue #63: the bucket key needs hostname and startedAt, which
  *  buildAuditDir encodes into a real audit directory's own
@@ -79,7 +79,10 @@ async function readPageInputs(
   artifactStore: ArtifactStore | undefined,
 ): Promise<NormalizePageInput[]> {
   const pagesDir = path.join(artifactsDir, 'pages');
-  const entries = await fs.readdir(pagesDir, { withFileTypes: true });
+  // Sorted: readdir order differs between filesystems (issue #503).
+  const entries = (await fs.readdir(pagesDir, { withFileTypes: true })).sort((a, b) =>
+    a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+  );
 
   const pages: NormalizePageInput[] = [];
   for (const entry of entries) {
@@ -182,71 +185,15 @@ export async function renormalizeAudit(
     }),
   );
 
-  const sitemapRedirectedUrls = classifiedPages
-    .filter(
-      (page) =>
-        page.status === 'redirect-interstitial' || page.status === 'skipped-external-redirect',
-    )
-    .map((page) => page.url);
-  const pagesForNormalization =
-    sitemapRedirectedUrls.length === 0
-      ? pages
-      : pages.map((page) =>
-          page.sitemapCheck === undefined
-            ? page
-            : {
-                ...page,
-                sitemapCheck: {
-                  ...page.sitemapCheck,
-                  redirectedUrls: [
-                    ...new Set([
-                      ...(page.sitemapCheck.redirectedUrls ?? []),
-                      ...sitemapRedirectedUrls,
-                    ]),
-                  ],
-                },
-              },
-        );
-
-  // Re-derived rather than read back: a persisted copy may come from an
-  // older, broader derivation that silenced absence rules on redirects.
-  const coverageLimitations = deriveCoverageLimitations(classifiedPages, {
-    ...(manifest.crawl.homepageUrl !== undefined
-      ? { homepageUrl: manifest.crawl.homepageUrl }
-      : {}),
-    capOmittedPageCount: manifest.crawl.sitemapCoverage?.capOmittedPageCount ?? 0,
-  });
-  const findings = normalizeAudit({
-    translationClusters,
-    coverageLimitations,
+  const normalizeInput = buildNormalizeAuditInput({
     auditId: manifest.auditId,
     startedAt: new Date(manifest.startedAt),
-    pages: pagesForNormalization,
-    crawl: {
-      startUrl: manifest.crawl.startUrl,
-      robotsTxtFound: manifest.crawl.robotsTxtFound,
-      pages: classifiedPages.map((page) => ({
-        url: page.url,
-        status: page.status,
-        ...(page.depth !== undefined ? { depth: page.depth } : {}),
-        ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
-        ...(page.discoveredFrom !== undefined ? { discoveredFrom: page.discoveredFrom } : {}),
-      })),
-      ...(manifest.crawl.robotsDisallowMatches !== undefined
-        ? { robotsDisallowMatches: manifest.crawl.robotsDisallowMatches }
-        : {}),
-      ...(manifest.crawl.aiCrawlerBlocks !== undefined
-        ? { aiCrawlerBlocks: manifest.crawl.aiCrawlerBlocks }
-        : {}),
-      ...(manifest.crawl.sitemapUrls !== undefined
-        ? { sitemapUrls: manifest.crawl.sitemapUrls }
-        : {}),
-      ...(manifest.relativeLinkNestingSummary !== undefined
-        ? { relativeLinkNestingSummary: manifest.relativeLinkNestingSummary }
-        : {}),
-    },
-    ...(manifest.cruxFieldData !== undefined ? { cruxFieldData: manifest.cruxFieldData } : {}),
+    manifest,
+    manifestPages: classifiedPages,
+    pages,
+    translationClusters,
   });
+  const findings = normalizeAudit(normalizeInput);
 
   await writeFindingsFile(resolvedDir, findings);
 
@@ -278,7 +225,7 @@ export async function renormalizeAudit(
     ...manifest,
     pages: manifestPages,
     translationClusters,
-    coverageLimitations,
+    coverageLimitations: normalizeInput.coverageLimitations,
     renormalizedAt: new Date().toISOString(),
     findingsProvenance: buildFindingsProvenance(findings),
   };

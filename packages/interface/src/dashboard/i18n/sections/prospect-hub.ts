@@ -313,6 +313,8 @@ export interface ProspectHubStrings {
     draftDiscardedPreviewLive: string;
     draftMailboxDeletePending: string;
     mailboxDeletionWarning: string;
+    draftNotInMailbox: string;
+    draftMailboxCheckFailed: string;
     noDraft: string;
     auditState: string;
     /** `{date}` and `{age}`, the latter one of the scanAge* phrases. */
@@ -753,6 +755,10 @@ export const prospectHub = {
         'La suppression dans la boîte mail est en attente. Une nouvelle tentative sera faite automatiquement ; ne l’envoyez pas.',
       mailboxDeletionWarning:
         '{count} brouillon(s) n’ont pas pu être supprimés de la boîte mail. Une nouvelle tentative sera faite automatiquement ; ne les envoyez pas.',
+      draftNotInMailbox:
+        'Ce brouillon n’est plus dans la boîte mail : il a peut-être été envoyé. Rien n’a été supprimé. Une synchronisation est lancée ; rechargez la page dans un instant.',
+      draftMailboxCheckFailed:
+        'La boîte mail n’a pas pu être vérifiée. Rien n’a été supprimé ; réessayez.',
       noDraft: 'Aucun brouillon en attente.',
       auditState: 'État de l’audit : {state}',
       scanDate: 'Scanné le {date}, {age}',
@@ -837,6 +843,10 @@ export const prospectHub = {
         'preview-wrong-audit': 'aperçu rattaché à un autre audit',
         'thread-not-eligible':
           'la relance n’est possible qu’après l’envoi confirmé du premier email ; envoyez le brouillon depuis la boîte mail puis synchronisez-la',
+        'follow-up-not-due':
+          'la relance n’est pas encore due : elle part 4 jours après le premier email, puis 7 jours après la relance',
+        'thread-needs-review':
+          'ce fil attend une vérification (réponse automatique ou état de la boîte mail inexpliqué) ; ouvrez-le dans la boîte mail avant toute relance',
         'thread-closed':
           'le fil de conversation est clos (réponse, désinscription ou séquence terminée)',
         'prospect-unknown': 'prospect introuvable ; rechargez la page',
@@ -1291,6 +1301,10 @@ export const prospectHub = {
         'Mailbox deletion is pending. The system will retry automatically; do not send this draft.',
       mailboxDeletionWarning:
         '{count} draft(s) could not be deleted from the mailbox. The system will retry automatically; do not send them.',
+      draftNotInMailbox:
+        'This draft is no longer in the mailbox; it may have been sent. Nothing was discarded. A sync has started; reload the page in a moment.',
+      draftMailboxCheckFailed:
+        'The mailbox could not be checked. Nothing was discarded; try again.',
       noDraft: 'No pending draft.',
       auditState: 'Audit state: {state}',
       scanDate: 'Scanned {date}, {age}',
@@ -1372,6 +1386,10 @@ export const prospectHub = {
         'preview-wrong-audit': 'preview belongs to another audit',
         'thread-not-eligible':
           'a follow-up is only possible once the first email is confirmed sent; send the draft from the mailbox, then sync it',
+        'follow-up-not-due':
+          'the follow-up is not due yet: it goes 4 days after the first email, then 7 days after the follow-up',
+        'thread-needs-review':
+          'this thread needs a check (automated answer or an unexplained mailbox state); open it in the mailbox before any follow-up',
         'thread-closed': 'the conversation is closed (reply, opt-out or finished sequence)',
         'prospect-unknown': 'prospect not found; reload the page',
         'previous-draft-missing': 'the previous draft is missing; draft the first email again',

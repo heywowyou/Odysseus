@@ -165,6 +165,32 @@ describe('Plan 067 writing contract', () => {
     );
   });
 
+  it('uses a neutral fallback impact for a fully stripped non-accessibility theme (issue #505)', () => {
+    const stripped = (category: 'seo' | 'accessibility', language: 'fr' | 'en') => {
+      const input: WritingInput = {
+        ...baseInput,
+        language,
+        themes: [{ ...baseInput.themes[0]!, category }],
+      };
+      const unsafe = output();
+      unsafe.themes[0]!.businessImpact =
+        language === 'fr'
+          ? 'Ce défaut pourrait réduire les réservations.'
+          : 'This defect could reduce bookings.';
+      return sanitizeWritingOutput(input, unsafe).output.themes[0]!.businessImpact;
+    };
+
+    expect(stripped('seo', 'fr')).toBe(
+      'Les constats de ce thème et les pages concernées sont détaillés dans ce rapport.',
+    );
+    expect(stripped('seo', 'en')).toBe(
+      'This theme’s findings and the pages concerned are detailed in this report.',
+    );
+    expect(stripped('accessibility', 'fr')).toBe(
+      'Les constats de ce thème limitent directement l’utilisation des éléments concernés pour les visiteurs affectés.',
+    );
+  });
+
   it('removes only a bad executive-summary count sentence and preserves every theme unchanged', () => {
     const unsafe = output();
     unsafe.executiveSummary =

@@ -1,12 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-export const REFERENCE_AUDIT_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
+const REFERENCE_AUDIT_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
 
 export function createReferenceAuditToken(): string {
   return randomBytes(32).toString('base64url');
 }
 
-export function isValidReferenceAuditToken(token: string): boolean {
+function isValidReferenceAuditToken(token: string): boolean {
   return REFERENCE_AUDIT_TOKEN_PATTERN.test(token);
 }
 

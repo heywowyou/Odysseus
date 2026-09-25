@@ -29,7 +29,8 @@ export function extractMixedContentCandidates(input: MixedContentCheckInput): Fi
       severity: severityFromCustom(MIXED_CONTENT_RULE_ID),
       wcagCriteria: [],
       title: 'Page loads insecure (http://) resources',
-      description: `This page is served over https, but loads ${input.insecureResourceUrls.length} resource(s) over plain http. Browsers commonly block or warn about mixed content, which can silently break the page for visitors.`,
+      // Page-independent (issue #503): the resources are in the evidence.
+      description: `This page is served over https, but loads resources over plain http. Browsers commonly block or warn about mixed content, which can silently break the page for visitors.`,
       pageUrl: input.pageUrl,
       element: null,
       rawEvidenceForPage: { insecureResourceUrls: input.insecureResourceUrls },

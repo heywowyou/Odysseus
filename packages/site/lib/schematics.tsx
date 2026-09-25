@@ -248,7 +248,7 @@ export function AccessibilitySchematic({ lang }: { lang: SiteLanguage }) {
               <li
                 key={gap.criterion}
                 className="readout-row fx-clip"
-                style={delay(A11Y_HITS[index] + 0.1)}
+                style={delay((A11Y_HITS[index] ?? 0) + 0.1)}
               >
                 <span className="pin pin-static" aria-hidden="true">
                   {index + 1}

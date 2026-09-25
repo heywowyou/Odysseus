@@ -33,3 +33,12 @@ export function isOutreachOutcome(value: string): value is OutreachOutcome {
 export function isOutreachLostReason(value: string): value is OutreachLostReason {
   return (OUTREACH_LOST_REASONS as readonly string[]).includes(value);
 }
+
+/** Issue #533: the campaign a thread belongs to, stamped when it opens so a
+ *  campaign's funnel can be counted apart from the next one's. A new
+ *  campaign (a new batch, or a change of email template, preview content,
+ *  evidence version or spacing) gets a new version through
+ *  ODYSSEUS_OUTREACH_CAMPAIGN_VERSION. The five threads opened on
+ *  2026-09-24, before the field existed, belong to this first campaign and
+ *  are counted as such. */
+export const FIRST_OUTREACH_CAMPAIGN_VERSION = 'first-100-2026-09';

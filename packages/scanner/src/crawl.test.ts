@@ -196,7 +196,7 @@ describe('crawl page deadlines', () => {
     vi.unstubAllGlobals();
   });
 
-  it('closes the crawl context when loaded-page content extraction stalls', async () => {
+  it('abandons a page whose content extraction stalls and continues on a fresh context (issue #499)', async () => {
     let resolveContentStarted!: () => void;
     const contentStarted = new Promise<void>((resolve) => {
       resolveContentStarted = resolve;
@@ -233,12 +233,18 @@ describe('crawl page deadlines', () => {
       delayMs: 0,
       sitemapMode: 'none',
     });
-    const rejected = expect(pending).rejects.toThrow(/watchdog: crawl page/);
 
     await contentStarted;
     expect(page.content).toHaveBeenCalledTimes(1);
-    await rejected;
-    expect(context.close).toHaveBeenCalledTimes(1);
+    const result = await pending;
+    // The stalled page is that page's error, not the audit's.
+    expect(result.pages).toHaveLength(1);
+    expect(result.pages[0]).toMatchObject({ url: 'https://example.com/', status: 'error' });
+    expect(result.pages[0]!.error).toMatch(/watchdog: crawl page/);
+    // The deadline closed the blocked context and the crawl opened a fresh
+    // one, which it closes when it finishes.
+    expect(browser.newContext).toHaveBeenCalledTimes(2);
+    expect(context.close).toHaveBeenCalledTimes(2);
   });
 });
 

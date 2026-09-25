@@ -117,11 +117,10 @@ export function countOccurrences(finding: FindingResponse): number {
   return finding.occurrences;
 }
 
-/** pageUrls is already deduped by the locked findings contract, but the
- *  column promises unique pages, so defend here rather than trust the
- *  writer. */
+/** The server's count of unique pages: pageUrls is only the first eight
+ *  (issue #510). */
 export function countPages(finding: FindingResponse): number {
-  return new Set(finding.pageUrls).size;
+  return finding.pageUrlCount;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,13 +215,13 @@ export function firstElementSelector(finding: FindingResponse): string | undefin
 }
 
 /** How many affected pages the expansion lists before the "+ N autres"
- *  line; pageUrls is uncapped in storage, so the slice is what keeps a
- *  90-page finding from taking over the card. */
+ *  line. The server already sends no more than this (issue #510,
+ *  routes/audit-finding-response.ts); the slice keeps the card bounded
+ *  either way. */
 const FINDING_PAGE_PREVIEW_COUNT = 8;
 
 /** How many occurrences (selector, snippet, page) the expansion lists
- *  before the "+ N autres" line; elements are already a capped sample in
- *  storage, this only bounds the rendered height. */
+ *  before the "+ N autres" line; the server sends at most this many. */
 const FINDING_ELEMENT_PREVIEW_COUNT = 5;
 
 export interface FindingExpansionView {
@@ -248,9 +247,9 @@ export function findingExpansionView(
     remediation: findingRemediation(finding, ruleCopy, language),
     gloss: findingGloss(finding, ruleCopy),
     pages: pages.slice(0, previewCount),
-    hiddenPageCount: pages.length - previewCount,
+    hiddenPageCount: Math.max(finding.pageUrlCount, pages.length) - previewCount,
     elements: finding.elements.slice(0, elementCount),
-    hiddenElementCount: finding.elements.length - elementCount,
+    hiddenElementCount: Math.max(finding.elementCount, finding.elements.length) - elementCount,
   };
 }
 

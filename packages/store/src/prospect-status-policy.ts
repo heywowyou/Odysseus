@@ -3,7 +3,7 @@ import type { ProspectStatus } from '@odysseus/core';
 /** The only statuses that form an automatic forward-progress path. Terminal
  * outcomes are deliberately not included in this rank: won, lost, and
  * opted-out are sibling branches, not later steps in one ordered list. */
-export const AUTOMATIC_PROGRESS_RANK: Readonly<
+const AUTOMATIC_PROGRESS_RANK: Readonly<
   Record<
     Extract<
       ProspectStatus,
@@ -21,10 +21,8 @@ export const AUTOMATIC_PROGRESS_RANK: Readonly<
   quoted: 6,
 };
 
-export const TERMINAL_PROSPECT_STATUSES: readonly Extract<
-  ProspectStatus,
-  'won' | 'lost' | 'opted-out'
->[] = ['won', 'lost', 'opted-out'];
+const TERMINAL_PROSPECT_STATUSES: readonly Extract<ProspectStatus, 'won' | 'lost' | 'opted-out'>[] =
+  ['won', 'lost', 'opted-out'];
 
 export interface AutomaticStatusDecision {
   allowed: boolean;

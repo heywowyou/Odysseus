@@ -31,6 +31,13 @@ import { fileURLToPath } from 'node:url';
  * matches are sufficient; the copied config JSONs are read relative to
  * import.meta.url and exist under src, so source execution finds them.
  */
+/**
+ * Every run uses UTC, as CI does, so a test that formats a timestamp in the
+ * default time zone gives the same text on the operator's Paris machine as
+ * on the CI runner. Set here, before any worker starts, so each inherits it.
+ */
+process.env.TZ = 'UTC';
+
 const workspaceSourceAliases = ['core', 'store', 'scanner', 'llm', 'interface', 'report'].map(
   (name) => ({
     find: new RegExp(`^@odysseus/${name}$`),
@@ -65,7 +72,9 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
-          include: ['packages/**/*.{test,spec}.{ts,tsx}'],
+          // scripts/**/*.test.mjs: the operator scripts that touch production
+          // data are tested too, not only the packages (issue #519).
+          include: ['packages/**/*.{test,spec}.{ts,tsx}', 'scripts/**/*.test.mjs'],
           exclude: [...configDefaults.exclude, 'packages/**/*.e2e.test.{ts,tsx}'],
         },
       },

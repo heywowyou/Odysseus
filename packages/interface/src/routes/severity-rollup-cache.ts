@@ -1,13 +1,18 @@
 import type { Connection } from 'mongoose';
-import { getSeverityRollups, type SeverityRollup } from '@odysseus/store';
+import { primarySeverityRollup } from '@odysseus/report';
+import {
+  getStoredPrimarySeverityRollups,
+  loadSeverityPopulationInputs,
+  storePrimarySeverityRollup,
+  type SeverityRollup,
+} from '@odysseus/store';
 
 /** Staleness contract: these rollups back the 5-second dashboard poll only.
  *  They can change only when findings are re-persisted by a pipeline run,
- *  and the audit detail route (GET /api/audits/:auditId, via
- *  getSeverityRollup) always computes fresh numbers, so a cached headline
- *  here is safe. Entries are also dropped wholesale whenever the poll's
- *  auditId set changes, so a newly linked or deleted audit is never shown
- *  from a stale key set. */
+ *  and the audit detail route (GET /api/audits/:auditId) always computes
+ *  fresh numbers, so a cached headline here is safe. Entries are also
+ *  dropped wholesale whenever the poll's auditId set changes, so a newly
+ *  linked or deleted audit is never shown from a stale key set. */
 const DEFAULT_ROLLUP_CACHE_TTL_MS = 30_000;
 
 export interface SeverityRollupCacheOptions {
@@ -50,7 +55,7 @@ export async function getSeverityRollupsForPoll(
     }
   }
   if (staleIds.length > 0) {
-    const fresh = await getSeverityRollups(connection, staleIds);
+    const fresh = await loadPrimarySeverityRollups(connection, staleIds);
     const atMs = now();
     for (const [auditId, rollup] of fresh) {
       cache.set(auditId, { rollup, cachedAtMs: atMs });
@@ -58,6 +63,28 @@ export async function getSeverityRollupsForPoll(
     }
   }
   return result;
+}
+
+/**
+ * Issue #508: the list shows the report's primary population, the counts the
+ * audit page shows, never a raw count of every finding. persistAudit stores
+ * them with the findings; an audit persisted before that is computed once
+ * from its projected findings and stored for the next poll.
+ */
+async function loadPrimarySeverityRollups(
+  connection: Connection,
+  auditIds: readonly string[],
+): Promise<Map<string, SeverityRollup>> {
+  const rollups = await getStoredPrimarySeverityRollups(connection, auditIds);
+  const missing = auditIds.filter((auditId) => !rollups.has(auditId));
+  for (const input of await loadSeverityPopulationInputs(connection, missing)) {
+    const rollup = primarySeverityRollup({ pages: input.pages }, input.findings);
+    rollups.set(input.auditId, rollup);
+    if (input.findingsDigest !== undefined) {
+      await storePrimarySeverityRollup(connection, input.auditId, input.findingsDigest, rollup);
+    }
+  }
+  return rollups;
 }
 
 /** Test isolation only: the cache is module-level by design so the poll

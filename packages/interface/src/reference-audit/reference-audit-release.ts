@@ -75,15 +75,6 @@ export interface BuildReferenceAuditCandidateResult {
   showcase: ReturnType<typeof buildReferenceAuditShowcase>;
 }
 
-export interface BuildReferenceAuditReleaseInput extends BuildReferenceAuditCandidateInput {
-  store: ReferenceAuditObjectStore;
-}
-
-export interface BuildReferenceAuditReleaseResult extends BuildReferenceAuditCandidateResult {
-  publication: PublishReferenceAuditResult;
-  pageCount: number;
-}
-
 function sha256(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
@@ -191,15 +182,6 @@ export async function publishReferenceAuditCandidate(
     referenceReleaseVersion: release.referenceReleaseVersion,
     publishedAt: new Date(),
   });
-}
-
-/** Build and publish in one step, for callers that have no review gap. */
-export async function buildAndPublishReferenceAuditRelease(
-  input: BuildReferenceAuditReleaseInput,
-): Promise<BuildReferenceAuditReleaseResult> {
-  const built = await buildReferenceAuditCandidate(input);
-  const publication = await publishReferenceAuditCandidate(input.store, built);
-  return { ...built, publication, pageCount: built.release.pageCount };
 }
 
 /** Assemble a reference source from one stored audit exactly as a paid

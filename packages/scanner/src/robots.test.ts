@@ -3,6 +3,7 @@ import {
   checkAiCrawlerAccess,
   findBlockingPattern,
   isAllowedByRobots,
+  normalizeRobotsPath,
   parseRobotsTxt,
   robotsProductToken,
 } from './robots.js';
@@ -267,5 +268,39 @@ describe('checkAiCrawlerAccess', () => {
     const text = 'User-agent: *\nDisallow: /\n';
     const results = checkAiCrawlerAccess(text, ['PerplexityBot']);
     expect(results).toEqual([{ agent: 'PerplexityBot', blocked: true, disallowPattern: '/' }]);
+  });
+});
+
+describe('percent-encoded matching (issue #492)', () => {
+  const rules = (disallow: string[], allow: string[] = []) => ({
+    found: true,
+    disallow,
+    allow,
+    sitemapUrls: [],
+  });
+
+  it('matches a rule written with accents against the encoded path, in either hex case', () => {
+    const accented = rules(['/réservation']);
+    expect(findBlockingPattern(accented, '/r%C3%A9servation')).toBe('/réservation');
+    expect(findBlockingPattern(accented, '/r%c3%a9servation/chambre')).toBe('/réservation');
+    expect(findBlockingPattern(accented, '/reservation')).toBeUndefined();
+  });
+
+  it('matches an encoded rule against an encoded path whatever the hex case', () => {
+    expect(findBlockingPattern(rules(['/r%c3%a9servation']), '/r%C3%A9servation')).toBe(
+      '/r%c3%a9servation',
+    );
+  });
+
+  it('decides the longest match on encoded length', () => {
+    // '/é' is 2 characters as written but 7 encoded, longer than '/%C3'.
+    const mixed = rules(['/%C3%A9t'], ['/été']);
+    expect(findBlockingPattern(mixed, '/%C3%A9t%C3%A9')).toBeUndefined();
+    expect(normalizeRobotsPath('/été')).toBe('/%C3%A9t%C3%A9');
+  });
+
+  it('collapses runs of wildcards and keeps the end anchor', () => {
+    expect(findBlockingPattern(rules(['/**.pdf$']), '/docs/tarifs.pdf')).toBe('/**.pdf$');
+    expect(findBlockingPattern(rules(['/**.pdf$']), '/docs/tarifs.pdf?x=1')).toBeUndefined();
   });
 });

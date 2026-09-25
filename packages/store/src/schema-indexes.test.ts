@@ -1,49 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import type { Connection, Model } from 'mongoose';
-import { createAnalysisModel } from './schemas/analysis.schema.js';
-import { createAuditModel } from './schemas/audit.schema.js';
-import { createBenchmarkCandidateModel } from './schemas/benchmark-candidate.schema.js';
-import { createDirectoryEntryModel } from './schemas/directory-entry.schema.js';
-import { createFindingModel } from './schemas/finding.schema.js';
-import { createJobModel } from './schemas/job.schema.js';
-import { createJobQueueStateModel } from './schemas/job-queue-state.schema.js';
-import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
-import { createOutreachOutcomeModel } from './schemas/outreach-outcome.schema.js';
-import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
-import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
-import { createProspectEventModel } from './schemas/prospect-event.schema.js';
-import { createProspectHubModel } from './schemas/prospect-hub.schema.js';
-import { createReportApprovalModel } from './schemas/report-approval.schema.js';
-import { createReportModel } from './schemas/report.schema.js';
-import { createRetentionRunModel } from './schemas/retention-run.schema.js';
-import { createSireneCacheModel } from './schemas/sirene-cache.schema.js';
-import { createSuppressionModel } from './schemas/suppression.schema.js';
-import { probeMongoAvailability, scopedMongoTestUri } from './test-support.js';
-
-/** Every model factory under schemas/. Mongoose's auto-index swallows an
- *  index build error, so an index MongoDB cannot build (an unsupported
- *  partial filter, say) otherwise ships silently and simply never exists.
- *  A new schema file must be added here. */
-const MODEL_FACTORIES: ReadonlyArray<(connection: Connection) => Model<never>> = [
-  createAnalysisModel,
-  createAuditModel,
-  createBenchmarkCandidateModel,
-  createDirectoryEntryModel,
-  createFindingModel,
-  createJobModel,
-  createJobQueueStateModel,
-  createOutreachDraftModel,
-  createOutreachOutcomeModel,
-  createOutreachPreviewModel,
-  createOutreachThreadModel,
-  createProspectEventModel,
-  createProspectHubModel,
-  createReportApprovalModel,
-  createReportModel,
-  createRetentionRunModel,
-  createSireneCacheModel,
-  createSuppressionModel,
-] as never;
+import { MODEL_FACTORIES, probeMongoAvailability, scopedMongoTestUri } from './test-support.js';
 
 const { available, connection } = await probeMongoAvailability(
   scopedMongoTestUri('schema_indexes'),

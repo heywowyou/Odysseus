@@ -1,5 +1,5 @@
 /**
- * The input contract for a public-safe outreach preview, and the guard that
+ * The contract for a public-safe outreach preview, and the guard that
  * decides whether a string may appear in one.
  *
  * **Why this is a contract and not a projection of the report input.** The paid
@@ -16,14 +16,7 @@
  * only consumer: plan 010's prose validator lives in `llm`, which depends on
  * `core` and nothing else in the workspace, so a contract held in `report`
  * would be unreachable there. Rendering stays in `report`; the decision about
- * what may be said lives here, beside its sibling `hotel-prescan-evidence.ts`.
- *
- * **PNG only, deliberately narrower than the plan text.** Plan 008 permitted
- * `data:image/webp`. The shipped evidence contract is PNG end to end - the
- * `ref` regex, the recorded `mimeType`, and the promotion step all say PNG -
- * so nothing in this repository can produce a webp. Accepting one would add a
- * code path with no producer and widen a contract trade-off 36 says not to
- * widen. Do not "fix" this back to a union.
+ * what may be said lives here.
  *
  * **The offer price is not a field.** It is
  * `ODYSSEUS_FULL_AUDIT_PRICE_EUR_HT`, injected by the renderer. Because these
@@ -31,33 +24,20 @@
  * than quietly quoting a different one, which is what "sourced from one
  * code-owned constant" actually has to mean to be worth stating.
  *
- * **v1, v2 and v3.** The `OutreachPreviewInput` shape below is the historical
- * v1 prescan contract and `OutreachPreviewSummary` is the historical v2
- * full-scan scorecard. Plan 069 makes `OutreachPreviewSummaryV3` the current
- * new-publication contract: measured aggregates remain deterministic, the
- * first three cards follow the selected report priority order while using only
- * reviewed public copy, and scoped client limitations are admitted explicitly.
- * Historical v1/v2 shapes stay typed for compatibility. V3 still has no image,
- * model-prose, selector, exact-URL, finding-ID, remediation or raw-evidence
- * field: unsafe report data has nowhere to go.
+ * **v3 only.** `OutreachPreviewSummaryV3` is the one contract (plan 069):
+ * measured aggregates stay deterministic, the three cards follow the selected
+ * report priority order using only reviewed public copy, and scoped client
+ * limitations are admitted explicitly. Issue #530 removed the v1 prescan
+ * input and the v2 scorecard; an older published row keeps its page in the
+ * bucket, and drafting from it is refused until it is republished. V3 has no
+ * image, model-prose, selector, exact-URL, finding-ID, remediation or
+ * raw-evidence field: unsafe report data has nowhere to go.
  */
 
 import { z } from 'zod';
-import type { Grade } from '../grade.js';
 import type { FindingCategory } from './findings.js';
 import { REGIME_TABLE, getRegime } from '../compliance/regimes.js';
 import { formatFullAuditPrice } from '../offer/pricing.js';
-import {
-  HOTEL_EVIDENCE_MAX_ASSET_BYTES,
-  HOTEL_EVIDENCE_MAX_SUMMARIES,
-  HOTEL_EVIDENCE_MAX_TOTAL_BYTES,
-  HOTEL_EVIDENCE_MIN_SUMMARIES,
-  fixedObservationSchema,
-} from './hotel-prescan-evidence.js';
-
-/** Wide enough for a full-page capture on a large viewport, and no wider. A
- *  dimension far above this is not a screenshot of a web page. */
-const MAX_IMAGE_DIMENSION_PX = 8000;
 const MAX_URL_LENGTH = 300;
 const MAX_BUSINESS_NAME_LENGTH = 120;
 
@@ -73,41 +53,6 @@ const ALLOWED_LINK_HOSTNAMES = new Set([
 ]);
 
 export type OutreachPreviewLanguage = 'fr' | 'en';
-
-export interface PublicFindingSummary {
-  observation: { fr: string; en: string };
-  severity: 'critical' | 'serious' | 'moderate' | 'minor';
-  wcagCriteria: string[];
-  pageRole: 'homepage' | 'booking' | 'content';
-}
-
-export interface OutreachPreviewImage {
-  kind: 'render-comparison' | 'specific-failure';
-  base64: string;
-  byteSize: number;
-  width: number;
-  height: number;
-  altText: { fr: string; en: string };
-}
-
-export interface OutreachPreviewInput {
-  language: OutreachPreviewLanguage;
-  businessName: string;
-  /** Where the reader goes next. All three are checked against the same host
-   *  allowlist; there is no fourth link and no inline JavaScript to add one. */
-  links: { offer: string; privacy: string; optOut: string };
-  /** RGPD article 14 requires telling someone whose data we processed without
-   *  asking them where it came from. Enumerated, not free text, so a preview
-   *  cannot invent a provenance nobody can support. */
-  dataOrigins: Array<'public-hotel-catalogue' | 'public-website' | 'public-business-registry'>;
-  summaries: PublicFindingSummary[];
-  images: OutreachPreviewImage[];
-  /** Built by `buildOutreachFactsBlock`. Paragraph strings, already
-   *  deterministic; the schema re-checks them so a hand-built input cannot
-   *  smuggle prose in through this field. */
-  facts: { state: 'omitted' } | { state: 'rendered'; heading: string; paragraphs: string[] };
-  observedAt: Date;
-}
 
 const bilingualSchema = z.object({ fr: z.string().min(1), en: z.string().min(1) }).strict();
 
@@ -138,42 +83,6 @@ const linkSchema = z
     }
   });
 
-const PNG_MAGIC = 'iVBORw0KGgo';
-
-const imageSchema = z
-  .object({
-    kind: z.enum(['render-comparison', 'specific-failure']),
-    base64: z.string().regex(/^[A-Za-z0-9+/]+={0,2}$/),
-    byteSize: z.number().int().positive().max(HOTEL_EVIDENCE_MAX_ASSET_BYTES),
-    width: z.number().int().positive().max(MAX_IMAGE_DIMENSION_PX),
-    height: z.number().int().positive().max(MAX_IMAGE_DIMENSION_PX),
-    altText: bilingualSchema,
-  })
-  .strict()
-  .superRefine((image, context) => {
-    // A declared size that disagrees with the payload means one of the two was
-    // computed somewhere else, and the caps are enforced on the declared one.
-    const decodedLength = Buffer.from(image.base64, 'base64').byteLength;
-    if (decodedLength !== image.byteSize) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'byteSize must equal the decoded payload length',
-      });
-    }
-    if (!image.base64.startsWith(PNG_MAGIC)) {
-      context.addIssue({ code: z.ZodIssueCode.custom, message: 'payload must be a PNG' });
-    }
-  });
-
-const summarySchema = z
-  .object({
-    observation: fixedObservationSchema,
-    severity: z.enum(['critical', 'serious', 'moderate', 'minor']),
-    wcagCriteria: z.array(z.string().regex(/^\d+\.\d+\.\d+$/)),
-    pageRole: z.enum(['homepage', 'booking', 'content']),
-  })
-  .strict();
-
 const factsSchema = z.union([
   z.object({ state: z.literal('omitted') }).strict(),
   z
@@ -184,69 +93,6 @@ const factsSchema = z.union([
     })
     .strict(),
 ]);
-
-export const outreachPreviewInputSchema: z.ZodType<OutreachPreviewInput> = z
-  .object({
-    language: z.enum(['fr', 'en']),
-    businessName: z.string().min(1).max(MAX_BUSINESS_NAME_LENGTH),
-    links: z.object({ offer: linkSchema, privacy: linkSchema, optOut: linkSchema }).strict(),
-    dataOrigins: z
-      .array(z.enum(['public-hotel-catalogue', 'public-website', 'public-business-registry']))
-      .min(1),
-    summaries: z
-      .array(summarySchema)
-      .min(HOTEL_EVIDENCE_MIN_SUMMARIES)
-      .max(HOTEL_EVIDENCE_MAX_SUMMARIES),
-    images: z.array(imageSchema).max(2),
-    facts: factsSchema,
-    observedAt: z.date(),
-  })
-  .strict()
-  .superRefine((input, context) => {
-    // One of each at most: the two kinds are two logical assets, not a gallery.
-    const kinds = input.images.map((image) => image.kind);
-    if (new Set(kinds).size !== kinds.length) {
-      context.addIssue({ code: z.ZodIssueCode.custom, message: 'one image per kind at most' });
-    }
-    const bytes = input.images.reduce((total, image) => total + image.byteSize, 0);
-    if (bytes > HOTEL_EVIDENCE_MAX_TOTAL_BYTES) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'images exceed the evidence contract total byte cap',
-      });
-    }
-    if (input.facts.state === 'rendered') {
-      for (const paragraph of [input.facts.heading, ...input.facts.paragraphs]) {
-        const hit = containsProhibitedPreviewContent(paragraph);
-        if (hit !== null) {
-          context.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: `facts paragraph contains prohibited content: ${hit}`,
-          });
-        }
-      }
-    }
-    if (containsProhibitedPreviewContent(input.businessName) !== null) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'businessName contains prohibited content',
-      });
-    }
-    // Alt text is free text that ends up inside an HTML attribute. Escaping
-    // makes it inert, but an escaped `onerror=` still reads as an event handler
-    // to anyone scanning the document, and to the document lint. Rejecting it
-    // here keeps that lint strict enough to be worth having.
-    for (const image of input.images) {
-      for (const language of ['fr', 'en'] as const) {
-        if (containsProhibitedPreviewContent(image.altText[language]) !== null) {
-          context.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'image altText contains prohibited content',
-          });
-        }
-      }
-    }
-  });
 
 /** Currency amounts this document is allowed to contain: the offer price, and
  *  the thresholds written into the regime table's own criteria. Anything else
@@ -338,14 +184,6 @@ export function containsProhibitedPreviewContent(text: string): string | null {
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// v2: the full-scan aggregate scorecard (plan 037)
-// ---------------------------------------------------------------------------
-
-/** Content version recorded on the v2 document and on its publication row.
- *  v1 rows keep `'v1'`; the two never mix in one document. */
-export const OUTREACH_PREVIEW_CONTENT_VERSION_V2 = 'v2' as const;
-
 export type OutreachDataOrigin =
   'public-hotel-catalogue' | 'public-website' | 'public-business-registry';
 
@@ -379,33 +217,6 @@ export interface OutreachPreviewRecipientFacts {
   dataOrigins: OutreachDataOrigin[];
 }
 
-export interface OutreachPreviewSummary {
-  contentVersion: typeof OUTREACH_PREVIEW_CONTENT_VERSION_V2;
-  /** The one audit this document aggregates. A later or different audit of
-   *  the same domain can never be substituted for it. */
-  auditId: string;
-  observedAt: Date;
-  /** Rendering language of this document; proof-card titles stay bilingual
-   *  so the contract does not need rebuilding per language. */
-  language: OutreachPreviewLanguage;
-  recipient: OutreachPreviewRecipientFacts;
-  links: { offer: string; privacy: string; optOut: string };
-  coverage: OutreachCoverageFacts;
-  /** Distinct findings after dedupe, and the union of pages they name.
-   *  Occurrences are deliberately uncountable here. */
-  distinctFindingCount: number;
-  affectedPageCount: number;
-  severityTotals: Record<OutreachPreviewSeverity, number>;
-  /** Operator-confirmed replacement for the severity-derived display grade.
-   *  The review reason remains private and never enters the public preview. */
-  gradeOverride?: Grade | undefined;
-  proofCards: [OutreachProofCard, OutreachProofCard, OutreachProofCard];
-  /** Built by `buildOutreachFactsBlock`, same shape and same re-validation
-   *  as v1: deterministic paragraphs, or omitted when the sources do not
-   *  permit the block. */
-  facts: { state: 'omitted' } | { state: 'rendered'; heading: string; paragraphs: string[] };
-}
-
 const countSchema = (max: number) => z.number().int().min(0).max(max);
 
 const MAX_TOTAL_PAGES = 100_000;
@@ -419,111 +230,11 @@ const severityTotalsSchema = z
   })
   .strict();
 
-const proofCardSchema = z
-  .object({
-    title: bilingualSchema,
-    category: z.enum(['accessibility', 'seo', 'geo', 'performance', 'rendering', 'privacy']),
-    severity: z.enum(['critical', 'serious', 'moderate', 'minor']),
-    affectedPageCount: z.number().int().min(1).max(MAX_TOTAL_PAGES),
-  })
-  .strict();
-
-export const outreachPreviewSummarySchema: z.ZodType<OutreachPreviewSummary> = z
-  .object({
-    contentVersion: z.literal(OUTREACH_PREVIEW_CONTENT_VERSION_V2),
-    auditId: z.string().min(1).max(64),
-    observedAt: z.date(),
-    language: z.enum(['fr', 'en']),
-    recipient: z
-      .object({
-        businessName: z.string().min(1).max(MAX_BUSINESS_NAME_LENGTH),
-        dataOrigins: z
-          .array(z.enum(['public-hotel-catalogue', 'public-website', 'public-business-registry']))
-          .min(1),
-      })
-      .strict(),
-    links: z.object({ offer: linkSchema, privacy: linkSchema, optOut: linkSchema }).strict(),
-    coverage: z
-      .object({
-        inventoriedPageCount: countSchema(MAX_TOTAL_PAGES),
-        contentCheckedPageCount: countSchema(MAX_TOTAL_PAGES),
-        performanceMeasuredPageCount: countSchema(MAX_TOTAL_PAGES),
-      })
-      .strict(),
-    distinctFindingCount: countSchema(MAX_TOTAL_PAGES),
-    affectedPageCount: countSchema(MAX_TOTAL_PAGES),
-    severityTotals: severityTotalsSchema,
-    gradeOverride: z.enum(['A', 'B', 'C', 'D']).optional(),
-    proofCards: z.tuple([proofCardSchema, proofCardSchema, proofCardSchema]),
-    facts: factsSchema,
-  })
-  .strict()
-  .superRefine((input, context) => {
-    const { coverage, severityTotals } = input;
-    if (
-      coverage.contentCheckedPageCount > coverage.inventoriedPageCount ||
-      coverage.performanceMeasuredPageCount > coverage.inventoriedPageCount
-    ) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'coverage subsets cannot exceed the inventoried page count',
-      });
-    }
-    const severitySum =
-      severityTotals.critical +
-      severityTotals.serious +
-      severityTotals.moderate +
-      severityTotals.minor;
-    if (severitySum !== input.distinctFindingCount) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'severity totals must sum to the distinct finding count',
-      });
-    }
-    if (input.distinctFindingCount < input.proofCards.length) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'proof cards cannot exceed distinct findings',
-      });
-    }
-    if (containsProhibitedPreviewContent(input.recipient.businessName) !== null) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'businessName contains prohibited content',
-      });
-    }
-    // Proof-card titles are reviewed catalog copy, but the guard runs over
-    // them anyway: the document lint and this schema are the two layers that
-    // must both stay true regardless of what enters the catalog.
-    for (const card of input.proofCards) {
-      for (const language of ['fr', 'en'] as const) {
-        if (containsProhibitedPreviewContent(card.title[language]) !== null) {
-          context.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: `proof card title contains prohibited content: ${card.title[language]}`,
-          });
-        }
-      }
-    }
-    if (input.facts.state === 'rendered') {
-      for (const paragraph of [input.facts.heading, ...input.facts.paragraphs]) {
-        const hit = containsProhibitedPreviewContent(paragraph);
-        if (hit !== null) {
-          context.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: `facts paragraph contains prohibited content: ${hit}`,
-          });
-        }
-      }
-    }
-  });
-
 // ---------------------------------------------------------------------------
 // v3: grounded report-aligned preview (plan 069)
 // ---------------------------------------------------------------------------
 
-/** New publications use v3. Historical v1/v2 objects remain immutable and
- * keep their original contracts. */
+/** The one published content version (issue #530). */
 export const OUTREACH_PREVIEW_CONTENT_VERSION_V3 = 'v3' as const;
 
 export interface OutreachPriorityCard {

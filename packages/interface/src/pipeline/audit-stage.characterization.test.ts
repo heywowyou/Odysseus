@@ -99,7 +99,15 @@ import { persistAudit } from '@odysseus/store';
 import { runAuditStage } from './audit-stage.js';
 
 const URL = 'https://example.com/';
-const FINDINGS = [{ findingId: 'finding-1', ruleId: 'image-alt' }];
+const FINDINGS = [
+  {
+    findingId: 'finding-1',
+    ruleId: 'image-alt',
+    severity: 'serious',
+    pageUrls: [URL],
+    elements: [],
+  },
+];
 const MANIFEST = {
   auditId: 'audit-stage-characterization',
   kind: 'audit',

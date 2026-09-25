@@ -11,7 +11,7 @@ import {
  *  Higher than the render-diff emission threshold (20%, in @odysseus/core)
  *  deliberately: most client-rendered pages are not wrapper pages, this
  *  only catches the near-total case. See docs/archive/report-v2-refactor.md A1-A3. */
-export const WRAPPER_PAGE_MISSING_PERCENT_THRESHOLD = 95;
+const WRAPPER_PAGE_MISSING_PERCENT_THRESHOLD = 95;
 
 export type DiversionReason = 'wrapper' | 'legal' | 'regime-dependent';
 

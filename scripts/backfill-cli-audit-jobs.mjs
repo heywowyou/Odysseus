@@ -21,6 +21,7 @@
 
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
+import { resolveMongoDbName } from './lib/mongo-db-name.mjs';
 
 // The driver is a transitive dependency here: the repo root resolves it, and
 // the production image keeps it under the store package. Try both rather
@@ -59,11 +60,22 @@ if (!uri) {
   process.exit(1);
 }
 
+// Issue #524: the store's rule, not the driver default. client.db() with no
+// name used whatever the URI named, which only worked because production's
+// database happens to be the driver's default `test`.
+const dbName = resolveMongoDbName(uri);
+if (dbName === undefined) {
+  console.error(
+    'backfill-cli-audit-jobs: MONGODB_URI names no database and MONGODB_DB_NAME is not set; refusing to guess one',
+  );
+  process.exit(1);
+}
+
 const client = new MongoClient(uri);
 
 try {
   await client.connect();
-  const db = client.db();
+  const db = client.db(dbName);
   const audits = db.collection('audits');
   const jobs = db.collection('jobs');
 

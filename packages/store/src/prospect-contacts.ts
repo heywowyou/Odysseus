@@ -182,10 +182,15 @@ export async function removeProspectEmail(
     );
   }
 
+  // Issue #481: blacklisting one contact is an address decision. A
+  // domain-wide row would suppress a whole mail provider (gmail.com,
+  // orange.fr) or every address at the hotel; objections to a whole domain
+  // go through opt-out.
   if (options.suppress === true) {
     await addSuppressionEntry(connection, {
       domain: emailDomain(removed.address) ?? '',
       address: removed.address,
+      addressOnly: true,
       reasonCode: 'operator-request',
       reason: 'address removed from the prospect and blacklisted by the operator',
     });

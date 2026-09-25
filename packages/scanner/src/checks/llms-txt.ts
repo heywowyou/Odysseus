@@ -13,6 +13,7 @@
  */
 
 import { classifyDocumentWall, extractHostSignalMarkers } from '@odysseus/core';
+import { isServedPlainTextFile } from '../bounded-body.js';
 import { getCrawlerUserAgent } from '../config.js';
 import type { NetworkSafetyDisposition, NetworkTargetPolicy } from '../network-target-policy.js';
 import { fetchWithNetworkPolicy, NetworkSafetyBlockedError } from '../safe-fetch.js';
@@ -86,6 +87,9 @@ export async function checkLlmsTxt(
       return { found: false, fetchError: `HTTP wall response (${wall.reason})` };
     }
     if (!response.ok) return { found: false, fetchError: `HTTP ${response.status}` };
+    // Issue #495: hotel CMSs redirect unknown paths to the homepage and SPAs
+    // answer 200 with index.html. Neither is an llms.txt.
+    if (!isServedPlainTextFile(url, response, sample)) return { found: false };
     return { found: true, url };
   } catch (error) {
     if (error instanceof NetworkSafetyBlockedError) throw error;

@@ -40,12 +40,12 @@ export function ensureEnvLoaded(): void {
   }
 }
 
-export const DEFAULT_ARTIFACTS_DIR_NAME = 'artifacts';
+const DEFAULT_ARTIFACTS_DIR_NAME = 'artifacts';
 /** Plan 072: where the operator's finalization working sets live. Separate
  *  from `artifacts/`, which holds what a scan produced: `reports/` holds what
  *  the operator did to a report afterwards, and every file in it is client
  *  data. Already in .gitignore alongside `*.pdf`. */
-export const DEFAULT_REPORTS_DIR_NAME = 'reports';
+const DEFAULT_REPORTS_DIR_NAME = 'reports';
 /** Sentinel meaning "crawl until the frontier is exhausted". A real
  *  number rather than Infinity so it survives JSON round-tripping into the
  *  manifest and Mongoose's Number schema unchanged; callers that do
@@ -90,7 +90,7 @@ export const UNLIMITED_MAX_CRAWL_DEPTH = Number.MAX_SAFE_INTEGER;
  *  This inherits the page cap's residual risk unchanged and makes it slightly
  *  sharper: an effectively infinite URL space is now bounded only by the
  *  continuation guard. Crawl a site of unknown shape with an explicit bound. */
-export const DEFAULT_MAX_CRAWL_DEPTH = UNLIMITED_MAX_CRAWL_DEPTH;
+const DEFAULT_MAX_CRAWL_DEPTH = UNLIMITED_MAX_CRAWL_DEPTH;
 /** Changed 2026-09-18 from 1000 as part of plan 059 decision 18, which makes
  *  one host-wide scheduler (host-request-scheduler.ts) the only thing allowed
  *  to start a request against the audited site. The number moved because its
@@ -123,8 +123,8 @@ export const DEFAULT_MAX_CRAWL_DEPTH = UNLIMITED_MAX_CRAWL_DEPTH;
  *  The 333ms floor therefore applies once, globally, to scanner-initiated
  *  requests against the audited host. A stricter robots Crawl-delay still
  *  raises the scheduler and rate-limit feedback can only slow it further. */
-export const DEFAULT_CRAWL_DELAY_MS = 333;
-export const DEFAULT_PAGE_TIMEOUT_MS = 30_000;
+const DEFAULT_CRAWL_DELAY_MS = 333;
+const DEFAULT_PAGE_TIMEOUT_MS = 30_000;
 /** How long the rendered pass waits for the network to fall idle *after*
  *  `load` has already fired, before giving up and measuring anyway.
  *  Bounded because `networkidle` is not merely slow on some real sites,
@@ -136,7 +136,7 @@ export const DEFAULT_PAGE_TIMEOUT_MS = 30_000;
  *  Waiting is still worth attempting: a slow client-rendered SPA can
  *  genuinely still be painting when `load` fires, and measuring then
  *  would overstate missingPercent. */
-export const DEFAULT_RENDER_SETTLE_TIMEOUT_MS = 8_000;
+const DEFAULT_RENDER_SETTLE_TIMEOUT_MS = 8_000;
 /** Lighthouse's own navigation-mode run routinely runs well past a single
  *  page's load timeout, since it collects a full trace across throttled
  *  network/CPU simulation on top of the audits themselves. Raised from
@@ -155,7 +155,7 @@ export const DEFAULT_LIGHTHOUSE_TIMEOUT_MS = 120_000;
  *  a higher request rate. It is also the scheduler's concurrency bound, which
  *  the scheduler may lower on its own after a rate-limit signal. The crawl
  *  (link-discovery) phase is unaffected and stays sequential. */
-export const DEFAULT_SCAN_CONCURRENCY = 3;
+const DEFAULT_SCAN_CONCURRENCY = 3;
 
 /**
  * Single configured root for everything the scanner writes to disk, so a

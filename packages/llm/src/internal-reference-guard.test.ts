@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   findInternalReferenceViolationsInFields,
-  hasInternalThemeKeyReference,
+  hasInternalReference,
 } from './internal-reference-guard.js';
 import { sanitizeWritingOutput } from './sanitize-writing-output.js';
 import {
@@ -18,7 +18,7 @@ describe('internal theme-key reference check', () => {
     'See t12 for the details.',
     'Les thèmes (t1, t2) se recoupent.',
   ])('flags %s', (text) => {
-    expect(hasInternalThemeKeyReference(text)).toBe(true);
+    expect(hasInternalReference(text)).toBe(true);
   });
 
   it.each([
@@ -30,7 +30,24 @@ describe('internal theme-key reference check', () => {
     'Le fichier t3-hero.jpg est trop lourd.',
     'Voir test1 et at3.',
   ])('does not flag %s', (text) => {
-    expect(hasInternalThemeKeyReference(text)).toBe(false);
+    expect(hasInternalReference(text)).toBe(false);
+  });
+
+  it.each([
+    'Voir le constat f012.',
+    'Les constats (f012, f013) se recoupent.',
+    'f10234 est isolé.',
+  ])('flags the finding ID in %s (issue #507)', (text) => {
+    expect(hasInternalReference(text)).toBe(true);
+  });
+
+  it.each([
+    'f12 est court.',
+    'La référence ref012 est interne au site.',
+    'Le fichier f012a.jpg.',
+    'Le code F012.',
+  ])('does not flag %s as a finding ID', (text) => {
+    expect(hasInternalReference(text)).toBe(false);
   });
 
   it('reports the field path and the matched key', () => {
@@ -101,5 +118,29 @@ describe('internal theme-key reference sanitation', () => {
     );
     expect(sanitized.output.themes).toEqual(raw.themes);
     expect(sanitized.warnings).toEqual([{ code: 'internal-reference-removed', field: 'notes' }]);
+  });
+
+  it('removes a sentence citing a finding ID (issue #507)', () => {
+    const raw: WritingPassOutput = {
+      themes: [
+        {
+          themeKey: 't1',
+          title: 'Contrastes et lisibilité',
+          businessImpact:
+            'Certains textes restent difficiles à lire (f012). Le contraste peut être relevé.',
+          recommendedActions: ['Augmentez le contraste des textes concernés.'],
+        },
+      ],
+      executiveSummary: 'Les constats portent surtout sur la lisibilité.',
+      notes: 'La portée reste limitée aux éléments mesurés.',
+    };
+
+    const sanitized = sanitizeWritingOutput(input, raw);
+
+    expect(sanitized.output.themes[0]!.businessImpact).toBe('Le contraste peut être relevé.');
+    expect(sanitized.warnings).toContainEqual({
+      code: 'internal-reference-removed',
+      field: 'themes[0](t1).businessImpact',
+    });
   });
 });

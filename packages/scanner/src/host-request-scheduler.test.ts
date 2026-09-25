@@ -387,3 +387,89 @@ describe('pressure recovers after clean request starts', () => {
     expect(scheduler.effectiveDelayMs).toBe(30);
   });
 });
+
+describe('the robots Crawl-delay is a floor, not a starting point (issue #489)', () => {
+  it('never recovers below a robots-raised delay', async () => {
+    const clock = fakeClock();
+    const scheduler = new HostRequestScheduler({
+      floorDelayMs: 1000,
+      maxConcurrency: 3,
+      ...clock,
+    });
+
+    scheduler.raiseDelayTo(4000);
+    scheduler.noteRateLimited();
+    scheduler.noteRateLimited();
+    for (let index = 0; index < 100; index += 1) await scheduler.pace();
+
+    expect(scheduler.floorDelayMs).toBe(4000);
+    expect(scheduler.effectiveDelayMs).toBe(4000);
+  });
+
+  it('lets a Retry-After raise recover down to the configured floor', async () => {
+    const clock = fakeClock();
+    const scheduler = new HostRequestScheduler({
+      floorDelayMs: 1000,
+      maxConcurrency: 1,
+      ...clock,
+    });
+
+    scheduler.noteRateLimited({
+      pageUrl: 'https://example.com/',
+      kind: 'rate-limit',
+      fetcher: 'crawl',
+      retryAfterMs: 8000,
+    });
+    for (let index = 0; index < 100; index += 1) await scheduler.pace();
+
+    expect(scheduler.floorDelayMs).toBe(1000);
+    expect(scheduler.effectiveDelayMs).toBe(1000);
+  });
+});
+
+describe('a Retry-After wait is bounded (issue #490)', () => {
+  it('waits at most the backoff cap and keeps the value the site sent', async () => {
+    const clock = fakeClock();
+    const events: HostPushbackEvent[] = [];
+    const scheduler = new HostRequestScheduler({
+      floorDelayMs: 1000,
+      maxConcurrency: 1,
+      ...clock,
+      onPushback: (event) => events.push(event),
+    });
+
+    scheduler.noteRateLimited({
+      pageUrl: 'https://example.com/',
+      kind: 'rate-limit',
+      fetcher: 'crawl',
+      status: 429,
+      retryAfterMs: 86_400_000,
+    });
+    expect(scheduler.retryAfterRemainingMs).toBe(60_000);
+    await scheduler.pace();
+
+    expect(clock.now()).toBeLessThanOrEqual(60_000);
+    expect(scheduler.retryAfterRemainingMs).toBe(0);
+    expect(events[0]).toMatchObject({ retryAfterMs: 86_400_000, retryAfterCapped: true });
+  });
+
+  it('does not mark a Retry-After within the cap as capped', () => {
+    const events: HostPushbackEvent[] = [];
+    const scheduler = new HostRequestScheduler({
+      floorDelayMs: 1000,
+      maxConcurrency: 1,
+      now: () => 0,
+      onPushback: (event) => events.push(event),
+    });
+
+    scheduler.noteRateLimited({
+      pageUrl: 'https://example.com/',
+      kind: 'rate-limit',
+      fetcher: 'crawl',
+      retryAfterMs: 5000,
+    });
+
+    expect(events[0]?.retryAfterCapped).toBeUndefined();
+    expect(scheduler.retryAfterRemainingMs).toBe(5000);
+  });
+});

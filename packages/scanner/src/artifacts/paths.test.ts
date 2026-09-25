@@ -131,3 +131,25 @@ describe('buildArtifactBucketKey', () => {
     expect(key).toBe('example.com/2026-08-02T14-32-05Z/pages/root-abc123/scan.json');
   });
 });
+
+describe('buildPageDir name length (issue #498)', () => {
+  it('keeps a long non-ASCII path within 255 bytes', () => {
+    const name = buildPageDir(
+      `https://example.jp/${'東京ホテルの客室と朝食プランのご案内ページです'.repeat(1)}/${'予約'.repeat(8)}`,
+    );
+    expect(Buffer.byteLength(name)).toBeLessThanOrEqual(255);
+    expect(name).toMatch(/-[0-9a-f]{6}$/);
+  });
+
+  it('leaves a slug already within the limit unchanged', () => {
+    const path = `/${'a'.repeat(200)}`;
+    expect(buildPageDir(`https://example.com${path}`)).toBe(
+      `${'a'.repeat(200)}-${buildPageDir(`https://example.com${path}`).slice(-6)}`,
+    );
+  });
+
+  it('still separates two long paths that share their first 248 slug characters', () => {
+    const base = `https://example.com/${'b'.repeat(300)}`;
+    expect(buildPageDir(`${base}/one`)).not.toBe(buildPageDir(`${base}/two`));
+  });
+});

@@ -120,6 +120,21 @@ function isUnderTestRunner(): boolean {
 }
 
 /**
+ * Issue #488: the policy a scanner entry point applies when its caller named
+ * none. Outside a test runner that is the public-site policy, so a caller
+ * that forgets (the CLI did) can never let a scanned site steer the
+ * operator's machine onto loopback, LAN or metadata addresses. Under a test
+ * runner it stays unset, the behaviour fixture tests were written against;
+ * a test that needs the guard names a policy explicitly.
+ */
+export function withDefaultNetworkPolicy<T extends { networkPolicy?: NetworkTargetPolicy }>(
+  options: T,
+): T {
+  if (options.networkPolicy !== undefined || isUnderTestRunner()) return options;
+  return { ...options, networkPolicy: PUBLIC_SITE_NETWORK_POLICY };
+}
+
+/**
  * The loopback profile, for fixture servers. Throws outside a test runner, so
  * the refusal happens at construction in any environment that should not have
  * one rather than at the first request it would have wrongly allowed.

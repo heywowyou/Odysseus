@@ -13,44 +13,18 @@
  * against the same provider - only the object shape and the bucket differ.
  */
 
-import { AwsClient } from 'aws4fetch';
+import { createS3Bucket, type S3BucketOptions } from '../s3-bucket.js';
 import type { ArtifactStore } from './artifact-store.js';
 
-export interface ScalewayArtifactStoreOptions {
-  bucket: string;
-  /** Region endpoint origin, e.g. `https://s3.fr-par.scw.cloud`. The bucket is
-   *  addressed virtual-host style beneath it. */
-  endpoint: string;
-  region: string;
-  accessKeyId: string;
-  secretAccessKey: string;
-  /** Injected so the adapter is testable without credentials or a network.
-   *  Defaults to the runtime's own `fetch`. */
-  fetchImpl?: typeof globalThis.fetch;
-}
+export type ScalewayArtifactStoreOptions = S3BucketOptions;
+
+/** An artifact can be a multi-megabyte scan or report file; the shared
+ *  30-second deadline is for small objects. */
+const ARTIFACT_TIMEOUT_MS = 5 * 60_000;
 
 export function createScalewayArtifactStore(options: ScalewayArtifactStoreOptions): ArtifactStore {
-  const client = new AwsClient({
-    accessKeyId: options.accessKeyId,
-    secretAccessKey: options.secretAccessKey,
-    service: 's3',
-    region: options.region,
-  });
-  const doFetch = options.fetchImpl ?? globalThis.fetch;
-  const endpoint = new URL(options.endpoint);
-  const origin = `${endpoint.protocol}//${options.bucket}.${endpoint.host}`;
-
-  function objectUrl(key: string): string {
-    // Each path segment encoded separately: the key's own `/` is a
-    // delimiter, not data, and must survive as one.
-    const encoded = key.split('/').map(encodeURIComponent).join('/');
-    return `${origin}/${encoded}`;
-  }
-
-  async function send(url: string, init: RequestInit): Promise<Response> {
-    const signed = await client.sign(url, init);
-    return doFetch(signed);
-  }
+  const bucket = createS3Bucket({ timeoutMs: ARTIFACT_TIMEOUT_MS, ...options });
+  const { objectUrl, send } = bucket;
 
   return {
     async get(key: string): Promise<Buffer | null> {
@@ -64,25 +38,8 @@ export function createScalewayArtifactStore(options: ScalewayArtifactStoreOption
       return Buffer.from(await response.arrayBuffer());
     },
 
-    async list(prefix: string): Promise<string[]> {
-      const keys: string[] = [];
-      let continuationToken: string | undefined;
-      do {
-        const url = new URL(`${origin}/`);
-        url.searchParams.set('list-type', '2');
-        url.searchParams.set('prefix', prefix);
-        if (continuationToken !== undefined) {
-          url.searchParams.set('continuation-token', continuationToken);
-        }
-        const response = await send(url.toString(), { method: 'GET' });
-        if (!response.ok) {
-          throw new Error(`artifact object listing failed with status ${response.status}`);
-        }
-        const page = parseListObjectsV2(await response.text());
-        keys.push(...page.keys);
-        continuationToken = page.nextContinuationToken;
-      } while (continuationToken !== undefined);
-      return keys;
+    list(prefix: string): Promise<string[]> {
+      return bucket.listKeys(prefix, 'artifact object');
     },
 
     async delete(key: string): Promise<void> {
@@ -104,31 +61,4 @@ export function createScalewayArtifactStore(options: ScalewayArtifactStoreOption
       }
     },
   };
-}
-
-function decodeXmlText(value: string): string {
-  return value
-    .replace(/&lt;/gu, '<')
-    .replace(/&gt;/gu, '>')
-    .replace(/&quot;/gu, '"')
-    .replace(/&apos;/gu, "'")
-    .replace(/&#(\d+);/gu, (_match, code: string) => String.fromCodePoint(Number(code)))
-    .replace(/&amp;/gu, '&');
-}
-
-/** The two things a ListObjectsV2 page carries that deletion needs. The
- *  response is a flat, provider-generated document, so a tag match is
- *  enough and no XML dependency is added for it. */
-function parseListObjectsV2(xml: string): {
-  keys: string[];
-  nextContinuationToken?: string;
-} {
-  const keys = [...xml.matchAll(/<Key>([\s\S]*?)<\/Key>/gu)].map((match) =>
-    decodeXmlText(match[1]!),
-  );
-  const truncated = /<IsTruncated>\s*true\s*<\/IsTruncated>/u.test(xml);
-  const token = xml.match(/<NextContinuationToken>([\s\S]*?)<\/NextContinuationToken>/u)?.[1];
-  return truncated && token !== undefined
-    ? { keys, nextContinuationToken: decodeXmlText(token) }
-    : { keys };
 }

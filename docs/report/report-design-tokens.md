@@ -149,8 +149,9 @@ are deliberately the plan 023 hues rather than the dashboard's severity
 shades; the divergence predates this baseline and is recorded in the
 trade-off entry rather than silently harmonized. The checklist's print
 block pairs are unchanged (their ground `#f7f7f5` did not move).
-`render-html.axe.e2e.test.ts` and `render-html-v2.axe.e2e.test.ts` remain
-the gates: do not move any pair without re-running them.
+The outreach preview's `render-html-v3.axe.e2e.test.ts` is the gate (the
+v1 and v2 preview tests went with their renderers, issue #530): do not move
+any pair without re-running it.
 
 ### Light register
 

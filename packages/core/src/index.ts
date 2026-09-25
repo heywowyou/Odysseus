@@ -34,6 +34,7 @@ export * from './prospecting/hotel-writing-site-context.js';
 export * from './normalize/translation-clusters.js';
 export * from './normalize/findings-provenance.js';
 export * from './normalize/normalize-cookie-consent.js';
+export { classifyCookie } from './normalize/classify-cookie.js';
 export * from './normalize/normalize-accessibility-statement.js';
 export * from './normalize/normalize-nap-consistency.js';
 export * from './normalize/normalize-reflow.js';
@@ -88,12 +89,8 @@ export * from './normalize/normalize-lighthouse.js';
 export * from './acquisition/host-signal.js';
 export {
   RENDERDIFF_RULE_ID,
-  SHARED_RAW_DOCUMENT_MIN_PAGES,
   isBlockedRender,
   unusableRawFetches,
-  extractRenderDiffCandidates,
-  type UnusableRawFetch,
-  type RawFetchInput,
 } from './normalize/normalize-renderdiff.js';
 export * from './normalize/normalize-custom.js';
 export * from './normalize/normalize.js';

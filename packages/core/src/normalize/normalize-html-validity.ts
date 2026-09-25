@@ -61,7 +61,9 @@ export function normalizeHtmlValidity(
       severity: severityFromCustom(HTML_VALIDITY_RULE_ID),
       wcagCriteria: [],
       title: 'The page markup is not well-formed',
-      description: `${issues.length} instance(s) of "${ruleId}" on this page. ${issues[0]!.message} (line ${issues[0]!.line}). Malformed markup makes a browser, a search engine and a screen reader each build a slightly different document from the same page.`,
+      // Page-independent (issue #503): one finding merges this rule across
+      // pages, so the count and the example live in the evidence, not here.
+      description: `The page markup breaks the "${ruleId}" validity rule. Malformed markup makes a browser, a search engine and a screen reader each build a slightly different document from the same page.`,
       pageUrl,
       // The rule name is the stable identity here; a line number is not a
       // selector and would defeat cross-run dedupe the moment the page's

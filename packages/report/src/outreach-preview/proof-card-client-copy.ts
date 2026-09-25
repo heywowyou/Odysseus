@@ -116,7 +116,7 @@ const FR_VISITOR_COPY: Readonly<Record<string, string>> = {
     "Le site bloque l'accès d'au moins un service utilisé par des assistants IA pour explorer le web.",
 };
 
-export function outreachProofCardCopy(ruleId: string): OutreachProofCardCopyEntry | undefined {
+function outreachProofCardCopy(ruleId: string): OutreachProofCardCopyEntry | undefined {
   const source = OUTREACH_PROOF_CARD_COPY[ruleId];
   if (source === undefined) return undefined;
   const fr = FR_VISITOR_COPY[ruleId];

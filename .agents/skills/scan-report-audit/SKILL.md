@@ -31,13 +31,13 @@ Two tracks. One run rehearses exactly one of them; the log records which.
 - **Paid-report track** (the skill's original target): the paid
   full-audit report (crawl, scan, normalize, analyze, PDF). The main
   flow of steps 1 to 7 below describes this track.
-- **Outreach-preview track**: the outreach preview scorecard (milestone
-  9c, plan 037's v2 preview), French only. It is not a by-product of
-  the paid audit: it builds from its own candidate-linked **outreach
-  full scan**, which runs the same crawl/scan/normalize pipeline and
-  then stops before model analysis and report. The "Outreach-preview
-  track" subsections in steps 1, 2, and 4 replace the main flow for a
-  preview run.
+- **Outreach-preview track**: the outreach preview scorecard (the v3
+  prospect-native preview), French only. It renders from a
+  **prospect-linked** full audit: the same scan as the paid track,
+  submitted with the prospect's `prospectId`, whose finished audit and
+  French report the preview stands on. The "Outreach-preview track"
+  subsections in steps 1, 2, and 4 replace the main flow for a preview
+  run.
 
 Out of scope for both tracks: the operator dashboard's own chrome
 (views, i18n, shell accessibility) and the touch-1 outreach email
@@ -134,81 +134,78 @@ unreachable, a preview-track run is blocked, not degraded.
 
 ### 1. Pick a hotel
 
-Eligible means both of:
+Hotels live in the prospect hub (plan 047 retired the old hotel-candidate
+catalogue, its `hotel-qualify` command and its cohorts). Eligible means all
+of:
 
-- `qualification.outcome` is `qualified` under the current qualification
-  version, and
-- not already scanned: no existing `audits` document for that hostname
-  (query via the mongodb-readonly MCP server) **and** no local
-  `artifacts/<hostname>/` directory. Scans can now originate from either
-  the VPS dashboard or a local CLI run against the same shared database,
-  so checking only the local directory is no longer sufficient.
+- the prospect has a website of its own: `websites[].kind` is `own` on its
+  primary website, not `vendor-hosted`, `chain` or `unknown`. A shared
+  vendor or chain page is not the hotel's site to audit;
+- not already scanned: no audit is linked to the prospect, no `audits`
+  document exists for its hostname (check through the mongodb-readonly MCP
+  server), and there is no local `artifacts/<hostname>/` directory. Scans
+  originate from both the VPS dashboard and local CLI runs against the
+  same shared database, so the local directory alone is not enough;
+- not suppressed: neither its website domain nor its contact addresses are
+  on the blacklist. A suppressed hotel asked not to be contacted, and
+  rehearsing on it tests something no client would ever receive.
 
-The outcome test is a positive filter on `qualified`, not merely "not
-`already-engaged`". The outcome vocabulary also holds `parked`, `rejected`,
-and `group-routed` (`packages/store/src/schemas/hotel-candidate.schema.ts`),
-and none of those describes a hotel this audit would ever be sold to, so
-rehearsing on one tests something the client never receives. `qualified` is
-also the only outcome that guarantees the candidate holds a domain of its
-own (`qualify-hotels.ts`, the `ownRegistrableDomain` guard), which is the
-thing there is to audit.
+The concrete route lists new prospects with an own website and no scan,
+from the dashboard's own API:
 
-The concrete route:
-
+```bash
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" \
+  'https://app.odysseusaudit.com/api/prospects?status=new&websiteKind=own&hasScan=false&pageSize=500'
 ```
-odysseus prospect hotel-qualify reasons --outcome qualified --limit 500
+
+It returns one page of prospects with their `prospectId`, name, websites
+and emails. Pick at random across the whole returned set (page through
+with `page` when there are more), not from the first rows. `status=new`
+already leaves out prospects that opted out; also check each contact
+address of the pick against the blacklist, which answers for the address
+and its whole domain:
+
+```bash
+curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X POST \
+  https://app.odysseusaudit.com/api/outreach/suppression-check \
+  -H 'content-type: application/json' -d '{"address":"<contact address>"}'
 ```
 
-It prints `candidateId`, `domain`, `finalUrl`, and `evaluatedAt` per row.
-Two things about it matter here:
-
-- It sorts by `evaluatedAt` descending and then truncates to `--limit`, so a
-  small limit samples the tail of the last qualification batch rather than
-  the catalogue. Pull a large limit and pick randomly across the whole
-  returned set.
-- Audit the row's `finalUrl`, the URL qualification actually resolved after
-  redirects, not the declared domain. A hotel whose declared domain
-  redirects to one it alone holds has had that target adopted as its own
-  (trade-off 37), and the declared domain is then the wrong site to scan.
+Audit the primary website's URL as recorded on the prospect. If it
+redirects, the scan follows the redirect and records the landing page;
+note both in the log.
 
 Pick at random. Do not hand-pick for variety or try to rotate across site
-types — let it emerge naturally across repeated runs.
+types. Let it emerge naturally across repeated runs.
 
-Fetch the candidate's SIREN too; step 2 needs it. It sits on the candidate
-(`hotel_candidates.siren`) and on the qualification row's
-`siteFacts.siren`, but the `reasons` command prints neither, so read it
-through the mongodb-readonly MCP server.
+Fetch the hotel's SIREN too; step 2 needs it. It sits on the prospect
+(`siren`, from `GET /api/prospects/<prospectId>`) when the directory import
+or the operator recorded one; when it is missing, read the legal notice on
+the site itself before scanning and note where it came from.
 
-**Stop and show your pick before scanning.** State the hotel's name, URL,
-SIREN, and why it was eligible, and wait for a go-ahead. This is the one
-veto point before a multi-hour run is sunk into it. The go-ahead you
-receive here is also the operator's current, explicit permission for this
-named site that AGENTS.md requires before any live third-party scan:
-record it (date, hotel, operator) in a session-log stream section for
-this rehearsal before submitting the job.
+**Stop and show your pick before scanning.** State the hotel's name,
+`prospectId`, URL, SIREN, and why it was eligible, and wait for a go-ahead.
+This is the one veto point before a multi-hour run is sunk into it. The
+go-ahead you receive here is also the operator's current, explicit
+permission for this named site that the project charter requires before
+any live third-party scan: record it (date, hotel, operator) in a
+session-log stream section for this rehearsal before submitting the job.
 
 #### Outreach-preview track pick
 
-The preview cannot be rehearsed on the paid audit's record: the render
-and publish routes require the audit to carry an outreach candidate
-link (`audit.outreach.candidateId`, refusal `not-an-outreach-audit`),
-and only an outreach full scan creates one. Pick differently:
+The same eligibility, plus what the preview itself needs:
 
-- The candidate must sit in a cohort with state `selected`
-  (approved). `planOutreachFullScan` re-validates cohort selection,
-  current qualification, own registrable domain, suppression, and
-  duplicates server-side and refuses with a typed code before anything
-  is scanned, so a wrong pick is cheap, but check first anyway,
-  through the dashboard's prospect views or the mongodb-readonly MCP
-  server.
-- Not already scanned: same rule as the paid track, no existing
-  `audits` document for the hostname.
-- SIREN is not an input here. The legal facts block takes its Sirene
-  data from the qualification's stored join on the server side; there
-  is no flag to pass, and passing nothing is correct.
-- Same stop-and-show veto: state the hotel's name, candidate ID, URL,
-  and cohort state, and wait for the go-ahead, recording it in the
-  session log as the live-scan permission before submitting the job.
+- at least one contact email on the prospect, since preview publication
+  and the first email are refused without one (`no-contact`);
+- prospect status `new` or `audited`, and no outreach thread started;
+  the outreach guard refuses a preview for a prospect whose outreach
+  already began.
+
+The preview carries deterministic facts only, so the SIREN is still passed
+to the scan for the paid-report legal section, not for the preview. Same
+stop-and-show veto: state the hotel's name, `prospectId`, URL and why it
+was eligible, and wait for the go-ahead, recording it in the session log as
+the live-scan permission before submitting the job.
 
 ### 2. Scan
 
@@ -219,7 +216,7 @@ above) — uncapped, the same way a real client's audit would run:
 curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X POST \
   https://app.odysseusaudit.com/api/scans \
   -H 'content-type: application/json' \
-  -d '{"type":"full-audit","url":"<finalUrl>","options":{"siren":"<siren>"}}'
+  -d '{"type":"full-audit","url":"<websiteUrl>","prospectId":"<prospectId>","options":{"siren":"<siren>"}}'
 ```
 
 This returns `{"jobId": "..."}`. Do not set `options.maxPages` or
@@ -295,43 +292,29 @@ curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X POST \
 
 #### Outreach-preview track scan
 
-Start the scan through the prospects route. It takes no url, no
-options, and no siren from the client; everything is resolved from the
-candidate server-side:
+Submit the same prospect-linked full audit as the paid track (the
+`prospectId` in the body is what links the audit to the prospect the
+preview is published for). Poll the job exactly as in the paid track;
+`auditId` appears on the job document at `complete`. The uncapped rule and
+the record-in-session-log-on-submission rule apply identically.
 
-```bash
-curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X POST \
-  https://app.odysseusaudit.com/api/prospects/<candidateId>/outreach/full-scan
-```
-
-`201` returns `{"started":true,"jobId":"..."}`; `200` returns
-`{"started":false,"refusal":"<code>"}` and no scan ran. The typed
-refusal vocabulary (`candidate-unknown`, `no-audit`, `audit-in-flight`,
-`audit-failed`, `domain-mismatch`, `suppressed`, `stale-provenance`,
-`coverage-incomplete`, `insufficient-safe-cards`) is shared across the
-start, render, and publish routes. A start-time refusal means pick
-another candidate and note the code in the log; treat it as a defect
-only when the code contradicts the candidate's recorded state. Poll
-the job exactly as in the paid track; `auditId` appears on the job
-document at `complete`. The uncapped rule and the
-record-in-session-log-on-submission rule apply identically.
-
-The transactional-flow manual-fields correction does not apply to this
-track: the preview carries deterministic facts, never an obligation
-conclusion, so there is no flow determination in it to correct.
+The preview stands on the audit's French report, so wait for the job to
+reach `complete` with its reports, not only the scan. The transactional-flow
+manual-fields correction still applies to the paid report, but not to the
+preview, which carries deterministic facts and never an obligation
+conclusion.
 
 ### 3. Generate the report
 
 Nothing to do here for a VPS-run scan: step 2's job already produced both
 bilingual analyses and both PDFs as part of the same pipeline run. Skip to
-step 4. Same for the outreach-preview track, for a different reason: the
-outreach full scan stops before analysis and report by design, and the
-preview renders on demand from the finished audit in step 4.
+step 4. Same for the outreach-preview track: the preview renders on demand
+from the finished audit in step 4.
 
 #### Local fallback (only when the VPS is unreachable)
 
 ```
-odysseus audit <finalUrl> --siren <siren>
+odysseus audit <websiteUrl> --siren <siren>
 odysseus analyze <artifacts-dir> --language fr
 odysseus analyze <artifacts-dir> --language en
 odysseus report <artifacts-dir> --all
@@ -339,7 +322,7 @@ odysseus report <artifacts-dir> --all
 
 Omitting `--max-pages` is not by itself enough to be uncapped locally.
 `getMaxPages()` reads a `MAX_PAGES` environment variable
-(`packages/scanner/src/config.ts`) and `codysseus` sources `.env`, so a cap
+(`packages/scanner/src/config.ts`), which loads `.env` itself, so a cap
 left there applies silently to a run this skill believes is uncapped.
 Confirm it is unset before starting. `report --all` prints the written PDF
 path per language; note both, step 4 reads them. Before analyzing, check
@@ -463,10 +446,10 @@ with an explicit go-ahead in this run, and revoke immediately after:
 
 ```bash
 curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X POST \
-  https://app.odysseusaudit.com/api/audits/<auditId>/outreach-preview/publish
+  https://app.odysseusaudit.com/api/prospects/<prospectId>/preview/publish
 curl -s '<returned public url>' -o <scratchpad>/rehearsal-<hostname>-public.html
 curl -s -b "$HOME/.cache/odysseus-rehearsal/cookies.txt" -X POST \
-  https://app.odysseusaudit.com/api/prospects/<candidateId>/preview/revoke
+  https://app.odysseusaudit.com/api/prospects/<prospectId>/previews/<previewId>/revoke
 ```
 
 Confirm the public page serves the same scorecard the internal build
@@ -525,7 +508,7 @@ the template there if this is the first run) with:
 - date, hostname, URL, `auditId`, and the `artifacts/<host>/<timestamp>/`
   path, which is the way back to the data behind the entry
 - the track rehearsed (paid-report or outreach-preview), plus the
-  `candidateId` for a preview run
+  `prospectId` for a preview run
 - the run outcome: COMPLETE (both PDFs read and critiqued for the paid
   track; both preview renderings read and critiqued for the preview
   track), PARTIAL

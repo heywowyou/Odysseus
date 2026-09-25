@@ -4,6 +4,7 @@ import {
   NORMALIZATION_FINGERPRINT,
   assertFindingsProvenance,
   buildFindingsProvenance,
+  canonicalizeForFindingsDigest,
 } from './findings-provenance.js';
 import { normalizeFingerprint } from '../../../../scripts/fixture-fingerprint.mjs';
 
@@ -62,5 +63,28 @@ describe('findings provenance', () => {
         'analysis',
       ),
     ).toThrow(/stale analysis.*findings digest/i);
+  });
+});
+
+describe('findings digest key order (issue #504)', () => {
+  it('orders object keys by code unit, not by locale collation', () => {
+    const canonical = canonicalizeForFindingsDigest({ a: 1, é: 2, _: 3, B: 4 }) as Record<
+      string,
+      unknown
+    >;
+    expect(Object.keys(canonical)).toEqual(['B', '_', 'a', 'é']);
+  });
+
+  it('orders URL keys of per-page evidence by code unit', () => {
+    const canonical = canonicalizeForFindingsDigest({
+      'https://example.com/b': 1,
+      'https://example.com/B': 2,
+      'https://example.com/-': 3,
+    }) as Record<string, unknown>;
+    expect(Object.keys(canonical)).toEqual([
+      'https://example.com/-',
+      'https://example.com/B',
+      'https://example.com/b',
+    ]);
   });
 });

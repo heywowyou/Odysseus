@@ -150,7 +150,7 @@ export async function regenerateWriting(
     // operator action just advances from "stale findings" to "stale structure
     // document" and fails again.
     const selectedProvenance = preparation.writingSelection?.selected?.findingsProvenance;
-    regenerateStructure = findingsWereRefreshed || findingsAreStale(selectedProvenance, findings);
+    regenerateStructure = findingsWereRefreshed || findingsAreStale(selectedProvenance);
   } catch (error) {
     // Release is idempotent, so releasing an already free lock changes
     // nothing.

@@ -37,6 +37,8 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   listProspectEvents: vi.fn(),
   listProspectTodo: vi.fn(),
   listProspects: vi.fn(),
+  countActiveAndAuditedProspects: vi.fn(),
+  aggregateOutreachFunnel: vi.fn(),
   loadProspectWork: vi.fn(),
   markOutreachDraftDeletionPending: vi.fn(),
   markOutreachDraftDeleted: vi.fn(),
@@ -65,9 +67,15 @@ vi.mock('../outreach/draft-runtime.js', () => ({
   createFirstEmailForProspect: vi.fn(),
   createFollowUpForProspect: vi.fn(),
 }));
-const { deleteMailboxDraft } = vi.hoisted(() => ({ deleteMailboxDraft: vi.fn() }));
+const { deleteMailboxDraft, getMailboxDraft } = vi.hoisted(() => ({
+  deleteMailboxDraft: vi.fn(),
+  getMailboxDraft: vi.fn(),
+}));
 vi.mock('../outreach/configured-mailbox-draft-adapter.js', () => ({
-  createConfiguredMailboxDraftAdapter: vi.fn(() => ({ deleteDraft: deleteMailboxDraft })),
+  createConfiguredMailboxDraftAdapter: vi.fn(() => ({
+    deleteDraft: deleteMailboxDraft,
+    getDraft: getMailboxDraft,
+  })),
 }));
 const { artifactStore } = vi.hoisted(() => ({
   artifactStore: {
@@ -113,6 +121,8 @@ import {
   listProspectTodo,
   loadProspectWork,
   listProspects,
+  countActiveAndAuditedProspects,
+  aggregateOutreachFunnel,
   markOutreachDraftDeletionPending,
   markOutreachDraftDeleted,
   revokeOutreachPreview,
@@ -194,7 +204,10 @@ async function handle(url: string, method: Method = 'GET', body?: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getMailboxDraft.mockResolvedValue({ providerDraftId: 'g-1' });
+  syncMailbox.mockResolvedValue({ configured: true });
   vi.mocked(listProspects).mockResolvedValue(emptyPage as never);
+  vi.mocked(countActiveAndAuditedProspects).mockResolvedValue({ active: 0, audited: 0 });
   vi.mocked(listDirectory).mockResolvedValue(emptyPage as never);
   vi.mocked(setProspectStatus).mockResolvedValue({ status: 'audited' } as never);
   vi.mocked(applyAutomaticProspectStatus).mockResolvedValue({ status: 'opted-out' } as never);
@@ -345,6 +358,32 @@ describe('prospect hub routes', () => {
       },
     });
     expect(listProspectTodo).toHaveBeenCalledWith(fakeConnection);
+    // Issue #514: the two totals come from one count helper, not two full
+    // listProspects pages.
+    expect(countActiveAndAuditedProspects).toHaveBeenCalledTimes(1);
+    expect(listProspects).not.toHaveBeenCalled();
+  });
+
+  it('serves the outreach funnel per campaign, counts only (issue #533)', async () => {
+    const campaigns = [
+      {
+        campaignVersion: 'first-100-2026-09',
+        threads: 5,
+        firstTouchSent: 5,
+        replied: 1,
+        bounced: 0,
+        optedOut: 0,
+        won: 0,
+        repliesAfterTouch: { 1: 1, 2: 0, 3: 0 },
+        outcomes: {},
+      },
+    ];
+    vi.mocked(aggregateOutreachFunnel).mockResolvedValue(campaigns as never);
+
+    const response = await handle('/api/outreach/funnel');
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({ campaigns });
   });
 
   it('forwards directory facets and rejects invalid status values', async () => {
@@ -984,6 +1023,43 @@ describe('draft review', () => {
       'pv-1',
       'draft discarded by the operator',
     );
+  });
+
+  it('keeps a draft that is no longer in the mailbox and syncs instead (issue #478)', async () => {
+    vi.mocked(listOutreachDrafts).mockResolvedValue([
+      {
+        draftId: 'd-1',
+        prospectId: 'p-1',
+        previewId: 'pv-1',
+        providerDraftId: 'g-1',
+        status: 'created',
+      },
+    ] as never);
+    getMailboxDraft.mockResolvedValue(null);
+
+    const response = await handle('/api/prospects/p-1/drafts/d-1/discard', 'POST', {});
+
+    expect(response.statusCode).toBe(409);
+    expect(response.body).toMatchObject({ error: 'draft-not-in-mailbox' });
+    expect(markOutreachDraftDeletionPending).not.toHaveBeenCalled();
+    expect(deleteMailboxDraft).not.toHaveBeenCalled();
+    expect(deletePreview).not.toHaveBeenCalled();
+    expect(revokeOutreachPreview).not.toHaveBeenCalled();
+    expect(syncMailbox).toHaveBeenCalledWith(fakeConnection);
+  });
+
+  it('changes nothing when the mailbox cannot be checked (issue #478)', async () => {
+    vi.mocked(listOutreachDrafts).mockResolvedValue([
+      { draftId: 'd-1', prospectId: 'p-1', providerDraftId: 'g-1', status: 'created' },
+    ] as never);
+    getMailboxDraft.mockRejectedValue(new Error('Gmail draft read failed with status 500'));
+
+    const response = await handle('/api/prospects/p-1/drafts/d-1/discard', 'POST', {});
+
+    expect(response.statusCode).toBe(502);
+    expect(markOutreachDraftDeletionPending).not.toHaveBeenCalled();
+    expect(deleteMailboxDraft).not.toHaveBeenCalled();
+    expect(syncMailbox).not.toHaveBeenCalled();
   });
 
   it('still discards when the preview object cannot be removed', async () => {

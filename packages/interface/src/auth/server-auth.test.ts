@@ -46,7 +46,6 @@ vi.mock('@odysseus/store', async (importOriginal) => {
       pages: [],
     })),
     getFindingsForAudit: vi.fn(async () => []),
-    getSeverityRollup: vi.fn(async () => ({})),
     listReportLanguages: vi.fn(async () => ['fr', 'en']),
     resolveSelectedAnalysisPairForAudit: vi.fn(async () => ({
       kind: 'none',

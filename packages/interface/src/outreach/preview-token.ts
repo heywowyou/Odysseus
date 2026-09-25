@@ -25,7 +25,7 @@ const PREVIEW_TOKEN_BYTES = 32;
  *  malformed path never reaches the bucket as a lookup. */
 export const PREVIEW_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
 
-export const PREVIEW_OBJECT_PREFIX = 'previews/';
+const PREVIEW_OBJECT_PREFIX = 'previews/';
 
 export function createPreviewToken(): string {
   return randomBytes(PREVIEW_TOKEN_BYTES).toString('base64url');

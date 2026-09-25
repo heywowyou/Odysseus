@@ -1,7 +1,13 @@
 import path from 'node:path';
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
-import { buildAuditDir, getArtifactsRoot, launchBrowser, scanSite } from '@odysseus/scanner';
+import {
+  buildAuditDir,
+  getArtifactsRoot,
+  launchBrowser,
+  PUBLIC_SITE_NETWORK_POLICY,
+  scanSite,
+} from '@odysseus/scanner';
 import { isHttpUrlWithoutCredentials } from '@odysseus/core';
 import { parseSirenOption } from '../parse-siren-option.js';
 import { parseBooleanOption } from '../parse-boolean-option.js';
@@ -58,7 +64,10 @@ export function registerScanCommand(program: Command): void {
           return;
         }
 
-        const { browser, debugPort } = await launchBrowser();
+        // Issue #488: the operator's machine gets the same private-address
+        // guard as a queued audit, for the browser and every side fetch.
+        const networkPolicy = PUBLIC_SITE_NETWORK_POLICY;
+        const { browser, debugPort } = await launchBrowser({ networkPolicy });
         try {
           const hostname = new URL(url).hostname;
           const screenshotDir = path.join(
@@ -70,6 +79,7 @@ export function registerScanCommand(program: Command): void {
             browser,
             debugPort,
             screenshotDir,
+            networkPolicy,
             ...(opts.maxPages !== undefined ? { maxPages: opts.maxPages } : {}),
             ...(opts.maxDepth !== undefined ? { maxDepth: opts.maxDepth } : {}),
           });
