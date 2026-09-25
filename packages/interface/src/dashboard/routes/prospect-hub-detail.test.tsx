@@ -29,6 +29,10 @@ function jsonResponse(body: unknown): Response {
 }
 
 beforeEach(() => {
+  // The snapshot holds relative times ("il y a 6 jours"), so the clock is
+  // frozen at the moment it was recorded. Only Date is faked: rendering
+  // still needs real timers.
+  vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-09-25T04:00:00.000Z') });
   calls = [];
   window.localStorage.setItem('odysseus.dashboard.language', 'fr');
   vi.stubGlobal('confirm', () => true);
@@ -50,6 +54,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   window.localStorage.clear();
   document.body.innerHTML = '';
