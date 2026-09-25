@@ -105,6 +105,19 @@ produces a `minor` rendering finding that says nothing is wrong. The
 measured percentage is recorded in the manifest for every page regardless,
 so nothing is lost.
 
+**Cookie classification is normalization, not scanning (issue #493).** The
+scanner records every cookie with its domain; `classify-cookie.ts` in `core`
+decides which ones belong to a measurement or advertising product, and
+`normalizeCookieConsent` re-classifies the stored `nonEssentialCookies` on
+every normalize, so a correction reaches stored audits on their next refresh.
+Distinctive vendor prefixes (`_ga`, `_fbp`, `_hj`) match by prefix on any
+domain. Short or generic names (`fr`, `ide`, `test_cookie`, `muid`,
+`personalization_id`, LinkedIn's `lidc`, `bcookie`, `bscookie`, `li_sugr`)
+match only exactly and only on the vendor's own registrable domain; Mixpanel
+matches only its documented `mp_<32 hex>_mixpanel` shape. Prefix-matching `fr`
+once reported Magento's first-party `frontend` cookie as a Meta cookie set
+before consent.
+
 **Both category exclusions and the audit suppression list are revisited in
 milestone 8**, where custom checks arrive and a deliberate per-audit-id
 mapping table can be built. Do not re-enable either category before then

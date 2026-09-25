@@ -35,6 +35,7 @@
  * report's own copy and to the client's counsel.
  */
 
+import { classifyCookie } from './classify-cookie.js';
 import { isOverseasFrenchDomain } from './normalize-custom.js';
 import type { FindingCandidate } from './candidate.js';
 import { severityFromCustom } from './severity.js';
@@ -89,9 +90,17 @@ export function normalizeCookieConsent(
 
   const candidates: FindingCandidate[] = [];
 
-  if (input.nonEssentialCookies.length > 0) {
-    const vendors = vendorList(input.nonEssentialCookies.map((cookie) => cookie.vendor));
-    const names = [...new Set(input.nonEssentialCookies.map((cookie) => cookie.name))].sort();
+  // Issue #493: the scan-time vendor is not trusted. Older scans classified
+  // `frontend` and `fr_lang` as Meta cookies by prefix, so every stored
+  // cookie is re-classified here and a refresh corrects stored audits.
+  const nonEssentialCookies = input.nonEssentialCookies.flatMap((cookie) => {
+    const classification = classifyCookie(cookie);
+    return classification === undefined ? [] : [{ ...cookie, vendor: classification.vendor }];
+  });
+
+  if (nonEssentialCookies.length > 0) {
+    const vendors = vendorList(nonEssentialCookies.map((cookie) => cookie.vendor));
+    const names = [...new Set(nonEssentialCookies.map((cookie) => cookie.name))].sort();
     candidates.push(
       candidate(
         COOKIE_NON_ESSENTIAL_BEFORE_CONSENT_RULE_ID,
@@ -117,7 +126,7 @@ export function normalizeCookieConsent(
   }
 
   const hasNonEssentialActivity =
-    input.nonEssentialCookies.length > 0 || input.trackerRequests.length > 0;
+    nonEssentialCookies.length > 0 || input.trackerRequests.length > 0;
   // The missing mechanism is a claim about a consent regime, so it keeps the
   // overseas-domain boundary the LCEN rule has (obligation-basis.md). The
   // cookies and requests above are observed facts and are reported anywhere.

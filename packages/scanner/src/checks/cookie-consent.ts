@@ -27,10 +27,12 @@
  * third-party origins were active, and whether a consent mechanism was
  * present at all. It does not decide whether a given site is in breach -
  * a cookie's purpose can depend on how the site uses it, and the
- * classification tables below are matched on names and hosts that are
- * documented and unambiguous, never guessed.
+ * classification tables (cookie names in core's classify-cookie.ts, tracker
+ * hosts below) are matched on names and hosts that are documented and
+ * unambiguous, never guessed.
  */
 
+import { classifyCookie } from '@odysseus/core';
 import type { Browser } from 'playwright';
 import { AUDIT_BROWSER_LOCALE } from '../audit-locale.js';
 import { getCrawlerUserAgent } from '../config.js';
@@ -40,52 +42,6 @@ import {
   type NetworkSafetyBlockHandler,
 } from '../browser-network-safety.js';
 import type { NetworkTargetPolicy } from '../network-target-policy.js';
-
-/** Cookie names, or name prefixes, that belong to a measurement or
- *  advertising product and are therefore never "strictly necessary" for
- *  a service the user requested. Every entry is a documented, vendor-
- *  published name. Matched case-insensitively, prefix-wise, because
- *  several of these carry a per-property suffix (`_ga_G-XXXX`).
- *
- *  Deliberately a short list of certainties rather than a broad
- *  heuristic: a false positive here would tell a client they have a
- *  legal problem they do not have, which is worse than missing one. A
- *  session or CSRF cookie a CMS invents cannot be classified from its
- *  name and is correctly not classified at all. */
-const NON_ESSENTIAL_COOKIE_PREFIXES: readonly { prefix: string; vendor: string }[] = [
-  { prefix: '_ga', vendor: 'Google Analytics' },
-  { prefix: '_gid', vendor: 'Google Analytics' },
-  { prefix: '_gat', vendor: 'Google Analytics' },
-  { prefix: '__utm', vendor: 'Google Analytics (legacy)' },
-  { prefix: '_gcl_', vendor: 'Google Ads' },
-  { prefix: '_fbp', vendor: 'Meta Pixel' },
-  { prefix: '_fbc', vendor: 'Meta Pixel' },
-  { prefix: 'fr', vendor: 'Meta' },
-  { prefix: '_hj', vendor: 'Hotjar' },
-  { prefix: '_clck', vendor: 'Microsoft Clarity' },
-  { prefix: '_clsk', vendor: 'Microsoft Clarity' },
-  { prefix: 'muid', vendor: 'Microsoft Advertising' },
-  { prefix: 'ide', vendor: 'Google DoubleClick' },
-  { prefix: 'test_cookie', vendor: 'Google DoubleClick' },
-  { prefix: '_pin_unauth', vendor: 'Pinterest' },
-  { prefix: '_pinterest_', vendor: 'Pinterest' },
-  { prefix: 'personalization_id', vendor: 'X (Twitter)' },
-  { prefix: '_tt_enable_cookie', vendor: 'TikTok' },
-  { prefix: '_ttp', vendor: 'TikTok' },
-  { prefix: 'li_sugr', vendor: 'LinkedIn' },
-  { prefix: 'bcookie', vendor: 'LinkedIn' },
-  { prefix: 'bscookie', vendor: 'LinkedIn' },
-  { prefix: 'lidc', vendor: 'LinkedIn' },
-  { prefix: '_uetsid', vendor: 'Microsoft UET' },
-  { prefix: '_uetvid', vendor: 'Microsoft UET' },
-  { prefix: '_hstc', vendor: 'HubSpot' },
-  { prefix: 'hubspotutk', vendor: 'HubSpot' },
-  { prefix: '_mkto_trk', vendor: 'Marketo' },
-  { prefix: 'ajs_', vendor: 'Segment' },
-  { prefix: 'mp_', vendor: 'Mixpanel' },
-  { prefix: 'amplitude_', vendor: 'Amplitude' },
-  { prefix: '_pk_', vendor: 'Matomo' },
-];
 
 /** Hosts whose only purpose is measurement, advertising or social
  *  tracking. A request to one of these before consent transmits the
@@ -146,7 +102,8 @@ const CMP_MARKERS: readonly { name: string; global?: string; selector?: string }
 export interface ObservedCookie {
   name: string;
   domain: string;
-  /** The vendor NON_ESSENTIAL_COOKIE_PREFIXES matched, when it matched. */
+  /** The vendor core's classifyCookie matched, when it matched. The
+   *  normalizer re-classifies, so this is a scan-time convenience only. */
   vendor?: string;
   /** True when the cookie's domain is not a suffix of the audited site's
    *  own registrable domain - a third-party cookie. */
@@ -174,7 +131,7 @@ export interface CookieConsentCheckResult {
   checked: boolean;
   /** Every cookie present after one navigation with no interaction. */
   cookies: ObservedCookie[];
-  /** The subset of `cookies` matching NON_ESSENTIAL_COOKIE_PREFIXES. */
+  /** The subset of `cookies` core's classifyCookie matched. */
   nonEssentialCookies: ObservedCookie[];
   /** Distinct tracker hosts contacted before any interaction. */
   trackerRequests: ObservedTrackerRequest[];
@@ -215,14 +172,6 @@ function isSameSite(cookieDomain: string, siteHostname: string): boolean {
   const site = siteHostname.toLowerCase();
   if (site === cookie || site.endsWith(`.${cookie}`) || cookie.endsWith(`.${site}`)) return true;
   return registrableDomain(cookie) === registrableDomain(site);
-}
-
-export function classifyCookie(name: string): { vendor: string } | undefined {
-  const lower = name.toLowerCase();
-  for (const entry of NON_ESSENTIAL_COOKIE_PREFIXES) {
-    if (lower === entry.prefix || lower.startsWith(entry.prefix)) return { vendor: entry.vendor };
-  }
-  return undefined;
 }
 
 export function classifyTrackerUrl(rawUrl: string): { host: string; vendor: string } | undefined {
@@ -314,7 +263,7 @@ export async function checkCookieConsent(
 
     const siteHostname = new URL(homepageUrl).hostname;
     const cookies: ObservedCookie[] = (await context.cookies()).map((cookie) => {
-      const classification = classifyCookie(cookie.name);
+      const classification = classifyCookie({ name: cookie.name, domain: cookie.domain });
       return {
         name: cookie.name,
         domain: cookie.domain,

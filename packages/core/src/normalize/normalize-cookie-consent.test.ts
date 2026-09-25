@@ -40,6 +40,39 @@ describe('normalizeCookieConsent', () => {
     ).toEqual([]);
   });
 
+  it('re-classifies stored cookies, so a first-party frontend cookie yields no finding (issue #493)', () => {
+    expect(
+      normalizeCookieConsent(
+        input({
+          nonEssentialCookies: [
+            { name: 'frontend', domain: '.example.com', vendor: 'Meta', isThirdParty: false },
+            {
+              name: 'IDE',
+              domain: '.example.com',
+              vendor: 'Google DoubleClick',
+              isThirdParty: false,
+            },
+          ],
+        }),
+        HOMEPAGE,
+      ),
+    ).toEqual([]);
+  });
+
+  it('keeps a stored cookie the current table still classifies, with its current vendor', () => {
+    const [finding] = normalizeCookieConsent(
+      input({
+        nonEssentialCookies: [
+          { name: 'fr', domain: '.facebook.com', vendor: 'stale', isThirdParty: true },
+        ],
+        consentPlatforms: ['Axeptio'],
+      }),
+      HOMEPAGE,
+    );
+    expect(finding?.ruleId).toBe('cookie-non-essential-before-consent');
+    expect(finding?.rawEvidenceForPage).toEqual({ cookieNames: ['fr'], vendors: ['Meta'] });
+  });
+
   it('emits nothing for a site with no non-essential cookies and no trackers', () => {
     expect(normalizeCookieConsent(input(), HOMEPAGE)).toEqual([]);
   });

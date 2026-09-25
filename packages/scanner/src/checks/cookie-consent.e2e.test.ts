@@ -9,7 +9,7 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser } from 'playwright';
 import { launchBrowser } from '../browser.js';
-import { checkCookieConsent, classifyCookie, classifyTrackerUrl } from './cookie-consent.js';
+import { checkCookieConsent, classifyTrackerUrl } from './cookie-consent.js';
 
 function startServer(
   html: string,
@@ -27,19 +27,6 @@ function startServer(
     });
   });
 }
-
-describe('classifyCookie', () => {
-  it('matches a per-property Google Analytics cookie by prefix', () => {
-    expect(classifyCookie('_ga_G3XYZ')?.vendor).toBe('Google Analytics');
-    expect(classifyCookie('_GA')?.vendor).toBe('Google Analytics');
-  });
-
-  it('does not classify a cookie whose purpose cannot be read from its name', () => {
-    expect(classifyCookie('PHPSESSID')).toBeUndefined();
-    expect(classifyCookie('csrf_token')).toBeUndefined();
-    expect(classifyCookie('wordpress_logged_in_abc')).toBeUndefined();
-  });
-});
 
 describe('classifyTrackerUrl', () => {
   it('matches a subdomain of a tracker host', () => {
