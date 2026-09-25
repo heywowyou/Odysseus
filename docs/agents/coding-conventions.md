@@ -151,7 +151,7 @@ cyclonedx odysseus-app:<tag>` makes one on demand.
     --skip-dirs node_modules,.agents,.claude,.codex,.zcode,data,artifacts,reports,coverage,.pnpm-store \
     --skip-files .env,.env.smoke,.restic.env,.restic-password \
     --severity HIGH,CRITICAL --ignore-unfixed \
-    --trivyignores .trivyignore.yaml /repo
+    --ignorefile .trivyignore.yaml /repo
   ```
 
   Drop `--ignore-unfixed` and widen `--severity` to see every finding, not
@@ -190,8 +190,9 @@ issue #261) targeting risk seams a generic community ruleset can't express:
   `===`/`==` instead of routed through the hash-then-lookup design in
   `packages/interface/src/outreach/preview-token.ts`.
 - `storage-write-outside-adapter` — `new AwsClient(...)` constructed outside
-  the three approved storage adapters, bypassing the PreviewPublisher /
-  ArtifactStore port.
+  the approved storage modules: `s3-bucket.ts`, which every interface bucket
+  adapter builds on, and the public site's own storage modules, since the site
+  cannot import the interface package.
 
 Each rule carries positive and negative fixtures under
 `.semgrep/fixtures/<rule-id>/{bad.ts,good.ts,stage-path}`, checked by

@@ -69,7 +69,7 @@ docker run --rm -v "$PWD":/repo:ro -w /repo "$TRIVY_IMAGE" fs \
   --scanners vuln,secret,misconfig \
   --skip-dirs "$TRIVY_SKIP_DIRS" --skip-files "$TRIVY_SKIP_FILES" \
   --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
-  --trivyignores .trivyignore.yaml /repo
+  --ignorefile .trivyignore.yaml /repo
 bash deploy/trivy-secret-gate.test.sh
 
 step 'custom Semgrep rules'
@@ -83,7 +83,7 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":/repo:ro 
   "$TRIVY_IMAGE" image \
   --scanners vuln,secret,misconfig \
   --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
-  --trivyignores .trivyignore.yaml "$SCAN_IMAGE"
+  --ignorefile .trivyignore.yaml "$SCAN_IMAGE"
 docker image rm "$SCAN_IMAGE" >/dev/null
 
 [[ "$(git rev-parse HEAD)" == "$COMMIT" && -z "$(git status --porcelain)" ]] ||
