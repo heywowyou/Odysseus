@@ -1,4 +1,4 @@
-import type { ReportLanguage, WritingSanitizationWarning } from '@odysseus/core';
+import type { FindingCategory, ReportLanguage, WritingSanitizationWarning } from '@odysseus/core';
 import { findBusinessClaimViolationsInFields } from './business-claim-guard.js';
 import { findLegalConsequenceViolationsInFields } from './legal-consequence-guard.js';
 import { hasPageCountViolation } from './page-count-guard.js';
@@ -107,10 +107,30 @@ function sanitizeSentences(
   return kept.join(' ').trim();
 }
 
-function fallbackImpact(language: ReportLanguage): string {
-  return language === 'fr'
-    ? 'Les constats de ce thème limitent directement l’utilisation des éléments concernés pour les visiteurs affectés.'
-    : 'The findings in this theme directly limit use of the affected interface elements for impacted visitors.';
+/** Issue #505: the sentence that replaces a business impact the guards
+ *  stripped entirely. Only accessibility findings describe visitors who
+ *  cannot use interface elements; for any other category that claim is
+ *  unsupported (product rule 1), so they get a neutral pointer to the
+ *  findings. Exhaustive over FindingCategory, so a new category must choose. */
+const NEUTRAL_FALLBACK_IMPACT = {
+  fr: 'Les constats de ce thème et les pages concernées sont détaillés dans ce rapport.',
+  en: 'This theme’s findings and the pages concerned are detailed in this report.',
+} as const;
+
+const FALLBACK_IMPACT: Record<FindingCategory, Record<ReportLanguage, string>> = {
+  accessibility: {
+    fr: 'Les constats de ce thème limitent directement l’utilisation des éléments concernés pour les visiteurs affectés.',
+    en: 'The findings in this theme directly limit use of the affected interface elements for impacted visitors.',
+  },
+  seo: NEUTRAL_FALLBACK_IMPACT,
+  geo: NEUTRAL_FALLBACK_IMPACT,
+  performance: NEUTRAL_FALLBACK_IMPACT,
+  rendering: NEUTRAL_FALLBACK_IMPACT,
+  privacy: NEUTRAL_FALLBACK_IMPACT,
+};
+
+function fallbackImpact(language: ReportLanguage, category: FindingCategory | undefined): string {
+  return (category === undefined ? NEUTRAL_FALLBACK_IMPACT : FALLBACK_IMPACT[category])[language];
 }
 
 function fallbackSummary(language: ReportLanguage): string {
@@ -178,7 +198,7 @@ export function sanitizeWritingOutput(
             input.performanceEvidence.suppressedLabRecommendations,
             warnings,
           )
-        : semanticImpact) || fallbackImpact(input.language);
+        : semanticImpact) || fallbackImpact(input.language, source?.category);
 
     const recommendedActions: string[] = [];
     for (const [actionIndex, action] of theme.recommendedActions.entries()) {
