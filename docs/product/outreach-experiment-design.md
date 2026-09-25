@@ -91,12 +91,20 @@ Kept deliberately small, and none of it changes what the prospect receives:
    selected-analysis lineage and the findings digest on the preview row. The
    legal half of the fixed bridge is derivable from whether those categories
    include accessibility. No rule IDs, URLs or recipient evidence are added.
-2. **Tag the experiment.** Add a campaign version to the thread, stamped when
-   the thread opens, and freeze it together with `evidenceVersion`,
-   `outreachPromptVersion`, `previewContentVersion` and the spacing values.
-3. **Export aggregates before expiry.** Add a read-only command that produces
-   the section 3 tables, as counts per group only, from the live collections,
-   and run it before the first thread reaches its 90-day TTL.
+2. **Tag the experiment — done (issue #533).** Each thread carries a
+   `campaignVersion`, stamped when it opens and never changed, from
+   `ODYSSEUS_OUTREACH_CAMPAIGN_VERSION` (default `first-100-2026-09`). Set a
+   new value whenever `evidenceVersion`, the email template,
+   `previewContentVersion` or the spacing changes. The five threads opened on
+   2026-09-24, before the field existed, count as the first campaign.
+3. **Export aggregates before expiry — done (issue #533).**
+   `odysseus outreach-funnel --json` prints, per campaign, threads opened,
+   first emails sent, replies (with the touch they followed, H4), bounces,
+   opt-outs, wins and current outcomes, as counts only; the To do page shows
+   the same counts. Run it and keep the output before 2026-12-23, when the
+   first threads reach their 90-day TTL. The per-group tables for H1, H2,
+   H3 and H5 still need the operator's D1 and D2 rulings before they can be
+   grouped.
 4. **Bridge assignment, only if D1 is approved.** Derive the bridge from a
    deterministic hash of campaign version and prospect ID instead of from
    priority-card category presence, and test that the groups are balanced.

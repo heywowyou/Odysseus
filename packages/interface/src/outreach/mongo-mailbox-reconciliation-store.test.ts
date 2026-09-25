@@ -63,6 +63,7 @@ describe.skipIf(!mongoAvailable)('createMongoMailboxReconciliationStore', () => 
       language: 'fr',
       openedAt: E1_SENT_AT,
       spacing: { touch2AfterDays: 4, touch3AfterDays: 7, replyWindowDays: 14 },
+      campaignVersion: 'test-campaign',
     });
     await attachProviderThreadId(db, thread.threadId, e1.providerThreadId);
     for (const [from, to] of [
@@ -164,6 +165,7 @@ describe.skipIf(!mongoAvailable)('createMongoMailboxReconciliationStore', () => 
       language: 'fr',
       openedAt: NOW,
       spacing: { touch2AfterDays: 4, touch3AfterDays: 7, replyWindowDays: 14 },
+      campaignVersion: 'test-campaign',
     });
     await attachProviderThreadId(db, thread.threadId, e1.providerThreadId);
     await transitionOutreachThread(db, {

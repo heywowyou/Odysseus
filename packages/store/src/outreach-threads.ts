@@ -51,6 +51,8 @@ export interface OpenOutreachThreadInput {
   language: 'fr' | 'en';
   openedAt: Date;
   spacing: OutreachThreadSpacing;
+  /** Issue #533: stamped on a new thread only; a reopened one keeps its own. */
+  campaignVersion: string;
 }
 
 export interface OpenedOutreachThread {
@@ -109,6 +111,7 @@ export async function openOutreachThread(
     stateEnteredAt: input.openedAt,
     touches: [],
     spacing: input.spacing,
+    campaignVersion: input.campaignVersion,
     createdAt: input.openedAt,
     updatedAt: input.openedAt,
     expiresAt: new Date(input.openedAt.getTime() + OUTREACH_THREAD_RETENTION_DAYS * DAY_MS),

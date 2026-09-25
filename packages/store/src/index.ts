@@ -278,3 +278,4 @@ export type {
   RetentionRunDocument,
   RetentionRunFailure,
 } from './schemas/retention-run.schema.js';
+export { aggregateOutreachFunnel } from './outreach-funnel.js';

@@ -46,6 +46,7 @@ async function threadIn(
     language: 'fr',
     openedAt: new Date(firstSent.getTime() - DAY_MS),
     spacing,
+    campaignVersion: 'test-campaign',
   });
   await createOutreachThreadModel(connection!).updateOne(
     { threadId: thread.threadId },
@@ -273,6 +274,7 @@ describe.skipIf(!available)('outreach preview recording', () => {
       language,
       openedAt: firstSent,
       spacing,
+      campaignVersion: 'test-campaign',
     });
     let prospectId: string;
 

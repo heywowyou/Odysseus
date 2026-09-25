@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { ensureEnvLoaded, findWorkspaceRoot, readOdysseusBuildId } from '@odysseus/scanner';
-import { OUTREACH_CONTACT } from '@odysseus/core';
+import { FIRST_OUTREACH_CAMPAIGN_VERSION, OUTREACH_CONTACT } from '@odysseus/core';
 
 const DEFAULT_INTERFACE_PORT = 4600;
 /** Binds to loopback only by default: this is what makes the dashboard a
@@ -193,6 +193,17 @@ export function getOutreachTouch3AfterDays(): number {
 
 export function getOutreachReplyWindowDays(): number {
   return positiveIntEnv('ODYSSEUS_OUTREACH_REPLY_WINDOW_DAYS', DEFAULT_OUTREACH_REPLY_WINDOW_DAYS);
+}
+
+/** Issue #533: the campaign a newly opened outreach thread is stamped with.
+ *  Set a new value when a new batch starts or anything the prospect receives
+ *  changes (email template, preview content, evidence version, spacing). */
+export function getOutreachCampaignVersion(): string {
+  ensureEnvLoaded();
+  const configured = process.env['ODYSSEUS_OUTREACH_CAMPAIGN_VERSION']?.trim();
+  return configured === undefined || configured === ''
+    ? FIRST_OUTREACH_CAMPAIGN_VERSION
+    : configured;
 }
 
 /** Anchored to the workspace root (not to this module's own depth on

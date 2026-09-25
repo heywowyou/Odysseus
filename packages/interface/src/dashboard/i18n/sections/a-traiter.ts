@@ -25,6 +25,17 @@ export interface ATraiterStrings {
   syncMailboxDone: string;
   syncMailboxNotConfigured: string;
   syncMailboxFailed: string;
+  /** Issue #533: the current campaign's funnel, counts only. */
+  funnel: {
+    heading: string;
+    campaign: string;
+    firstTouchSent: string;
+    replied: string;
+    bounced: string;
+    optedOut: string;
+    won: string;
+    note: string;
+  };
   overview: {
     heading: string;
     auditedProspects: string;
@@ -89,6 +100,16 @@ export const aTraiter = {
       'Boîte mail synchronisée : {sent} envoi(s) confirmé(s), {replies} réponse(s) ou retour(s), {review} à vérifier.',
     syncMailboxNotConfigured: 'Aucune boîte mail n’est configurée sur cette machine.',
     syncMailboxFailed: 'La boîte mail n’a pas pu être synchronisée. Réessayez.',
+    funnel: {
+      heading: 'Résultats de la campagne',
+      campaign: 'Campagne {campaign}',
+      firstTouchSent: 'Premiers emails envoyés',
+      replied: 'Réponses',
+      bounced: 'Rebonds',
+      optedOut: 'Désinscriptions',
+      won: 'Gagnés',
+      note: 'Compteurs seuls. Les fils expirent après 90 jours : exportez-les avant avec « odysseus outreach-funnel --json ».',
+    },
     overview: {
       heading: 'Vue de campagne',
       auditedProspects: 'Prospects audités',
@@ -158,6 +179,16 @@ export const aTraiter = {
       'Mailbox synced: {sent} confirmed send(s), {replies} reply(ies) or bounce(s), {review} to check.',
     syncMailboxNotConfigured: 'No mailbox is configured on this machine.',
     syncMailboxFailed: 'The mailbox could not be synced. Try again.',
+    funnel: {
+      heading: 'Campaign results',
+      campaign: 'Campaign {campaign}',
+      firstTouchSent: 'First emails sent',
+      replied: 'Replies',
+      bounced: 'Bounces',
+      optedOut: 'Opt-outs',
+      won: 'Won',
+      note: 'Counts only. Threads expire after 90 days: export them first with "odysseus outreach-funnel --json".',
+    },
     overview: {
       heading: 'Campaign overview',
       auditedProspects: 'Audited prospects',

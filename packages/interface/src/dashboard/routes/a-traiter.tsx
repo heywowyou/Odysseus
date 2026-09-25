@@ -22,7 +22,8 @@ import { useI18n } from '../i18n/provider';
 import { ApiError, sendJson } from '../lib/api';
 import { formatDateTime, formatRelativeTime } from '../lib/format';
 import { useTodoPoll } from '../app/todo-poll';
-import type { AttentionTodoRow, TodoRow, TodoRowKind } from '../lib/api-types';
+import type { AttentionTodoRow, OutreachFunnelPage, TodoRow, TodoRowKind } from '../lib/api-types';
+import { useApi } from '../lib/use-api';
 
 const SKELETON_ROW_COUNT = 6;
 
@@ -50,6 +51,8 @@ export function ATraiterPage(): JSX.Element {
   const navigate = useNavigate();
   // Issue #514: the shell's To-do poll, not a second one of our own.
   const { data, error, refresh } = useTodoPoll();
+  // Issue #533: fetched once per visit and after a mailbox sync, not polled.
+  const funnel = useApi<OutreachFunnelPage>('/api/outreach/funnel');
 
   const [syncing, setSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
@@ -71,6 +74,7 @@ export function ATraiterPage(): JSX.Element {
           .replace('{review}', String(result.review)),
       );
       refresh();
+      funnel.refresh();
     } catch (syncError) {
       setSyncNotice(
         syncError instanceof ApiError && syncError.status === 503
@@ -259,6 +263,31 @@ export function ATraiterPage(): JSX.Element {
                 </Badge>
               ))}
           </div>
+        </Card>
+      ) : null}
+      {funnel.data !== undefined && funnel.data.campaigns.length > 0 ? (
+        <Card title={strings.aTraiter.funnel.heading} className="mb-4">
+          {funnel.data.campaigns.map((campaign) => (
+            <div key={campaign.campaignVersion} className="mb-4">
+              <p className="mb-2 text-xs text-ink-muted">
+                {strings.aTraiter.funnel.campaign.replace('{campaign}', campaign.campaignVersion)}
+              </p>
+              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                <OverviewMetric
+                  label={strings.aTraiter.funnel.firstTouchSent}
+                  value={campaign.firstTouchSent}
+                />
+                <OverviewMetric label={strings.aTraiter.funnel.replied} value={campaign.replied} />
+                <OverviewMetric label={strings.aTraiter.funnel.bounced} value={campaign.bounced} />
+                <OverviewMetric
+                  label={strings.aTraiter.funnel.optedOut}
+                  value={campaign.optedOut}
+                />
+                <OverviewMetric label={strings.aTraiter.funnel.won} value={campaign.won} />
+              </div>
+            </div>
+          ))}
+          <p className="text-xs text-ink-muted">{strings.aTraiter.funnel.note}</p>
         </Card>
       ) : null}
       <p

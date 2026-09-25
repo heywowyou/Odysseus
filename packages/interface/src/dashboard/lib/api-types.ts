@@ -132,3 +132,21 @@ export type ScanUrlResult = z.infer<typeof scanUrlResultSchema>;
  *  site it is scanning; both stay optional because a prospecting job has a
  *  URL list rather than one site. */
 export type ScanJobDetail = z.infer<typeof scanJobDetailSchema>;
+
+/** GET /api/outreach/funnel (issue #533): counts per campaign, nothing that
+ *  identifies a prospect. */
+export interface OutreachCampaignFunnel {
+  campaignVersion: string;
+  threads: number;
+  firstTouchSent: number;
+  replied: number;
+  bounced: number;
+  optedOut: number;
+  won: number;
+  repliesAfterTouch: { 1: number; 2: number; 3: number };
+  outcomes: Record<string, number>;
+}
+
+export interface OutreachFunnelPage {
+  campaigns: OutreachCampaignFunnel[];
+}

@@ -38,6 +38,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   listProspectTodo: vi.fn(),
   listProspects: vi.fn(),
   countActiveAndAuditedProspects: vi.fn(),
+  aggregateOutreachFunnel: vi.fn(),
   loadProspectWork: vi.fn(),
   markOutreachDraftDeletionPending: vi.fn(),
   markOutreachDraftDeleted: vi.fn(),
@@ -121,6 +122,7 @@ import {
   loadProspectWork,
   listProspects,
   countActiveAndAuditedProspects,
+  aggregateOutreachFunnel,
   markOutreachDraftDeletionPending,
   markOutreachDraftDeleted,
   revokeOutreachPreview,
@@ -360,6 +362,28 @@ describe('prospect hub routes', () => {
     // listProspects pages.
     expect(countActiveAndAuditedProspects).toHaveBeenCalledTimes(1);
     expect(listProspects).not.toHaveBeenCalled();
+  });
+
+  it('serves the outreach funnel per campaign, counts only (issue #533)', async () => {
+    const campaigns = [
+      {
+        campaignVersion: 'first-100-2026-09',
+        threads: 5,
+        firstTouchSent: 5,
+        replied: 1,
+        bounced: 0,
+        optedOut: 0,
+        won: 0,
+        repliesAfterTouch: { 1: 1, 2: 0, 3: 0 },
+        outcomes: {},
+      },
+    ];
+    vi.mocked(aggregateOutreachFunnel).mockResolvedValue(campaigns as never);
+
+    const response = await handle('/api/outreach/funnel');
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({ campaigns });
   });
 
   it('forwards directory facets and rejects invalid status values', async () => {

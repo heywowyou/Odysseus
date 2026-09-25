@@ -16,6 +16,7 @@ import {
   listOutreachDrafts,
   listDirectory,
   loadProspectWork,
+  aggregateOutreachFunnel,
   countActiveAndAuditedProspects,
   listProspectTodo,
   PROSPECT_TODO_KINDS,
@@ -211,6 +212,13 @@ export function registerProspectHubRoutes(
     const audits = await listProspectAudits(connection, prospectId);
     return audits.some((audit) => isReportProductionInFlight(audit.auditId));
   }
+
+  // Issue #533: the outreach funnel per campaign, counts only, for the To do
+  // page's campaign tile. Read-only; the CLI's outreach-funnel exports the
+  // same numbers before the threads expire.
+  router.get('/api/outreach/funnel', async ({ res }) => {
+    sendJson(res, 200, { campaigns: await aggregateOutreachFunnel(connection) });
+  });
 
   router.get('/api/prospect-hub/todo', async ({ res }) => {
     // Plan 060 §8: the sidebar badge is the server-provided attention count,

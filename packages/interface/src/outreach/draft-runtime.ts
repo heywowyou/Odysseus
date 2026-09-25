@@ -36,6 +36,7 @@ import {
 import type { OutreachActionRefusal } from '@odysseus/store';
 import type { Connection } from 'mongoose';
 import {
+  getOutreachCampaignVersion,
   getOutreachReplyWindowDays,
   getOutreachTouch2AfterDays,
   getOutreachTouch3AfterDays,
@@ -266,6 +267,7 @@ export async function createTouchOneDraft(
       touch3AfterDays: getOutreachTouch3AfterDays(),
       replyWindowDays: getOutreachReplyWindowDays(),
     },
+    campaignVersion: getOutreachCampaignVersion(),
   });
   if (isTerminalOutreachThreadState(thread.thread.state)) {
     return { configured: true, created: false, refusal: 'thread-closed' };
