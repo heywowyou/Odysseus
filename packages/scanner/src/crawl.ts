@@ -1626,8 +1626,11 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
         // one document-only retry. Budget both navigation windows, their
         // scheduler waits, and bounded document extraction under one outer
         // deadline so the watchdog does not preempt that recovery path.
+        // A pending Retry-After window (capped at the backoff ceiling) holds
+        // the next request start back on top of the delay (issue #490).
         const pacingBudgetMs =
-          2 * Math.max(effectiveDelayMs, options.scheduler?.effectiveDelayMs ?? 0);
+          2 * Math.max(effectiveDelayMs, options.scheduler?.effectiveDelayMs ?? 0) +
+          (options.scheduler?.retryAfterRemainingMs ?? 0);
         const crawlPageWatchdogMs = timeoutMs * 4 + pacingBudgetMs;
         await withPageWorkDeadline(
           `crawl page ${item.url}`,

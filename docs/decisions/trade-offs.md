@@ -5222,12 +5222,21 @@ could supply would let the deployment attest to itself.
 2026-09-22 Haaitza run exposed that a false pushback permanently ratcheted the
 delay to 60 seconds, even after the host resumed answering normally. After 20
 consecutive request starts without a pushback and outside any `Retry-After`
-window, the shared scheduler halves the delay, stopping at the configured
-floor. From 60 seconds to a 10-second floor that is 60 → 30 → 15 → 10 seconds.
+window, the shared scheduler halves the delay, stopping at the floor: the
+larger of the configured delay and the robots.txt `Crawl-delay` (issue #489;
+the robots raise lifts the floor one way, a `Retry-After` raise lifts only the
+delay). From 60 seconds to a 10-second floor that is 60 → 30 → 15 → 10 seconds.
 A fresh pushback resets the clean-start counter. The delay recovers; concurrency
 still only decreases, because the shared global start spacing already controls
 request pressure while more lanes only overlap local work. Recovery events are
 persisted beside pushback events so the operator sees the actual pace.
+
+**Amended for issue #490: a `Retry-After` wait is capped.** The scheduler waits
+at most its backoff cap (60 seconds) for one `Retry-After`, however long the
+site asks for. The pushback event keeps the value the site sent and records
+`retryAfterCapped: true`, and the crawl watchdog budgets the remaining window.
+A day-long header therefore slows the run to the slowest pace it can reach
+instead of stalling every request until the watchdogs fail the audit.
 
 **Plan 076 samples diagnostic surfaces by template family.** Mobile and
 consent-rejected surfaces provide diagnostics and link discovery, not client

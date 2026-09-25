@@ -17,7 +17,11 @@
  * is the intended direction, since plan 059 states cost is not the objective.
  *
  * A pushback raises the delay and sheds lanes. Once Retry-After has passed,
- * twenty clean request starts halve the delay toward its configured floor.
+ * twenty clean request starts halve the delay toward its floor. The floor is
+ * the larger of the configured delay and any robots.txt Crawl-delay handed to
+ * `raiseDelayTo`, so recovery never paces faster than the site asked for
+ * (issue #489). A Retry-After wait is clamped to the backoff cap, so one
+ * header cannot stall the whole run (issue #490).
  * Concurrency only ever falls: section 22 rejects adding lanes as a response
  * to rate limits, and global spacing already controls request pressure.
  */
@@ -32,15 +36,17 @@ import {
 } from '@odysseus/core';
 
 export interface HostRequestSchedulerOptions {
-  /** The configured and robots-derived floor. The scheduler never waits less
-   *  than this between request starts, whatever else happens. */
+  /** The configured floor. The scheduler never waits less than this between
+   *  request starts, whatever else happens. `raiseDelayTo` lifts it further
+   *  when robots.txt asks for a longer Crawl-delay. */
   floorDelayMs: number;
   /** Lanes of overlapping work. Never exceeded, and reduced under pressure. */
   maxConcurrency: number;
   /** Multiplier applied on each rate-limit signal. */
   rateLimitBackoffFactor?: number;
-  /** Upper bound on backoff, so a misbehaving site cannot stall the run
-   *  forever without the caller noticing it has stopped making progress. */
+  /** Upper bound on backoff and on a Retry-After wait, so a misbehaving site
+   *  cannot stall the run forever without the caller noticing it has stopped
+   *  making progress. */
   maxDelayMs?: number;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
@@ -65,7 +71,12 @@ export interface HostPushbackEvent {
   fetcher: HostPushbackFetcher;
   occurredAt: string;
   status?: number;
+  /** The wait the site asked for, as sent. The scheduler waits at most its
+   *  backoff cap; `retryAfterCapped` says when it waited less than this. */
   retryAfterMs?: number;
+  /** The site's Retry-After exceeded the backoff cap, so the run waited only
+   *  the cap. Set by the scheduler. */
+  retryAfterCapped?: boolean;
   /** The delay between request starts once this event was absorbed. Set by
    *  the scheduler; absent on events recorded before it was tracked. */
   delayMs?: number;
@@ -76,14 +87,17 @@ export interface HostPushbackEvent {
 }
 
 /** What a caller reports; the scheduler adds the time and its own pacing. */
-export type HostPushbackSignal = Omit<HostPushbackEvent, 'occurredAt' | 'delayMs' | 'atMaxDelay'>;
+export type HostPushbackSignal = Omit<
+  HostPushbackEvent,
+  'occurredAt' | 'delayMs' | 'atMaxDelay' | 'retryAfterCapped'
+>;
 
 const DEFAULT_BACKOFF_FACTOR = 2;
 const CLEAN_STARTS_TO_RECOVER = 20;
 const DEFAULT_MAX_DELAY_MS = 60_000;
 
 export class HostRequestScheduler {
-  readonly #floorDelayMs: number;
+  #floorDelayMs: number;
   readonly #maxDelayMs: number;
   readonly #backoffFactor: number;
   readonly #now: () => number;
@@ -128,13 +142,34 @@ export class HostRequestScheduler {
     return this.#requestStartCount;
   }
 
+  /** The delay recovery never goes below: the configured delay, lifted by
+   *  any robots.txt Crawl-delay handed to `raiseDelayTo`. */
+  get floorDelayMs(): number {
+    return this.#floorDelayMs;
+  }
+
+  /** How long the current Retry-After window still holds every request
+   *  start back; zero once it has passed. Watchdogs add it to their budget. */
+  get retryAfterRemainingMs(): number {
+    return Math.max(0, this.#retryAfterUntil - this.#now());
+  }
+
   /**
-   * Raises the delay, typically because a robots revalidation asked for more.
-   * A request to lower it is ignored rather than rejected: callers recompute
-   * the epoch's effective delay from the whole policy chain and hand it over,
-   * and that value legitimately stays the same most of the time.
+   * Raises the delay and the floor, because a robots policy asked for more.
+   * The floor rises with it (one-way), so recovery after a later pushback
+   * never paces faster than the site's Crawl-delay (issue #489). A request to
+   * lower it is ignored rather than rejected: callers recompute the epoch's
+   * effective delay from the whole policy chain and hand it over, and that
+   * value legitimately stays the same most of the time.
    */
   raiseDelayTo(delayMs: number): void {
+    this.#floorDelayMs = Math.min(this.#maxDelayMs, Math.max(this.#floorDelayMs, delayMs));
+    this.#raiseCurrentDelayTo(delayMs);
+  }
+
+  /** Raises only the current delay. Retry-After uses this, so its raise can
+   *  still recover after clean request starts. */
+  #raiseCurrentDelayTo(delayMs: number): void {
     this.#delayMs = Math.min(this.#maxDelayMs, Math.max(this.#delayMs, delayMs));
   }
 
@@ -144,12 +179,19 @@ export class HostRequestScheduler {
    */
   noteRateLimited(event?: HostPushbackSignal): void {
     this.#cleanStartsSincePushback = 0;
+    // A site can ask for a day, or a far-future date. Waiting that long would
+    // stall every later request until the watchdogs fail the audit, so the
+    // wait is clamped to the backoff cap and the event keeps the value the
+    // site sent (issue #490).
+    const retryAfterCapped =
+      event?.retryAfterMs !== undefined && event.retryAfterMs > this.#maxDelayMs;
     if (event?.retryAfterMs !== undefined) {
-      this.#retryAfterUntil = Math.max(this.#retryAfterUntil, this.#now() + event.retryAfterMs);
+      const waitMs = Math.max(0, Math.min(event.retryAfterMs, this.#maxDelayMs));
+      this.#retryAfterUntil = Math.max(this.#retryAfterUntil, this.#now() + waitMs);
     }
     const atMaxDelay = this.#delayMs >= this.#maxDelayMs;
     if (event?.retryAfterMs !== undefined) {
-      this.raiseDelayTo(event.retryAfterMs);
+      this.#raiseCurrentDelayTo(event.retryAfterMs);
     }
     this.#delayMs = Math.min(
       this.#maxDelayMs,
@@ -162,6 +204,7 @@ export class HostRequestScheduler {
         occurredAt: new Date(this.#now()).toISOString(),
         delayMs: this.#delayMs,
         atMaxDelay,
+        ...(retryAfterCapped ? { retryAfterCapped: true } : {}),
       });
     }
   }

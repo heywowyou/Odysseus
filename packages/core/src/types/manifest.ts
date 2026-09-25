@@ -381,7 +381,11 @@ export interface AuditPushbackEvent {
   fetcher: 'crawl' | 'render' | 'lighthouse' | 'canonical';
   occurredAt: string;
   status?: number;
+  /** The Retry-After the site sent, uncapped. */
   retryAfterMs?: number;
+  /** The site's Retry-After exceeded the backoff cap, so the run waited
+   *  only the cap; absent on older runs and when it did not. */
+  retryAfterCapped?: boolean;
   /** Delay between request starts after this event; absent on older runs. */
   delayMs?: number;
   /** The delay was already at the backoff cap when this event arrived. */

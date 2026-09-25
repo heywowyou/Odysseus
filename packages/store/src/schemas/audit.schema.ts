@@ -130,6 +130,7 @@ const pushbackEventSchema = new Schema(
     occurredAt: { type: String, required: true },
     status: { type: Number },
     retryAfterMs: { type: Number },
+    retryAfterCapped: { type: Boolean },
     delayMs: { type: Number },
     atMaxDelay: { type: Boolean },
   },
