@@ -239,6 +239,50 @@ the whole `findings.json` bytes, and the renormalized manifest minus
 | `www.villasfoch.fr/2026-09-07T20-49-46Z` | equal | 42.4 | 32.7 |
 | `www.villasfoch.fr/2026-09-16T02-37-05Z` | equal | 41.5 | 31.7 |
 
+### Steps 2 to 9: implementation (2026-09-25)
+
+| Requirement | Artifact | Proof |
+|---|---|---|
+| Compaction lossless | `compactScanJson` (`packages/scanner/src/artifacts/page-scan-io.ts`), the only owner of the trim rules; `buildScanJson` calls it | Step 1 digest record; `page-scan-io.test.ts` (`compactScanJson`: drops `fullPageScreenshot`, keeps unowned fields, idempotent) |
+| Compaction idempotent and atomic | `compactStoredScans` (`packages/interface/src/artifacts/compact-stored-scans.ts`), CLI `artifacts compact-scans` | `compact-stored-scans.test.ts`: second run compacts 0; failed rename leaves the original and no temp file; bucket failure leaves the local original so a retry redoes both |
+| Audit deletion removes quality candidates | `deleteAuditArtifacts` + `reportQualityCandidatesPrefix` | `delete-audit-artifacts.test.ts` (in-memory store: own candidates removed, another audit's kept, orphan prefix names none) |
+| Keep registry exhaustive, no silent default | `RETENTION_KEEP_REASONS` / `planRetention` (`packages/interface/src/retention/retention-policy.ts`) | `retention-policy.test.ts`: fixture table typed `Record<RetentionKeepReason, …>` plus a runtime set-equality test; each reason keeps its item and the item goes without it (`latest-per-language` never stands alone and is asserted recorded) |
+| Grace = 7 days from supersession | `RETENTION_GRACE_DAYS` | 6 d 23 h kept / 7 d deleted, for versions and audits; an ancient item superseded 3 days ago stays |
+| Supersession rank | rank table, legacy rules | 16 pairwise intent cases incl. legacy on both sides; other site, other kind, unfinished newer audit ignored; earliest qualifying replacement dates it |
+| Delivered → slim, never delete | `isDeliveredAudit`, executor slim, `retention.slimmedAt` | one test per signal (approval, active bundle, operator-approved, promoted, finalized report, live preview); `apply-retention.test.ts` slim keeps manifest/findings/report files and bucket copies; `store/retention.test.ts` findings-delta baseline still resolves after slim |
+| Slimmed audit refused | `refuseSlimmedAudit` (`raw-evidence-removed`, FR/EN copy in `work-state.ts`) on regenerate-report, manual-fields/confirm, report-quality, regenerate-writing, generate-english-version | `slimmed-audit-routes.test.ts`: 409 typed problem and the pipeline never called, per route |
+| Holds | `busy` / `storage` inputs, `RetentionHold` | policy tests for all four reasons and within-audit holds; executor tests for a DB-queued job, in-process report production and not-local |
+| Sweeper only on the VPS | `isRetentionSweepEnabled` (exact `on`), `startBackgroundPollers`, `serve` | `retention-sweeper.test.ts` (flag values, 15 min first tick, daily, apply with cap); `server-background-pollers.test.ts` (no option, no sweeper); executor dry run makes zero delete calls and writes no record |
+| Per-run cap | `RETENTION_RUN_CAP = 20` | executor test: 21 audits refuse the whole run and record the refusal; `--allow-large` passes; the sweeper always passes `allowLarge: false` |
+| Storage before records, retryable | executor order | bucket delete failure keeps audit rows and records `audit-storage`; the retry completes |
+| Run record | `retentionRuns` (`schemas/retention-run.schema.ts`, TTL 90 d) | `store/retention.test.ts`; `schema-indexes.test.ts` builds its indexes |
+| Disk alarm 75/90 | `diskLevel`, `GET /api/storage-status`, `StorageStatusCard` | `storage-status.test.ts` (boundaries 74.9/75/89.9/90); `storage-status-render.test.ts` (ok, warning, danger with `role=alert`, last-run summary, unmeasurable disk) |
+| Backup retention | `restic-maintain.sh` (14 daily, 6 weekly, no monthly), `backup-artifacts.sh` (14 days) | `deploy/restic-scripts.test.sh` |
+
+Dashboard location: `docs/product/dashboard-ia.md` named no system or health
+location and the dashboard has no Settings page, so the storage block is on
+the Tools page (`/outils`), and the IA doc now says so.
+
+Two unrelated test mocks on `main` were already failing and are fixed in
+their own commits: the report-preparation route mock lacked
+`reconcileFailedAuditJobs`, and the server auth mock lacked the outreach
+draft index migration.
+
+### Step 10: local gate (2026-09-25)
+
+- `pnpm run format:check` and `pnpm run check` (docs, plans, format, lint,
+  typecheck, architecture, dead code): pass.
+- `REQUIRE_MONGO_TESTS=1 pnpm run test:all`: 6,089 passed, 8 failed, 4
+  skipped. None of the 8 is in code this plan touched, and all fail on `main`
+  without it: `findings-provenance` and `fixture-freshness` (the
+  normalization fingerprint over `packages/core/src/normalize`, untouched
+  here), `delete-audit.test.ts` (3, cascade counts the test does not
+  expect), `reconcile-jobs.test.ts` and `report-preparations.test.ts`
+  (reproduced with this plan's only change to a shared file, the audit
+  schema, reverted), and `workflow.e2e.test.ts` (outreach outcome flow).
+  CI on `main` was already failing before plan 077 started. They are left to
+  their owners and reported to the operator.
+
 ## Definition of done
 
 Plan 077 is done only when the local implementation is verified, every row in
