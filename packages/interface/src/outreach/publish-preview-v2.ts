@@ -105,7 +105,13 @@ export interface OutreachPreviewStorePortV3 {
   recordPreview(
     input: RecordPreviewV3Input,
   ): Promise<{ recorded: true; previewId: string; publicExpiresAt: Date } | { recorded: false }>;
-  listLivePreviews(domain: string): Promise<{ previewId: string; objectKey: string }[]>;
+  /** The publishing prospect's own live previews. Never the domain's: several
+   *  prospects can share a domain (a chain or portal), and each one's live
+   *  preview may already be linked from a sent email (issue #480). Domain-wide
+   *  revocation belongs to opt-out only. */
+  listLivePreviewsForProspect(
+    prospectId: string,
+  ): Promise<{ previewId: string; objectKey: string }[]>;
   revokePreview(previewId: string, reason: string): Promise<{ changed: boolean }>;
 }
 
@@ -510,7 +516,7 @@ export async function publishPreviewV3(
     return refuse('suppressed');
   }
 
-  const livePreviews = await options.store.listLivePreviews(row.domain);
+  const livePreviews = await options.store.listLivePreviewsForProspect(row.prospectId);
   for (const previous of livePreviews) {
     if (previous.previewId === recorded.previewId) continue;
     try {
