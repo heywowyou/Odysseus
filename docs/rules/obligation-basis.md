@@ -343,6 +343,8 @@ sign-off because they touch legal wording:
 | « faites-le confirmer avant de vous appuyer sur ce statut » | « faites confirmer ce point avant d'en tirer une conclusion sur l'applicabilité de l'obligation » |
 | « Les obligations sont donc déjà en vigueur, depuis {durée}, pas à venir. » | « Les obligations sont donc en vigueur depuis {durée} ; il ne s'agit pas d'une échéance à venir. » |
 | « parcours transactionnel » (status descriptions) | « parcours de réservation ou d'achat en ligne (« parcours transactionnel ») » on first use |
+| « le répertoire indique la tranche d'effectif 00 » | « le répertoire indique un effectif de 0 salarié » (INSEE label, not the code; NN reads « un effectif non renseigné ») |
+| out_of_scope status line « soit un effectif et un chiffre d'affaires sous les seuils cités, soit … » when the SME facts resolved it | « D'après le répertoire Sirene, l'effectif et le chiffre d'affaires se situent sous les seuils de l'article L412-13 du code de la consommation : moins de dix personnes employées et un chiffre d'affaires annuel n'excédant pas deux millions d'euros. » Cites the section 3 criterion the old line called « cités » without printing; a comparison of inputs, no exemption verdict. An NN headcount keeps the generic line. |
 
 ---
 

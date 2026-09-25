@@ -608,6 +608,35 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
     expect(html).not.toContain('parcours transactionnel identifié');
     expect(html).not.toContain('example.com/reserver');
     expect(html).toContain('Seuil ou parcours non observé');
+    // The generic line cited thresholds the section never printed and left
+    // the reader to guess which branch applied.
+    expect(html).toContain('article L412-\u206013');
+    expect(html).toContain('moins de dix personnes');
+    expect(html).not.toContain('seuils cités');
+    expect(html).not.toContain('exempt');
+  });
+
+  it('keeps the generic out-of-scope line when the headcount is unreported', () => {
+    const assessment: ObligationAssessment = {
+      status: 'out_of_scope',
+      basis: [
+        {
+          regimeId: EAA_REGIME_ID,
+          facts: [{ kind: 'sme-exemption', effectifCode: 'NN', turnoverEur: 500_000 }],
+        },
+      ],
+    };
+    const html = renderLegalExposure(
+      fr,
+      2,
+      'fr',
+      assessment,
+      new Date('2026-08-17'),
+      fakeManifest(),
+      [],
+    );
+    expect(html).not.toContain('moins de dix personnes');
+    expect(html).toContain('un effectif non renseigné');
   });
 });
 

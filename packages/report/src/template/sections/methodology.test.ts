@@ -279,8 +279,10 @@ describe('renderLegalCitationParagraph', () => {
       ],
     };
     const html = renderLegalCitationParagraph(getStrings('fr'), assessment, 'fr');
-    expect(html).toContain('loi n° 2023-171');
-    expect(html).toContain('tranche d’effectif 02');
+    expect(html).toContain('loi n°\u00a02023-171');
+    // The INSEE code alone means nothing to the reader; its label does.
+    expect(html).toContain('un effectif de 3 à 5 salariés');
+    expect(html).not.toContain('tranche d’effectif 02');
     expect(html).toContain('500 000 €');
     expect(html).not.toContain('ne relève pas de');
   });

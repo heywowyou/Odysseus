@@ -193,15 +193,13 @@ describe('item 3.5: the 8 previously-missing glossary terms', () => {
       hasMeasuredCoreWebVitals: true,
       reportText: '',
     });
-    for (const term of [
-      'Sans objet',
-      'Pages concernées',
-      'Rendu',
-      'Complexité',
-      'Impact commercial',
-    ]) {
+    for (const term of ['Sans objet', 'Pages concernées', 'Rendu', 'Complexité', 'Impact']) {
       expect(html).toContain(term);
     }
+    // The cards label the column "Impact"; the glossary must name it the
+    // same, and never claim the audit measures conversion.
+    expect(html).not.toContain('Impact commercial');
+    expect(html).not.toContain('conversion');
   });
 
   it('includes "Signaux à vérifier" only when a heuristic-rule finding exists', () => {
@@ -223,23 +221,25 @@ describe('item 3.5: the 8 previously-missing glossary terms', () => {
     expect(withoutHeuristic).not.toContain('Signaux à vérifier');
   });
 
-  it('includes "Recherche émergente" only when the report has geo findings', () => {
-    const withGeo = renderGlossary(getStrings('fr'), 13, {
+  it('includes "Recherche émergente" only when the report prints that label', () => {
+    // It prints only beside a statistic flagged as emerging, not with every
+    // GEO finding: a hotel report with GEO findings defined it unused.
+    const ctx = {
       findings: [buildFinding('geo')],
       obligationAssessment: undefined,
       transactionalFlowEvaluated: false,
       hasMeasuredCoreWebVitals: true,
-      reportText: '',
+    };
+    const labelled = renderGlossary(getStrings('fr'), 13, {
+      ...ctx,
+      reportText: 'Repère chiffré (Recherche émergente) : …',
     });
-    const withoutGeo = renderGlossary(getStrings('fr'), 13, {
-      findings: [buildFinding('accessibility')],
-      obligationAssessment: undefined,
-      transactionalFlowEvaluated: false,
-      hasMeasuredCoreWebVitals: true,
-      reportText: '',
+    const unlabelled = renderGlossary(getStrings('fr'), 13, {
+      ...ctx,
+      reportText: 'Repère chiffré : …',
     });
-    expect(withGeo).toContain('Recherche émergente');
-    expect(withoutGeo).not.toContain('Recherche émergente');
+    expect(labelled).toContain('Recherche émergente');
+    expect(unlabelled).not.toContain('Recherche émergente');
   });
 });
 

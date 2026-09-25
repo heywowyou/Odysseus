@@ -604,7 +604,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     },
   },
   'meta-description-missing': {
-    text: 'Ajoutez une méta-description à cette page, pour choisir vous-même le résumé affiché sous le titre dans les résultats de recherche.',
+    text: 'Ajoutez une méta-description à chaque page concernée, pour choisir vous-même le résumé affiché sous le titre dans les résultats de recherche.',
     snippet: {
       kind: 'fill-in-blank',
       template: '<meta name="description" content="<résumé de la page>">',

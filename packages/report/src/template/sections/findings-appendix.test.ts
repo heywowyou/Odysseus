@@ -111,7 +111,9 @@ describe('renderFindingsAppendix against the real small-site.test findings', () 
     // Issue #325: the tag now closes the group header, after the counts.
     const crawlableAnchorsHead = crawlableAnchorsGroup.split('<table')[0] ?? '';
     expect(crawlableAnchorsHead).toContain('class="obs-tag"');
-    expect(crawlableAnchorsHead).toContain('Détail dans la section «\u00a0Observations\u00a0»');
+    expect(crawlableAnchorsHead).toContain(
+      'Détail dans la section «\u00a0Observations complémentaires\u00a0»',
+    );
     expect(crawlableAnchorsHead.indexOf('class="obs-tag"')).toBeGreaterThan(
       crawlableAnchorsHead.search(/\d+ constats?/),
     );

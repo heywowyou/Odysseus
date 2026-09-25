@@ -440,6 +440,23 @@ describe('fix #1 (2026-08-25 report review): the covered-by-priorities bridging 
     expect(html).toMatch(/en couvrent 1 sur 2\s*;/);
   });
 
+  it('names the observations section when some uncovered findings are presented there', () => {
+    // A hotel report said the rest were all in "Autres constats" while one of
+    // them, the missing accessibility statement, was in the observations.
+    const analysis = buildAnalysis([theme]);
+    const findings = [
+      buildFinding('f001'),
+      buildFinding('f002'),
+      { ...buildFinding('f003'), ruleId: 'accessibility-statement-missing' },
+    ];
+    const html = renderExecutiveSummary(getStrings('fr'), 1, analysis, findings, emptyManifest);
+
+    expect(html).toMatch(/en couvrent 1 sur 3\s*;/);
+    expect(html).toContain('Autres constats');
+    expect(html).toContain('Observations complémentaires');
+    expect(html).not.toContain('par gravité');
+  });
+
   it('renders nothing when every finding is covered by a rendered priority', () => {
     const analysis = buildAnalysis([theme]);
     const findings = [buildFinding('f001')];

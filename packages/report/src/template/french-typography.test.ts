@@ -10,6 +10,10 @@ import {
 const NBSP = ' ';
 
 describe('normalizeFrenchTypography', () => {
+  it('keeps n° on the same line as its number', () => {
+    expect(normalizeFrenchTypography('loi n° 2023-171')).toBe('loi n°\u00a02023-171');
+  });
+
   it('sets elision apostrophes as U+2019', () => {
     expect(normalizeFrenchTypography("l'usage n'est pas conforme")).toBe(
       'l’usage n’est pas conforme',

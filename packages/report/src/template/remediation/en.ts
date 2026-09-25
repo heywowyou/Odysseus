@@ -559,7 +559,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     },
   },
   'meta-description-missing': {
-    text: 'Add a meta description to this page, so you choose the summary shown under the title in search results rather than leaving it to the search engine.',
+    text: 'Add a meta description to each affected page, so you choose the summary shown under the title in search results rather than leaving it to the search engine.',
     snippet: {
       kind: 'fill-in-blank',
       template: '<meta name="description" content="<page summary>">',

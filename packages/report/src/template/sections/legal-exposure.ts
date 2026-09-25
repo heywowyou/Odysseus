@@ -423,6 +423,18 @@ export function renderLegalExposure(
   const lcenBlock = renderLcenBlock(strings, language, findings);
   const generalEaaReference = renderGeneralEaaReference(strings, language, obligationAssessment);
   const synthetic = obligationAssessment?.registrySnapshot?.source === SYNTHETIC_REGISTRY_SOURCE;
+  // The generic out_of_scope line ("either below the cited thresholds, or no
+  // flow found") cited thresholds the section never printed and left the
+  // reader to guess which branch applied. When the registry facts resolved
+  // it, say so and name the published criterion. An unreported headcount
+  // (NN) proves nothing about staff numbers, so it keeps the generic line.
+  const smeResolved = obligationAssessment?.basis
+    .find((b) => b.regimeId === EAA_REGIME_ID)
+    ?.facts.some((f) => f.kind === 'sme-exemption' && f.effectifCode !== 'NN');
+  const statusDescription =
+    !synthetic && status === 'out_of_scope' && smeResolved === true
+      ? l.outOfScopeSmeShortDescription
+      : (synthetic ? l.syntheticStatusShortDescriptions : l.statusShortDescriptions)[status];
 
   return sheet(
     `
@@ -436,7 +448,7 @@ export function renderLegalExposure(
       <div class="card elev-sm">
         <div class="card-kicker">${escapeHtml(l.obligationStatusLabel)}</div>
         <div class="card-title">${escapeHtml(l.statusLabels[status])}</div>
-        <div class="card-body">${escapeCopy((synthetic ? l.syntheticStatusShortDescriptions : l.statusShortDescriptions)[status], language)}</div>
+        <div class="card-body">${escapeCopy(statusDescription, language)}</div>
         ${actionNote}
       </div>
     </div>

@@ -1088,7 +1088,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
         "La page n'a pas de titre, qui est le libellé affiché dans l'onglet du navigateur et en tête du résultat de recherche.",
     },
     'meta-description-missing': {
-      label: 'Méta description absente',
+      label: 'Méta-description absente',
       gloss:
         'La page ne fournit pas de résumé court ; les moteurs de recherche en fabriquent alors un à partir du contenu, sans contrôle du site.',
     },

@@ -1,5 +1,6 @@
 import type { AuditManifest, Finding, ObligationAssessment, ReportLanguage } from '@odysseus/core';
 import { EAA_REGIME_ID, eaaSanctionFigureSentence } from '@odysseus/core';
+import { partitionFindings } from '@odysseus/llm';
 import type { StoredAnalysis } from '../../types.js';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
@@ -216,15 +217,25 @@ function renderCoveredByPrioritiesNote(
   ].filter((findingId) => counted.has(findingId)).length;
   if (covered === 0 || covered >= counted.size) return '';
 
+  // Issue #211 diverts contextual findings (an absent accessibility
+  // statement, for one) to Observations rather than Remaining Work, so
+  // pointing every uncovered finding at Remaining Work miscounted by those.
+  const diverted = partitionFindings(findings, manifest).diverted.some(({ finding }) =>
+    counted.has(finding.findingId),
+  );
   const e = strings.executiveSummary;
-  const text = fillTemplate(e.coveredByPrioritiesTemplate, {
-    covered: formatNumber(covered, analysis.language),
-    total: formatNumber(counted.size, analysis.language),
-    // Issue #307: this sheet precedes the priorities by several pages, so
-    // the sentence names their section instead of saying "below".
-    prioritiesSection: sectionTitle('section-04', strings),
-    remainingSection: sectionTitle('section-05b', strings),
-  });
+  const text = fillTemplate(
+    diverted ? e.coveredByPrioritiesWithObservationsTemplate : e.coveredByPrioritiesTemplate,
+    {
+      covered: formatNumber(covered, analysis.language),
+      total: formatNumber(counted.size, analysis.language),
+      // Issue #307: this sheet precedes the priorities by several pages, so
+      // the sentence names their section instead of saying "below".
+      prioritiesSection: sectionTitle('section-04', strings),
+      remainingSection: sectionTitle('section-05b', strings),
+      observationsSection: sectionTitle('section-06', strings),
+    },
+  );
   return `<p style="font-size:12px;color:var(--color-neutral-400);margin-top:var(--space-1);line-height:1.4">${escapeHtml(text)}</p>`;
 }
 

@@ -46,6 +46,9 @@ const TEXT_GATED_TERMS: Readonly<Record<string, RegExp>> = {
   eaa: /\bEAA\b/,
   dgccrf: /\bDGCCRF\b/,
   sirene: /\bSirene\b/,
+  // The label prints only beside a statistic flagged as emerging, not with
+  // every GEO finding: a hotel report defined it without ever using it.
+  'recherche-emergente': /Recherche émergente|Emerging research/,
 };
 
 /** Visible text of rendered report HTML: tags dropped, the handful of
@@ -102,8 +105,6 @@ function isGlossaryTermRelevant(id: string, ctx: GlossaryContext): boolean {
     // five Core Web Vitals/constat-vs-occurrence/selecteur/dgccrf.
     case 'signaux-a-verifier':
       return ctx.findings.some((f) => HEURISTIC_RULE_IDS.has(f.ruleId));
-    case 'recherche-emergente':
-      return ctx.findings.some((f) => f.category === 'geo');
     default:
       if (CORE_WEB_VITALS_TERM_IDS.has(id)) {
         return ctx.hasMeasuredCoreWebVitals;

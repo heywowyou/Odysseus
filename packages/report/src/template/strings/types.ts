@@ -516,6 +516,9 @@ export interface ReportStrings {
      *  bare "covers N of them" had two candidate denominators.
      *  Rendered only when there is a genuine remainder. */
     coveredByPrioritiesTemplate: string;
+    /** Same sentence when some of the rest are presented in the
+     *  observations section instead: {observationsSection}. */
+    coveredByPrioritiesWithObservationsTemplate: string;
   };
   /** Promotes methodology's own legal-citation paragraph (rendered via
    *  the exported renderLegalCitationParagraph) to its own page for
@@ -551,6 +554,10 @@ export interface ReportStrings {
       out_of_scope: string;
       undetermined: string;
     };
+    /** out_of_scope when the registry facts, not a missing flow, resolved
+     *  it: the published size criterion the facts fall under, stated as a
+     *  comparison of inputs, never as an exemption verdict. */
+    outOfScopeSmeShortDescription: string;
     /** Public reference variants: the legal inputs in the detached showcase
      *  are fictional and must never read as a registry-backed client fact. */
     syntheticStatusShortDescriptions: {
@@ -1418,7 +1425,7 @@ export interface ReportStrings {
     /** Under 10 staff, turnover above EUR 2M, no balance sheet available:
      *  the exemption can be neither confirmed nor ruled out. */
     legalCitationSmeBalanceSheetUnknownFactTemplate: string;
-    /** Template: {effectifCode}, {turnover}. */
+    /** Template: {effectif}, {turnover}. */
     legalCitationSmeFactTemplate: string;
     legalCitationSyntheticSmeFactTemplate: string;
     /** item 41: names the specific detected flow type (e.g. "réservation

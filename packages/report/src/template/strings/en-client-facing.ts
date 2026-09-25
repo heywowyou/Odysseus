@@ -112,7 +112,10 @@ export function applyEnglishClientFacingCopy(strings: ReportStrings): ReportStri
         '({critical} and {serious} serious).',
       coveredByPrioritiesTemplate:
         'The priorities in the "{prioritiesSection}" section cover {covered} of the {total}; the ' +
-        'remainder stay documented by severity in "{remainingSection}".',
+        'remainder are grouped by area in "{remainingSection}".',
+      coveredByPrioritiesWithObservationsTemplate:
+        'The priorities in the "{prioritiesSection}" section cover {covered} of the {total}; the ' +
+        'remainder are presented in "{remainingSection}" and "{observationsSection}".',
     },
     themes: {
       ...strings.themes,

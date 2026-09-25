@@ -159,8 +159,12 @@ export function applyFrenchClientFacingCopy(strings: ReportStrings): ReportStrin
         '({critical} et {serious} sérieux).',
       coveredByPrioritiesTemplate:
         'Les priorités présentées dans la section « {prioritiesSection} » en couvrent ' +
-        '{covered} sur {total} ; les autres restent documentés par gravité dans ' +
+        '{covered} sur {total} ; les autres sont regroupés par domaine dans ' +
         '« {remainingSection} ».',
+      coveredByPrioritiesWithObservationsTemplate:
+        'Les priorités présentées dans la section « {prioritiesSection} » en couvrent ' +
+        '{covered} sur {total} ; les autres sont présentés dans « {remainingSection} » ' +
+        'et « {observationsSection} ».',
     },
     themes: {
       ...strings.themes,

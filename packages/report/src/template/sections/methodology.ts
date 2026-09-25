@@ -30,7 +30,7 @@ import {
   auditDate,
 } from '../html-utils.js';
 import { frenchCopy } from '../french-typography.js';
-import { translateEffectifLabel } from '../effectif-label.js';
+import { effectifPhrase, translateEffectifLabel } from '../effectif-label.js';
 import { buildCoverageDisclosure } from '../coverage-disclosure.js';
 import { SYNTHETIC_REGISTRY_SOURCE } from '../../constants.js';
 
@@ -73,7 +73,7 @@ function renderFact(
       return fillTemplate(
         synthetic ? m.legalCitationSyntheticSmeFactTemplate : m.legalCitationSmeFactTemplate,
         {
-          effectifCode: fact.effectifCode,
+          effectif: effectifPhrase(fact.effectifCode, language),
           turnover: formatEur(fact.turnoverEur, language),
         },
       );
@@ -121,7 +121,7 @@ function renderFact(
     }
     case 'sme-balance-sheet-unknown':
       return fillTemplate(m.legalCitationSmeBalanceSheetUnknownFactTemplate, {
-        effectifCode: fact.effectifCode,
+        effectif: effectifPhrase(fact.effectifCode, language),
         turnover: formatEur(fact.turnoverEur, language),
         threshold: formatEur(fact.thresholdEur, language),
       });

@@ -206,7 +206,7 @@ export const fr: ReportStrings = {
     eyebrow: 'Reste \u00e0 traiter',
     heading: 'Les autres constats, group\u00e9s par th\u00e8me',
     introTemplate:
-      "Les priorit\u00e9s class\u00e9es de la section {prioritiesSection} couvrent les corrections \u00e0 mener en premier. Les {count} constats restants sont regroup\u00e9s ci-dessous par domaine et par r\u00e8gle, avec l'action correspondante. Chaque ligne renvoie aux num\u00e9ros de constats de l'annexe.",
+      "Les priorit\u00e9s class\u00e9es de la section « {prioritiesSection} » couvrent les corrections \u00e0 mener en premier. Les {count} constats restants sont regroup\u00e9s ci-dessous par domaine et par r\u00e8gle, avec l'action correspondante. Chaque ligne renvoie aux num\u00e9ros de constats de l'annexe.",
     nothingRemaining:
       "Tous les constats de cet audit sont couverts par les priorit\u00e9s class\u00e9es. Cette section n'a rien \u00e0 ajouter.",
     findingSingular: 'constat',
@@ -316,6 +316,8 @@ export const fr: ReportStrings = {
     criticalCountPluralTemplate: '{count} critiques',
     coveredByPrioritiesTemplate:
       'Parmi ces {total} constats, {covered} sont couverts par les priorités de la section « {prioritiesSection} » ; les autres sont listés par sévérité dans « {remainingSection} ».',
+    coveredByPrioritiesWithObservationsTemplate:
+      'Parmi ces {total} constats, {covered} sont couverts par les priorités de la section « {prioritiesSection} » ; les autres sont présentés dans « {remainingSection} » et « {observationsSection} ».',
   },
   legalExposure: {
     eyebrow: 'Exposition légale',
@@ -341,6 +343,9 @@ export const fr: ReportStrings = {
       undetermined:
         "L'identifiant d'entreprise ou les données Sirene nécessaires n'étaient pas disponibles pour comparer les faits observés aux seuils cités.",
     },
+    // \u2060 (word joiner) keeps the article number off a line break.
+    outOfScopeSmeShortDescription:
+      "D'après le répertoire Sirene, l'effectif et le chiffre d'affaires se situent sous les seuils de l'article L412-\u206013 du code de la consommation : moins de dix personnes employées et un chiffre d'affaires annuel n'excédant pas deux millions d'euros.",
     syntheticStatusShortDescriptions: {
       in_scope:
         'Le statut illustré repose sur des données synthétiques créées pour cet exemple ; elles ne décrivent pas un établissement réel.',
@@ -907,7 +912,7 @@ export const fr: ReportStrings = {
         id: 'pages-concernees',
         term: 'Pages concernées',
         definition:
-          'Nombre total de pages distinctes touchées par au moins un constat pour ce critère, tous constats de ce critère confondus : le nombre de pages distinctes concernées, sans double comptage.',
+          "Nombre de pages distinctes touchées par au moins un constat relevant de ce critère ; une page concernée par plusieurs constats n'est comptée qu'une fois.",
       },
       {
         id: 'rendu',
@@ -929,9 +934,9 @@ export const fr: ReportStrings = {
       },
       {
         id: 'impact-commercial',
-        term: 'Impact commercial',
+        term: 'Impact',
         definition:
-          "Estimation qualitative (Faible / Moyen / Élevé) de l'effet attendu d'un correctif sur l'expérience client, la conversion ou la visibilité, distincte de la sévérité technique du constat.",
+          "Estimation qualitative (Faible / Moyen / Élevé) de l'effet attendu d'un correctif pour les visiteurs du site ou pour sa visibilité, distincte de la gravité technique du constat.",
       },
     ],
   },
@@ -1013,7 +1018,7 @@ export const fr: ReportStrings = {
     geoEmergingLabel: 'Recherche émergente',
     thirdPartyHeading: 'À traiter avec vos prestataires tiers',
     thirdPartyIntro:
-      "Ces constats concernent du code appartenant à un plugin, un widget ou un cadre tiers (moteur de réservation, bannière de cookies, aperçu, formulaire). Votre agence ne peut pas modifier ce code directement : la correction passe par le prestataire ou l'éditeur concerné.",
+      "Ces constats concernent du code appartenant à un plugin, un widget ou un cadre tiers (moteur de réservation, bannière de cookies, aperçu, formulaire). Ce code ne peut pas être modifié directement dans votre site : la correction passe par le prestataire ou l'éditeur concerné.",
     // P2.3 (2026-08-21 La Corniche feedback pass): a real report counted
     // a Complianz cookie-consent finding among the "sérieux" total on the
     // cover while this section noted the current implementation needs no
@@ -1057,7 +1062,7 @@ export const fr: ReportStrings = {
     pageSingular: 'page',
     pagePlural: 'pages',
     wcagLabel: 'WCAG',
-    observationsCrossRefLabel: 'Détail dans la section « Observations »',
+    observationsCrossRefLabel: 'Détail dans la section « {section} »',
     splitGroupThirdPartyNoteTemplate:
       'Encore {count} occurrences de cette règle concernent un composant tiers ; voir « {thirdPartyHeading} ».',
     splitGroupThirdPartyNoteSingularTemplate:
@@ -1138,11 +1143,11 @@ export const fr: ReportStrings = {
     legalCitationTurnoverFactTemplate:
       "Le chiffre d'affaires annuel enregistré est de {amount} ; le seuil publié est de {threshold}.",
     legalCitationSmeBalanceSheetUnknownFactTemplate:
-      "Le répertoire indique la tranche d'effectif {effectifCode} et un chiffre d'affaires de {turnover}, supérieur à {threshold} ; le total de bilan n'était pas disponible pour le comparer à ce seuil.",
+      "Le répertoire indique {effectif} et un chiffre d'affaires de {turnover}, supérieur à {threshold} ; le total de bilan n'était pas disponible pour le comparer à ce seuil.",
     legalCitationSmeFactTemplate:
-      "Le répertoire indique la tranche d'effectif {effectifCode} et un chiffre d'affaires de {turnover}.",
+      "Le répertoire indique {effectif} et un chiffre d'affaires de {turnover}.",
     legalCitationSyntheticSmeFactTemplate:
-      "Les données synthétiques de cet exemple utilisent la tranche d'effectif {effectifCode} et un chiffre d'affaires fictif de {turnover}.",
+      "Les données synthétiques de cet exemple utilisent {effectif} et un chiffre d'affaires fictif de {turnover}.",
     legalCitationTransactionalFlowFactTemplate:
       'Le site propose un parcours de {flowType} {location}.',
     legalCitationTransactionalFlowLocationOnSite: 'directement en ligne',

@@ -287,6 +287,8 @@ export const en: ReportStrings = {
     criticalCountPluralTemplate: '{count} critical',
     coveredByPrioritiesTemplate:
       '{covered} of these {total} findings are covered by the priorities in the "{prioritiesSection}" section; the rest are listed by severity in "{remainingSection}".',
+    coveredByPrioritiesWithObservationsTemplate:
+      '{covered} of these {total} findings are covered by the priorities in the "{prioritiesSection}" section; the rest are presented in "{remainingSection}" and "{observationsSection}".',
   },
   legalExposure: {
     eyebrow: 'Legal exposure',
@@ -312,6 +314,9 @@ export const en: ReportStrings = {
       undetermined:
         'The business identifier or Sirene data needed to compare observed facts with the cited thresholds was unavailable.',
     },
+    // \u2060 (word joiner) keeps the article number off a line break.
+    outOfScopeSmeShortDescription:
+      'According to the Sirene register, headcount and turnover fall below the thresholds in article L412-\u206013 of the French Consumer Code: fewer than ten persons employed and annual turnover not exceeding two million euros.',
     syntheticStatusShortDescriptions: {
       in_scope:
         'The illustrated status uses synthetic data created for this example; it does not describe a real establishment.',
@@ -824,9 +829,9 @@ export const en: ReportStrings = {
       },
       {
         id: 'impact-commercial',
-        term: 'Business impact',
+        term: 'Impact',
         definition:
-          "Qualitative estimate (Low / Medium / High) of a fix's expected effect on customer experience, conversion, or visibility - distinct from the finding's technical severity.",
+          "Qualitative estimate (Low / Medium / High) of a fix's expected effect for the site's visitors or its visibility - distinct from the finding's technical severity.",
       },
     ],
   },
@@ -897,7 +902,7 @@ export const en: ReportStrings = {
     geoEmergingLabel: 'Emerging research',
     thirdPartyHeading: 'To resolve with your third-party providers',
     thirdPartyIntro:
-      'These findings are in code belonging to a third-party plugin, widget, or embedded frame (booking engine, cookie banner, preview panel, form). Your agency cannot edit this code directly: the fix goes through the vendor or provider concerned.',
+      'These findings are in code belonging to a third-party plugin, widget, or embedded frame (booking engine, cookie banner, preview panel, form). This code cannot be edited directly in your site: the fix goes through the vendor or provider concerned.',
     thirdPartyCountedInTotalsNote:
       // Revised 2026-08-30 with the French entry: the first wording read as
       // two flat contradictory propositions ("a real conformance gap ...
@@ -937,7 +942,7 @@ export const en: ReportStrings = {
     pageSingular: 'page',
     pagePlural: 'pages',
     wcagLabel: 'WCAG',
-    observationsCrossRefLabel: 'Details in the Observations section',
+    observationsCrossRefLabel: 'Details in the "{section}" section',
     splitGroupThirdPartyNoteTemplate:
       '{count} more occurrences of this rule affect a third-party component; see "{thirdPartyHeading}".',
     splitGroupThirdPartyNoteSingularTemplate:
@@ -1009,11 +1014,10 @@ export const en: ReportStrings = {
     legalCitationTurnoverFactTemplate:
       'Recorded annual turnover is {amount}; the published threshold is {threshold}.',
     legalCitationSmeBalanceSheetUnknownFactTemplate:
-      'The register records headcount band {effectifCode} and turnover of {turnover}, above {threshold}; the balance sheet total was not available to compare with that threshold.',
-    legalCitationSmeFactTemplate:
-      'The registry reports headcount band {effectifCode} and turnover of {turnover}.',
+      'The register records {effectif} and turnover of {turnover}, above {threshold}; the balance sheet total was not available to compare with that threshold.',
+    legalCitationSmeFactTemplate: 'The registry reports {effectif} and turnover of {turnover}.',
     legalCitationSyntheticSmeFactTemplate:
-      'The synthetic data for this example uses headcount band {effectifCode} and fictional turnover of {turnover}.',
+      'The synthetic data for this example uses {effectif} and fictional turnover of {turnover}.',
     legalCitationTransactionalFlowFactTemplate: 'The site offers a {flowType} {location}.',
     legalCitationTransactionalFlowLocationOnSite: 'directly online',
     legalCitationTransactionalFlowLocationDelegated: 'online, delegated to a third-party provider',

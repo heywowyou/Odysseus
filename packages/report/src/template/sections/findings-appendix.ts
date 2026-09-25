@@ -27,6 +27,7 @@ import { VERBATIM_EVIDENCE_ATTRIBUTE } from '../render-lint.js';
 import { printableSelector } from '../printable-selector.js';
 import { renderSeverityBadge } from '../severity-badge.js';
 import { CATEGORY, CATEGORY_ORDER } from '../design-tokens.js';
+import { sectionTitle } from '../section-registry.js';
 import { renderReferenceStatNote } from '../reference-stat-note.js';
 import { groupAppendix, type RuleGroup } from '../appendix-grouping.js';
 import { resolveFindingDisplayLabel, RULE_TRANSLATIONS_FR } from '../rule-translations.js';
@@ -552,7 +553,7 @@ function renderRuleGroup(
     })
     .join('');
   const obsTag = isFullyDiverted
-    ? `<span class="obs-tag" style="font-size:11px;opacity:0.55">${escapeHtml(a.observationsCrossRefLabel)}</span>`
+    ? `<span class="obs-tag" style="font-size:11px;opacity:0.55">${escapeHtml(fillTemplate(a.observationsCrossRefLabel, { section: sectionTitle('section-06', strings) }))}</span>`
     : '';
   // item 1.6 follow-up (La Corniche pass): a group here used to get the
   // `.appendix-group` class (paged.css, break-inside: avoid) whenever it
