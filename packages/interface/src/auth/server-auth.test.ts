@@ -30,6 +30,7 @@ vi.mock('@odysseus/store', async (importOriginal) => {
   return {
     ...actual,
     verifyUniqueIndexes: vi.fn(async () => []),
+    migrateOutreachDraftThreadTouchIndex: vi.fn(async () => 'current'),
     resetOrphanedRunningJobs: vi.fn(async () => 0),
     settleCancelRequestedJobsOnStartup: vi.fn(async () => 0),
     backfillQueueOrder: vi.fn(async () => 0),
