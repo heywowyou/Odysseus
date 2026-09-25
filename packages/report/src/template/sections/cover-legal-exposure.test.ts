@@ -607,7 +607,10 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
     const html = renderLegalExposure(fr, 2, 'fr', assessment, new Date('2026-08-17'), manifest, []);
     expect(html).not.toContain('parcours transactionnel identifié');
     expect(html).not.toContain('example.com/reserver');
-    expect(html).toContain('Seuil ou parcours non observé');
+    // A 2026-09 report titled this card "threshold or flow not observed"
+    // above a body naming the thresholds the business sits under.
+    expect(html).toContain('Sous les seuils de taille');
+    expect(html).not.toContain('Seuil ou parcours non observé');
     // The generic line cited thresholds the section never printed and left
     // the reader to guess which branch applied.
     expect(html).toContain('article L412-\u206013');
@@ -636,6 +639,7 @@ describe('item 28: the transactional-flow crawl scope is stated explicitly', () 
       [],
     );
     expect(html).not.toContain('moins de dix personnes');
+    expect(html).toContain('Seuil ou parcours non observé');
     expect(html).toContain('un effectif non renseigné');
   });
 });

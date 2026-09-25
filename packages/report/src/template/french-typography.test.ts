@@ -10,6 +10,16 @@ import {
 const NBSP = ' ';
 
 describe('normalizeFrenchTypography', () => {
+  it('supplies the missing no-break space before ; ? and ! after a word, never before a colon', () => {
+    expect(normalizeFrenchTypography('du navigateur; le site')).toBe(
+      'du navigateur\u00a0; le site',
+    );
+    expect(normalizeFrenchTypography('Pourquoi? Parce que')).toBe('Pourquoi\u00a0? Parce que');
+    expect(normalizeFrenchTypography('voir https://exemple.fr/?p=1 ici')).toBe(
+      'voir https://exemple.fr/?p=1 ici',
+    );
+  });
+
   it('keeps n° on the same line as its number', () => {
     expect(normalizeFrenchTypography('loi n° 2023-171')).toBe('loi n°\u00a02023-171');
   });

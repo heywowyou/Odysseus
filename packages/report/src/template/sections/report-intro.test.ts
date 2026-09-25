@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Finding, PreparationPreviewLanguage } from '@odysseus/core';
+import { EAA_REGIME_ID } from '@odysseus/core';
 import { renderReportIntro } from './report-intro.js';
 import { getStrings } from '../strings/i18n.js';
 import { fr } from '../strings/fr.js';
@@ -515,5 +516,38 @@ describe('the affected-page count against the analysed scope', () => {
     const html = renderReportIntro(getStrings('fr'), 1, analysis as never, findings);
 
     expect(html).toContain('2 pages');
+  });
+});
+
+describe('the legal reminder when the registry facts put the business under the size criterion', () => {
+  const findings = [
+    buildFinding({ findingId: 'f001', severity: 'serious', pageUrls: ['https://example.com/a'] }),
+  ];
+  const withAssessment = (effectifCode: string) => ({
+    ...buildAnalysis([['f001']]),
+    obligationAssessment: {
+      status: 'out_of_scope',
+      basis: [
+        {
+          regimeId: EAA_REGIME_ID,
+          facts: [{ kind: 'sme-exemption', effectifCode, turnoverEur: 1_000_000 }],
+        },
+      ],
+    },
+  });
+
+  // A 2026-09 hotel report told a micro-business that obligations "may also
+  // concern" it, while its own legal section said it sat under the thresholds.
+  it('states the threshold comparison instead of "obligations may apply"', () => {
+    const html = renderReportIntro(getStrings('fr'), 1, withAssessment('00') as never, findings);
+    expect(html).toContain('sous les seuils de taille publiés');
+    expect(html).toContain('conseil juridique');
+    expect(html).not.toContain('peuvent également concerner');
+    expect(html).not.toMatch(/exempt|dispens/i);
+  });
+
+  it('keeps the generic reminder when the headcount is unreported', () => {
+    const html = renderReportIntro(getStrings('fr'), 1, withAssessment('NN') as never, findings);
+    expect(html).toContain('peuvent également concerner');
   });
 });

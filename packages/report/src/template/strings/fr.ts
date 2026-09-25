@@ -36,6 +36,8 @@ export const fr: ReportStrings = {
     priorityPlural: 'priorités classées',
     consequenceRegulatoryOverseas:
       'Le régime d’accessibilité applicable à votre territoire reste à vérifier ; la section « {legalSection} » précise ce point.',
+    consequenceRegulatoryBelowThresholds:
+      "D'après le répertoire Sirene, l'effectif et le chiffre d'affaires de votre établissement se situent sous les seuils de taille publiés pour l'obligation d'accessibilité numérique : la section « {legalSection} » décrit ces critères et les faits enregistrés, à faire confirmer par votre conseil juridique.",
     consequenceRegulatory:
       "Des obligations légales peuvent s'appliquer à votre établissement : la section « {legalSection} » décrit les critères publiés et les faits enregistrés, à faire confirmer par votre conseil juridique.",
     notALegalOpinionNote:
@@ -343,6 +345,7 @@ export const fr: ReportStrings = {
       undetermined:
         "L'identifiant d'entreprise ou les données Sirene nécessaires n'étaient pas disponibles pour comparer les faits observés aux seuils cités.",
     },
+    outOfScopeSmeLabel: 'Sous les seuils de taille',
     // \u2060 (word joiner) keeps the article number off a line break.
     outOfScopeSmeShortDescription:
       "D'après le répertoire Sirene, l'effectif et le chiffre d'affaires se situent sous les seuils de l'article L412-\u206013 du code de la consommation : moins de dix personnes employées et un chiffre d'affaires annuel n'excédant pas deux millions d'euros.",
@@ -918,7 +921,7 @@ export const fr: ReportStrings = {
         id: 'rendu',
         term: 'Rendu',
         definition:
-          "Catégorie de constats liés à l'écart entre le contenu HTML brut d'une page et son contenu une fois le JavaScript exécuté, utile pour identifier le contenu qu'un moteur de recherche ou un lecteur d'écran risque de ne pas percevoir.",
+          "Catégorie de constats liés à l'écart entre le contenu HTML brut d'une page et son contenu une fois les scripts exécutés, utile pour identifier le contenu qu'un moteur de recherche qui n'exécute pas le JavaScript risque de ne pas voir.",
       },
       {
         id: 'sirene',

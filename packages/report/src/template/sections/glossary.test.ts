@@ -358,3 +358,14 @@ describe('terms gated on the rendered report text (issue #330)', () => {
     },
   );
 });
+
+describe('the rendering definition', () => {
+  // A 2026-09 report said JavaScript-only content may escape "a screen
+  // reader". Assistive technology reads the rendered page; only a crawler
+  // that does not run scripts misses it, which is what the section says.
+  it.each(['fr', 'en'] as const)('names only non-executing crawlers (%s)', (language) => {
+    const term = getStrings(language).glossary.terms.find((t) => t.id === 'rendu');
+    expect(term?.definition).toMatch(/moteur de recherche|search engine/);
+    expect(term?.definition).not.toMatch(/lecteur d.écran|screen reader/);
+  });
+});

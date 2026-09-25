@@ -345,6 +345,8 @@ sign-off because they touch legal wording:
 | « parcours transactionnel » (status descriptions) | « parcours de réservation ou d'achat en ligne (« parcours transactionnel ») » on first use |
 | « le répertoire indique la tranche d'effectif 00 » | « le répertoire indique un effectif de 0 salarié » (INSEE label, not the code; NN reads « un effectif non renseigné ») |
 | out_of_scope status line « soit un effectif et un chiffre d'affaires sous les seuils cités, soit … » when the SME facts resolved it | « D'après le répertoire Sirene, l'effectif et le chiffre d'affaires se situent sous les seuils de l'article L412-13 du code de la consommation : moins de dix personnes employées et un chiffre d'affaires annuel n'excédant pas deux millions d'euros. » Cites the section 3 criterion the old line called « cités » without printing; a comparison of inputs, no exemption verdict. An NN headcount keeps the generic line. |
+| out_of_scope status title « Seuil ou parcours non observé » when the SME facts resolved it | « Sous les seuils de taille ». The generic title read as contradicting a card body that names the thresholds. Same condition as the status line above; an NN headcount keeps the generic title. |
+| Presentation-section reminder « Certaines obligations d'accessibilité peuvent également concerner votre établissement… » when the SME facts resolved out_of_scope | « D'après le répertoire Sirene, l'effectif et le chiffre d'affaires de votre établissement se situent sous les seuils de taille publiés pour l'obligation d'accessibilité numérique : la section « Cadre réglementaire » décrit ces critères et les faits enregistrés, à faire confirmer par votre conseil juridique. » A comparison of inputs with the counsel deferral kept; no exemption verdict. |
 
 ---
 

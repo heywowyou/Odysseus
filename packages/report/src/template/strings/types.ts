@@ -107,6 +107,10 @@ export interface ReportStrings {
     /** Overseas-domain variant: names no obligation, only where the regime
      *  question is addressed. */
     consequenceRegulatoryOverseas: string;
+    /** Replaces consequenceRegulatory when the registry facts put the
+     *  business under the EAA size criterion: "obligations may apply" read
+     *  as contradicting the legal section's own status card. */
+    consequenceRegulatoryBelowThresholds: string;
     /** The deterministic limitation statement offer-positioning.md
      *  requires, kept verbatim inside the sentence. Template:
      *  {legalSection}, {methodologySection}, both resolved through
@@ -558,6 +562,8 @@ export interface ReportStrings {
      *  it: the published size criterion the facts fall under, stated as a
      *  comparison of inputs, never as an exemption verdict. */
     outOfScopeSmeShortDescription: string;
+    /** Card title paired with outOfScopeSmeShortDescription. */
+    outOfScopeSmeLabel: string;
     /** Public reference variants: the legal inputs in the detached showcase
      *  are fictional and must never read as a registry-backed client fact. */
     syntheticStatusShortDescriptions: {

@@ -13,6 +13,7 @@ import {
 } from '../html-utils.js';
 import { sectionTitle, type SectionId } from '../section-registry.js';
 import { selectRenderedThemes } from './themes.js';
+import { isBelowSmeThresholds } from './legal-exposure.js';
 import { primaryFindingFilter } from '../unlinked-sitemap-pages.js';
 import type { RenderedPriority } from '../rendered-priorities.js';
 
@@ -132,7 +133,9 @@ export function renderReportIntro(
   const legalReminder = fillTemplate(
     manifest !== undefined && isOverseasFrenchDomain(manifest.siteUrl)
       ? r.consequenceRegulatoryOverseas
-      : r.consequenceRegulatory,
+      : isBelowSmeThresholds(analysis.obligationAssessment)
+        ? r.consequenceRegulatoryBelowThresholds
+        : r.consequenceRegulatory,
     {
       legalSection: legalSectionTitle,
     },

@@ -125,6 +125,13 @@ l'autre dans le même rapport :
   partagée par plus d'un quart des actions, seuils calibrés sur les
   analyses stockées (les actions d'exemple de la section 6 culminent à
   60 pour cent d'ouvertures sujet + devoir et doivent rester un passage).
+- **Le futur passif.** Ajouté le 2026-09-25 : un rapport d'hôtel régénéré
+  a contourné la limite ci-dessus en écrivant toutes ses actions au futur
+  passif (« Un texte lisible sera ajouté à chaque lien », « Le contraste
+  sera renforcé »). Une action est une consigne à transmettre, pas
+  l'annonce de ce qui sera fait : le futur passif ne dit ni qui agit ni que
+  c'est au client de le demander. Le prompt l'interdit ; aucun contrôle ne
+  le rejette encore.
 
 ## 4. Le nom du prestataire
 
@@ -247,6 +254,15 @@ reprendre l'une de ces trois formulations telle quelle.
 > vingt-trois mots d'affilée, y compris après l'ajout d'une interdiction
 > explicite de réutiliser leurs premiers mots. Le prompt indique désormais
 > qu'aucun modèle de phrase n'est fourni, et le tic a disparu.
+
+## 7 ter. L'applicabilité de l'obligation reste hors de la synthèse
+
+La synthèse reçoit l'applicabilité de l'obligation comme fait de contexte.
+Le 2026-09-25, elle l'a recopiée telle quelle (« L'applicabilité de
+l'obligation est indiquée comme hors périmètre dans les éléments de
+contexte ») : une phrase juridique hors de la formulation approuvée, que la
+section « Cadre réglementaire » expose déjà. Le prompt demande désormais de
+ne pas la mentionner dans executiveSummary.
 
 ## 7 bis. Ancrage et réparation locale
 

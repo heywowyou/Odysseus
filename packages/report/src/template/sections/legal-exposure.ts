@@ -378,6 +378,22 @@ function renderGeneralEaaReference(
   `;
 }
 
+/** out_of_scope because the registry facts put the business under the EAA
+ *  size criterion, not because no flow was found. The generic out_of_scope
+ *  line and label ("either below the cited thresholds, or no flow found")
+ *  left the reader to guess which branch applied, and read as contradicting
+ *  a card body that names the thresholds. An unreported headcount (NN)
+ *  proves nothing about staff numbers, so it keeps the generic wording. */
+export function isBelowSmeThresholds(assessment: ObligationAssessment | undefined): boolean {
+  if (assessment?.status !== 'out_of_scope') return false;
+  if (assessment.registrySnapshot?.source === SYNTHETIC_REGISTRY_SOURCE) return false;
+  return (
+    assessment.basis
+      .find((b) => b.regimeId === EAA_REGIME_ID)
+      ?.facts.some((f) => f.kind === 'sme-exemption' && f.effectifCode !== 'NN') === true
+  );
+}
+
 export function renderLegalExposure(
   strings: ReportStrings,
   ordinal: number,
@@ -423,18 +439,10 @@ export function renderLegalExposure(
   const lcenBlock = renderLcenBlock(strings, language, findings);
   const generalEaaReference = renderGeneralEaaReference(strings, language, obligationAssessment);
   const synthetic = obligationAssessment?.registrySnapshot?.source === SYNTHETIC_REGISTRY_SOURCE;
-  // The generic out_of_scope line ("either below the cited thresholds, or no
-  // flow found") cited thresholds the section never printed and left the
-  // reader to guess which branch applied. When the registry facts resolved
-  // it, say so and name the published criterion. An unreported headcount
-  // (NN) proves nothing about staff numbers, so it keeps the generic line.
-  const smeResolved = obligationAssessment?.basis
-    .find((b) => b.regimeId === EAA_REGIME_ID)
-    ?.facts.some((f) => f.kind === 'sme-exemption' && f.effectifCode !== 'NN');
-  const statusDescription =
-    !synthetic && status === 'out_of_scope' && smeResolved === true
-      ? l.outOfScopeSmeShortDescription
-      : (synthetic ? l.syntheticStatusShortDescriptions : l.statusShortDescriptions)[status];
+  const belowThresholds = isBelowSmeThresholds(obligationAssessment);
+  const statusDescription = belowThresholds
+    ? l.outOfScopeSmeShortDescription
+    : (synthetic ? l.syntheticStatusShortDescriptions : l.statusShortDescriptions)[status];
 
   return sheet(
     `
@@ -447,7 +455,7 @@ export function renderLegalExposure(
       </div>
       <div class="card elev-sm">
         <div class="card-kicker">${escapeHtml(l.obligationStatusLabel)}</div>
-        <div class="card-title">${escapeHtml(l.statusLabels[status])}</div>
+        <div class="card-title">${escapeHtml(belowThresholds ? l.outOfScopeSmeLabel : l.statusLabels[status])}</div>
         <div class="card-body">${escapeCopy(statusDescription, language)}</div>
         ${actionNote}
       </div>

@@ -56,6 +56,11 @@ export function normalizeFrenchTypography(value: string): string {
       // at the start of the next one (issue #46). Only an existing space
       // is converted: inserting one would put a break inside "https://".
       .replace(/ ([?!:;])/g, `${NO_BREAK_SPACE}$1`)
+      // The writing model often drops the space altogether ("navigateur;
+      // le déplacement"), twice in one hotel summary. Supply it after a
+      // word. The colon is left out: "https:" and CSS declarations are
+      // letter-colon too.
+      .replace(/(\p{L})([;?!])(?=\s)/gu, `$1${NO_BREAK_SPACE}$2`)
       // "n°" belongs to its number: a legal citation printed "loi n°" at a
       // line end and "2023-171" on the next.
       .replace(/\bn° /g, `n°${NO_BREAK_SPACE}`)

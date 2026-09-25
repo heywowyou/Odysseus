@@ -35,6 +35,8 @@ export const en: ReportStrings = {
     priorityPlural: 'ranked priorities',
     consequenceRegulatoryOverseas:
       'The accessibility regime that applies to your territory remains to be verified; the "{legalSection}" section addresses this point.',
+    consequenceRegulatoryBelowThresholds:
+      'According to the Sirene register, your establishment\'s headcount and turnover fall below the published size thresholds for the digital accessibility obligation: the "{legalSection}" section sets out these criteria and the recorded facts, to be confirmed with your legal adviser.',
     consequenceRegulatory:
       'Legal obligations may apply to your establishment: the "{legalSection}" section sets out the published criteria and the recorded facts, to be confirmed with your legal adviser.',
     notALegalOpinionNote:
@@ -314,6 +316,7 @@ export const en: ReportStrings = {
       undetermined:
         'The business identifier or Sirene data needed to compare observed facts with the cited thresholds was unavailable.',
     },
+    outOfScopeSmeLabel: 'Below the size thresholds',
     // \u2060 (word joiner) keeps the article number off a line break.
     outOfScopeSmeShortDescription:
       'According to the Sirene register, headcount and turnover fall below the thresholds in article L412-\u206013 of the French Consumer Code: fewer than ten persons employed and annual turnover not exceeding two million euros.',
@@ -813,7 +816,7 @@ export const en: ReportStrings = {
         id: 'rendu',
         term: 'Rendering',
         definition:
-          "Category of findings about the gap between a page's raw HTML content and its content once JavaScript has run - relevant to what a search engine or screen reader may miss.",
+          "Category of findings about the gap between a page's raw HTML content and its content once JavaScript has run - relevant to what a search engine that does not run JavaScript may miss.",
       },
       {
         id: 'sirene',
