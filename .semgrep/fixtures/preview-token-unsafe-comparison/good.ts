@@ -9,3 +9,8 @@ export function acceptEmptyDraftToken(token: string): boolean {
 export function checkPreviewToken(token: string): boolean {
   return isValidPreviewToken(token);
 }
+
+// ok: preview-token-unsafe-comparison
+export function checkUnknownToken(token: unknown): boolean {
+  return typeof token === 'string' && isValidPreviewToken(token);
+}

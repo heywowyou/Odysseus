@@ -4,14 +4,16 @@ rules:
     severity: ERROR
     message: >
       new AwsClient(...) (aws4fetch's S3-signing client) constructed
-      outside the three approved storage adapters
-      (outreach/scaleway-preview-publisher.ts,
-      artifacts/scaleway-artifact-store.ts, and site/lib/read-preview.ts).
-      Every publication or artifact write goes through the PreviewPublisher
-      / ArtifactStore port so bucket credentials and object-key derivation
-      stay in one reviewed place - call the existing adapter (via
-      configured-preview-publisher.ts) instead of signing requests
-      directly.
+      outside the approved storage modules. In the interface package every
+      bucket adapter (preview publisher, artifact store, opt-out and
+      reference-audit buckets) builds on createS3Bucket in s3-bucket.ts, the
+      one place a client is constructed. The public site cannot import the
+      interface package, so its own storage modules (site/lib/read-preview.ts,
+      opt-out.ts, reference-audit-object.ts, reference-audit-receipt.ts) are
+      its adapters. Bucket credentials and object-key derivation stay in
+      those reviewed places - call an existing adapter (via
+      configured-preview-publisher.ts in the interface) instead of signing
+      requests directly.
     paths:
       include:
         - '**/packages/interface/src/**/*.ts'
@@ -19,7 +21,9 @@ rules:
       exclude:
         - '*.test.ts'
         - '*.e2e.test.ts'
-        - '**/packages/interface/src/outreach/scaleway-preview-publisher.ts'
-        - '**/packages/interface/src/artifacts/scaleway-artifact-store.ts'
+        - '**/packages/interface/src/s3-bucket.ts'
         - '**/packages/site/lib/read-preview.ts'
+        - '**/packages/site/lib/opt-out.ts'
+        - '**/packages/site/lib/reference-audit-object.ts'
+        - '**/packages/site/lib/reference-audit-receipt.ts'
     pattern: new AwsClient(...)

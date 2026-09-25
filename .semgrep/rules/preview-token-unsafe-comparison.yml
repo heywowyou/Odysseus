@@ -24,6 +24,9 @@ rules:
       - pattern-either:
           - pattern: $TOKEN === $STORED
           - pattern: $TOKEN == $STORED
+      # A type guard reads no secret: typeof token === 'string'.
+      - pattern-not: typeof $X === $TYPE
+      - pattern-not: typeof $X == $TYPE
       - metavariable-regex:
           metavariable: $TOKEN
           regex: (?i).*token.*
