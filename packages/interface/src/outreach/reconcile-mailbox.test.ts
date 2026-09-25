@@ -9,6 +9,7 @@
  * not through hand-built response objects.
  */
 
+import { canTransitionOutreachThread } from '@odysseus/core';
 import { describe, expect, it } from 'vitest';
 import { createInMemoryMailboxDraftAdapter } from './in-memory-mailbox-draft-adapter.js';
 import {
@@ -53,9 +54,24 @@ function fakeStore(inputThreads: TestThread[]): {
       calls.push({ method: 'recordTouchSent', input });
       return Promise.resolve();
     },
+    // Enforces the real state machine, as the store does, so a test cannot
+    // pass on a move the store would refuse (issue #477).
     transition: (input) => {
       calls.push({ method: 'transition', input });
+      const thread = threads.find((item) => item.threadId === input.threadId);
+      if (
+        thread === undefined ||
+        !input.from.includes(thread.state) ||
+        !canTransitionOutreachThread(thread.state, input.to)
+      ) {
+        return Promise.resolve(false);
+      }
+      thread.state = input.to;
       return Promise.resolve(true);
+    },
+    withdrawLiveDrafts: (input) => {
+      calls.push({ method: 'withdrawLiveDrafts', input });
+      return Promise.resolve();
     },
     markSynced: (input) => {
       calls.push({ method: 'markSynced', input });
@@ -133,6 +149,7 @@ describe('reconcileMailbox', () => {
       {
         threadId: 'thread-1',
         providerThreadId: draft.providerThreadId,
+        state: 'e1-sent',
         lastConfirmedSentAt: NOW,
       },
     ]);
@@ -148,12 +165,14 @@ describe('reconcileMailbox', () => {
     expect(calls.map((call) => call.method)).toEqual([
       'listThreadsToSync',
       'transition',
+      'withdrawLiveDrafts',
       'markSynced',
     ]);
     expect(calls[1]?.input).toMatchObject({
       to: 'replied',
-      from: ['e1-sent', 'e2-sent', 'e3-sent'],
+      from: ['e1-sent', 'e2-drafted', 'e2-sent', 'e3-drafted', 'e3-sent'],
     });
+    expect(calls[3]?.input).not.toHaveProperty('needsReview');
   });
 
   it('detects a bounce and transitions the thread to bounced', async () => {
@@ -171,7 +190,12 @@ describe('reconcileMailbox', () => {
     });
 
     const { store, calls } = fakeStore([
-      { threadId: 'thread-1', providerThreadId: draft.providerThreadId, lastConfirmedSentAt: NOW },
+      {
+        threadId: 'thread-1',
+        providerThreadId: draft.providerThreadId,
+        state: 'e1-sent',
+        lastConfirmedSentAt: NOW,
+      },
     ]);
 
     const result = await reconcileMailbox({
@@ -340,5 +364,224 @@ describe('reconcileMailbox', () => {
       threadId: 'thread-2',
     });
     expect(calls[0]?.input).toMatchObject({ threadId: 'thread-2' });
+  });
+
+  describe('an answer that arrives while a follow-up is drafted (issue #477)', () => {
+    const E1_SENT_AT = new Date('2026-08-20T09:00:00.000Z');
+
+    async function threadWithE1SentAndE2Drafted() {
+      const mailbox = createInMemoryMailboxDraftAdapter({ senderAddress: SENDER });
+      const e1 = await mailbox.createDraft({
+        to: 'direction@hotel-exemple.fr',
+        subject: 'Votre site web',
+        body: 'Bonjour',
+        htmlBody: '<div>Bonjour</div>',
+      });
+      mailbox.markDraftSent(e1.providerDraftId, E1_SENT_AT);
+      const e2 = await mailbox.createDraft({
+        to: 'direction@hotel-exemple.fr',
+        subject: 'Re: Votre site web',
+        body: 'Relance',
+        htmlBody: '<div>Relance</div>',
+        providerThreadId: e1.providerThreadId,
+      });
+      return { mailbox, e1, e2 };
+    }
+
+    it('moves an e2-drafted thread to replied and withdraws the drafted follow-up', async () => {
+      const { mailbox, e1, e2 } = await threadWithE1SentAndE2Drafted();
+      mailbox.injectInboundMessage(e1.providerThreadId, {
+        fromAddress: 'direction@hotel-exemple.fr',
+        at: new Date('2026-08-25T09:00:00.000Z'),
+      });
+      const { store, calls } = fakeStore([
+        {
+          threadId: 'thread-1',
+          providerThreadId: e1.providerThreadId,
+          state: 'e2-drafted',
+          lastConfirmedSentAt: E1_SENT_AT,
+          outstandingDraft: { touch: 2, providerMessageId: e2.providerMessageId },
+        },
+      ]);
+
+      const result = await reconcileMailbox({ mailbox, senderAddress: SENDER, store, now: NOW });
+
+      expect(result.results[0]?.classification.kind).toBe('reply');
+      expect(calls.map((call) => call.method)).toEqual([
+        'listThreadsToSync',
+        'transition',
+        'withdrawLiveDrafts',
+        'markSynced',
+      ]);
+      const [transition] = calls.filter((call) => call.method === 'transition');
+      expect(transition?.input).toMatchObject({ to: 'replied' });
+    });
+
+    it('moves an e3-drafted thread to bounced', async () => {
+      const { mailbox, e1, e2 } = await threadWithE1SentAndE2Drafted();
+      mailbox.injectInboundMessage(e1.providerThreadId, {
+        fromAddress: 'mailer-daemon@googlemail.com',
+        at: new Date('2026-08-25T09:00:00.000Z'),
+      });
+      const { store, calls } = fakeStore([
+        {
+          threadId: 'thread-1',
+          providerThreadId: e1.providerThreadId,
+          state: 'e3-drafted',
+          lastConfirmedSentAt: E1_SENT_AT,
+          outstandingDraft: { touch: 3, providerMessageId: e2.providerMessageId },
+        },
+      ]);
+
+      await reconcileMailbox({ mailbox, senderAddress: SENDER, store, now: NOW });
+
+      expect(calls.filter((call) => call.method === 'transition')[0]?.input).toMatchObject({
+        to: 'bounced',
+      });
+      expect(calls.map((call) => call.method)).toContain('withdrawLiveDrafts');
+    });
+
+    it('records a follow-up sent after a reply, then moves to replied and flags review', async () => {
+      const { mailbox, e1, e2 } = await threadWithE1SentAndE2Drafted();
+      mailbox.injectInboundMessage(e1.providerThreadId, {
+        fromAddress: 'direction@hotel-exemple.fr',
+        at: new Date('2026-08-25T09:00:00.000Z'),
+      });
+      mailbox.markDraftSent(e2.providerDraftId, new Date('2026-08-26T09:00:00.000Z'));
+      const { store, calls } = fakeStore([
+        {
+          threadId: 'thread-1',
+          providerThreadId: e1.providerThreadId,
+          state: 'e2-drafted',
+          lastConfirmedSentAt: E1_SENT_AT,
+          outstandingDraft: { touch: 2, providerMessageId: e2.providerMessageId },
+        },
+      ]);
+
+      const result = await reconcileMailbox({ mailbox, senderAddress: SENDER, store, now: NOW });
+
+      expect(result.results[0]?.classification).toMatchObject({
+        kind: 'sent',
+        touch: 2,
+        inboundBeforeSend: { kind: 'reply' },
+      });
+      const transitions = calls.filter((call) => call.method === 'transition');
+      expect(transitions.map((call) => (call.input as { to: string }).to)).toEqual([
+        'e2-sent',
+        'replied',
+      ]);
+      expect(calls.map((call) => call.method)).toContain('recordTouchSent');
+      expect(calls.at(-1)).toMatchObject({
+        method: 'markSynced',
+        input: { needsReview: { reason: 'reply-before-send' } },
+      });
+    });
+
+    it('treats a human reply after an out-of-office as a reply', async () => {
+      const { mailbox, e1 } = await threadWithE1SentAndE2Drafted();
+      mailbox.injectInboundMessage(e1.providerThreadId, {
+        fromAddress: 'direction@hotel-exemple.fr',
+        at: new Date('2026-08-21T09:00:00.000Z'),
+        autoSubmitted: true,
+      });
+      mailbox.injectInboundMessage(e1.providerThreadId, {
+        fromAddress: 'direction@hotel-exemple.fr',
+        at: new Date('2026-08-24T09:00:00.000Z'),
+      });
+      const { store, calls } = fakeStore([
+        {
+          threadId: 'thread-1',
+          providerThreadId: e1.providerThreadId,
+          state: 'e1-sent',
+          lastConfirmedSentAt: E1_SENT_AT,
+        },
+      ]);
+
+      const result = await reconcileMailbox({ mailbox, senderAddress: SENDER, store, now: NOW });
+
+      expect(result.results[0]?.classification.kind).toBe('reply');
+      expect(calls.filter((call) => call.method === 'transition')[0]?.input).toMatchObject({
+        to: 'replied',
+      });
+    });
+
+    it('flags a reply the state machine refuses instead of syncing silently', async () => {
+      const mailbox = createInMemoryMailboxDraftAdapter({ senderAddress: SENDER });
+      const e1 = await mailbox.createDraft({
+        to: 'direction@hotel-exemple.fr',
+        subject: 'Votre site web',
+        body: 'Bonjour',
+        htmlBody: '<div>Bonjour</div>',
+      });
+      mailbox.injectInboundMessage(e1.providerThreadId, {
+        fromAddress: 'direction@hotel-exemple.fr',
+        at: new Date('2026-08-25T09:00:00.000Z'),
+      });
+      const { store, calls } = fakeStore([
+        {
+          threadId: 'thread-1',
+          providerThreadId: e1.providerThreadId,
+          state: 'e1-drafted',
+          outstandingDraft: { touch: 1, providerMessageId: e1.providerMessageId },
+        },
+      ]);
+
+      await reconcileMailbox({ mailbox, senderAddress: SENDER, store, now: NOW });
+
+      expect(calls.map((call) => call.method)).not.toContain('withdrawLiveDrafts');
+      expect(calls.at(-1)).toMatchObject({
+        method: 'markSynced',
+        input: { needsReview: { reason: 'reply-not-applied' } },
+      });
+    });
+  });
+
+  it('keeps syncing later threads when one thread fails (issue #483)', async () => {
+    const mailbox = createInMemoryMailboxDraftAdapter({ senderAddress: SENDER });
+    const draft = await mailbox.createDraft({
+      to: 'direction@hotel-exemple.fr',
+      subject: 'Votre site web',
+      body: 'Bonjour',
+      htmlBody: '<div>Bonjour</div>',
+    });
+    mailbox.markDraftSent(draft.providerDraftId, NOW);
+    const failing = {
+      ...mailbox,
+      getThreadMetadata: (providerThreadId: string) =>
+        providerThreadId === 'broken'
+          ? Promise.reject(new Error('Gmail thread read failed with status 500'))
+          : mailbox.getThreadMetadata(providerThreadId),
+    };
+    const { store, calls } = fakeStore([
+      { threadId: 'thread-broken', providerThreadId: 'broken' },
+      {
+        threadId: 'thread-2',
+        providerThreadId: draft.providerThreadId,
+        outstandingDraft: { touch: 1, providerMessageId: draft.providerMessageId },
+      },
+    ]);
+
+    const result = await reconcileMailbox({
+      mailbox: failing,
+      senderAddress: SENDER,
+      store,
+      now: NOW,
+    });
+
+    expect(result.results[0]).toMatchObject({
+      threadId: 'thread-broken',
+      applied: false,
+      classification: { kind: 'needs-review', reason: 'sync-error' },
+      error: 'Gmail thread read failed with status 500',
+    });
+    expect(result.results[1]).toMatchObject({
+      threadId: 'thread-2',
+      applied: true,
+      classification: { kind: 'sent' },
+    });
+    expect(calls[1]).toMatchObject({
+      method: 'markSynced',
+      input: { threadId: 'thread-broken', needsReview: { reason: 'sync-error' } },
+    });
   });
 });

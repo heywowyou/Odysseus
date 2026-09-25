@@ -61,15 +61,18 @@ export const ACTIVE_OUTREACH_THREAD_STATES: readonly OutreachThreadState[] = [
 const ALLOWED_TRANSITIONS: Readonly<Record<OutreachThreadState, readonly OutreachThreadState[]>> = {
   // An objection can arrive before a single draft exists (the suppression
   // gate runs before generation), so `opted-out` and `closed` are reachable
-  // from every active state, not only from a sent one. `bounced` is not:
-  // a bounce is a fact about a message the provider actually tried to
-  // deliver, so it can only follow a confirmed send.
+  // from every active state, not only from a sent one. `replied` and
+  // `bounced` are not: each is a fact about a message the provider actually
+  // delivered or tried to, so they follow a confirmed send. A follow-up
+  // being drafted does not change that the previous touch was sent, so a
+  // reply or bounce to it is reachable from `e2-drafted` and `e3-drafted`
+  // (issue #477), never from `e1-drafted`.
   open: ['e1-drafted', 'opted-out', 'closed'],
   'e1-drafted': ['e1-sent', 'opted-out', 'closed'],
   'e1-sent': ['e2-drafted', 'replied', 'bounced', 'opted-out', 'closed'],
-  'e2-drafted': ['e2-sent', 'opted-out', 'closed'],
+  'e2-drafted': ['e2-sent', 'replied', 'bounced', 'opted-out', 'closed'],
   'e2-sent': ['e3-drafted', 'replied', 'bounced', 'opted-out', 'closed'],
-  'e3-drafted': ['e3-sent', 'opted-out', 'closed'],
+  'e3-drafted': ['e3-sent', 'replied', 'bounced', 'opted-out', 'closed'],
   'e3-sent': ['replied', 'bounced', 'opted-out', 'sequence-complete', 'closed'],
   replied: ['closed'],
   bounced: ['closed'],

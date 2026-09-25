@@ -12,6 +12,9 @@
  * A `dryRun` reconciliation classifies every thread and applies nothing, so an
  * operator can see what a real run would do before committing to it, per this
  * repository's convention for every other bounded prospecting batch.
+ *
+ * One thread's failure never stops the batch (issue #483): the thread is
+ * flagged for review with reason `sync-error` and the next thread is read.
  */
 
 import {
@@ -52,6 +55,10 @@ export interface MailboxReconciliationStorePort {
     syncedAt: Date;
     needsReview?: { reason: string; detectedAt: Date };
   }): Promise<void>;
+  /** Withdraws the thread's live drafts, from the mailbox and the store, once
+   *  a reply or bounce has ended the sequence (issue #477): a follow-up
+   *  drafted before the answer arrived must not stay one click from sending. */
+  withdrawLiveDrafts(input: { threadId: string }): Promise<void>;
   /** Writes permanent suppression before moving a due E3 thread to its
    * terminal state. The store rechecks due-ness before either write. */
   completeSequence(input: { threadId: string; at: Date }): Promise<boolean>;
@@ -73,6 +80,8 @@ export interface ReconcileMailboxThreadResult {
   classification: MailboxThreadClassification;
   applied: boolean;
   sequenceCompleted?: boolean;
+  /** The thread could not be read or applied; it was flagged for review. */
+  error?: string;
 }
 
 export interface ReconcileMailboxResult {
@@ -86,9 +95,16 @@ const TOUCH_STATES: Record<number, { drafted: OutreachThreadState; sent: Outreac
 };
 
 /** Only a confirmed send licenses a reply or a bounce, per the state machine
- *  (`canTransitionOutreachThread`): both are unreachable from a merely
- *  drafted state. */
-const SENT_STATES: readonly OutreachThreadState[] = ['e1-sent', 'e2-sent', 'e3-sent'];
+ *  (`canTransitionOutreachThread`). A drafted follow-up still has a sent touch
+ *  before it, so `e2-drafted` and `e3-drafted` can take a reply or a bounce
+ *  (issue #477); `e1-drafted` cannot, since nothing has been sent yet. */
+const ANSWERABLE_STATES: readonly OutreachThreadState[] = [
+  'e1-sent',
+  'e2-drafted',
+  'e2-sent',
+  'e3-drafted',
+  'e3-sent',
+];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -107,7 +123,9 @@ function isSequenceCompletionDue(
   }
 
   const thirdTouchSentAt =
-    classification.kind === 'sent' && classification.touch === 3
+    classification.kind === 'sent' &&
+    classification.touch === 3 &&
+    classification.inboundBeforeSend === undefined
       ? classification.sentAt
       : classification.kind === 'unchanged' && thread.state === 'e3-sent'
         ? thread.lastConfirmedSentAt
@@ -116,6 +134,45 @@ function isSequenceCompletionDue(
 
   const dueAt = thirdTouchSentAt.getTime() + thread.replyWindowDays * DAY_MS;
   return dueAt <= now.getTime();
+}
+
+/**
+ * Moves the thread to `replied` or `bounced` and withdraws its live drafts.
+ * A refused move is never silent: the thread is flagged for a person, since
+ * an answer the state machine could not record must not leave the next
+ * follow-up looking due.
+ */
+async function applyAnswer(
+  store: MailboxReconciliationStorePort,
+  threadId: string,
+  kind: 'reply' | 'bounce',
+  now: Date,
+  reviewReason: string | undefined,
+): Promise<void> {
+  const to = kind === 'reply' ? 'replied' : 'bounced';
+  const moved = await store.transition({
+    threadId,
+    from: ANSWERABLE_STATES,
+    to,
+    at: now,
+    reason: kind === 'reply' ? 'reply-detected' : 'bounce-detected',
+  });
+  if (!moved) {
+    await store.markSynced({
+      threadId,
+      syncedAt: now,
+      needsReview: { reason: `${kind}-not-applied`, detectedAt: now },
+    });
+    return;
+  }
+  await store.withdrawLiveDrafts({ threadId });
+  await store.markSynced({
+    threadId,
+    syncedAt: now,
+    ...(reviewReason === undefined
+      ? {}
+      : { needsReview: { reason: reviewReason, detectedAt: now } }),
+  });
 }
 
 async function applyClassification(
@@ -143,29 +200,20 @@ async function applyClassification(
           reason: 'confirmed-send',
         });
       }
+      // The prospect answered the previous touch before this one went out.
+      // The send is recorded as a fact; the answer still ends the sequence,
+      // and a person should look at why a follow-up went after it.
+      const answer = classification.inboundBeforeSend;
+      if (answer !== undefined) {
+        await applyAnswer(store, threadId, answer.kind, now, `${answer.kind}-before-send`);
+        return;
+      }
       await store.markSynced({ threadId, syncedAt: now });
       return;
     }
-    case 'reply': {
-      await store.transition({
-        threadId,
-        from: SENT_STATES,
-        to: 'replied',
-        at: now,
-        reason: 'reply-detected',
-      });
-      await store.markSynced({ threadId, syncedAt: now });
-      return;
-    }
+    case 'reply':
     case 'bounce': {
-      await store.transition({
-        threadId,
-        from: SENT_STATES,
-        to: 'bounced',
-        at: now,
-        reason: 'bounce-detected',
-      });
-      await store.markSynced({ threadId, syncedAt: now });
+      await applyAnswer(store, threadId, classification.kind, now, undefined);
       return;
     }
     case 'automated': {
@@ -205,34 +253,58 @@ export async function reconcileMailbox(
   const results: ReconcileMailboxThreadResult[] = [];
 
   for (const thread of threads) {
-    const metadata = await options.mailbox.getThreadMetadata(thread.providerThreadId);
-    const classification = classifyMailboxThread({
-      messages: metadata?.messages ?? [],
-      senderAddress: options.senderAddress,
-      ...(thread.outstandingDraft === undefined
-        ? {}
-        : { outstandingDraft: thread.outstandingDraft }),
-      ...(thread.lastConfirmedSentAt === undefined
-        ? {}
-        : { lastConfirmedSentAt: thread.lastConfirmedSentAt }),
-    });
-
-    if (options.dryRun === true) {
-      results.push({ threadId: thread.threadId, classification, applied: false });
-      continue;
+    try {
+      results.push(await reconcileThread(options, thread));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const classification: MailboxThreadClassification = {
+        kind: 'needs-review',
+        reason: 'sync-error',
+      };
+      if (options.dryRun !== true) {
+        // Best effort: a store that is down fails this write too, and the
+        // next thread still deserves its turn.
+        await options.store
+          .markSynced({
+            threadId: thread.threadId,
+            syncedAt: options.now,
+            needsReview: { reason: 'sync-error', detectedAt: options.now },
+          })
+          .catch(() => undefined);
+      }
+      results.push({ threadId: thread.threadId, classification, applied: false, error: message });
     }
-
-    await applyClassification(options.store, thread.threadId, classification, options.now);
-    const sequenceCompleted = isSequenceCompletionDue(thread, classification, options.now)
-      ? await options.store.completeSequence({ threadId: thread.threadId, at: options.now })
-      : false;
-    results.push({
-      threadId: thread.threadId,
-      classification,
-      applied: true,
-      ...(sequenceCompleted ? { sequenceCompleted: true } : {}),
-    });
   }
 
   return { results };
+}
+
+async function reconcileThread(
+  options: ReconcileMailboxOptions,
+  thread: ThreadToSync,
+): Promise<ReconcileMailboxThreadResult> {
+  const metadata = await options.mailbox.getThreadMetadata(thread.providerThreadId);
+  const classification = classifyMailboxThread({
+    messages: metadata?.messages ?? [],
+    senderAddress: options.senderAddress,
+    ...(thread.outstandingDraft === undefined ? {} : { outstandingDraft: thread.outstandingDraft }),
+    ...(thread.lastConfirmedSentAt === undefined
+      ? {}
+      : { lastConfirmedSentAt: thread.lastConfirmedSentAt }),
+  });
+
+  if (options.dryRun === true) {
+    return { threadId: thread.threadId, classification, applied: false };
+  }
+
+  await applyClassification(options.store, thread.threadId, classification, options.now);
+  const sequenceCompleted = isSequenceCompletionDue(thread, classification, options.now)
+    ? await options.store.completeSequence({ threadId: thread.threadId, at: options.now })
+    : false;
+  return {
+    threadId: thread.threadId,
+    classification,
+    applied: true,
+    ...(sequenceCompleted ? { sequenceCompleted: true } : {}),
+  };
 }

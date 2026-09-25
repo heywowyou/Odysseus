@@ -19,10 +19,15 @@
  *
  * Everything else is read from messages after the last confirmed send only,
  * so a reply to touch 1 is never re-detected as a reply to touch 2 once touch
- * 2 has gone out. Order matters: an automated response (`Auto-Submitted`) is
- * never a reply and never a bounce, even if it happens to come from a
- * mail-system local part; a genuine bounce is checked next; anything else
- * inbound is a reply. An outstanding draft that has vanished from the thread
+ * 2 has gone out. Because of that, a send found in this sync also reports a
+ * human message that arrived between the previous send and this one
+ * (`inboundBeforeSend`): the operator sent the follow-up after the prospect
+ * had answered, and that answer would otherwise never be seen (issue #477).
+ * Order matters: an automated response (`Auto-Submitted`) is never a reply
+ * and never a bounce, even if it happens to come from a mail-system local
+ * part, and it does not hide a human message that follows it: the first
+ * non-automated inbound message decides; a genuine bounce is checked next;
+ * anything else inbound is a reply. An outstanding draft that has vanished from the thread
  * with no confirmed send and no inbound activity to explain it is flagged for
  * a person to look at, rather than guessed at.
  */
@@ -63,8 +68,22 @@ export interface ClassifyMailboxThreadInput {
   lastConfirmedSentAt?: Date;
 }
 
+/** A human message (reply or bounce) that arrived after the previous
+ *  confirmed send and before the send this sync found. */
+export interface InboundBeforeSend {
+  kind: 'reply' | 'bounce';
+  providerMessageId: string;
+  at: Date;
+}
+
 export type MailboxThreadClassification =
-  | { kind: 'sent'; touch: number; providerMessageId: string; sentAt: Date }
+  | {
+      kind: 'sent';
+      touch: number;
+      providerMessageId: string;
+      sentAt: Date;
+      inboundBeforeSend?: InboundBeforeSend;
+    }
   | { kind: 'reply'; providerMessageId: string; at: Date }
   | { kind: 'bounce'; providerMessageId: string; at: Date }
   | { kind: 'automated'; providerMessageId: string; at: Date }
@@ -85,6 +104,53 @@ function isFromConfiguredSender(message: MailboxClassifierMessage, senderAddress
   return message.fromAddress.toLowerCase() === senderAddress.toLowerCase();
 }
 
+function isBounce(message: MailboxClassifierMessage): boolean {
+  return BOUNCE_LOCAL_PARTS.has(localPartOf(message.fromAddress));
+}
+
+/** Inbound messages strictly after `after` (when given) and strictly before
+ *  `before` (when given), oldest first. */
+function inboundBetween(
+  input: ClassifyMailboxThreadInput,
+  after: Date | undefined,
+  before: Date | undefined,
+): MailboxClassifierMessage[] {
+  return input.messages
+    .filter((message) => after === undefined || message.at.getTime() > after.getTime())
+    .filter((message) => before === undefined || message.at.getTime() < before.getTime())
+    .filter((message) => !isFromConfiguredSender(message, input.senderAddress))
+    .sort((a, b) => a.at.getTime() - b.at.getTime());
+}
+
+/** A send found in this sync, with any human answer to the previous touch
+ *  that arrived before it. Only a follow-up has a previous touch to answer. */
+function sentClassification(
+  input: ClassifyMailboxThreadInput,
+  touch: number,
+  message: MailboxClassifierMessage,
+): MailboxThreadClassification {
+  const previousSend = input.lastConfirmedSentAt;
+  const human =
+    previousSend === undefined
+      ? undefined
+      : inboundBetween(input, previousSend, message.at).find((inbound) => !inbound.autoSubmitted);
+  return {
+    kind: 'sent',
+    touch,
+    providerMessageId: message.providerMessageId,
+    sentAt: message.at,
+    ...(human === undefined
+      ? {}
+      : {
+          inboundBeforeSend: {
+            kind: isBounce(human) ? 'bounce' : 'reply',
+            providerMessageId: human.providerMessageId,
+            at: human.at,
+          },
+        }),
+  };
+}
+
 export function classifyMailboxThread(
   input: ClassifyMailboxThreadInput,
 ): MailboxThreadClassification {
@@ -98,12 +164,7 @@ export function classifyMailboxThread(
         !message.labelIds.includes('DRAFT'),
     );
     if (sentMessage !== undefined) {
-      return {
-        kind: 'sent',
-        touch: outstanding.touch,
-        providerMessageId: sentMessage.providerMessageId,
-        sentAt: sentMessage.at,
-      };
+      return sentClassification(input, outstanding.touch, sentMessage);
     }
 
     const draftStillPresent = input.messages.some(
@@ -123,31 +184,22 @@ export function classifyMailboxThread(
         )
         .sort((a, b) => a.at.getTime() - b.at.getTime())[0];
       if (replacement !== undefined) {
-        return {
-          kind: 'sent',
-          touch: outstanding.touch,
-          providerMessageId: replacement.providerMessageId,
-          sentAt: replacement.at,
-        };
+        return sentClassification(input, outstanding.touch, replacement);
       }
     }
   }
 
-  const since = input.lastConfirmedSentAt;
-  const inboundSinceLastSend = input.messages
-    .filter((message) => since === undefined || message.at.getTime() > since.getTime())
-    .filter((message) => !isFromConfiguredSender(message, input.senderAddress))
-    .sort((a, b) => a.at.getTime() - b.at.getTime());
-
-  const inbound = inboundSinceLastSend[0];
-  if (inbound !== undefined) {
-    if (inbound.autoSubmitted) {
-      return { kind: 'automated', providerMessageId: inbound.providerMessageId, at: inbound.at };
+  const inboundSinceLastSend = inboundBetween(input, input.lastConfirmedSentAt, undefined);
+  const human = inboundSinceLastSend.find((message) => !message.autoSubmitted);
+  if (human !== undefined) {
+    if (isBounce(human)) {
+      return { kind: 'bounce', providerMessageId: human.providerMessageId, at: human.at };
     }
-    if (BOUNCE_LOCAL_PARTS.has(localPartOf(inbound.fromAddress))) {
-      return { kind: 'bounce', providerMessageId: inbound.providerMessageId, at: inbound.at };
-    }
-    return { kind: 'reply', providerMessageId: inbound.providerMessageId, at: inbound.at };
+    return { kind: 'reply', providerMessageId: human.providerMessageId, at: human.at };
+  }
+  const automated = inboundSinceLastSend[0];
+  if (automated !== undefined) {
+    return { kind: 'automated', providerMessageId: automated.providerMessageId, at: automated.at };
   }
 
   if (outstanding !== undefined) {

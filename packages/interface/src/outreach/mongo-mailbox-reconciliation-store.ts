@@ -15,15 +15,19 @@ import {
   findOutreachThreadById,
   listOutreachDrafts,
   listThreadsToSync,
+  markOutreachDraftDeletionPending,
   markOutreachThreadSynced,
   recordOutreachThreadTouchSent,
   recordOutreachTouchSent,
   transitionOutreachThread,
 } from '@odysseus/store';
+import type { MailboxDraftAdapter } from './mailbox-draft-adapter.js';
 import type { MailboxReconciliationStorePort, ThreadToSync } from './reconcile-mailbox.js';
+import { deletePendingMailboxDraftRows } from './withdraw-prospect-outreach.js';
 
 export function createMongoMailboxReconciliationStore(
   connection: Connection,
+  mailbox: MailboxDraftAdapter | null,
 ): MailboxReconciliationStorePort {
   return {
     async listThreadsToSync(options): Promise<ThreadToSync[]> {
@@ -99,6 +103,23 @@ export function createMongoMailboxReconciliationStore(
 
     async markSynced(input): Promise<void> {
       await markOutreachThreadSynced(connection, input.threadId, input.syncedAt, input.needsReview);
+    },
+
+    async withdrawLiveDrafts(input): Promise<void> {
+      const liveDrafts = await listOutreachDrafts(connection, {
+        threadId: input.threadId,
+        status: 'created',
+      });
+      const pending = [];
+      for (const draft of liveDrafts) {
+        if ((await markOutreachDraftDeletionPending(connection, draft.draftId)).changed) {
+          pending.push(draft);
+        }
+      }
+      // A provider deletion that fails stays `mailbox-delete-pending`, which
+      // the opt-out poller retries; the draft is already out of every
+      // follow-up and To-do path.
+      await deletePendingMailboxDraftRows(connection, pending, mailbox);
     },
 
     async completeSequence(input): Promise<boolean> {

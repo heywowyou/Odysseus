@@ -78,7 +78,13 @@ export interface GmailDraftAdapterOptions {
   /** Injected so the adapter is testable without credentials or a network.
    *  Defaults to the runtime's own `fetch`. */
   fetchImpl?: typeof globalThis.fetch;
+  /** Every Gmail and token request is aborted after this long, body read
+   *  included, so one hung request cannot block every later mailbox sync
+   *  (issue #483). Defaults to 30 seconds. */
+  requestTimeoutMs?: number;
 }
+
+const DEFAULT_GMAIL_REQUEST_TIMEOUT_MS = 30_000;
 
 interface GmailDraftResponse {
   id?: string;
@@ -129,7 +135,10 @@ function pathFor(template: string, id: string): string {
 }
 
 export function createGmailDraftAdapter(options: GmailDraftAdapterOptions): MailboxDraftAdapter {
-  const doFetch = options.fetchImpl ?? globalThis.fetch;
+  const baseFetch = options.fetchImpl ?? globalThis.fetch;
+  const timeoutMs = options.requestTimeoutMs ?? DEFAULT_GMAIL_REQUEST_TIMEOUT_MS;
+  const doFetch = (url: string, init: RequestInit): Promise<Response> =>
+    baseFetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
   let accessToken: string | undefined;
   let accessTokenExpiresAt = 0;
 

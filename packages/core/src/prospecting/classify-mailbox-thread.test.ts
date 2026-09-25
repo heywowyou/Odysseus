@@ -231,4 +231,58 @@ describe('classifyMailboxThread', () => {
     });
     expect(result).toMatchObject({ kind: 'reply', providerMessageId: 'earlier' });
   });
+
+  it('reports the first human message, not an out-of-office before it (issue #477)', () => {
+    const result = classifyMailboxThread({
+      messages: [
+        draftMessage({ providerMessageId: 'm1', labelIds: ['SENT'], at: NOW }),
+        draftMessage({
+          providerMessageId: 'auto',
+          fromAddress: 'direction@hotel.fr',
+          labelIds: ['INBOX'],
+          at: new Date('2026-08-30T10:00:00.000Z'),
+          autoSubmitted: true,
+        }),
+        draftMessage({
+          providerMessageId: 'human',
+          fromAddress: 'direction@hotel.fr',
+          labelIds: ['INBOX'],
+          at: new Date('2026-08-31T10:00:00.000Z'),
+        }),
+      ],
+      senderAddress: SENDER,
+      lastConfirmedSentAt: NOW,
+    });
+    expect(result).toMatchObject({ kind: 'reply', providerMessageId: 'human' });
+  });
+
+  it('reports a reply that arrived before the follow-up it found sent (issue #477)', () => {
+    const e2SentAt = new Date('2026-09-03T09:00:00.000Z');
+    const result = classifyMailboxThread({
+      messages: [
+        draftMessage({ providerMessageId: 'e1', labelIds: ['SENT'], at: NOW }),
+        draftMessage({
+          providerMessageId: 'reply',
+          fromAddress: 'direction@hotel.fr',
+          labelIds: ['INBOX'],
+          at: new Date('2026-09-01T09:00:00.000Z'),
+        }),
+        draftMessage({ providerMessageId: 'e2', labelIds: ['SENT'], at: e2SentAt }),
+      ],
+      senderAddress: SENDER,
+      outstandingDraft: { touch: 2, providerMessageId: 'e2' },
+      lastConfirmedSentAt: NOW,
+    });
+    expect(result).toEqual({
+      kind: 'sent',
+      touch: 2,
+      providerMessageId: 'e2',
+      sentAt: e2SentAt,
+      inboundBeforeSend: {
+        kind: 'reply',
+        providerMessageId: 'reply',
+        at: new Date('2026-09-01T09:00:00.000Z'),
+      },
+    });
+  });
 });

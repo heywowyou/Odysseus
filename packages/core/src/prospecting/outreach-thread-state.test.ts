@@ -59,9 +59,17 @@ describe('canTransitionOutreachThread', () => {
     expect(canTransitionOutreachThread('e1-drafted', 'opted-out')).toBe(true);
   });
 
-  it('never allows a bounce before a message was actually sent', () => {
-    for (const from of ['open', 'e1-drafted', 'e2-drafted', 'e3-drafted'] as const) {
+  it('never allows a reply or bounce before a message was actually sent', () => {
+    for (const from of ['open', 'e1-drafted'] as const) {
       expect(canTransitionOutreachThread(from, 'bounced')).toBe(false);
+      expect(canTransitionOutreachThread(from, 'replied')).toBe(false);
+    }
+  });
+
+  it('allows a reply or bounce to the sent touch while a follow-up is drafted (issue #477)', () => {
+    for (const from of ['e2-drafted', 'e3-drafted'] as const) {
+      expect(canTransitionOutreachThread(from, 'bounced')).toBe(true);
+      expect(canTransitionOutreachThread(from, 'replied')).toBe(true);
     }
   });
 

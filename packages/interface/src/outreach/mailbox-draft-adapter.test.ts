@@ -309,6 +309,21 @@ describe('gmail adapter transport', () => {
     await expect(adapter.createDraft(VALID_DRAFT)).rejects.not.toThrow(/super-secret-value/);
   });
 
+  it('aborts a Gmail request that never answers (issue #483)', async () => {
+    const adapter = createGmailDraftAdapter({
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+      refreshToken: 'refresh-token',
+      senderAddress: 'contact@example-sending-domain.fr',
+      requestTimeoutMs: 20,
+      fetchImpl: (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(init.signal?.reason));
+        }),
+    });
+    await expect(adapter.getThreadMetadata('thread-1')).rejects.toThrow(/timeout|abort/i);
+  });
+
   it('sends the message base64url encoded with the configured sender', async () => {
     const { adapter, requests } = stubGmail();
     await adapter.createDraft(VALID_DRAFT);
