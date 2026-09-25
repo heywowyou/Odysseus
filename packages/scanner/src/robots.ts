@@ -1,5 +1,6 @@
 import { getCrawlerUserAgent } from './config.js';
 import type { NetworkSafetyDisposition, NetworkTargetPolicy } from './network-target-policy.js';
+import { isServedPlainTextFile, readTextPrefix, ROBOTS_TXT_MAX_BYTES } from './bounded-body.js';
 import { fetchWithNetworkPolicy, NetworkSafetyBlockedError } from './safe-fetch.js';
 
 export interface RobotsRules {
@@ -232,8 +233,8 @@ export async function fetchRobotsText(
   userAgent: string = getCrawlerUserAgent(),
   options: RobotsFetchOptions = {},
 ): Promise<string | null> {
+  const url = new URL('/robots.txt', origin).href;
   try {
-    const url = new URL('/robots.txt', origin).href;
     const request = {
       headers: { 'user-agent': userAgent },
       signal: AbortSignal.timeout(timeoutMs),
@@ -247,8 +248,16 @@ export async function fetchRobotsText(
               ? { onBlocked: options.onNetworkSafetyBlocked }
               : {}),
           });
-    if (!response.ok) return null;
-    return await response.text();
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined);
+      return null;
+    }
+    // Bounded (issue #486): content past RFC 9309's 500 KiB may be ignored.
+    const text = await readTextPrefix(response, ROBOTS_TXT_MAX_BYTES);
+    // Issue #495: a redirect to the homepage or an SPA's index.html answers
+    // 200 but is not a robots.txt, and parsing it as one records a file
+    // with no rules.
+    return isServedPlainTextFile(url, response, text) ? text : null;
   } catch (error) {
     if (error instanceof NetworkSafetyBlockedError) throw error;
     const message = error instanceof Error ? error.message : String(error);

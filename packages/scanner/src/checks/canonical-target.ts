@@ -25,6 +25,7 @@
  */
 
 import { auditedHostAliases, classifyHostResponse } from '@odysseus/core';
+import { HTML_PAGE_MAX_BYTES, readTextPrefix } from '../bounded-body.js';
 import { checkFetchTarget, type LookupAddresses } from '../address-guard.js';
 import { fetchWithNetworkPolicy, NetworkSafetyBlockedError } from '../safe-fetch.js';
 import type { NetworkSafetyDisposition, NetworkTargetPolicy } from '../network-target-policy.js';
@@ -194,7 +195,9 @@ export async function checkCanonicalTarget(
       }
       return { pageUrl, canonicalUrl: resolved, httpStatus: response.status, noindex: false };
     }
-    const html = await response.text();
+    // Only the head's robots meta is read; a bounded prefix is enough and
+    // keeps a huge target page out of memory (issue #486).
+    const html = await readTextPrefix(response, HTML_PAGE_MAX_BYTES);
     const robotsContent = extractRobotsMetaContent(html);
     return {
       pageUrl,

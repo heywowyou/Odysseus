@@ -21,6 +21,7 @@
  * total-time budget for a whole chain rather than a per-hop one.
  */
 
+import { HTML_PAGE_MAX_BYTES, readTextPrefix } from '@odysseus/scanner';
 import { MAX_REDIRECT_HOPS } from './probe-url.js';
 import { checkFetchTarget, type LookupAddresses } from './fetch-address-guard.js';
 
@@ -139,7 +140,8 @@ export async function fetchPageText(
         continue;
       }
       if (!response.ok) return null;
-      const html = await response.text();
+      // Bounded (issue #486): a prospect's site is untrusted content.
+      const html = await readTextPrefix(response, HTML_PAGE_MAX_BYTES);
       return {
         url: currentUrl,
         bodyText: htmlToText(html),

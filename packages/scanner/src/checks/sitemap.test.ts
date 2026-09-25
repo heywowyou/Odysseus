@@ -2,7 +2,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 import { gzipSync } from 'node:zlib';
-import { checkSitemap, parseSitemapXml } from './sitemap.js';
+import { checkSitemap, MAX_SITEMAP_DOCUMENTS, parseSitemapXml } from './sitemap.js';
 
 describe('parseSitemapXml', () => {
   it('extracts loc/lastmod pairs from a well-formed urlset sitemap', () => {
@@ -118,6 +118,33 @@ describe('checkSitemap', () => {
     expect(result.sitemapUrl).toBe(`${started.origin}/my-sitemap.xml`);
     expect(result.entries).toEqual([{ url: 'https://example.com/' }]);
   });
+
+  it('records the child sitemaps past the document limit as failures (issue #486)', async () => {
+    const children = MAX_SITEMAP_DOCUMENTS + 5;
+    const routes: Record<string, { status: number; body: string }> = {
+      '/sitemap.xml': {
+        status: 200,
+        body: `<sitemapindex>${Array.from(
+          { length: children },
+          (_, index) => `<sitemap><loc>/child-${index}.xml</loc></sitemap>`,
+        ).join('')}</sitemapindex>`,
+      },
+    };
+    for (let index = 0; index < children; index += 1) {
+      routes[`/child-${index}.xml`] = {
+        status: 200,
+        body: `<urlset><url><loc>https://example.com/p${index}</loc></url></urlset>`,
+      };
+    }
+    const started = await startServer(routes);
+    server = started.server;
+
+    const result = await checkSitemap(started.origin, [], 5000);
+
+    expect(result.fetchedDocuments).toHaveLength(MAX_SITEMAP_DOCUMENTS);
+    const limited = result.fetchErrors.filter((error) => /document limit/u.test(error.error));
+    expect(limited).toHaveLength(children + 1 - MAX_SITEMAP_DOCUMENTS);
+  }, 30_000);
 
   it('decompresses a gzip sitemap and returns its page entries', async () => {
     const started = await startServer({

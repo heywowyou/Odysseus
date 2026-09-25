@@ -28,6 +28,7 @@
  * guard decides where the network may actually connect.
  */
 
+import { HTML_PAGE_MAX_BYTES, readTextPrefix } from '@odysseus/scanner';
 import {
   checkFetchTarget,
   type FetchTargetVerdict,
@@ -241,7 +242,8 @@ export async function probeUrl(
         };
       }
 
-      const html = await response.text();
+      // Bounded (issue #486): a prospect's site is untrusted content.
+      const html = await readTextPrefix(response, HTML_PAGE_MAX_BYTES);
       return { kind: 'ok', finalUrl: currentUrl, html, redirectedWithinSite };
     } catch (error) {
       const { failure, detail } = classifyFetchError(error);

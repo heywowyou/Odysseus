@@ -47,6 +47,7 @@ export {
   type HostPushbackFetcher,
   type HostPushbackKind,
 } from './host-request-scheduler.js';
+export * from './bounded-body.js';
 export * from './inventory-ledger.js';
 export * from './check-attempt-ledger.js';
 export * from './performance-measurement-set.js';

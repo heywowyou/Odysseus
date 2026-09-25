@@ -4,8 +4,8 @@
  * page entries across recursively resolved sitemap indexes.
  */
 
-import { gunzipSync } from 'node:zlib';
 import { isSameSiteHostname } from '../links.js';
+import { gunzipBounded, readBoundedBytes, SITEMAP_MAX_BYTES } from '../bounded-body.js';
 import type { HostRequestScheduler } from '../host-request-scheduler.js';
 import {
   checkNetworkTarget,
@@ -124,10 +124,18 @@ async function tryFetchSitemap(
               ? { onBlocked: options.onNetworkSafetyBlocked }
               : {}),
           });
-    if (!response.ok) return { error: `HTTP ${response.status}` };
-    const bytes = Buffer.from(await response.arrayBuffer());
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined);
+      return { error: `HTTP ${response.status}` };
+    }
+    // Issue #486: both the download and the inflated document are capped at
+    // the protocol's 50 MB, so a gzip bomb is refused without allocating
+    // its full size.
+    const bytes = await readBoundedBytes(response, SITEMAP_MAX_BYTES);
     const xmlBytes =
-      bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b ? gunzipSync(bytes) : bytes;
+      bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b
+        ? gunzipBounded(bytes, SITEMAP_MAX_BYTES, url)
+        : bytes;
     return { xml: xmlBytes.toString('utf8'), finalUrl: response.url || url };
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
@@ -152,6 +160,12 @@ interface SitemapQueueEntry {
   url: string;
   isRoot: boolean;
 }
+
+/** Issue #486: an index can list any number of child sitemaps, each up to
+ *  50 MB. Past this many documents the rest are not fetched; each one is
+ *  recorded as a fetch error, so the crawl's sitemap coverage reports them
+ *  as failed documents rather than cutting silently. */
+export const MAX_SITEMAP_DOCUMENTS = 200;
 
 /**
  * Resolves every robots-declared root sitemap, or the conventional
@@ -193,6 +207,13 @@ export async function checkSitemap(
     }
     if (visitedDocuments.has(documentUrl)) continue;
     visitedDocuments.add(documentUrl);
+    if (hasFetched && fetchedDocuments.length + fetchErrors.length >= MAX_SITEMAP_DOCUMENTS) {
+      fetchErrors.push({
+        url: documentUrl,
+        error: `sitemap document limit reached (${MAX_SITEMAP_DOCUMENTS} documents)`,
+      });
+      continue;
+    }
 
     if (options.networkPolicy !== undefined) {
       const networkVerdict = await checkNetworkTarget(documentUrl, options.networkPolicy);
