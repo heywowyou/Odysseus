@@ -16,6 +16,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import type { Browser, Page } from 'playwright';
+import { cutOffNetwork } from './offline-render-context.js';
 
 const require = createRequire(import.meta.url);
 
@@ -1303,6 +1304,7 @@ export async function renderPdfWithPageCountFromHtml(
 ): Promise<RenderedPdfWithPageCount> {
   const pagedjsSource = await readPagedjsSource();
   const context = await browser.newContext();
+  await cutOffNetwork(context);
   const page = await context.newPage();
   try {
     let pagedjsLayoutFailure: string | undefined;

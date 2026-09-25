@@ -18,6 +18,7 @@
 
 import { launchBrowser } from '@odysseus/scanner';
 import { REPORT_PDF_CHROMIUM_ARGS } from '../constants.js';
+import { cutOffNetwork } from '../offline-render-context.js';
 import { assertOutreachPreviewHtml } from './preview-lint.js';
 
 export async function generateOutreachPreviewPdf(html: string): Promise<Buffer> {
@@ -29,6 +30,7 @@ export async function generateOutreachPreviewPdf(html: string): Promise<Buffer> 
   const { browser } = await launchBrowser({ extraArgs: REPORT_PDF_CHROMIUM_ARGS });
   try {
     const context = await browser.newContext();
+    await cutOffNetwork(context);
     const page = await context.newPage();
     try {
       // Self-contained HTML: nothing to wait on network-wise.
