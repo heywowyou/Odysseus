@@ -1,5 +1,7 @@
 {
   "entry": [
+    // pnpm loads it itself (issue #528's html-validate peer hook).
+    ".pnpmfile.cjs",
     "scripts/*.mjs",
     "scripts/build-pushback-corpus.ts",
     "packages/interface/src/dashboard/index.html",
