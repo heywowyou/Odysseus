@@ -24,6 +24,11 @@
       "groupName": "react and next"
     },
     {
+      "description": "Trade-off 119 (issue #529): no TypeScript 7 yet. typescript-eslint 8.70 supports TypeScript <6.1 and needs the compiler API that TypeScript 7 does not ship; the type-aware promise rules (issue #517) depend on it. Remove once a typescript-eslint release supports TypeScript 7.",
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
+    },
+    {
       "description": "TypeScript/ESLint: kept in one reviewed group.",
       "matchPackageNames": [
         "typescript",

@@ -6081,3 +6081,29 @@ Lighthouse on each) and the runbook's in-container PDF render (35 pages).
 
 Rejected alternative: staying on 22 until its end of life, which would turn
 a routine upgrade into a deadline.
+
+### 119. Dependency majors of 2026-09-25, and TypeScript 7 held back (build decision, issue #529, 2026-09-25)
+
+Issue #529 listed the majors a routine patch flow would not reach. Each got
+its own commit and full verification on Node 24:
+
+- vite 6 to 8 and `@vitejs/plugin-react` 4 to 6: no config change; the
+  dashboard and `fixtures/spa-demo` build, and vitest shares the same vite.
+- zod 3.25 to 4.6: one real break. zod 4 derives a key's optionality from
+  its schema, so a preprocess cast to a plain `ZodType` made optional model
+  fields required; `absentable()` now ends in `.optional()`.
+- vitest 4 to 5: no change needed; unit and e2e results are identical.
+
+TypeScript 7.0.2 was tried and not adopted. It builds the workspace in
+8.4 s against 26.3 s for 5.9.3, and needs `"types": ["node"]` because it no
+longer includes `@types/node` on its own. But typescript-eslint 8.70 accepts
+TypeScript below 6.1 only, and TypeScript 7 ships no JavaScript compiler API:
+the type-aware promise rules (issue #517) and one architecture test that
+parses imports with `ts.createSourceFile` both need that API. `renovate.json`
+holds the major until typescript-eslint supports it.
+
+Left for their own changes: commander 13 to 15 and `@sentry/node` 10 to 11,
+which the issue named only as available.
+
+Rejected alternative: TypeScript 7 for `tsc -b` beside 5.9 for ESLint, which
+would type-check the same code with two compilers that can disagree.
