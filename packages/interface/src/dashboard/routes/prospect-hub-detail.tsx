@@ -562,7 +562,7 @@ export function ProspectHubDetailPage(): JSX.Element {
         options: { prospectId: prospect.prospectId },
       });
       if (result.jobId) {
-        navigate(`/scans/${result.jobId}`);
+        void navigate(`/scans/${result.jobId}`);
       } else {
         setScanNotice({
           from,
@@ -651,7 +651,7 @@ export function ProspectHubDetailPage(): JSX.Element {
   const deletePermanently = async (): Promise<void> => {
     try {
       await sendJson(`/api/prospects/${encodeURIComponent(prospect.prospectId)}`, 'DELETE', {});
-      navigate('/prospects');
+      void navigate('/prospects');
     } catch (error) {
       setOutreachNotice(deleteFailureNotice(copy, error));
     }

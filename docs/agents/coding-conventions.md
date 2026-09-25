@@ -11,8 +11,12 @@ Use the narrowest authority for each concern:
 
 1. Prettier owns source layout. Do not hand-tune whitespace that Prettier will
    replace.
-2. ESLint owns static code-quality rules that do not require project type
-   information.
+2. ESLint owns static code-quality rules. Only the promise rules
+   (`no-floating-promises`, `no-misused-promises`, `await-thenable`) use
+   project type information, on `packages/*/src` (issue #517): an unhandled
+   rejection exits the single server. They took `pnpm run lint` from about 18 s
+   to about 76 s on 2026-09-25; mark a deliberately unawaited promise with
+   `void`.
 3. TypeScript owns types and cross-package compile-time contracts.
 4. Tests own behavior.
 5. The charter and focused documents own product meaning, legal wording, and

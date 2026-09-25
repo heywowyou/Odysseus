@@ -274,7 +274,7 @@ export function NewScanPage() {
     try {
       const request = buildScanRequest(form);
       const created = await sendJson<ScanCreated>('/api/scans', 'POST', request);
-      navigate(`/scans/${created.jobId}`);
+      void navigate(`/scans/${created.jobId}`);
     } catch (error) {
       const message = error instanceof ApiError ? error.message : String(error);
       // The technical string rides as the toast's detail line; the headline

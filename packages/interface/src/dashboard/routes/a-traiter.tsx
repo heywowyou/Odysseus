@@ -137,7 +137,7 @@ export function ATraiterPage(): JSX.Element {
                 ? strings.attention.kinds[row.kind]
                 : strings.aTraiter.kinds[row.kind];
               return (
-                <TableRow key={`${row.kind}-${row.href}`} onClick={() => navigate(row.href)}>
+                <TableRow key={`${row.kind}-${row.href}`} onClick={() => void navigate(row.href)}>
                   <TableCell>
                     <span className="mb-1 inline-block">
                       {isAttentionRow(row) ? (

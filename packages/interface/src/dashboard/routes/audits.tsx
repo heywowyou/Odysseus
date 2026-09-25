@@ -311,7 +311,7 @@ export function AuditsPage(): JSX.Element {
                     const badges: SeverityBadge[] = severityBadges(summary.severityRollup);
                     const type = typeBadge(summary, strings);
                     return (
-                      <TableRow key={summary.jobId} onClick={() => navigate(target)}>
+                      <TableRow key={summary.jobId} onClick={() => void navigate(target)}>
                         <TableCell className="whitespace-nowrap">
                           <div className="numeric text-ink">
                             {formatDateTime(summary.createdAt, language)}

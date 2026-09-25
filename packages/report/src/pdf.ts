@@ -1353,7 +1353,11 @@ export async function renderPdfWithPageCountFromHtml(
         const previewer = new Paged.Previewer();
         await previewer.preview();
       });
-      if (debugNodePromise) await debugNodePromise;
+      // The console handler assigns this while the preview runs; TypeScript
+      // cannot see an assignment in a callback and still narrows it to the
+      // undefined set above, hence the explicit type.
+      const pendingDebugNode = debugNodePromise as Promise<void> | undefined;
+      if (pendingDebugNode) await pendingDebugNode;
       if (pagedjsLayoutFailure !== undefined) {
         throw new Error(
           `Report generation aborted: Paged.js hit its own layout-repeated guard and stopped ` +
