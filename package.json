@@ -14,7 +14,7 @@
     "plans:check": "node scripts/check-plan-quality.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint . --max-warnings 0",
+    "lint": "node --max-old-space-size=4096 node_modules/eslint/bin/eslint.js . --max-warnings 0",
     "architecture:check": "depcruise --config .dependency-cruiser.cjs packages/core/src packages/scanner/src packages/llm/src packages/store/src packages/report/src packages/interface/src packages/cli/src packages/site/app packages/site/lib",
     "audit:code": "fallow dead-code",
     "test": "vitest run --project unit",
