@@ -65,7 +65,9 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
-          include: ['packages/**/*.{test,spec}.{ts,tsx}'],
+          // scripts/**/*.test.mjs: the operator scripts that touch production
+          // data are tested too, not only the packages (issue #519).
+          include: ['packages/**/*.{test,spec}.{ts,tsx}', 'scripts/**/*.test.mjs'],
           exclude: [...configDefaults.exclude, 'packages/**/*.e2e.test.{ts,tsx}'],
         },
       },
