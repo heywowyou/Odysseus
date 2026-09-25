@@ -1258,3 +1258,46 @@ describe('page order never changes the findings (issue #503)', () => {
     expect(run([...pages].reverse())).toEqual(run(pages));
   });
 });
+
+describe('public evidence for noindex pages scales with the site (issue #513)', () => {
+  it('normalizes a 2,000-page site within a bounded time', () => {
+    const pageCount = 2_000;
+    const url = (index: number) => `https://example.com/p${index}`;
+    const pages = Array.from({ length: pageCount }, (_, index) =>
+      buildNormalizePageInput({
+        url: url(index),
+        headMetadata: {
+          pageUrl: url(index),
+          title: `Page ${index}`,
+          metaDescription: 'Description',
+          canonicalUrls: [url(index)],
+          openGraphTags: {},
+          jsonLdBlocks: [],
+          headings: [],
+          hreflangLinks: [
+            { lang: 'fr', href: url(index) },
+            { lang: 'en', href: url((index + 1) % pageCount) },
+          ],
+          robotsMeta: index % 2 === 0 ? 'noindex' : null,
+        },
+      }),
+    );
+
+    const startedMs = performance.now();
+    const findings = normalizeAudit({
+      auditId: 'audit-1',
+      startedAt: STARTED_AT,
+      pages,
+      crawl: {
+        startUrl: url(0),
+        robotsTxtFound: true,
+        pages: pages.map((page) => ({ url: page.url, status: 'visited' })),
+      },
+    });
+    const elapsedMs = performance.now() - startedMs;
+
+    expect(findings.length).toBeGreaterThan(0);
+    // Quadratic public-evidence lookups took seconds at this size.
+    expect(elapsedMs).toBeLessThan(5_000);
+  }, 30_000);
+});

@@ -316,6 +316,7 @@ function resolveSiteLevelAnchorUrl(
 function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
   const contentExcludedUrls = excludedContentUrls(input);
+  let publicEvidenceIndex: PublicEvidenceIndex | undefined;
   // D13: resolved over every page before any page is normalized, so a
   // successor emitting on one page suppresses its legacy audits everywhere.
   const supersededAudits = computeSupersededAudits(
@@ -402,11 +403,16 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
       );
     }
     if (page.headMetadata) {
+      // Public evidence only matters for a noindex page, so only those pay
+      // for it, against an index built once per audit (issue #513).
+      if (input.crawl !== undefined && headMetadataHasNoindex(page.headMetadata)) {
+        publicEvidenceIndex ??= buildPublicEvidenceIndex(input, contentExcludedUrls);
+      }
       candidates.push(
         ...extractHeadMetadataCandidates({
           ...page.headMetadata,
-          ...(input.crawl !== undefined
-            ? { publicEvidence: publicEvidenceForPage(page.url, input, contentExcludedUrls) }
+          ...(publicEvidenceIndex !== undefined && headMetadataHasNoindex(page.headMetadata)
+            ? { publicEvidence: publicEvidenceForPage(page.url, publicEvidenceIndex) }
             : {}),
         }),
       );
@@ -576,55 +582,87 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
   );
 }
 
-function publicEvidenceForPage(
-  pageUrl: string,
+/**
+ * Which URL identities other indexable pages point to, built once per audit
+ * (issue #513). Computing this per page re-read every other page's hreflang
+ * and canonical links for every page, which is quadratic: seconds of
+ * blocking CPU per normalize on a large site with no page cap.
+ */
+interface PublicEvidenceIndex {
+  /** Target identity to the identities of the pages that declare it. */
+  hreflangTargets: ReadonlyMap<string, ReadonlySet<string>>;
+  canonicalTargets: ReadonlyMap<string, ReadonlySet<string>>;
+  sitemapIdentities: ReadonlySet<string>;
+  homepageIdentity: string | undefined;
+}
+
+function identityOf(url: string, base?: string): string {
+  return normalizeUrlIdentity(url, base) ?? url;
+}
+
+function buildPublicEvidenceIndex(
   input: NormalizeAuditInput,
   excludedUrls: ReadonlySet<string>,
-): NonNullable<HeadMetadataCheckInput['publicEvidence']> {
-  const identity = normalizeUrlIdentity(pageUrl) ?? pageUrl;
-  const crawl = input.crawl;
+): PublicEvidenceIndex {
+  const hreflangTargets = new Map<string, Set<string>>();
+  const canonicalTargets = new Map<string, Set<string>>();
+  const add = (targets: Map<string, Set<string>>, target: string, source: string): void => {
+    const sources = targets.get(target);
+    if (sources === undefined) targets.set(target, new Set([source]));
+    else sources.add(source);
+  };
   // Only a page that is itself meant to be found can vouch for another:
   // WordPress writes hreflang between the FR and EN twins of a noindex date
   // archive, and each twin used to count as public evidence for the other.
-  const pages = input.pages.filter(
-    (page) =>
-      page.headMetadata !== undefined &&
-      !isExcludedUrl(excludedUrls, page.url) &&
-      !headMetadataHasNoindex(page.headMetadata),
-  );
-  const isTarget = (candidate: string): boolean =>
-    (normalizeUrlIdentity(candidate, pageUrl) ?? candidate) === identity;
-  let isHreflangTarget = false;
-  let isCanonicalTarget = false;
-  for (const page of pages) {
-    // A page's own self-canonical or self-referencing hreflang says nothing
-    // about whether anyone else points to it; only other pages count.
-    if ((normalizeUrlIdentity(page.url) ?? page.url) === identity) continue;
-    if (page.headMetadata!.hreflangLinks.some((link) => isTarget(link.href))) {
-      isHreflangTarget = true;
+  for (const page of input.pages) {
+    if (
+      page.headMetadata === undefined ||
+      isExcludedUrl(excludedUrls, page.url) ||
+      headMetadataHasNoindex(page.headMetadata)
+    ) {
+      continue;
     }
-    if (page.headMetadata!.canonicalUrls.some((canonical) => isTarget(canonical))) {
-      isCanonicalTarget = true;
+    const source = identityOf(page.url);
+    // A declaration resolves against the page that makes it.
+    for (const link of page.headMetadata.hreflangLinks) {
+      add(hreflangTargets, identityOf(link.href, page.url), source);
+    }
+    for (const canonical of page.headMetadata.canonicalUrls) {
+      add(canonicalTargets, identityOf(canonical, page.url), source);
     }
   }
+  const homepageUrl = input.crawl?.homepageUrl ?? input.crawl?.startUrl;
+  return {
+    hreflangTargets,
+    canonicalTargets,
+    sitemapIdentities: new Set((input.crawl?.sitemapUrls ?? []).map((url) => identityOf(url))),
+    homepageIdentity: homepageUrl === undefined ? undefined : identityOf(homepageUrl),
+  };
+}
 
-  let isHomepage = false;
+function publicEvidenceForPage(
+  pageUrl: string,
+  index: PublicEvidenceIndex,
+): NonNullable<HeadMetadataCheckInput['publicEvidence']> {
+  const identity = identityOf(pageUrl);
+  // A page's own self-canonical or self-referencing hreflang says nothing
+  // about whether anyone else points to it; only other pages count.
+  const pointedToByAnother = (targets: ReadonlyMap<string, ReadonlySet<string>>): boolean =>
+    [...(targets.get(identity) ?? [])].some((source) => source !== identity);
+
   let isLanguageHome = false;
   try {
-    const url = new URL(pageUrl);
-    const homepageUrl = crawl?.homepageUrl ?? crawl?.startUrl;
-    isHomepage = homepageUrl !== undefined && isTarget(homepageUrl);
-    isLanguageHome = /^\/[a-z]{2}(?:-[a-z]{2})?\/?$/i.test(url.pathname);
+    isLanguageHome = /^\/[a-z]{2}(?:-[a-z]{2})?\/?$/i.test(new URL(pageUrl).pathname);
   } catch {
     // An invalid page URL cannot provide public evidence.
   }
 
   return {
-    ...(crawl?.sitemapUrls?.some((url) => isTarget(url)) ? { inSitemap: true } : {}),
-    ...(isHomepage ? { isHomepage: true } : {}),
+    ...(index.sitemapIdentities.has(identity) ? { inSitemap: true } : {}),
+    ...(index.homepageIdentity === identity ? { isHomepage: true } : {}),
     ...(isLanguageHome ? { isLanguageHome: true } : {}),
-    ...(isHreflangTarget ? { isHreflangTarget: true } : {}),
-    ...(isCanonicalTarget ? { isCanonicalTarget: true } : {}),
+    ...(pointedToByAnother(index.hreflangTargets) ? { isHreflangTarget: true } : {}),
+    ...(pointedToByAnother(index.canonicalTargets) ? { isCanonicalTarget: true } : {}),
   };
 }
 
