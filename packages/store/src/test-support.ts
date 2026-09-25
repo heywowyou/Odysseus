@@ -7,7 +7,61 @@ import { appendFileSync } from 'node:fs';
 import { createConnection } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import mongoose, { type Connection } from 'mongoose';
+import mongoose, { type Connection, type Model } from 'mongoose';
+import { createAnalysisModel } from './schemas/analysis.schema.js';
+import { createAuditModel } from './schemas/audit.schema.js';
+import { createBenchmarkCandidateModel } from './schemas/benchmark-candidate.schema.js';
+import { createDirectoryEntryModel } from './schemas/directory-entry.schema.js';
+import { createFindingModel } from './schemas/finding.schema.js';
+import { createJobModel } from './schemas/job.schema.js';
+import { createJobQueueStateModel } from './schemas/job-queue-state.schema.js';
+import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
+import { createOutreachOutcomeModel } from './schemas/outreach-outcome.schema.js';
+import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
+import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
+import { createProspectEventModel } from './schemas/prospect-event.schema.js';
+import { createProspectHubModel } from './schemas/prospect-hub.schema.js';
+import { createReportApprovalModel } from './schemas/report-approval.schema.js';
+import {
+  createActiveReportBundleModel,
+  createReportBundleModel,
+  createReportQualityLeaseModel,
+  createReportQualityRunModel,
+} from './schemas/report-quality.schema.js';
+import { createReportModel } from './schemas/report.schema.js';
+import { createRetentionRunModel } from './schemas/retention-run.schema.js';
+import { createSireneCacheModel } from './schemas/sirene-cache.schema.js';
+import { createSuppressionModel } from './schemas/suppression.schema.js';
+
+/** Every model factory under schemas/. Read by the index-build check
+ *  (schema-indexes.test.ts), since Mongoose's auto-index swallows an index
+ *  build error, and by the audit-deletion check (delete-audit.test.ts), so a
+ *  new audit-scoped collection cannot be left out of the cascade (issue
+ *  #516). A new schema file must be added here. */
+export const MODEL_FACTORIES: ReadonlyArray<(connection: Connection) => Model<never>> = [
+  createActiveReportBundleModel,
+  createAnalysisModel,
+  createAuditModel,
+  createBenchmarkCandidateModel,
+  createDirectoryEntryModel,
+  createFindingModel,
+  createJobModel,
+  createJobQueueStateModel,
+  createOutreachDraftModel,
+  createOutreachOutcomeModel,
+  createOutreachPreviewModel,
+  createOutreachThreadModel,
+  createProspectEventModel,
+  createProspectHubModel,
+  createReportApprovalModel,
+  createReportBundleModel,
+  createReportModel,
+  createReportQualityLeaseModel,
+  createReportQualityRunModel,
+  createRetentionRunModel,
+  createSireneCacheModel,
+  createSuppressionModel,
+] as never;
 
 export const MONGODB_TEST_URI =
   process.env['MONGODB_TEST_URI'] ?? 'mongodb://localhost:27018/odysseus_test';

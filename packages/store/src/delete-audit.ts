@@ -2,8 +2,11 @@
  * Deletion of one audit and every derived document that names it, plus the
  * queue-history unlinking the audits page needs. persist-audit upserts and
  * persist-analysis/persist-report insert (trade-off 5), so a scan fans out
- * across five collections (audits, findings, analyses, reports,
- * reportApprovals); centralizing the cascade here keeps that fan-out in
+ * across nine collections (audits, findings, analyses, reports,
+ * reportApprovals, and the four report-quality collections: leases, runs,
+ * bundles and the active-bundle pointer); delete-audit.test.ts checks every
+ * model with an auditId against this list (issue #516). Centralizing the
+ * cascade here keeps that fan-out in
  * store, where the collection names live, instead of scattering
  * Mongoose deletes through the interface package.
  *

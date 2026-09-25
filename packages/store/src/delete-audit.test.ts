@@ -6,7 +6,7 @@ import {
   listArchivedProspectsWithAudits,
 } from './delete-audit.js';
 import { createReportModel } from './schemas/report.schema.js';
-import { probeMongoAvailability } from './test-support.js';
+import { MODEL_FACTORIES, probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
 
@@ -15,7 +15,7 @@ afterAll(async () => {
 });
 
 /** Raw driver inserts, not model.create: the cascade's contract is "every
- *  document naming this auditId across the five collections goes away",
+ *  document naming this auditId across the cascaded collections goes away",
  *  which does not depend on the documents passing Mongoose validation, and
  *  building a fully valid manifest fixture here would only duplicate
  *  persist-audit.test.ts's. The structural collection type avoids importing
@@ -37,18 +37,54 @@ async function countForAudit(collection: MinimalCollection, auditId: string): Pr
   return collection.countDocuments({ auditId });
 }
 
+/** Every collection the cascade clears (issue #516: the four report-quality
+ *  collections were never checked), by the count key it reports. */
+const CASCADED_COLLECTIONS = {
+  audits: 'audits',
+  findings: 'findings',
+  analyses: 'analyses',
+  reports: 'reports',
+  reportApprovals: 'reportApprovals',
+  reportQualityLeases: 'reportQualityLeases',
+  reportQualityRuns: 'reportQualityRuns',
+  reportBundles: 'reportBundles',
+  activeReportBundles: 'activeReportBundles',
+} as const;
+
+/** Audit-scoped collections the cascade deliberately leaves alone, and why. */
+const NOT_CASCADED = new Map([
+  ['jobs', 'finished scan jobs go through deleteFinishedScanJobsForAudit'],
+  ['outreach_previews', 'a live preview is revoked by the outreach flows, object first'],
+]);
+
+function zeroCounts(): Record<keyof typeof CASCADED_COLLECTIONS, number> {
+  return Object.fromEntries(Object.keys(CASCADED_COLLECTIONS).map((key) => [key, 0])) as never;
+}
+
 describe.skipIf(!mongoAvailable)('deleteAuditCascade', () => {
-  it('removes every document naming the audit across all five collections and leaves others alone', async () => {
+  it('covers every model with a top-level auditId, or names why not (issue #516)', () => {
+    const cascaded = new Set<string>(Object.values(CASCADED_COLLECTIONS));
+    for (const factory of MODEL_FACTORIES) {
+      const model = factory(connection!);
+      if (model.schema.path('auditId') === undefined) continue;
+      const name = model.collection.collectionName;
+      expect(cascaded.has(name) || NOT_CASCADED.has(name), name).toBe(true);
+    }
+    for (const name of cascaded) {
+      expect(
+        MODEL_FACTORIES.some((factory) => factory(connection!).collection.collectionName === name),
+        name,
+      ).toBe(true);
+    }
+  });
+
+  it('removes every document naming the audit across all nine collections and leaves others alone', async () => {
     const db = connection!.db!;
     const auditId = `cascade-test-${Date.now()}`;
     const survivorId = `cascade-survivor-${Date.now()}`;
-    const collections = {
-      audits: db.collection('audits'),
-      findings: db.collection('findings'),
-      analyses: db.collection('analyses'),
-      reports: db.collection('reports'),
-      reportApprovals: db.collection('reportApprovals'),
-    };
+    const collections = Object.fromEntries(
+      Object.entries(CASCADED_COLLECTIONS).map(([key, name]) => [key, db.collection(name)]),
+    ) as unknown as Record<keyof typeof CASCADED_COLLECTIONS, MinimalCollection>;
 
     await insertRaw(collections.audits, {
       auditId,
@@ -59,9 +95,10 @@ describe.skipIf(!mongoAvailable)('deleteAuditCascade', () => {
     });
     await insertRaw(collections.findings, { auditId, findingId: 'f1' });
     await insertRaw(collections.findings, { auditId, findingId: 'f2' });
-    await insertRaw(collections.analyses, { auditId, analysisId: 'a1', language: 'fr' });
-    await insertRaw(collections.reports, { auditId, reportId: 'r1', language: 'fr' });
-    await insertRaw(collections.reportApprovals, { auditId, approvalId: 'ap1' });
+    for (const key of Object.keys(CASCADED_COLLECTIONS) as (keyof typeof CASCADED_COLLECTIONS)[]) {
+      if (key === 'audits' || key === 'findings') continue;
+      await insertRaw(collections[key], { auditId, marker: `${key}-1` });
+    }
 
     // An unrelated audit sharing none of the cascade's target rows.
     await insertRaw(collections.audits, {
@@ -72,6 +109,7 @@ describe.skipIf(!mongoAvailable)('deleteAuditCascade', () => {
       finishedAt: new Date(),
     });
     await insertRaw(collections.findings, { auditId: survivorId, findingId: 's1' });
+    await insertRaw(collections.activeReportBundles, { auditId: survivorId, marker: 'kept' });
 
     const counts = await deleteAuditCascade(connection!, auditId);
     expect(counts).toEqual({
@@ -80,6 +118,10 @@ describe.skipIf(!mongoAvailable)('deleteAuditCascade', () => {
       analyses: 1,
       reports: 1,
       reportApprovals: 1,
+      reportQualityLeases: 1,
+      reportQualityRuns: 1,
+      reportBundles: 1,
+      activeReportBundles: 1,
     });
 
     for (const [name, collection] of Object.entries(collections)) {
@@ -87,6 +129,7 @@ describe.skipIf(!mongoAvailable)('deleteAuditCascade', () => {
     }
     expect(await countForAudit(collections.audits, survivorId)).toBe(1);
     expect(await countForAudit(collections.findings, survivorId)).toBe(1);
+    expect(await countForAudit(collections.activeReportBundles, survivorId)).toBe(1);
 
     await Promise.all(
       Object.values(collections).map((collection) =>
@@ -141,9 +184,8 @@ describe.skipIf(!mongoAvailable)('deleteAuditCascade', () => {
     expect(await countForAudit(collections.reportApprovals, auditId)).toBe(1);
 
     await expect(deleteAuditCascade(connection!, auditId)).resolves.toEqual({
+      ...zeroCounts(),
       audits: 1,
-      findings: 0,
-      analyses: 0,
       reports: 1,
       reportApprovals: 1,
     });
@@ -154,13 +196,7 @@ describe.skipIf(!mongoAvailable)('deleteAuditCascade', () => {
 
   it('returns zero counts for an unknown auditId instead of throwing', async () => {
     const counts = await deleteAuditCascade(connection!, 'no-such-audit');
-    expect(counts).toEqual({
-      audits: 0,
-      findings: 0,
-      analyses: 0,
-      reports: 0,
-      reportApprovals: 0,
-    });
+    expect(counts).toEqual(zeroCounts());
   });
 });
 
