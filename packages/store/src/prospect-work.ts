@@ -29,11 +29,16 @@ import {
 import { createReportModel } from './schemas/report.schema.js';
 import { displayJobIntent } from './scan-intents.js';
 import {
+  READINESS_ANALYSIS_PROJECTION,
   READINESS_REPORT_PROJECTION,
   resolveOutreachReportReadiness,
+  selectedFrenchAnalysisIds,
   type OutreachReportReadiness,
+  type ReadinessAnalysis,
+  type ReadinessAuditRow,
   type ReadinessReport,
 } from './outreach-report-readiness.js';
+import { createAnalysisModel } from './schemas/analysis.schema.js';
 import { listNewestReportQualityRuns, type NewestReportQualityRun } from './report-quality.js';
 
 export type ProspectTodoKind =
@@ -144,6 +149,10 @@ export interface ProspectWorkSources {
   failedJobs: readonly ProspectWorkJob[];
   /** Report rows of the prospect's audits (readiness projection only). */
   reports: readonly ProspectWorkReport[];
+  /** Issue #509: the selected French analysis of each audit, by auditId
+   *  (null: no usable selection). Readiness requires the newest French
+   *  report to come from it; absent entries skip that check. */
+  selectedFrAnalyses?: ReadonlyMap<string, string | null>;
   /** Plan 060 §7.1: the newest Plan-058 quality run of each of the
    *  prospect's audits, whatever its state, so the derivation can prove
    *  which run — if any — genuinely needs an operator review. */
@@ -433,10 +442,15 @@ export function deriveProspectWork(
   const reportReadiness =
     qualification.audit === undefined
       ? undefined
-      : resolveOutreachReportReadiness(qualification.audit, sources.reports, [
-          ...needsInputJobs.map((job) => ({ ...job, status: 'needs-input' as const })),
-          ...failedJobs.map((job) => ({ ...job, status: 'failed' as const })),
-        ]);
+      : resolveOutreachReportReadiness(
+          qualification.audit,
+          sources.reports,
+          [
+            ...needsInputJobs.map((job) => ({ ...job, status: 'needs-input' as const })),
+            ...failedJobs.map((job) => ({ ...job, status: 'failed' as const })),
+          ],
+          sources.selectedFrAnalyses?.get(qualification.audit.auditId),
+        );
   if (
     qualification.audit !== undefined &&
     reportReadiness !== undefined &&
@@ -580,6 +594,8 @@ export async function loadProspectWork(
         'crawl.sitemapCoverage': 1,
         // Whole provenance: report readiness compares every field of it.
         findingsProvenance: 1,
+        // Issue #509: readiness also checks the report against the selection.
+        'reportPreparation.writingSelection': 1,
       })
       .sort({ startedAt: -1, auditId: -1 })
       .lean<ProspectWorkAudit[]>(),
@@ -651,13 +667,19 @@ export async function loadProspectWork(
   const needsInputJobs = scanJobs.filter((job) => job.status === 'needs-input');
   const failedJobs = scanJobs.filter((job) => job.status === 'failed');
   const activeJobs = scanJobs.filter((job) => job.status === 'queued' || job.status === 'running');
-  const [reports, qualityRunMap] = await Promise.all([
+  const [reports, analyses, qualityRunMap] = await Promise.all([
     auditIds.length === 0
       ? Promise.resolve([])
       : createReportModel(connection)
           .find({ auditId: { $in: auditIds } })
           .select(READINESS_REPORT_PROJECTION)
           .lean<ProspectWorkReport[]>(),
+    auditIds.length === 0
+      ? Promise.resolve([])
+      : createAnalysisModel(connection)
+          .find({ auditId: { $in: auditIds } })
+          .select(READINESS_ANALYSIS_PROJECTION)
+          .lean<ReadinessAnalysis[]>(),
     listNewestReportQualityRuns(connection, auditIds),
   ]);
 
@@ -668,6 +690,7 @@ export async function loadProspectWork(
     needsInputJobs,
     failedJobs,
     reports,
+    selectedFrAnalyses: selectedFrenchAnalysisIds(audits as readonly ReadinessAuditRow[], analyses),
     qualityRuns: [...qualityRunMap.values()],
     activeJobs,
     suppressedDomains: suppression.domains,

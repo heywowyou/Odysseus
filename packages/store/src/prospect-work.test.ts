@@ -7,6 +7,12 @@ vi.mock('./schemas/outreach-draft.schema.js', () => ({ createOutreachDraftModel:
 vi.mock('./schemas/outreach-thread.schema.js', () => ({ createOutreachThreadModel: vi.fn() }));
 vi.mock('./suppression.js', () => ({ findSuppressionMatches: vi.fn() }));
 vi.mock('./schemas/report.schema.js', () => ({ createReportModel: vi.fn() }));
+vi.mock('./schemas/analysis.schema.js', () => ({
+  createAnalysisModel: vi.fn(() => {
+    const cursor = { select: () => cursor, lean: () => Promise.resolve([]) };
+    return { find: () => cursor };
+  }),
+}));
 vi.mock('./report-quality.js', () => ({ listNewestReportQualityRuns: vi.fn() }));
 
 import { createAuditModel } from './schemas/audit.schema.js';
@@ -825,7 +831,7 @@ describe('prospect work model', () => {
     expect(findSuppressionMatches).toHaveBeenCalledTimes(1);
     const reportProjection = reportCursor.select.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(Object.keys(reportProjection).sort()).toEqual(
-      ['_id', 'auditId', 'findingsProvenance', 'generatedAt', 'language'].sort(),
+      ['_id', 'analysisId', 'auditId', 'findingsProvenance', 'generatedAt', 'language'].sort(),
     );
     const auditProjection = auditCursor.select.mock.calls[0]?.[0] as Record<string, unknown>;
     // Only the per-page fields qualification reads, never the whole manifest.

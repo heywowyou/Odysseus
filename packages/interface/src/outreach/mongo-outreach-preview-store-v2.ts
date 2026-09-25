@@ -99,7 +99,6 @@ export function createMongoOutreachPreviewStoreV3(
         audit === null ||
         selected.kind === 'none' ||
         frReport === null ||
-        frReport.analysisId !== selected.fr.analysisId ||
         !findingsProvenanceMatches(selected.fr.findingsProvenance, audit.findingsProvenance) ||
         !findingsProvenanceMatches(frReport.findingsProvenance, audit.findingsProvenance) ||
         audit.findingsProvenance?.findingsDigest === undefined

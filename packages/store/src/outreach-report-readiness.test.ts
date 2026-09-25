@@ -21,12 +21,25 @@ const audit = {
 };
 
 function report(language: 'fr' | 'en', overrides: Partial<ReadinessReport> = {}): ReadinessReport {
+  const auditId = overrides.auditId ?? audit.auditId;
   return {
-    auditId: audit.auditId,
+    auditId,
     language,
     generatedAt: new Date('2026-09-16T11:00:00.000Z'),
     findingsProvenance: provenance,
+    analysisId: `${auditId}-${language}`,
     ...overrides,
+  };
+}
+
+/** The analysis a report of the same audit and language was rendered from. */
+function analysis(auditId: string, language: 'fr' | 'en', analysisId = `${auditId}-${language}`) {
+  return {
+    analysisId,
+    auditId,
+    language,
+    generatedAt: new Date('2026-09-16T10:30:00.000Z'),
+    findingsProvenance: provenance,
   };
 }
 
@@ -118,6 +131,21 @@ describe('resolveOutreachReportReadiness (issue #388)', () => {
     });
   });
 
+  it('requires the newest French report to come from the selected French analysis (issue #509)', () => {
+    expect(
+      resolveOutreachReportReadiness(audit, [report('fr')], [], `${audit.auditId}-fr`),
+    ).toEqual({ state: 'ready' });
+    // A failed regeneration moved the selected pair past the newest report.
+    expect(resolveOutreachReportReadiness(audit, [report('fr')], [], 'analysis-newer')).toEqual({
+      state: 'not-ready',
+      reason: 'stale',
+    });
+    expect(resolveOutreachReportReadiness(audit, [report('fr')], [], null)).toEqual({
+      state: 'not-ready',
+      reason: 'stale',
+    });
+  });
+
   it('is ready again once regeneration produced a current pair after a failure', () => {
     const failed = {
       auditId: audit.auditId,
@@ -142,9 +170,17 @@ afterAll(async () => {
 
 describe.skipIf(!available)('findAuditsWithUnreadyReports (issue #389)', () => {
   beforeEach(async () => {
-    for (const name of ['audits', 'reports', 'jobs']) {
+    for (const name of ['audits', 'reports', 'jobs', 'analyses']) {
       await connection!.collection(name).deleteMany({});
     }
+    await connection!
+      .collection('analyses')
+      .insertMany([
+        analysis(audit.auditId, 'fr'),
+        analysis('audit-ready', 'fr'),
+        analysis('audit-ready', 'en'),
+        analysis('audit-french-only', 'fr'),
+      ]);
     await connection!
       .collection('audits')
       .insertMany([
@@ -179,10 +215,13 @@ describe.skipIf(!available)('loadOutreachReportReadiness', () => {
   const prospectId = 'prospect-cap';
 
   beforeEach(async () => {
-    for (const name of ['audits', 'reports', 'jobs']) {
+    for (const name of ['audits', 'reports', 'jobs', 'analyses']) {
       await connection!.collection(name).deleteMany({});
     }
     await connection!.collection('audits').insertOne({ ...audit, prospectId });
+    await connection!
+      .collection('analyses')
+      .insertMany([analysis(audit.auditId, 'fr'), analysis(audit.auditId, 'en')]);
   });
 
   it('reads the audit provenance, its reports and the prospect jobs', async () => {
@@ -203,6 +242,31 @@ describe.skipIf(!available)('loadOutreachReportReadiness', () => {
     await expect(
       loadOutreachReportReadiness(connection!, { auditId: audit.auditId, prospectId }),
     ).resolves.toEqual({ state: 'ready' });
+  });
+
+  it('is not ready when the selected pair moved past the newest French report (issue #509)', async () => {
+    await connection!.collection('reports').insertOne(report('fr'));
+    await connection!
+      .collection('analyses')
+      .insertOne(analysis(audit.auditId, 'fr', 'analysis-after-failed-regeneration'));
+    await connection!.collection('audits').updateOne(
+      { auditId: audit.auditId },
+      {
+        $set: {
+          'reportPreparation.writingSelection.selected': {
+            frAnalysisId: 'analysis-after-failed-regeneration',
+            findingsProvenance: provenance,
+          },
+        },
+      },
+    );
+
+    await expect(
+      loadOutreachReportReadiness(connection!, { auditId: audit.auditId, prospectId }),
+    ).resolves.toEqual({ state: 'not-ready', reason: 'stale' });
+    await expect(findAuditsWithUnreadyReports(connection!, [audit.auditId])).resolves.toEqual(
+      new Set([audit.auditId]),
+    );
   });
 
   it('fails closed for an unknown audit', async () => {
