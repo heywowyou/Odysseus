@@ -1,8 +1,11 @@
 # First-100 outreach experiment, redesigned on the prospect hub
 
-Status: design proposal, 2026-09-16 (issue #373). Not an execution plan. Once
-the operator settles the decisions in section 5, it becomes a numbered plan
-under `plans/`.
+Status: dropped by the operator on 2026-09-25 (trade-off 121). First emails go
+out at the operator's own pace; none of the hypotheses, selection order,
+bridge test or freeze window below is run. Only the stop signals in
+[first-100-rollout-runbook.md](first-100-rollout-runbook.md) apply. The
+campaign tag and the `outreach-funnel` counts (section 4) stay in the product
+as plain reporting. Kept as a record of the proposal (issue #373, 2026-09-16).
 
 ## 1. Why the old experiment cannot run
 

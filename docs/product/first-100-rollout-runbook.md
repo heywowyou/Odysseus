@@ -1,7 +1,10 @@
 # First-100 rollout runbook (plan 014)
 
-> Plan 014 is superseded. The redesigned experiment on the prospect hub is
-> proposed in [outreach-experiment-design.md](outreach-experiment-design.md).
+> Plan 014 is superseded, and so is its redesign in
+> [outreach-experiment-design.md](outreach-experiment-design.md): on 2026-09-25
+> the operator dropped the experiment (trade-off 121). First emails go out at
+> the operator's own pace, with no selection order, test groups, freeze date or
+> fixed ramp. Only the stop signals in "Standing operating rules" still apply.
 
 Operational record for
 [plan 014](../../plans/archive/014-first-100-hotel-rollout.md), opened 2026-09-08.
@@ -89,13 +92,11 @@ ruling recorded in the decision log below before the pilot starts.
    The leftover plan 030 manual real-hotel dashboard pass is still due before
    the pilot.
 
-5. **Before 2026-12-23**, export the first campaign's funnel with
-   `node packages/cli/dist/index.js outreach-funnel --json` and keep the
-   output with the experiment record: the first threads and outcomes expire
-   on their 90-day TTL that day (issue #533,
-   `docs/product/outreach-experiment-design.md` section 4). The decisions D2
-   (how the 100 are chosen) and D3 (response window and freeze date) remain
-   open and are the operator's to rule.
+5. Optional, around 2026-12-10: export the reply, bounce and opt-out counts
+   with `node packages/cli/dist/index.js outreach-funnel --json` if you want
+   to keep them. The first threads and outcomes expire on their 90-day TTL on
+   2026-12-23; which prospects became clients stays on the prospect record
+   regardless.
 
 ## Pilot domain list (plan 014 Step 4), identified 2026-09-08
 
@@ -148,13 +149,16 @@ been scanned or contacted yet - the bounded prescan and manual review in plan
 | 2026-09-08 | K | Operator confirmed no competing blackout is anticipated for the eventual wave date. |
 | 2026-09-10 | L, G | Second human reviewer named; disclosure/argument-B review and the privacy/legitimate-interest review pass both completed, reported by the operator. Gates L and G close. Remaining OPEN gate before pilot send: I (domain warmup, still early phase 1). |
 
-## Standing operating rules (unchanged from the plan)
+## Standing operating rules
 
 - Every send is manual. Maximum three touches per thread.
-- Total daily operating volume at most 20 to 30 including follow-ups.
+- Total daily operating volume at most 20 to 30 including follow-ups, to keep
+  the sending domain's reputation.
 - Every scanned hotel needs current, explicit permission for that named site.
 - Suppression is checked immediately before every provider draft operation.
 - Operational records expire at 90 days; permanent suppression stores hashes
   only.
-- A written stop log is maintained daily, including "no stop triggered"
-  days. Stop conditions are listed in plan 014 and are never worked around.
+- Stop signals: pause sending when hard bounces reach 2 percent of what was
+  sent, or on any spam complaint or provider warning, a wrong establishment
+  match, or a broken opt-out. Check after each batch; resume only once the
+  cause is fixed. They are never worked around.

@@ -6156,3 +6156,27 @@ Rejected alternatives: keeping the workflows for a future paid plan (every
 push would show a failed run, which hides real failures), and a self-hosted
 runner (a machine to maintain for one operator). Revisit if a second
 contributor joins or CI moves to another host.
+
+### 121. First emails go out at the operator's pace; the outreach experiment is dropped (operator decision, 2026-09-25)
+
+`docs/product/outreach-experiment-design.md` proposed turning the first 100
+emails into a measured experiment: prospects ordered by a hash, a hash-assigned
+accessibility bridge, a frozen response window and a fixed 10, 20, 30, 30
+ramp. With about 100 sends none of its hypotheses could reach more than a
+direction, and the operator wants to send at their own pace without that
+schedule.
+
+What stays: the stop signals (hard bounces at 2 percent or more, any spam
+complaint or provider warning, a wrong establishment match, a broken
+opt-out), the daily volume ceiling that protects the sending domain, manual
+sending, per-site scan permission, and suppression before every draft. They
+protect deliverability and legal compliance, not measurement. The campaign
+tag and `odysseus outreach-funnel` (issue #533) stay as plain reporting; an
+export before the first 90-day expiry (2026-12-23) is optional.
+
+What goes: decisions D1 to D3, D5 and D6 of that design, the daily written
+stop log, and the hash-assigned bridge, which is not built. D4 is unchanged:
+threads and outcomes keep their 90-day retention.
+
+Rejected alternative: running the experiment as designed, which the operator
+approved in part before choosing simplicity over weak evidence.
