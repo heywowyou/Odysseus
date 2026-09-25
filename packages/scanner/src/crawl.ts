@@ -1382,7 +1382,24 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                       /^\d+$/.test((a.textContent ?? '').trim()),
                   })),
                 );
-                const hrefs = anchors.map((anchor) => anchor.href);
+                // Issue #497: a relative href resolves against the document's
+                // base URL, which <base href> can move away from the page's
+                // own URL; the browser (and checks/link-facts.ts, which reads
+                // el.href) follows it, so discovery must too. Each href is made
+                // absolute against document.baseURI first, and the landed URL
+                // below still decides origin and redirect questions.
+                const documentBase = await browserPage
+                  .evaluate(() => document.baseURI)
+                  .catch(() => browserPage.url());
+                const againstBase = (href: string | null): string | null => {
+                  if (href === null) return null;
+                  try {
+                    return new URL(href, documentBase).href;
+                  } catch {
+                    return href;
+                  }
+                };
+                const hrefs = anchors.map((anchor) => againstBase(anchor.href));
                 // Resolved against browserPage.url() (where the navigation actually
                 // landed), not item.url (what was requested). A same-origin request
                 // can still land on a different origin after a server redirect - a
@@ -1404,8 +1421,9 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                 >();
                 for (const anchor of anchors) {
                   if (anchor.href === null) continue;
-                  const normalizedWithoutExclusion = normalizePageUrl(anchor.href, landedUrl);
-                  const normalized = normalizePageUrl(anchor.href, landedUrl, {
+                  const absoluteHref = againstBase(anchor.href)!;
+                  const normalizedWithoutExclusion = normalizePageUrl(absoluteHref, landedUrl);
+                  const normalized = normalizePageUrl(absoluteHref, landedUrl, {
                     exclusionPatterns: options.exclusions ?? [],
                   });
                   if (normalized === undefined) {
@@ -1442,9 +1460,9 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                 >();
                 for (const anchor of anchors) {
                   if (anchor.href === null) continue;
-                  const evidence = relativeLinkNestingEvidence(anchor.href, landedUrl);
+                  const evidence = relativeLinkNestingEvidence(anchor.href, documentBase);
                   if (evidence === undefined) continue;
-                  const normalized = normalizePageUrl(anchor.href, landedUrl, {
+                  const normalized = normalizePageUrl(againstBase(anchor.href)!, landedUrl, {
                     exclusionPatterns: options.exclusions ?? [],
                   });
                   if (normalized !== undefined) relativeNestingByUrl.set(normalized, evidence);
@@ -1540,7 +1558,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                   )
                   .catch(() => [] as (string | null)[]);
                 const hreflangLinks = normalizeInternalLinks(
-                  hreflangTargets,
+                  hreflangTargets.map(againstBase),
                   landedUrl,
                   options.exclusions ?? [],
                 );
