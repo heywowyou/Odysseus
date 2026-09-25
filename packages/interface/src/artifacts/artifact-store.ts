@@ -1,11 +1,11 @@
 /**
  * The `ArtifactStore` port, issue #63.
  *
- * A full audit's database row is shared (one Atlas cluster), but the
- * artifact directory and rendered PDFs a job writes are local to whichever
- * machine ran it. A scan or render triggered on a different machine, or
- * after a fresh deploy, has no local file to serve even though the database
- * row says the audit exists. This port is what a caller writes an artifact
+ * The artifact directory and rendered PDFs a job writes are local to
+ * whichever machine ran it. Each machine now has its own database (the VPS
+ * `test`, the workstation `odysseus-local`), but a fresh deploy or a moved
+ * volume still leaves a database row with no local file to serve, and rows
+ * from when the database was shared can name another machine's files. This port is what a caller writes an artifact
  * through and reads one back through when the local disk alone cannot
  * answer - the bucket is a fallback and a sync target, never the primary
  * copy `resolveArtifactFile` reads from first.

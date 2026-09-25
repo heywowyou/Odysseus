@@ -15,7 +15,10 @@ grep -q 'AWS_ACCESS_KEY_ID=' deploy/.restic.env.example
 
 echo "odysseus: restic deployment scripts passed static checks"
 
-grep -q -- '--keep-daily 30' deploy/restic-maintain.sh
-grep -q -- '--keep-weekly 8' deploy/restic-maintain.sh
-grep -q -- '--keep-monthly 12' deploy/restic-maintain.sh
+grep -q -- '--keep-daily 14' deploy/restic-maintain.sh
+grep -q -- '--keep-weekly 6' deploy/restic-maintain.sh
+if grep -q -- '--keep-monthly' deploy/restic-maintain.sh; then
+  echo "odysseus: restic retention must not keep monthly snapshots (plan 077)" >&2
+  exit 1
+fi
 grep -q -- '--prune' deploy/restic-maintain.sh

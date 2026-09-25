@@ -450,7 +450,8 @@ startup instead of restarting from zero.
 
 ### Disk usage on the VPS
 
-The VPS disk is 30 GB and the builds are large, so the controller enforces a
+The VPS disk is 200 GB (operator, 2026-09-24) and the builds are large, so
+the controller enforces a
 data-first disk policy after every successful deploy (`prune_old_releases` in
 `deploy/release.sh`):
 
@@ -507,6 +508,51 @@ node packages/cli/dist/index.js artifacts archived-prospects --apply  # purge
 For `artifacts orphans`, only `<hostname>/<YYYY-MM-DDTHH-MM-SSZ>/` prefixes with no matching audit row
 and older than 24 hours count as orphans. Any other key is printed as
 unidentified and never deleted.
+
+### Retention (plan 077)
+
+Every rewrite, render and rescan adds a version. Retention keeps the latest
+and removes superseded versions once they have been superseded for 7 days
+(`RETENTION_GRACE_DAYS`). The rules and why are in
+`docs/rules/normalization-rules.md` ("Retention of stored versions") and
+`docs/decisions/trade-offs.md`.
+
+- Inside every audit, a report, analysis, structure file or quality-run
+  candidate set stays while a keep reason names it (latest per language,
+  approved, selected, finalized, active bundle, and so on). The dry run
+  lists everything else it would remove.
+- An older audit of the same site and kind goes once a newer audit of equal
+  or broader scope (quick check < prospecting audit < full audit) has
+  existed for 7 days. A delivered audit (approval, active or approved bundle,
+  finalized report, live outreach preview) is slimmed instead: its
+  `pages/**` and crawl state go, its report files, findings and manifest
+  stay, and the findings delta still reads it. Rewriting or re-rendering a
+  slimmed audit is refused with "Les données brutes de ce scan ancien ont été
+  supprimées ; lancez un nouveau scan."
+- Audits with a queued or running job, a report in production, an archived
+  prospect, or no files on this machine are held and listed, never touched.
+
+The daily sweeper runs inside the app only when `ODYSSEUS_RETENTION_SWEEP=on`
+is set in `deploy/compose.yaml` (never in a `.env`), first 15 minutes after
+start, then every 24 hours. A run that would delete or slim more than 20
+audits refuses as a whole; the sweeper never overrides that. Run it by hand
+from the app container:
+
+```sh
+node packages/cli/dist/index.js artifacts retention                       # dry run: action, audit, reason, size
+node packages/cli/dist/index.js artifacts retention --apply               # remove and record the run
+node packages/cli/dist/index.js artifacts retention --apply --allow-large # only after reading a refused dry run
+node packages/cli/dist/index.js artifacts compact-scans                   # dry run of the scan.json trim
+node packages/cli/dist/index.js artifacts compact-scans --apply
+```
+
+The CLI sees queued and running jobs through the database, but not a report
+being produced inside the running server: apply it while no report is being
+produced. Each applied run writes one `retentionRuns` document (kept 90
+days) with counts, bytes reclaimed, any cap refusal and each failure with
+its audit and step. The Tools page (`/outils`) shows the latest one next to
+the artifacts disk level, which warns from 75% and alarms from 90%. A failed
+item keeps its database rows, so the next run retries it.
 
 ## 7B. Routine local deployments
 
@@ -747,7 +793,8 @@ container exists to stop carrying at all.
 ## 8. Backups
 
 The nightly job tars the artifacts volume and copies it to the existing
-private bucket `odysseus-previews` under `backups/`, keeping 30 days.
+private bucket `odysseus-previews` under `backups/`, keeping 14 days (plan
+077, down from 30).
 
 Install rclone and create the remote, as `deploy`, on the server. The
 credentials are the SAME ones as `ODYSSEUS_PREVIEW_BUCKET_ACCESS_KEY_ID` /
@@ -899,8 +946,10 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now odysseus-restic-backup.timer odysseus-restic-maintain.timer
 ```
 
-The maintenance timer retains 30 daily, 8 weekly and 12 monthly snapshots,
-then prunes unreachable pack data and runs `restic check`. Retention is
+The maintenance timer retains 14 daily and 6 weekly snapshots (plan 077,
+down from 30 daily, 8 weekly and 12 monthly: retention removes superseded
+audits from the live disk, and a year of monthly snapshots would keep every
+one of them), then prunes unreachable pack data and runs `restic check`. Retention is
 scoped to the production host/tag so another repository user is not
 accidentally pruned.
 

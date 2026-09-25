@@ -32,7 +32,9 @@ if [ -n "$COMPOSE_PROJECT_NAME" ]; then
   COMPOSE_ARGS=(-p "$COMPOSE_PROJECT_NAME" "${COMPOSE_ARGS[@]}")
 fi
 REMOTE="scaleway:odysseus-previews/backups"
-RETENTION_DAYS=30
+# Plan 077: matches the restic dailies, so a deleted audit leaves backups
+# about two weeks after it leaves the live disk.
+RETENTION_DAYS=14
 
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT

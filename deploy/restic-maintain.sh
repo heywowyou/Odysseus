@@ -19,12 +19,15 @@ common=(
   -v "${PASSWORD_FILE}:/run/secrets/restic-password:ro"
 )
 
+# Plan 077: retention removes superseded audits from the live disk after a
+# week; two weeks of dailies and six weeklies (about six weeks in all) keep
+# enough history to undo a mistake without keeping every deleted version
+# for a year.
 docker run "${common[@]}" "${RESTIC_IMAGE}" forget \
   --host "${BACKUP_HOST}" \
   --tag odysseus-artifacts \
-  --keep-daily 30 \
-  --keep-weekly 8 \
-  --keep-monthly 12 \
+  --keep-daily 14 \
+  --keep-weekly 6 \
   --prune
 
 docker run "${common[@]}" "${RESTIC_IMAGE}" check

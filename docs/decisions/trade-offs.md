@@ -141,7 +141,8 @@ default cap instead; that decision is the operator's.
    not: one per language, and again after a prompt change, are all
    legitimately distinct documents. Each records its model identifier and
    temperature, for the same provenance reason the manifest records
-   scanner versions.
+   scanner versions. The insert stays; since plan 077 a version that a newer
+   one superseded is kept only until retention removes it (trade-off 117).
 
 6. **The LLM is not called when a scan has not produced enough to justify
    it**, decided 2026-08-03. Two gates: a conservative audit fallback
@@ -5990,3 +5991,52 @@ crawl now records `settledUnscannedPageCount`, the sitemap entries that
 answered a definite 404 or 410 or that the crawl chose not to scan, and the
 gate leaves them out of its denominator. A 403, 429 or 5xx still counts
 against coverage, since those are how a site turns a crawler away.
+
+### 117. Keep the latest version, remove superseded ones after 7 days (operator decision, plan 077, 2026-09-24)
+
+Every rewrite, render and rescan added a version and nothing removed one,
+so the artifacts disk only grew: on the operator's machine, older audits of
+sites that had a newer audit were 29% of 5 GB, and per-page `scan.json`
+files were 3.7 GB. The operator decided that once a newer scan, analysis or
+report exists, the older one has no reason to stay beyond a few days.
+
+Retention keeps inserting (trade-off 5) and removes afterwards:
+
+- Inside an audit, an item stays while a typed keep reason names it: the
+  latest report per language, the latest pipeline and finalized reports and
+  the one a finalization corrected, every approved report, the selected and
+  candidate analyses, the analyses kept reports were built from, the newest
+  analysis per language, the structure files kept analyses used, the newest
+  structure, and the active, approved and newest quality-run candidates.
+  Quality-run rows themselves always stay: they carry model-call provenance
+  and the benchmark tallies read them.
+- An older audit of the same site and kind goes once a newer, finished
+  audit of equal or broader scope exists. A legacy audit with no recorded
+  intent counts as a full audit when it is the older one and replaces
+  nothing when it is the newer one, because what it covered is unknown.
+- A delivered audit (approval, active or approved bundle, finalized report,
+  live outreach preview) is slimmed, not deleted: its raw evidence goes, and
+  the report files, findings and manifest the client's report and the
+  re-audit findings delta need stay. Routes that recompute from raw evidence
+  refuse it with a plain message.
+- The grace is 7 days from the moment the newer item appeared, not from the
+  item's own age, so a fresh rescan never removes an older audit the
+  operator is still comparing against.
+- The sweeper runs only on the VPS (`ODYSSEUS_RETENTION_SWEEP=on` in
+  `deploy/compose.yaml`) and refuses a run over 20 audits; the CLI is dry
+  run by default. Backups keep 14 daily and 6 weekly snapshots so a mistake
+  can be undone for about six weeks.
+
+Compaction is a separate, lossless step: new scans already dropped axe's
+passes and Lighthouse's screenshot audits, stored v1 files did not, and
+Lighthouse's full-page screenshot was read by nothing. `compactScanJson` is
+the one owner of those rules; on all 25 normalizable local audits the
+compacted files renormalized to byte-identical findings, and the local
+`scan.json` total fell 61%.
+
+Rejected alternatives: deleting by age alone (it would remove an old
+prospect's only audit, which archiving already owns); keeping every
+delivered audit whole (the delivered report needs its findings, not 50 MB
+of per-page scan output); compressing `scan.json` on disk (every reader
+would change, for less than dropping bytes nothing reads); an env knob for
+the grace period (one more setting to get wrong for no operator need).

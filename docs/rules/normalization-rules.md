@@ -454,6 +454,32 @@ already deleted.
 Pruning does not affect `normalize <dir>`, which reads `scan.json` only
 and never touches the images.
 
+**`scan.json` compaction.** `compactScanJson` in `page-scan-io.ts` is the
+single owner of what a stored `scan.json` keeps: axe's `violations`,
+`incomplete` and `testEngine` (not `passes`, `inapplicable` or the run
+environment), and Lighthouse without its `screenshot-thumbnails` and
+`final-screenshot` audits or its `fullPageScreenshot`. Nothing reads those,
+and findings provenance hashes normalized findings, not these bytes, so a
+compacted audit renormalizes to the same `findingsDigest` (plan 077 proved
+it on every normalizable local audit). New scans are written compact;
+`odysseus artifacts compact-scans --apply` rewrites stored ones. The version
+stays 2, because `readPageScanJson` accepts only an absent version or 2.
+
+**Retention of stored versions (plan 077, trade-off 117).** Analyses and
+reports are still inserted, never overwritten (trade-off 5), and retention
+removes superseded ones afterwards, 7 days after a newer one appeared. The
+policy is `planRetention` in `packages/interface/src/retention/`; its keep
+reasons are one typed list (`RETENTION_KEEP_REASONS`), and an item no reason
+names is removed. An older audit of the same site and kind goes once a newer
+audit of equal or broader scope exists. A delivered audit is slimmed
+instead: `pages/**` and the crawl state go, `manifest.json`, `findings.json`,
+the audit scope, evidence files and the kept analyses and reports stay, and
+the audit row carries `retention.slimmedAt`. `normalize` and every other
+step that recomputes from `scan.json` cannot run on a slimmed audit; the
+dashboard routes refuse it up front. Deleting an audit also removes its
+private report-quality candidates under
+`report-quality/candidates/<auditId>/`.
+
 ---
 
 ## 7. Reference data

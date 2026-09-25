@@ -2,7 +2,8 @@
  * Mongoose schema for the `reports` collection. Follows analyses' exact
  * pattern (insert-only, no unique index on auditId): a report regenerated
  * after a template change, or re-run in a second language, is a distinct
- * artifact worth keeping, not an overwrite of an earlier one.
+ * artifact, not an overwrite of an earlier one. Retention removes it once a
+ * newer one has superseded it for a week (plan 077, trade-off 117).
  */
 
 import { Schema, type Connection, type Model } from 'mongoose';
@@ -50,12 +51,13 @@ export interface ReportDocumentFields {
   /** Path relative to the audit directory, e.g. "reports/2026-...-full-fr.pdf". */
   fileRef: string;
   generatedAt: Date;
-  /** Issue #62: os.hostname() of the machine that rendered the PDF. The
-   *  artifacts root is per-machine (local workspace vs the deployment's
-   *  /data/artifacts volume) while the Mongo data is shared, so a fileRef
-   *  that resolves to nothing on this machine usually means the file
-   *  lives on the machine named here, not that it was lost. Optional:
-   *  documents rendered before it was recorded simply lack it. */
+  /** Issue #62: os.hostname() of the machine that rendered the PDF. Each
+   *  machine now has its own database (the VPS `test`, the workstation
+   *  `odysseus-local`), but rows written while the database was shared can
+   *  name another machine, so a fileRef that resolves to nothing here
+   *  usually means the file lives on the machine named here, not that it
+   *  was lost. Optional: documents rendered before it was recorded simply
+   *  lack it. */
   renderedOnHost?: string;
   /** Plan 072: which of the two ways this PDF came to exist. A `finalized`
    *  row is the operator's own render, corrected after reading the pipeline's

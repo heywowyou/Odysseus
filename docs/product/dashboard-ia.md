@@ -22,6 +22,11 @@ the directory`. `Résultats` is the `view=results` mode of Prospects. The
 suppression lookup and Tools remain footer utilities. They are deliberately
 not primary destinations.
 
+Tools (`/outils`) also carries the one system-status block: the artifacts
+disk's fill level (warning from 75%, alarm from 90%) and the last retention
+run (plan 077). There is no Settings page; a new system or health signal goes
+beside it rather than into a primary destination.
+
 Compatibility routes remain safe for bookmarks:
 
 | Legacy path | Destination |

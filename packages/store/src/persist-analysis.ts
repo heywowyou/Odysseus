@@ -4,9 +4,10 @@
  * auditId is a retry of the same work and should be idempotent, but an
  * analysis re-run is not a retry of the same work - the same audit is
  * legitimately analysed more than once (once per language, again after
- * a prompt change), and each run is a distinct document worth keeping.
- * Upserting here would silently overwrite an earlier language's or an
- * earlier prompt version's analysis.
+ * a prompt change), and each run is a distinct document, kept until
+ * retention supersedes it (plan 077, trade-off 117). Upserting here would
+ * silently overwrite an earlier language's or an earlier prompt version's
+ * analysis.
  */
 
 import type { Connection } from 'mongoose';
