@@ -107,6 +107,13 @@ SMOKE_APP_EFFECTIVE="$(effective_block "$SMOKE" app)"
 assert_contains "$SMOKE_APP_EFFECTIVE" '../.env.smoke' "smoke overlay does not load .env.smoke"
 assert_not_contains "$SMOKE_APP_EFFECTIVE" "ports:" "smoke app publishes ports"
 
+# 7b. Both Caddy sites compress responses (issue #512): the dashboard's
+#     JSON polls and script bundle otherwise travel uncompressed.
+for caddyfile in "$REPO_ROOT/deploy/Caddyfile" "$REPO_ROOT/deploy/Caddyfile.smoke"; do
+  grep -Eq '^[[:space:]]*encode zstd gzip$' "$caddyfile" ||
+    fail "$(basename "$caddyfile") does not compress responses"
+done
+
 # 8. Structural validation with docker compose when it exists (CI has it):
 #    the line checks above cannot prove the file still parses, the anchor
 #    still merges, and the interpolation still resolves.

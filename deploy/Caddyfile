@@ -11,7 +11,12 @@
 # localhost site the local smoke needs lives in Caddyfile.smoke, mounted only
 # by compose.smoke.yaml, so no plaintext listener that proxies to the app
 # ships to the server.
+#
+# encode compresses what the browser accepts (issue #512): the dashboard's
+# JSON polls and its script bundle compress several times over. Keep it in
+# step with Caddyfile.smoke.
 
 app.odysseusaudit.com {
+	encode zstd gzip
 	reverse_proxy app:4600
 }
