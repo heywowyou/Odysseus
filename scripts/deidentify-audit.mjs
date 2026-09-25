@@ -10,7 +10,10 @@
  *   node scripts/deidentify-audit.mjs \
  *     --source artifacts/<host>/<timestamp> \
  *     --name small-site --host small-site.test --brand "Small Site" \
- *     [--token Fernande]
+ *     [--token Fernande] [--out-root <dir>]
+ *
+ * --out-root defaults to fixtures/test-audits; deidentify-audit.test.mjs
+ * points it at a temporary directory.
  *
  * The source-to-fixture mapping is deliberately not recorded anywhere. Writing
  * it into a committed file would rebuild the link this script exists to break,
@@ -79,12 +82,16 @@ function identityTokens(sourceHost, extra) {
  *  ids and classes are left alone: they are how a finding stays legible as a
  *  real defect, and a theme class name identifies the theme, not the client. */
 function redactMarkup(value) {
-  return value
-    .replace(/>([^<]+)</gu, (match, text) => (text.trim() === '' ? match : '>redacted<'))
-    .replace(
-      /\b(href|src|srcset|alt|title|aria-label|placeholder|value|content)="[^"]*"/giu,
-      '$1="redacted"',
-    );
+  return (
+    value
+      // Text up to the next tag, or to the end: axe cuts snippets mid-element,
+      // so the last text node often has no closing tag (issue #519's test).
+      .replace(/>([^<]+)(?=<|$)/gu, (match, text) => (text.trim() === '' ? match : '>redacted'))
+      .replace(
+        /\b(href|src|srcset|alt|title|aria-label|placeholder|value|content)="[^"]*"/giu,
+        '$1="redacted"',
+      )
+  );
 }
 
 /** One replacement per token, never one replacement for all of them.
@@ -172,7 +179,10 @@ function fixtureUuid(seed) {
 
 const options = parseArgs(process.argv.slice(2));
 const sourceDir = path.resolve(REPO_ROOT, options.source);
-const targetDir = path.join(REPO_ROOT, 'fixtures/test-audits', options.name);
+const targetDir = path.join(
+  path.resolve(REPO_ROOT, options['out-root'] ?? 'fixtures/test-audits'),
+  options.name,
+);
 
 const manifest = JSON.parse(readFileSync(path.join(sourceDir, 'manifest.json'), 'utf-8'));
 const findings = JSON.parse(readFileSync(path.join(sourceDir, 'findings.json'), 'utf-8'));
