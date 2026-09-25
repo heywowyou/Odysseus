@@ -538,6 +538,13 @@ union of findings' own pageUrls, so the anchor rule is what keeps that
 count inside the analyzed scope; the count itself is deliberately not
 independently filtered.
 
+The crawl's `homepageUrl`, when recorded, is preferred over the start URL.
+The live audit and every refresh build `normalizeAudit`'s input through one
+function, `buildNormalizeAuditInput` in
+`packages/interface/src/pipeline/normalize-audit-input.ts` (issue #502), so a
+refresh can no longer drop `homepageUrl` and move site-level findings, and
+their identities, to another page.
+
 ## Plan 075 amendments to sections 1, 2, 5 and 5a
 
 The content population is now explicit across every extractor. A URL that
