@@ -153,12 +153,32 @@ export const ODYSSEUS_REAUDIT_LEAD_TIME_DAYS = 5;
 
 const DATE_LOCALES = { fr: 'fr-FR', en: 'en-GB' } as const;
 
+/** Issue #506: client documents are dated in the client's time zone, never
+ *  the server's. The container sets no TZ, so an audit finishing between
+ *  00:00 and 02:00 in Paris (overnight batches) was dated the day before.
+ *  The report-quality fact registry already reads dates the same way. */
+const REPORT_TIME_ZONE = 'Europe/Paris';
+
 export function formatDate(date: Date, language: 'fr' | 'en'): string {
   return new Intl.DateTimeFormat(DATE_LOCALES[language], {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+    timeZone: REPORT_TIME_ZONE,
   }).format(date);
+}
+
+/** The calendar date `date` falls on in Paris. */
+function parisCalendarDate(date: Date): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    timeZone: REPORT_TIME_ZONE,
+  }).formatToParts(date);
+  const part = (type: 'year' | 'month' | 'day'): number =>
+    Number(parts.find((entry) => entry.type === type)?.value);
+  return { year: part('year'), month: part('month'), day: part('day') };
 }
 
 /** item 17: "depuis plus d'un an" would itself go stale the way "Échéance
@@ -171,11 +191,12 @@ export function formatDate(date: Date, language: 'fr' | 'en'): string {
  *  ans"/"more than N years" (singular-cased at exactly one year, the doc's
  *  own reported case: a report generated 14 months after the date). */
 export function formatElapsedDuration(from: Date, to: Date, language: 'fr' | 'en'): string {
+  // Paris calendar dates, like formatDate (issue #506).
+  const start = parisCalendarDate(from);
+  const end = parisCalendarDate(to);
   const totalMonths = Math.max(
     0,
-    (to.getFullYear() - from.getFullYear()) * 12 +
-      (to.getMonth() - from.getMonth()) -
-      (to.getDate() < from.getDate() ? 1 : 0),
+    (end.year - start.year) * 12 + (end.month - start.month) - (end.day < start.day ? 1 : 0),
   );
   if (totalMonths < 12) {
     const months = Math.max(1, totalMonths);
