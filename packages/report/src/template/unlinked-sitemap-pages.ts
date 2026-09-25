@@ -31,7 +31,7 @@ export function unlinkedSitemapPageUrls(manifest: PopulationManifest): ReadonlyS
   return new Set(sitemapOnly.map((page) => page.url));
 }
 
-export function isConfinedToUnlinkedSitemapPages(
+function isConfinedToUnlinkedSitemapPages(
   finding: Pick<Finding, 'pageUrls'>,
   unlinkedUrls: ReadonlySet<string>,
 ): boolean {
