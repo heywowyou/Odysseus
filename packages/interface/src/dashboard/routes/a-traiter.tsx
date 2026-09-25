@@ -53,6 +53,7 @@ export function ATraiterPage(): JSX.Element {
   const { data, error, refresh } = useTodoPoll();
   // Issue #533: fetched once per visit and after a mailbox sync, not polled.
   const funnel = useApi<OutreachFunnelPage>('/api/outreach/funnel');
+  const campaigns = funnel.data?.campaigns ?? [];
 
   const [syncing, setSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
@@ -265,9 +266,9 @@ export function ATraiterPage(): JSX.Element {
           </div>
         </Card>
       ) : null}
-      {funnel.data !== undefined && funnel.data.campaigns.length > 0 ? (
+      {campaigns.length > 0 ? (
         <Card title={strings.aTraiter.funnel.heading} className="mb-4">
-          {funnel.data.campaigns.map((campaign) => (
+          {campaigns.map((campaign) => (
             <div key={campaign.campaignVersion} className="mb-4">
               <p className="mb-2 text-xs text-ink-muted">
                 {strings.aTraiter.funnel.campaign.replace('{campaign}', campaign.campaignVersion)}

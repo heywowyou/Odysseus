@@ -289,6 +289,10 @@ function installFixture(fixture: WorkflowFixture): void {
         return jsonResponse({ created: true });
       }
 
+      if (path === '/api/outreach/funnel') {
+        return jsonResponse({ campaigns: [] });
+      }
+
       if (path === '/api/prospects/prospect-1/outcome' && method === 'POST') {
         fixture.stage = 'won';
         return jsonResponse({ recorded: true });
@@ -387,6 +391,11 @@ describe('dashboard prospect workflow', () => {
       outcome.dispatchEvent(new Event('change', { bubbles: true }));
       await pause();
     });
+    // A terminal outcome asks for confirmation first; the dialog renders in
+    // a portal on document.body, outside the app container.
+    const dialog = document.body.querySelector('[role="alertdialog"], [role="dialog"]');
+    if (!dialog) throw new Error('Outcome confirmation dialog was not rendered');
+    await click(exactElement(dialog as HTMLElement, 'button', 'Gagné'));
 
     await click(container.querySelector('a[href="/prospects"]')!);
     await click(exactElement(container, 'button', 'Résultats'));
