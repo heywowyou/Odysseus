@@ -1,4 +1,4 @@
-import type { Browser } from 'playwright';
+import type { Browser, BrowserContext } from 'playwright';
 import { AUDIT_BROWSER_LOCALE } from './audit-locale.js';
 import type {
   AuditConfigSnapshot,
@@ -54,6 +54,7 @@ import { isSocialPlatformHost } from './social-hosts.js';
 import { checkSitemap, type SitemapCheckResult } from './checks/sitemap.js';
 import {
   createPageWorkGuard,
+  PageWorkDeadlineError,
   withPageWorkDeadline,
   type PageWorkGuard,
 } from './page-work-guard.js';
@@ -836,18 +837,28 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
     queue.push({ url: normalizedSeed, depth: 0, discoveryMethod: 'seed' });
   }
 
-  const context = await options.browser.newContext({ userAgent, locale: AUDIT_BROWSER_LOCALE });
-  const crawlGuard = createPageWorkGuard(options.guard);
-  crawlGuard.track(context);
-  if (options.networkPolicy !== undefined) {
-    await installBrowserNetworkSafety(
-      context,
-      options.networkPolicy,
-      options.onNetworkSafetyBlocked,
-    );
-  }
-  context.setDefaultTimeout(timeoutMs);
-  context.setDefaultNavigationTimeout(timeoutMs);
+  /** The crawl's one browsing context and the guard its watchdog closes.
+   *  Reopened after a page outlives its deadline (issue #499), since the
+   *  deadline closes every context the guard tracks. */
+  const openCrawlContext = async (): Promise<{
+    context: BrowserContext;
+    crawlGuard: PageWorkGuard;
+  }> => {
+    const opened = await options.browser.newContext({ userAgent, locale: AUDIT_BROWSER_LOCALE });
+    const guard = createPageWorkGuard(options.guard);
+    guard.track(opened);
+    if (options.networkPolicy !== undefined) {
+      await installBrowserNetworkSafety(
+        opened,
+        options.networkPolicy,
+        options.onNetworkSafetyBlocked,
+      );
+    }
+    opened.setDefaultTimeout(timeoutMs);
+    opened.setDefaultNavigationTimeout(timeoutMs);
+    return { context: opened, crawlGuard: guard };
+  };
+  let { context, crawlGuard } = await openCrawlContext();
 
   const recordPage = (page: CrawledPage): void => {
     pages.push(page);
@@ -1019,6 +1030,16 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           queued: queue.length,
         });
 
+        // Issue #499: an iteration that outlives its watchdog keeps running
+        // until its closed context makes it throw. Its late writes are
+        // dropped, so the watchdog's own error record is the page's only one.
+        let abandoned = false;
+        const recordFromIteration = (page: CrawledPage): void => {
+          if (!abandoned) recordPage(page);
+        };
+        const enqueueFromIteration = (queued: (typeof queue)[number]): void => {
+          if (!abandoned) queue.push(queued);
+        };
         const pageWork = async (): Promise<void> => {
           // Every URL is requested as a first visit, the way a search engine
           // crawls. A cookie one page sets must not steer the next: a Next.js
@@ -1163,7 +1184,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               landedIdentity !== item.url;
 
             if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
-              recordPage({
+              recordFromIteration({
                 url: item.url,
                 depth: item.depth,
                 status: 'skipped-external-redirect',
@@ -1180,7 +1201,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               // Server redirects are inventory facts, not content pages. Keep
               // the requested spelling visible, then enqueue the actual target
               // once so only its content is analysed.
-              recordPage({
+              recordFromIteration({
                 url: item.url,
                 depth: item.depth,
                 status: 'redirect-interstitial',
@@ -1204,7 +1225,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                 !pagesByUrl.has(landedIdentity)
               ) {
                 enqueued.add(landedIdentity);
-                queue.push({
+                enqueueFromIteration({
                   url: landedIdentity,
                   depth: item.depth,
                   discoveredFrom: item.url,
@@ -1224,7 +1245,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               // A redirect can land on a path robots.txt disallows even though
               // the requested URL was allowed; the landed page is then treated
               // exactly like a disallowed link and never analysed.
-              recordPage({
+              recordFromIteration({
                 url: item.url,
                 depth: item.depth,
                 status: 'skipped-robots',
@@ -1233,7 +1254,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                 ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
               });
             } else if (isNonHtmlContentType(contentType)) {
-              recordPage({
+              recordFromIteration({
                 url: item.url,
                 depth: item.depth,
                 status: 'skipped-non-html',
@@ -1242,7 +1263,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                 ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
               });
             } else if (observed.auditedDocumentWall) {
-              recordPage({
+              recordFromIteration({
                 url: item.url,
                 depth: item.depth,
                 status: 'blocked',
@@ -1260,7 +1281,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               // its links followed, and never count as a page the client is
               // presented. The four /back-office/* 404s that reached the
               // Villas Foch report were exactly this failure.
-              recordPage({
+              recordFromIteration({
                 url: item.url,
                 depth: item.depth,
                 status: 'http-error-status',
@@ -1350,7 +1371,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                     });
               if (pluginObject !== undefined) discoverOnly = true;
 
-              recordPage({
+              recordFromIteration({
                 url: item.url,
                 depth: item.depth,
                 status: discoverOnly ? 'discovered-not-scanned' : 'visited',
@@ -1535,7 +1556,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                   }
                   if (enqueued.has(link)) continue;
                   enqueued.add(link);
-                  queue.push({
+                  enqueueFromIteration({
                     url: link,
                     depth: item.depth + 1,
                     discoveredFrom: item.url,
@@ -1588,7 +1609,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                     continue;
                   }
                   enqueued.add(link);
-                  queue.push({
+                  enqueueFromIteration({
                     url: link,
                     depth: item.depth + 1,
                     discoveredFrom: item.url,
@@ -1608,7 +1629,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
             const requestedHost = new URL(item.url).hostname;
             const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
             if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
-              recordPage({
+              recordFromIteration({
                 url: item.url,
                 depth: item.depth,
                 status: 'skipped-external-redirect',
@@ -1616,6 +1637,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
                 ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
               });
             } else {
+              if (abandoned) return;
               const message = error instanceof Error ? error.message : String(error);
               const refusalCode = connectionRefusalCode(message);
               if (refusalCode !== undefined) {
@@ -1624,7 +1646,7 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
               } else {
                 consecutiveRefusals = 0;
               }
-              recordPage({
+              recordFromIteration({
                 url: item.url,
                 depth: item.depth,
                 status: 'error',
@@ -1650,12 +1672,31 @@ export async function crawlSite(startUrl: string, options: CrawlOptions): Promis
           2 * Math.max(effectiveDelayMs, options.scheduler?.effectiveDelayMs ?? 0) +
           (options.scheduler?.retryAfterRemainingMs ?? 0);
         const crawlPageWatchdogMs = timeoutMs * 4 + pacingBudgetMs;
-        await withPageWorkDeadline(
-          `crawl page ${item.url}`,
-          pageWork(),
-          crawlPageWatchdogMs,
-          crawlGuard,
-        );
+        try {
+          await withPageWorkDeadline(
+            `crawl page ${item.url}`,
+            pageWork(),
+            crawlPageWatchdogMs,
+            crawlGuard,
+          );
+        } catch (error) {
+          if (!(error instanceof PageWorkDeadlineError)) throw error;
+          // Issue #499: one page that blocks its renderer is that page's
+          // error, not the audit's. The deadline closed the crawl's context,
+          // so the crawl continues on a fresh one, and the page is recorded
+          // now, so a frontier snapshot never re-queues it on resume.
+          abandoned = true;
+          recordPage({
+            url: item.url,
+            depth: item.depth,
+            status: 'error',
+            error: error.message,
+            discoveryMethod,
+            ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+          });
+          ({ context, crawlGuard } = await openCrawlContext());
+          maybeSnapshotFrontier();
+        }
         if (consecutiveRefusals >= HOST_REFUSAL_STOP_THRESHOLD && lastRefusalCode !== undefined) {
           hostStoppedAnswering = {
             answeredNavigationCount,
