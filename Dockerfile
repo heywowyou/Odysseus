@@ -1,7 +1,14 @@
 # Odysseus deploy image: multi-stage, final base node:24-bookworm-slim.
-# Three stages: deps (manifests + pnpm install), build (full source +
-# tsc/vite build), runtime (whole workspace + Playwright Chromium, then a
-# non-root user runs `odysseus serve`).
+# Four stages: deps (manifests + full pnpm install), build (full source +
+# tsc/vite build), prod-deps (production dependencies of the CLI and the
+# workspace packages it runs, nothing else), runtime (those dependencies,
+# the built packages and the few source files read at run time, plus
+# Playwright Chromium; a non-root user runs `odysseus serve`).
+#
+# Issue #528: the runtime used to copy the whole build workspace, so vitest,
+# eslint, typescript, jsdom, the Next.js site's dependencies, every fixture
+# and every compiled test shipped in the container that holds every secret
+# next to an unsandboxed Chromium (trade-off 92).
 
 # pnpm is never fetched from a floating tag: corepack reads the exact
 # version and hash pinned in package.json's packageManager field.
@@ -10,7 +17,7 @@ WORKDIR /app
 # Manifests first, so pnpm install's layer cache survives unrelated source
 # changes. Every workspace importer must be present (including
 # fixtures/spa-demo and packages/site) or --frozen-lockfile fails.
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc .pnpmfile.cjs ./
 COPY fixtures/spa-demo/package.json fixtures/spa-demo/package.json
 COPY packages/cli/package.json packages/cli/package.json
 COPY packages/core/package.json packages/core/package.json
@@ -35,9 +42,41 @@ COPY . .
 # packages/interface/dist/public.
 RUN pnpm --filter @odysseus/cli... run build
 
+# Compiled tests are not runtime code.
+RUN find packages -path '*/dist/*' -name '*.test.*' -delete
+
+FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS prod-deps
+WORKDIR /app
+COPY --from=deps /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml /app/.npmrc /app/.pnpmfile.cjs ./
+COPY --from=deps /app/fixtures/spa-demo/package.json fixtures/spa-demo/package.json
+COPY --from=deps /app/packages packages
+RUN find packages -name node_modules -prune -exec rm -rf {} +
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+# `@odysseus/cli...` is the CLI and every workspace package it depends on;
+# --prod leaves out every devDependency, the site and the fixtures.
+RUN corepack enable && pnpm install --prod --frozen-lockfile --filter '@odysseus/cli...'
+
 FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6
 WORKDIR /app
-COPY --from=build /app ./
+# findWorkspaceRoot locates the runtime by pnpm-workspace.yaml, and every
+# path the packages resolve (dist/public, the artifacts root) hangs off it.
+COPY --from=prod-deps /app/package.json /app/pnpm-workspace.yaml ./
+COPY --from=prod-deps /app/node_modules node_modules
+COPY --from=prod-deps /app/packages packages
+COPY --from=build /app/packages/cli/dist packages/cli/dist
+COPY --from=build /app/packages/core/dist packages/core/dist
+COPY --from=build /app/packages/interface/dist packages/interface/dist
+COPY --from=build /app/packages/llm/dist packages/llm/dist
+COPY --from=build /app/packages/report/dist packages/report/dist
+COPY --from=build /app/packages/scanner/dist packages/scanner/dist
+COPY --from=build /app/packages/store/dist packages/store/dist
+# The report inlines its stylesheets and fonts from src at render time.
+COPY --from=build /app/packages/report/src/styles packages/report/src/styles
+COPY --from=build /app/packages/report/src/fonts packages/report/src/fonts
+# Maintenance scripts run inside the container (`node /app/scripts/...`),
+# and the runbook's in-container PDF check renders this one fixture.
+COPY --from=build /app/scripts scripts
+COPY --from=build /app/fixtures/test-audits/small-site fixtures/test-audits/small-site
 
 # Issue #58: .git is excluded from the build context (.dockerignore), so the
 # runtime cannot derive a commit the way a developer checkout does, and every
@@ -60,7 +99,7 @@ ENV ODYSSEUS_BUILT_AT=${ODYSSEUS_BUILT_AT}
 # are present. Called via node directly: the runtime stage needs no package
 # manager, and this avoids a second corepack pnpm fetch.
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
-RUN node node_modules/playwright/cli.js install --with-deps chromium
+RUN node packages/scanner/node_modules/playwright/cli.js install --with-deps chromium
 
 # Artifacts live in a volume so audit output survives image upgrades and is
 # the one thing a backup must capture.
