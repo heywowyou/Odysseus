@@ -37,7 +37,12 @@ export function ensureEnvLoaded(): void {
   if (envLoaded) return;
   envLoaded = true;
   try {
-    process.loadEnvFile(path.join(findWorkspaceRoot(), '.env'));
+    // ODYSSEUS_ENV_FILE is the same override packages/scanner honors; the
+    // test runner points it at an empty file.
+    const configuredEnvFile = process.env['ODYSSEUS_ENV_FILE'];
+    process.loadEnvFile(
+      configuredEnvFile !== undefined ? configuredEnvFile : path.join(findWorkspaceRoot(), '.env'),
+    );
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }

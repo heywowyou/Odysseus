@@ -38,6 +38,14 @@ import { fileURLToPath } from 'node:url';
  */
 process.env.TZ = 'UTC';
 
+/**
+ * The scanner and llm packages load the repository .env on first use. On the
+ * operator's machine that file holds real credentials, so a test reached a
+ * live service with them (a CrUX call failed a run with a 503). Every run
+ * loads an empty file instead, as CI's checkout, which had no .env, did.
+ */
+process.env.ODYSSEUS_ENV_FILE = fileURLToPath(new URL('./fixtures/env/test.env', import.meta.url));
+
 const workspaceSourceAliases = ['core', 'store', 'scanner', 'llm', 'interface', 'report'].map(
   (name) => ({
     find: new RegExp(`^@odysseus/${name}$`),
