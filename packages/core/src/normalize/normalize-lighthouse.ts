@@ -68,10 +68,46 @@ export interface LighthouseAuditInput {
     items?: unknown;
   };
   /** Lighthouse's own declaration that this audit supersedes older ones.
-   *  Present on the "insight" audits, which ship alongside the legacy
-   *  audits they replace rather than removing them. See
-   *  SUPERSEDED_AUDIT_IDS below for why we read it. */
+   *  Present on the "insight" audits of Lighthouse 12 results, which ship
+   *  alongside the legacy audits they replace rather than removing them.
+   *  Lighthouse 13 no longer copies it into the result; see
+   *  LIGHTHOUSE_REPLACED_AUDITS below. */
   replacesAudits?: string[];
+}
+
+/** Each insight's `meta.replacesAudits`, transcribed from Lighthouse 13.4.1
+ *  (`core/audits/insights/*.js`). Lighthouse 13 still declares these but its
+ *  `generateAuditResult` no longer copies the field into the result, so a
+ *  stored Lighthouse 13 run carries none and D13 never fired: a hotel audit
+ *  of 2026-09-24 printed document-latency-insight beside server-response-time
+ *  and cls-culprits-insight beside layout-shifts, same pages, same problem.
+ *  Lighthouse 13 keeps redirects, server-response-time and layout-shifts
+ *  running in a hidden group for exactly this reason. A result that does
+ *  carry the field keeps precedence. */
+const LIGHTHOUSE_REPLACED_AUDITS: Readonly<Record<string, readonly string[]>> = {
+  'cache-insight': ['uses-long-cache-ttl'],
+  'cls-culprits-insight': ['layout-shifts'],
+  'document-latency-insight': ['redirects', 'server-response-time', 'uses-text-compression'],
+  'dom-size-insight': ['dom-size'],
+  'duplicated-javascript-insight': ['duplicated-javascript'],
+  'font-display-insight': ['font-display'],
+  'image-delivery-insight': [
+    'modern-image-formats',
+    'uses-optimized-images',
+    'efficient-animated-content',
+    'uses-responsive-images',
+  ],
+  'inp-breakdown-insight': ['work-during-interaction'],
+  'lcp-breakdown-insight': ['largest-contentful-paint-element'],
+  'lcp-discovery-insight': ['prioritize-lcp-image', 'lcp-lazy-loaded'],
+  'network-dependency-tree-insight': ['critical-request-chains', 'uses-rel-preconnect'],
+  'render-blocking-insight': ['render-blocking-resources'],
+  'third-parties-insight': ['third-party-summary'],
+  'viewport-insight': ['viewport'],
+};
+
+function replacedAudits(auditId: string, audit: LighthouseAuditInput): readonly string[] {
+  return audit.replacesAudits ?? LIGHTHOUSE_REPLACED_AUDITS[auditId] ?? [];
 }
 
 /** The Lighthouse audits that measure or explain one lab metric. A page's
@@ -483,11 +519,12 @@ export function computeNonActionableSuccessorsToDrop(
   const dropped = new Set<string>();
   for (const lhr of reports) {
     for (const [successorId, successor] of Object.entries(lhr.audits)) {
-      if (!successor.replacesAudits?.length) continue;
+      const replaced = replacedAudits(successorId, successor);
+      if (replaced.length === 0) continue;
       if (!auditEmitsFinding(successor, successorId) || auditHasActionableDetail(successor))
         continue;
       if (
-        successor.replacesAudits.some((legacyId) => {
+        replaced.some((legacyId) => {
           const legacy = lhr.audits[legacyId];
           return (
             legacy !== undefined &&
@@ -537,13 +574,14 @@ export function computeSupersededAudits(
   const superseded = new Map<string, string>();
   for (const lhr of reports) {
     for (const [auditId, audit] of Object.entries(lhr.audits)) {
-      if (!audit.replacesAudits?.length) continue;
+      const replaced = replacedAudits(auditId, audit);
+      if (replaced.length === 0) continue;
       if (!auditEmitsFinding(audit, auditId)) continue;
       // A successor with no actionable item of its own would replace a file
       // list with a blank row. Measured, not assumed: see
       // auditHasActionableDetail above for the four insights this excludes.
       if (!auditHasActionableDetail(audit)) continue;
-      for (const replaced of audit.replacesAudits) superseded.set(replaced, auditId);
+      for (const legacyId of replaced) superseded.set(legacyId, auditId);
     }
   }
   return superseded;

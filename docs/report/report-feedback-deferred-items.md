@@ -76,22 +76,6 @@ behavior before choosing between a row wrapper, a different table structure,
 or a Paged.js hook. The accepted limitation that table headers do not repeat
 is separate and is not an open backlog item.
 
-### Overlapping Lighthouse legacy and successor audit families
-
-Older reports printed overlapping Lighthouse work families, for example
-`legacy-javascript` beside its successor `legacy-javascript-insight`, and
-`uses-http2` beside `modern-http-insight`, with overlapping remediation and
-page sets, which inflates rows and can produce two tickets for one change.
-Normalization reads Lighthouse replacement metadata, but historical artifacts
-show metadata alone does not separate every version pair. The 2026-08-29
-Haaitza report contains only `legacy-javascript-insight`, so there is no
-current reproduction. Provenance keeps both raw records; client roll-ups
-should expose only the current actionable family.
-
-Trigger: a current normalized report reproduces an overlapping legacy and
-successor family pair. At that point, plan a tested successor map over the
-known pairs; do not change normalization from historical artifacts alone.
-
 ## Below the duplication threshold
 
 ### Lighthouse element-shaped findings lack stable shape identity

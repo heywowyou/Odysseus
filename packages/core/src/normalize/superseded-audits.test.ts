@@ -163,6 +163,44 @@ describe('D13: a Lighthouse insight suppresses the audits it replaces', () => {
     expect(findings.map((f) => f.ruleId)).toContain('layout-shifts');
   });
 
+  it('applies to Lighthouse 13 results, which no longer carry replacesAudits', () => {
+    // A 2026-09-24 hotel audit printed "the server responds slowly" twice and
+    // "the layout shifts while loading" twice: Lighthouse 13 still declares
+    // the successors in its source but stopped copying the field into the
+    // result, so neither side was ever dropped.
+    const findings = normalize([
+      page(
+        'https://example.com/',
+        report({
+          'document-latency-insight': { score: 0, items: [] },
+          'server-response-time': {
+            score: 0,
+            items: [{ url: 'https://example.com/', responseTime: 931 }],
+          },
+          'cls-culprits-insight': {
+            score: 0,
+            scoreDisplayMode: 'numeric',
+            items: [{ type: 'table', headings: [], items: [] }],
+          },
+          'layout-shifts': {
+            score: 0,
+            items: [{ node: { type: 'node', selector: 'main > h2', snippet: '<h2 class="t">' } }],
+          },
+          [SUCCESSOR]: { score: 0.5, items: urlItems('https://example.com/a.jpg') },
+          [LEGACY]: { score: 0.5, items: urlItems('https://example.com/b.jpg') },
+        }),
+      ),
+    ]);
+
+    const rules = findings.map((f) => f.ruleId);
+    expect(rules).toContain('server-response-time');
+    expect(rules).not.toContain('document-latency-insight');
+    expect(rules).toContain('layout-shifts');
+    expect(rules).not.toContain('cls-culprits-insight');
+    expect(rules).toContain(SUCCESSOR);
+    expect(rules).not.toContain(LEGACY);
+  });
+
   it('decides across the whole audit, not page by page', () => {
     // haaitza.com: image-delivery-insight does not emit on every page. Per
     // page, the legacy audits survived on the pages it skipped and the

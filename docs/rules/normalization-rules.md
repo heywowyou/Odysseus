@@ -42,6 +42,16 @@ cannot silently start emitting findings after an upgrade.
   suppresses individual audit IDs regardless of which category surfaces
   them. Add to that list only rules whose overlap has been confirmed
   against real scanner output.
+- A Lighthouse insight and the legacy audits it replaces report one
+  problem once (D13, `computeSupersededAudits` and
+  `computeNonActionableSuccessorsToDrop`). The replaced ids come from the
+  result's `replacesAudits` when present, otherwise from
+  `LIGHTHOUSE_REPLACED_AUDITS`, transcribed from Lighthouse 13.4.1's own
+  insight metadata: Lighthouse 13 declares the pairs but no longer copies
+  the field into its result, and still runs `redirects`,
+  `server-response-time` and `layout-shifts` in a hidden group, so a
+  2026-09-24 audit printed both sides of two pairs. Re-transcribe the table
+  when the Lighthouse major version changes.
 - Audits with `scoreDisplayMode` of `informative`, `notApplicable`,
   `manual`, or `error` are skipped. They have no pass or fail state.
 - Failure threshold is `score < 0.9`, as a named constant.
