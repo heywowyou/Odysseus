@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# Issue #255: proves the CI secret-scanning gate actually fires, without
+# Issue #255: proves the release gate's secret scanning actually fires, without
 # committing anything that looks like a real credential. The fixture is
 # generated into a throwaway temp directory at run time and never touches
 # git history.
 #
-# Keep TRIVY_VERSION in sync with the `version:` input pinned in
-# .github/workflows/ci.yml's Trivy steps.
+# Keep TRIVY_VERSION in sync with TRIVY_IMAGE in scripts/gate.sh.
 set -Eeuo pipefail
 
 TRIVY_VERSION='v0.74.0'

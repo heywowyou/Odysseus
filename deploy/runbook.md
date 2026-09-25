@@ -5,9 +5,9 @@ operator with an assistant walking through them. Do not skip the STOP boxes.
 Sections 1 to 3, 5 and 6 are the historical record of the original Scaleway
 box. Section 4 is current: the server's secrets list and the permanent
 reference-audit release workflow apply to the Hostinger box today.
-Routine production deployment is section 7B: run `deploy/odysseus-deploy.sh`
-from the operator's machine against the Hostinger box. Section 7A stays as
-reference for the disabled workflow mechanism.
+Routine production deployment is section 7B: run `pnpm run gate`, then
+`deploy/odysseus-deploy.sh`, from the operator's machine against the Hostinger
+box. Section 7A records the retired GitHub release workflow.
 
 ## 1. What this stack is
 
@@ -334,239 +334,21 @@ curl -sI https://app.odysseusaudit.com/
 Both services `Up`, and the 302 to `/login` again: `restart: unless-stopped`
 and the timer stack came back on their own.
 
-## 7A. Configure controlled production releases
+## 7A. Retired GitHub release workflow
 
-> Operator decision, 2026-09-09: production (the Hostinger box serving
-> `app.odysseusaudit.com`) is deployed locally with
-> `deploy/odysseus-deploy.sh`; this GitHub workflow is deliberately disabled
-> (`PRODUCTION_DEPLOY_ENABLED=false`) and agents must not suggest it unless
-> the local path is genuinely blocked (trade-off 77). This section stays as
-> reference for the mechanism, its guards, and its rollback design.
-
-Routine releases had started only when the operator ran the `Deploy production`
-workflow on `main`. The workflow refuses to deploy unless that exact commit has
-a successful `CI` push run. It does not pull whatever happens to be at the tip
-of a branch later.
-
-The VPS keeps releases under `/srv/odysseus/releases/<full-commit-sha>` and
-points `/srv/odysseus/current` at the live one. Docker images carry the same
-commit SHA. Compose's project name is pinned to `deploy`, so moving between
-release directories continues to use the existing `deploy_artifacts`,
-`deploy_caddy_data`, and `deploy_caddy_config` volumes. The production `.env`
-stays at `/srv/odysseus/.env` and is symlinked into each release; it is never
-included in a release archive.
-
-### Install the restricted command on the VPS
-
-From the checked-out repository already on the VPS:
-
-```sh
-cd /srv/odysseus
-chmod 0755 deploy/release.sh deploy/github-deploy-command.sh \
-  deploy/install-github-deploy-key.sh
-```
-
-Generate a dedicated key on the operator's local machine. It is not the
-operator's normal SSH key:
-
-```sh
-ssh-keygen -t ed25519 -f /tmp/odysseus-github-deploy -N '' \
-  -C 'github-actions-production-deploy'
-```
-
-Install the public key from the operator's local machine. The installer handles
-an existing `authorized_keys` file that does not end in a newline and refuses
-non-Ed25519 input:
-
-```sh
-ssh deploy@VPS_IP /srv/odysseus/deploy/install-github-deploy-key.sh \
-  < /tmp/odysseus-github-deploy.pub
-```
-
-`restrict` disables port, agent, X11, and terminal forwarding. The forced
-command accepts only `deploy <40-character-sha>` with an archive on standard
-input, that same command with the single literal token `force-running`
-appended, or `rollback`. It cannot open a shell or print `/srv/odysseus/.env`.
-
-### Configure the GitHub production environment
-
-The repository is private on a GitHub plan that does not provide required
-environment reviewers for private repositories. The manual workflow dispatch
-is therefore the approval action; a push cannot start the deployment job. Add
-these repository-level values:
-
-| Kind | Name | Value |
-| --- | --- | --- |
-| Variable | `PRODUCTION_DEPLOY_ENABLED` | `true`, added last |
-| Variable | `PRODUCTION_HOST` | the VPS IPv4 address |
-| Variable | `PRODUCTION_USER` | `deploy` |
-| Secret | `PRODUCTION_SSH_PRIVATE_KEY` | complete private deployment key |
-| Secret | `PRODUCTION_SSH_KNOWN_HOSTS` | trusted VPS `known_hosts` line |
-
-Obtain the host line from an already trusted operator connection. Do not accept
-a new host key blindly merely because `ssh-keyscan` returned it. Add
-the repository-level `PRODUCTION_DEPLOY_ENABLED=true` only after all other
-values and the forced VPS key are in place. Until then, the workflow is
-deliberately skipped. A future GitHub plan upgrade may add a required reviewer
-to the `production` environment as a second gate without changing the workflow.
-
-Delete `/tmp/odysseus-github-deploy` and its `.pub` file from the operator's
-machine after the private key is stored in the GitHub repository and one
-deployment has passed. The GitHub copy then becomes the only private-key copy.
-
-### Normal deployment and rollback
-
-After a successful `CI` run on `main`, open Actions, `Deploy production`, Run
-workflow, keep branch `main`, and choose `deploy`. Documentation-only pushes
-need no deployment. The release controller serializes deployments, builds the
-commit-tagged app image, restarts Compose, and requires `/health/ready` to confirm
-both MongoDB connectivity and queue initialization. A failed readiness check restores
-the previous release automatically. The workflow separately requires the public
-unauthenticated request to return a 302 redirect to `/login`, which verifies the
-routing and authentication boundary rather than application readiness.
-
-Before recreating the app container, the controller asks the currently running
-container for the jobs whose status is `running`. Full-audit jobs are logged
-but do not block deployment: Plan 035 gives them a stable run identity,
-persistent crawl/content checkpoints, and startup re-claim, so a container
-restart resumes the same audit rather than forfeiting it. Other running job
-types still refuse the deploy because they do not all carry that resume
-contract. The probe itself remains fail-closed: a failure or unreadable answer
-refuses the deploy because an unknown queue state is not safe to guess about.
-When no app container is running at all the deploy proceeds. To deploy over a
-non-resumable running job anyway, append the literal token `force-running` to
-the deploy command, or set `ODYSSEUS_DEPLOY_FORCE_RUNNING=1` for a manual SSH
-run.
-
-To roll back intentionally, open Actions, `Deploy production`, Run workflow,
-and choose `rollback`. From a normal operator SSH session, the equivalent
-recovery command is:
-
-```sh
-/srv/odysseus/deploy/release.sh rollback
-```
-
-Rollback swaps the current and previous pointers, so it can be reversed by
-running it again. Five recent releases are retained in addition to whichever
-older release is the active rollback target. Every deployment restarts the app,
-which logs out the in-memory dashboard session. With the guard above that can
-no longer interrupt a running job unless the deploy was forced; an interrupted
-job is returned to the persistent queue when the new process starts, and since
-plan 035 (issue #124) a full-audit job resumes from its checkpoint on the next
-startup instead of restarting from zero.
-
-### Disk usage on the VPS
-
-The VPS disk is 200 GB (operator, 2026-09-24) and the builds are large, so
-the controller enforces a
-data-first disk policy after every successful deploy (`prune_old_releases` in
-`deploy/release.sh`):
-
-- Kept: the artifacts volume, `/srv/odysseus/.env`, the Caddy certificates,
-  the five most recent release trees (a few dozen MB each), and the app images
-  for the current and previous releases only (about 3 GB each). Atlas holds
-  the database, off-box.
-- Pruned: app images for every other release (a rollback to one of those
-  rebuilds the image first; the controller handles a missing image), dangling
-  images, and Docker build cache above 4 GB (`ODYSSEUS_BUILD_CACHE_KEEP`, the
-  release controller's own knob and not section 7B's
-  `ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP`, overrides the ceiling).
-
-Before the controller had this policy the disk filled on 2026-09-03 and
-deploys died with `no space left on device` during the image build. If that
-ever recurs before the controller's own prune can run, reclaim space from an
-operator SSH session, keeping the current and previous images:
-
-```sh
-readlink /srv/odysseus/current
-cat /srv/odysseus/previous-release
-docker images --format '{{.Repository}}:{{.Tag}}' | grep odysseus-app
-# docker image rm <tags that are neither of the two pointers above>
-docker image prune -f
-docker builder prune -f -a --keep-storage 4GB
-df -h /
-```
-
-A deploy can then be re-run from Actions. Never prune volumes: the artifacts
-volume is the data of record on this box (see section 11).
-
-### Artifact bucket orphans
-
-Deleting an audit, a scan or a prospect removes the audit's local directory
-and its bucket prefix before its database records (issue #384); a storage
-failure answers 503 and keeps the records so the deletion can be retried.
-Audits deleted before that change may have left bucket objects behind. To
-find them, run from the app container:
-
-```sh
-node packages/cli/dist/index.js artifacts orphans           # dry run
-node packages/cli/dist/index.js artifacts orphans --delete  # removes listed orphans
-```
-
-Archived prospects that still own audits (archived before issue #381 made
-archive purge scans, or left part-way by a storage failure) are reconciled the
-same way, through the purge the archive action itself runs:
-
-```sh
-node packages/cli/dist/index.js artifacts archived-prospects          # dry run
-node packages/cli/dist/index.js artifacts archived-prospects --apply  # purge
-```
-
-For `artifacts orphans`, only `<hostname>/<YYYY-MM-DDTHH-MM-SSZ>/` prefixes with no matching audit row
-and older than 24 hours count as orphans. Any other key is printed as
-unidentified and never deleted.
-
-### Retention (plan 077)
-
-Every rewrite, render and rescan adds a version. Retention keeps the latest
-and removes superseded versions once they have been superseded for 7 days
-(`RETENTION_GRACE_DAYS`). The rules and why are in
-`docs/rules/normalization-rules.md` ("Retention of stored versions") and
-`docs/decisions/trade-offs.md`.
-
-- Inside every audit, a report, analysis, structure file or quality-run
-  candidate set stays while a keep reason names it (latest per language,
-  approved, selected, finalized, active bundle, and so on). The dry run
-  lists everything else it would remove.
-- An older audit of the same site and kind goes once a newer audit of equal
-  or broader scope (quick check < prospecting audit < full audit) has
-  existed for 7 days. A delivered audit (approval, active or approved bundle,
-  finalized report, live outreach preview) is slimmed instead: its
-  `pages/**` and crawl state go, its report files, findings and manifest
-  stay, and the findings delta still reads it. Rewriting or re-rendering a
-  slimmed audit is refused with "Les données brutes de ce scan ancien ont été
-  supprimées ; lancez un nouveau scan."
-- Audits with a queued or running job, a report in production, an archived
-  prospect, or no files on this machine are held and listed, never touched.
-
-The daily sweeper runs inside the app only when `ODYSSEUS_RETENTION_SWEEP=on`
-is set in `deploy/compose.yaml` (never in a `.env`), first 15 minutes after
-start, then every 24 hours. A run that would delete or slim more than 20
-audits refuses as a whole; the sweeper never overrides that. Run it by hand
-from the app container:
-
-```sh
-node packages/cli/dist/index.js artifacts retention                       # dry run: action, audit, reason, size
-node packages/cli/dist/index.js artifacts retention --apply               # remove and record the run
-node packages/cli/dist/index.js artifacts retention --apply --allow-large # only after reading a refused dry run
-node packages/cli/dist/index.js artifacts compact-scans                   # dry run of the scan.json trim
-node packages/cli/dist/index.js artifacts compact-scans --apply
-```
-
-The CLI sees queued and running jobs through the database, but not a report
-being produced inside the running server: apply it while no report is being
-produced. Each applied run writes one `retentionRuns` document (kept 90
-days) with counts, bytes reclaimed, any cap refusal and each failure with
-its audit and step. The Tools page (`/outils`) shows the latest one next to
-the artifacts disk level, which warns from 75% and alarms from 90%. A failed
-item keeps its database rows, so the next run retries it.
+GitHub only versions the repository (operator decision, 2026-09-25, trade-off
+120): no GitHub Actions workflow runs. The dispatched release workflow, its
+release controller (`deploy/release.sh`), the forced-command SSH key scripts
+and this section's setup and rollback procedure were removed from the tree.
+Commit `a91c93e2` is the last one that holds them, for reference. Production
+deploys are section 7B only.
 
 ## 7B. Routine local deployments
 
 > Operator decision, 2026-09-09 (trade-off 77): production on the Hostinger
 > box is deployed by running `deploy/odysseus-deploy.sh` from the operator's
-> own machine. The GitHub workflow of section 7A stays disabled. This section
-> is the routine procedure.
+> own machine. GitHub runs no workflow (trade-off 120). This section is the
+> routine procedure.
 
 One-time setup, on the operator's machine:
 
@@ -582,11 +364,27 @@ leave alone: `ODYSSEUS_DEPLOY_REMOTE_PATH` (`/srv/odysseus`),
 `ODYSSEUS_DEPLOY_COMPOSE_PROJECT` (`odysseus`), and
 `ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP` (`4GB`).
 
-Routine deploy, from the operator's machine:
+Routine deploy, from the operator's machine, on a clean checkout of the
+commit to ship:
 
 ```sh
+pnpm run gate
 bash deploy/odysseus-deploy.sh
 ```
+
+`pnpm run gate` (`scripts/gate.sh`) is the release gate that GitHub Actions
+used to be: the static check, the builds, the IBM Equal Access engine, the
+deploy-script tests, the full test suite against the replica-set test MongoDB,
+and the Trivy and Semgrep security gates, including a Trivy scan of a locally
+built production image. It needs Docker and Playwright's Chromium, and records
+a pass for the exact commit under `.git/odysseus-gate/`. The deploy script
+refuses a dirty working tree or a commit without a pass. For an emergency fix
+that cannot wait for the gate, `ODYSSEUS_DEPLOY_SKIP_GATE=1 bash
+deploy/odysseus-deploy.sh` deploys anyway and logs the override.
+
+To roll back a bad release, check out the last good commit (detached is fine)
+and deploy it the same way. A commit that passed the gate on this machine
+keeps its pass; an older one needs the gate run again, or the override.
 
 The script, in order: renders the server compose file from the repo's own
 `deploy/compose.yaml` and writes it to the server, rsyncs the repo, builds
@@ -1016,7 +814,7 @@ cd /srv/odysseus
 docker compose -f deploy/compose.yaml down
 ```
 
-For a routine bad release, use the section 7A rollback instead. This section is
+For a routine bad release, use the section 7B rollback instead. This section is
 for stopping or dismantling the whole stack.
 
 Safe to delete after that:

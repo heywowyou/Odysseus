@@ -7,14 +7,14 @@ credentials remain opt-in and are never committed.
 
 | Recommendation | Status | Implementation |
 | --- | --- | --- |
-| dependency-cruiser | Implemented | `.dependency-cruiser.cjs`, `pnpm run architecture:check`, CI/pre-push |
+| dependency-cruiser | Implemented | `.dependency-cruiser.cjs`, `pnpm run architecture:check`, release gate/pre-push |
 | Renovate | Implemented, local only | `renovate.json` policy, `pnpm run deps:check` (Docker, `local` platform) |
-| Trivy | Implemented | CI filesystem/image scans, SBOM, `.trivyignore.yaml` |
+| Trivy | Implemented | release-gate filesystem/image scans, `.trivyignore.yaml` |
 | Sentry | Implemented, opt-in | metadata-only job telemetry sink behind `SENTRY_DSN` |
 | fast-check | Implemented | deterministic property-test support and core property suites |
-| IBM Equal Access | Implemented as secondary CI checker | `deploy/equal-access-ci.sh`, `.achecker.yml`, CI |
+| IBM Equal Access | Implemented as secondary checker | `deploy/equal-access-ci.sh`, `.achecker.yml`, release gate |
 | Langfuse | Implemented, opt-in | metadata-only LLM OTLP sink behind explicit Langfuse env vars |
-| Semgrep Community Edition | Implemented | pinned custom-rule CI + positive/negative fixtures |
+| Semgrep Community Edition | Implemented | pinned custom rules in the release gate + positive/negative fixtures |
 | restic | Implemented, operator-configured | encrypted backup/check/restore-drill scripts + runbook |
 | Context7 | Implemented, opt-in | official project MCP in `.mcp.json`, disabled by default |
 

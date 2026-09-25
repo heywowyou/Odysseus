@@ -36,8 +36,8 @@ This is a pnpm workspace covering `packages/*` and `fixtures/*` (the
 
 Enable the repo's git hooks once per clone. `pre-push` runs `pnpm run check`
 (docs links, formatting, lint, typecheck, dependency-cruiser architecture
-rules, and fallow dead-code audit) locally instead of failing for the
-first time in CI, and `commit-msg` rejects a commit message that credits an
+rules, and fallow dead-code audit), the fast static part of the release
+gate, and `commit-msg` rejects a commit message that credits an
 LLM (`docs/agents/coding-conventions.md`, "Authorship and attribution"):
 
 ```bash
@@ -71,19 +71,32 @@ variable in `.env` at another path:
 `directory-import` also accepts `--file <path>` for a one-off import. Sources,
 licences, and encodings are described in `docs/rules/prospect-qualification.md`.
 
+## Release gate
+
+GitHub only versions this repository; no GitHub Actions workflow runs
+(trade-off 120). Before every production deploy, on a clean checkout:
+
+```bash
+pnpm run gate                  # static check, builds, all tests, Equal Access, Trivy, Semgrep
+bash deploy/odysseus-deploy.sh # refuses a commit the gate has not passed
+```
+
+It needs Docker and Playwright's Chromium. See `deploy/runbook.md`, section 7B.
+
 ## Running tests
 
 ```bash
 pnpm run test:store:up    # starts the local mongo-test replica set and waits for its primary
 pnpm run test             # runs the unit Vitest project (excludes browser e2e)
 pnpm run test:e2e         # runs the e2e and e2e-serial projects; needs Chromium (below) and mongo-test
-pnpm run test:all         # runs all three projects (unit, e2e, e2e-serial); this is what CI gates on
+pnpm run test:all         # runs all three projects (unit, e2e, e2e-serial); the release gate runs this
 pnpm run test:store:down  # stops it again
 ```
 
 Mongo-backed integration suites skip when the test database is unreachable,
-so a machine without Docker still runs the rest. In CI, or locally with
-`REQUIRE_MONGO_TESTS=1`, an unreachable database fails the run instead.
+so a machine without Docker still runs the rest. With
+`REQUIRE_MONGO_TESTS=1`, as the release gate sets it, an unreachable database
+fails the run instead.
 `mongo-test` is a single-node replica set, as production's Atlas cluster is,
 so the report-bundle activation transaction runs in tests; with
 `REQUIRE_MONGO_TESTS=1` a database without transactions fails the run too.

@@ -114,22 +114,35 @@ safe.
   does not need a real browser or spawned process), `pnpm run test:e2e` covers
   the `*.e2e.test.ts` browser and CLI suites, and `pnpm run test:all` runs
   both. Name any test that launches Chromium, a dev server, or a child CLI
-  `*.e2e.test.ts` so the fast local loop stays browser-free; CI gates on
-  `test:all`, so tiering never removes coverage.
+  `*.e2e.test.ts` so the fast local loop stays browser-free; the release
+  gate runs `test:all`, so tiering never removes coverage.
+
+## Release gate
+
+GitHub only versions the repository: no GitHub Actions workflow runs
+(trade-off 120). `pnpm run gate` (`scripts/gate.sh`) runs everything CI used
+to, on the operator's machine: `pnpm run check`, the CLI and site builds, the
+IBM Equal Access engine, `pnpm run test:deploy`, `pnpm run test:all` against
+the replica-set test MongoDB with `REQUIRE_MONGO_TESTS=1`, and the Trivy and
+Semgrep gates below, including a Trivy scan of a locally built production
+image. It refuses a dirty tree and records a pass for the exact commit;
+`deploy/odysseus-deploy.sh` refuses a commit without one. The pre-push hook
+runs only the static `pnpm run check`.
 
 ## Security scanning
 
-CI runs Trivy (`.github/workflows/ci.yml`, issue #255) over every pull
-request: dependency manifests, secrets across every text file, and
+The release gate runs Trivy (issue #255): dependency manifests, secrets across every text file, and
 Dockerfile misconfiguration checks, gated on actionable HIGH/CRITICAL
 findings only. `deploy/compose.yaml` gets secret scanning like any other
 text file but not structural misconfiguration checks: Trivy's misconfig
 scanner has no ruleset for Compose's schema (Dockerfile and Containerfile
 only, per its own coverage docs), not a gap in this configuration.
-`main` additionally builds and scans the production image and publishes a
-CycloneDX SBOM artifact.
+The gate also builds and scans the production image. The CycloneDX SBOM that
+CI used to publish is no longer produced; `docker run --rm -v
+/var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.74.0 image --format
+cyclonedx odysseus-app:<tag>` makes one on demand.
 
-- Reproduce the PR-gate scan locally with Docker (no local Trivy install
+- Run the filesystem gate on its own with Docker (no local Trivy install
   needed):
 
   ```bash
@@ -141,8 +154,8 @@ CycloneDX SBOM artifact.
     --trivyignores .trivyignore.yaml /repo
   ```
 
-  Drop `--ignore-unfixed` and widen `--severity` to see everything CI's
-  non-gating report step shows. Keep `--skip-files .env,.env.smoke`: those
+  Drop `--ignore-unfixed` and widen `--severity` to see every finding, not
+  only the gating ones. Keep `--skip-files .env,.env.smoke`: those
   hold this repo's real local secrets and are never in git, so Trivy has
   nothing useful to say about them beyond confirming they contain
   credentials, which is what they are for.
@@ -154,7 +167,7 @@ CycloneDX SBOM artifact.
   expiry unless the advisory has no fix at all. Prefer fixing the underlying
   dependency or configuration over adding an entry; see the file's own header
   for the format.
-- Keep the `version:` pinned in the workflow, the fallback in
+- Keep `TRIVY_IMAGE` in `scripts/gate.sh`, the fallback in
   `deploy/trivy-secret-gate.test.sh`, and the version used above in sync when
   bumping Trivy. Trivy versions before 0.74 do not parse this repo's
   pnpm-lock.yaml format at all and silently skip dependency scanning; do not
@@ -162,7 +175,7 @@ CycloneDX SBOM artifact.
 
 ### Custom Semgrep rules
 
-CI also runs five narrow, hand-written Semgrep rules (`.semgrep/rules/`,
+The release gate also runs five narrow, hand-written Semgrep rules (`.semgrep/rules/`,
 issue #261) targeting risk seams a generic community ruleset can't express:
 
 - `prospecting-fetch-without-ssrf-guard` — a `fetch()` reaching a
@@ -182,18 +195,17 @@ issue #261) targeting risk seams a generic community ruleset can't express:
 
 Each rule carries positive and negative fixtures under
 `.semgrep/fixtures/<rule-id>/{bad.ts,good.ts,stage-path}`, checked by
-`.semgrep/test-rules.py` before the real scan runs in CI; a fixture-test
+`.semgrep/test-rules.py` before the real scan runs in the gate; a fixture-test
 failure means the rule regressed, not that product code did.
 
-- Reproduce the fixture check and the real scan locally with the same pinned
-  image CI uses:
+- Run the fixture check and the real scan on their own with the gate's pinned
+  image:
 
   ```bash
   python3 .semgrep/test-rules.py semgrep/semgrep:1.145.0
 
   docker run --rm -v "$PWD:/src" semgrep/semgrep:1.145.0 \
     semgrep scan --config /src/.semgrep/rules --error \
-    --sarif --output /src/semgrep-odysseus.sarif.json \
     /src/packages /src/scripts
   ```
 
@@ -217,11 +229,11 @@ failure means the rule regressed, not that product code did.
 
 ### Secondary accessibility engine
 
-CI runs IBM Equal Access `accessibility-checker` in addition to the existing
+The release gate runs IBM Equal Access `accessibility-checker` in addition to the existing
 axe/browser tests. The wrapper is `deploy/equal-access-ci.sh`, the checker is
 pinned to `4.0.34`, and `.achecker.yml` pins its rule archive to the
 tool-versioned archive with the WCAG 2.2 policy. IBM telemetry is explicitly
-disabled in CI.
+disabled in the gate.
 
 This is an independent regression signal, not a replacement for axe or manual
 keyboard/screen-reader/zoom testing. A checker disagreement is investigated;
@@ -271,8 +283,7 @@ Applying updates:
 - To hold a group back, add a rule with `"enabled": false` above its group rule
   in `renovate.json`, with a comment naming why and when to remove it.
 - The Mend-hosted Renovate GitHub App must stay uninstalled (or have this
-  repository deselected). If it ran, it would open PRs that each trigger the
-  full CI.
+  repository deselected): GitHub only versions the repository (trade-off 120).
 
 ## Product writing
 
@@ -375,5 +386,6 @@ pnpm run test <affected test paths>
 
 Before handing off, record which commands passed, failed, or were not run.
 `pnpm run check` covers agent documentation, formatting, lint, and workspace
-typechecking. CI also runs the full suite via `pnpm run test:all`; use it
-locally before a handoff that touched e2e suites or cross-package behavior.
+typechecking. `pnpm run test:all` runs the full suite; use it before a handoff
+that touched e2e suites or cross-package behavior. `pnpm run gate` runs
+everything before a deploy.

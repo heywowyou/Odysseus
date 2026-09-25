@@ -147,8 +147,9 @@ cross-cutting outcomes unless the requested work intentionally revisits them:
   provenance is missing or stale.
 - Real-scan fixtures are de-identified and rebuilt through the repository
   scripts, never hand-edited or committed raw.
-- Production deploys through `deploy/odysseus-deploy.sh`, not the disabled
-  GitHub release workflow.
+- GitHub only versions the repository; no GitHub Actions workflow runs.
+  Production deploys through `deploy/odysseus-deploy.sh`, only for a commit
+  that passed the local release gate, `pnpm run gate`.
 - Outreach wording comes from operator-approved deterministic templates; no
   model writes outreach copy at runtime.
 - Impeccable remains installed as an optional design workflow, but global
@@ -214,6 +215,7 @@ pnpm run check
 pnpm test <affected test paths>
 pnpm run test:e2e
 pnpm run test:all
+pnpm run gate   # everything CI used to run; required before a deploy
 ```
 
 A behavior change normally gets a focused test. Broaden verification when the

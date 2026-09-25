@@ -2990,7 +2990,8 @@ allowlist caution, and the restore drill live in `deploy/runbook.md`.
 Superseded as the production path by trade-off 77 (operator decision,
 2026-09-09): production is deployed locally through `odysseus-deploy` and the
 GitHub workflow is deliberately disabled. This entry is kept for its mechanics
-and threat model in case that decision is ever reversed.
+and threat model. Since trade-off 120 (2026-09-25) the workflow, the release
+controller and the forced-command key scripts are removed from the tree.
 
 Routine updates to `app.odysseusaudit.com` now start only when the operator
 manually dispatches the production workflow on `main`. The workflow refuses to
@@ -4186,6 +4187,9 @@ jobs. This changes only deploy gating; it does not weaken the checkpoint,
 identity, coverage-gate, or startup-recovery rules above.
 
 ### 77. Production deploys run locally through odysseus-deploy; the GitHub release workflow is retired unless the local path becomes a roadblock (operator decision, 2026-09-09)
+
+Amended by trade-off 120 (2026-09-25): GitHub Actions no longer runs, so the
+reversal path this entry kept open is closed and its files are removed.
 
 The Hostinger box serving `app.odysseusaudit.com` is updated by the local
 sequence `deploy/odysseus-deploy.sh` performs: sync the tree to
@@ -5914,6 +5918,9 @@ fallback for audits that predate this rule.
 
 ### 113. Renovate runs locally in lookup mode; GitHub only tracks the repository (operator decision, 2026-09-24)
 
+Extended by trade-off 120 (2026-09-25): no GitHub Actions workflow runs at
+all now, not only Renovate's.
+
 Renovate was configured in `renovate.json` (issue #252) to open grouped PRs
 through the Mend-hosted GitHub App. The app was installed and received every
 push from 2026-09-23, yet never produced a PR, a branch or a Dependency
@@ -6118,3 +6125,34 @@ which the issue named only as available.
 
 Rejected alternative: TypeScript 7 for `tsc -b` beside 5.9 for ESLint, which
 would type-check the same code with two compilers that can disagree.
+
+### 120. GitHub only versions the repository; a local release gate replaces CI (operator decision, 2026-09-25)
+
+The operator no longer pays for GitHub Actions. On 2026-09-25 every job had
+already been refused for a failed payment or spending limit, so `main` had no
+working CI while every run showed red. Two store tests had been failing on
+`main` unseen since 2026-09-24. GitHub keeps only the git history.
+
+`pnpm run gate` (`scripts/gate.sh`) runs, on the operator's machine,
+everything the `ci.yml` jobs ran: `pnpm run check`, the CLI and site builds,
+the IBM Equal Access engine, `pnpm run test:deploy`, `pnpm run test:all`
+against the replica-set test MongoDB with `REQUIRE_MONGO_TESTS=1`, the Trivy
+filesystem gate and its secret-gate self-test, the custom Semgrep rules, and
+a Trivy gate over a locally built production image. It refuses a dirty tree
+and records a pass for the exact commit under `.git/odysseus-gate/`.
+`deploy/odysseus-deploy.sh` refuses a dirty tree or a commit without a pass;
+`ODYSSEUS_DEPLOY_SKIP_GATE=1` overrides it for an emergency and is logged.
+Without that check nothing would ever run the full suite before production:
+the pre-push hook deliberately runs only the static check.
+
+Removed with CI: both workflow files, and the GitHub-dispatched release path
+of trade-offs 61 and 77 (`deploy/release.sh`, its test,
+`deploy/github-deploy-command.sh`, `deploy/install-github-deploy-key.sh`, and
+runbook section 7A's procedure). It could never run again without Actions.
+Commit `a91c93e2` is the last to hold them. Also dropped: the SARIF upload to
+GitHub code scanning and the CycloneDX SBOM artifact, which nothing consumed.
+
+Rejected alternatives: keeping the workflows for a future paid plan (every
+push would show a failed run, which hides real failures), and a self-hosted
+runner (a machine to maintain for one operator). Revisit if a second
+contributor joins or CI moves to another host.

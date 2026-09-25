@@ -17,7 +17,7 @@ describe('readOdysseusBuildId', () => {
     expect(readOdysseusBuildId()).toBe('deadbee');
   });
 
-  it('abbreviates a stamped full commit SHA, which is what release.sh passes', () => {
+  it('abbreviates a stamped full commit SHA', () => {
     vi.stubEnv('ODYSSEUS_BUILD_ID', '2b7eec6a1f4c9d0e5b8a3726c4d1e0f9a8b7c6d5');
     expect(readOdysseusBuildId()).toBe('2b7eec6');
   });

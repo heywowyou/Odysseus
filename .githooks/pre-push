@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Runs the same fast gate CI runs (docs links, formatting, lint, typecheck,
-# dependency-cruiser architecture rules, fallow dead-code audit)
-# before a push leaves this machine. Skips the test suites deliberately:
+# Runs the fast static part of the release gate (docs links, formatting,
+# lint, typecheck, dependency-cruiser architecture rules, fallow dead-code
+# audit) before a push leaves this machine. Skips the test suites deliberately:
 # they need Docker Mongo and Playwright Chromium, which not every push
-# should have to pay for locally, and CI still runs them as the real gate.
+# should have to pay for; `pnpm run gate` runs them before every deploy.
 #
 # Enabled once per clone with:
 #   git config core.hooksPath .githooks

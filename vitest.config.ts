@@ -18,8 +18,8 @@ import { fileURLToPath } from 'node:url';
  * repeatedly crossed its 15s per-test ceiling purely from CPU contention
  * (it runs in 4-6s per test in isolation), which is why `test:e2e`
  * selects both projects with the `e2e*` filter.
- * `pnpm run test:all` runs all of them, and CI gates on exactly that, so
- * the full suite is still mandatory.
+ * `pnpm run test:all` runs all of them, and the release gate
+ * (`pnpm run gate`) runs exactly that, so the full suite is still mandatory.
  *
  * passWithNoTests: true because early phases had intentionally empty
  * suites; keeping it avoids breaking focused runs.
@@ -32,9 +32,9 @@ import { fileURLToPath } from 'node:url';
  * import.meta.url and exist under src, so source execution finds them.
  */
 /**
- * Every run uses UTC, as CI does, so a test that formats a timestamp in the
- * default time zone gives the same text on the operator's Paris machine as
- * on the CI runner. Set here, before any worker starts, so each inherits it.
+ * Every run uses UTC, so a test that formats a timestamp in the default time
+ * zone gives the same text on the operator's Paris machine as on any other.
+ * Set here, before any worker starts, so each inherits it.
  */
 process.env.TZ = 'UTC';
 

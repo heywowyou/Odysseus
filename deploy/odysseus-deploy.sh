@@ -40,6 +40,22 @@ ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP="${ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP:-4GB}"
 [[ "$ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP" =~ ^[1-9][0-9]*(B|KB|MB|GB|TB)$ ]] ||
   fail "ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP must be a positive whole-byte Docker size, such as 4GB"
 
+# GitHub Actions no longer runs (trade-off 120), so the local release gate is
+# the only proof a commit passed the full suite and the security scans. Ship
+# only a clean checkout of a commit `pnpm run gate` passed. The override
+# exists for an emergency fix; it is logged, never silent.
+GATE_COMMIT="$(git -C "$REPO_ROOT" rev-parse HEAD)"
+GATE_PASS="$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-common-dir)/odysseus-gate/$GATE_COMMIT"
+if [[ "${ODYSSEUS_DEPLOY_SKIP_GATE:-}" == 1 ]]; then
+  log "warning: ODYSSEUS_DEPLOY_SKIP_GATE=1, deploying $GATE_COMMIT without checking the release gate"
+else
+  [[ -z "$(git -C "$REPO_ROOT" status --porcelain)" ]] ||
+    fail "the working tree has uncommitted changes; commit them and run pnpm run gate first"
+  [[ -f "$GATE_PASS" ]] ||
+    fail "commit $GATE_COMMIT has not passed pnpm run gate (ODYSSEUS_DEPLOY_SKIP_GATE=1 overrides in an emergency)"
+  log "release gate passed for $GATE_COMMIT at $(<"$GATE_PASS")"
+fi
+
 SSH_OPTS=(-i "$ODYSSEUS_DEPLOY_SSH_KEY" -o BatchMode=yes)
 
 # Issue #74: $ODYSSEUS_DEPLOY_COMPOSE_DIR/docker-compose.yml used to be a
@@ -52,8 +68,7 @@ SSH_OPTS=(-i "$ODYSSEUS_DEPLOY_SSH_KEY" -o BatchMode=yes)
 # again. The path-rewriting itself lives in render-server-compose.sh, a
 # small pure script with its own test (render-server-compose.test.sh), so
 # it's verifiable without faking ssh/rsync for an end-to-end run of this
-# whole script. release.sh (the CI-dispatched production path) already runs
-# deploy/compose.yaml directly from the release checkout and is unaffected.
+# whole script.
 GENERATED_COMPOSE_FILE="$(mktemp)"
 trap 'rm -f "$GENERATED_COMPOSE_FILE"' EXIT
 "$SCRIPT_DIR/render-server-compose.sh" "$ODYSSEUS_DEPLOY_REMOTE_PATH" \
