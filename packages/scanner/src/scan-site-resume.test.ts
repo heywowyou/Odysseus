@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CrawledPage } from './crawl.js';
 import type { PageAuditDecision } from './full-audit-plan.js';
 import type { PageScanResult } from './scan-page.js';
-import { needsLighthouseRun, partitionPagesForResume } from './scan-site.js';
+import { needsLighthouseRun, partitionPagesForResume, slimResumedPage } from './scan-site.js';
 
 const crawledPage = (url: string): CrawledPage => ({
   url,
@@ -132,22 +132,51 @@ describe('needsLighthouseRun', () => {
     expect(
       needsLighthouseRun(
         makeDecision(url, true),
-        scanJson({ url, lighthouse: { finalUrl: url } as never }),
+        slimResumedPage(scanJson({ url, lighthouse: { finalUrl: url } as never })),
       ),
     ).toBe(false);
   });
 
   it('does not re-run Lighthouse for a selected page whose scan.json records a lighthouseError', () => {
     expect(
-      needsLighthouseRun(makeDecision(url, true), scanJson({ url, lighthouseError: 'timeout' })),
+      needsLighthouseRun(
+        makeDecision(url, true),
+        slimResumedPage(scanJson({ url, lighthouseError: 'timeout' })),
+      ),
     ).toBe(false);
   });
 
   it('runs Lighthouse for a selected page whose scan.json carries neither record', () => {
-    expect(needsLighthouseRun(makeDecision(url, true), scanJson({ url }))).toBe(true);
+    expect(needsLighthouseRun(makeDecision(url, true), slimResumedPage(scanJson({ url })))).toBe(
+      true,
+    );
   });
 
   it('never runs Lighthouse for a page the plan did not select', () => {
-    expect(needsLighthouseRun(makeDecision(url, false), scanJson({ url }))).toBe(false);
+    expect(needsLighthouseRun(makeDecision(url, false), slimResumedPage(scanJson({ url })))).toBe(
+      false,
+    );
+  });
+});
+
+describe('resumed pages are kept slim (issue #500)', () => {
+  it('keeps what the resume reads and drops the axe, Lighthouse and evidence payloads', () => {
+    const url = 'https://example.com/heavy';
+    const heavy = scanJson({
+      url,
+      checkOutcomes: { axe: 'completed' },
+      axe: { violations: [] } as never,
+      lighthouse: { finalUrl: url } as never,
+    });
+    const { completedByUrl } = partitionPagesForResume([crawledPage(url)], () => heavy);
+    const record = completedByUrl.get(url)!;
+
+    expect(record).toEqual({
+      checkOutcomes: { axe: 'completed' },
+      renderedCostProfile: heavy.renderedCostProfile,
+      hasLighthouseOutcome: true,
+    });
+    expect(record).not.toHaveProperty('axe');
+    expect(record).not.toHaveProperty('lighthouse');
   });
 });
