@@ -219,3 +219,39 @@ describe('extractMentionsLegales', () => {
     expect(result.siren).toBe('835138645');
   });
 });
+
+describe('legal-notice slugs (issue #496)', () => {
+  it('finds underscore, joined, accented and bare "mentions" slugs', () => {
+    for (const path of [
+      '/mentions_legales',
+      '/mentionslegales',
+      '/mentions-l%C3%A9gales',
+      '/fr/mentions-légales/',
+      '/mentions',
+    ]) {
+      expect(findMentionsLegalesUrl([`https://hotel.fr${path}`]), path).toBe(
+        `https://hotel.fr${path}`,
+      );
+    }
+  });
+
+  it('still does not lock onto a bare "legal" page', () => {
+    expect(findMentionsLegalesUrl(['https://hotel.fr/legal', 'https://hotel.fr/fr/legal'])).toBe(
+      null,
+    );
+  });
+
+  it('ranks a real legal notice above terms of sale and a bare "mentions" page', () => {
+    expect(
+      findMentionsLegalesUrls([
+        'https://hotel.fr/cgv',
+        'https://hotel.fr/fr/mentions',
+        'https://hotel.fr/mentions-legales',
+      ]),
+    ).toEqual([
+      'https://hotel.fr/mentions-legales',
+      'https://hotel.fr/fr/mentions',
+      'https://hotel.fr/cgv',
+    ]);
+  });
+});
