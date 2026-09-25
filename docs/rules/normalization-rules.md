@@ -527,6 +527,12 @@ real Villas Foch audit - **the anchor is the content-checked page closest
 to the homepage**: shallowest crawl depth first, ties broken by URL
 ascending so the choice is deterministic regardless of page order (a live
 run normalizes in crawl order, `normalize <dir>` in directory read order).
+Since issue #503, `normalizeAudit` also puts its pages in URL order
+(code-unit, never `localeCompare`) before anything else, and the refresh
+reads page folders sorted, so a merged finding's title, description and
+element sample never depend on the path or the machine. Descriptions of
+page-scoped rules that merge across pages carry no per-page count; each
+page's count stays in its raw evidence.
 The depths come from the crawl inventory through `CrawlPageInput.depth`.
 
 A site-level fact is never attributed to a page no scanner ran on, and is

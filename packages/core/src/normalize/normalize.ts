@@ -310,7 +310,7 @@ function resolveSiteLevelAnchorUrl(
   return [...input.pages]
     .filter((page) => !isExcludedUrl(excludedUrls, page.url))
     .map((page) => ({ url: page.url, depth: depthByUrl.get(page.url) ?? Number.MAX_SAFE_INTEGER }))
-    .sort((a, b) => a.depth - b.depth || a.url.localeCompare(b.url))[0]?.url;
+    .sort((a, b) => a.depth - b.depth || compareCodeUnits(a.url, b.url))[0]?.url;
 }
 
 function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
@@ -895,7 +895,22 @@ export function aggregateSharedScopeOccurrences(
   return result;
 }
 
-export function normalizeAudit(input: NormalizeAuditInput): Finding[] {
+/** Plain UTF-16 code-unit order: the same on every machine and ICU build,
+ *  unlike `localeCompare`. */
+function compareCodeUnits(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+export function normalizeAudit(unorderedInput: NormalizeAuditInput): Finding[] {
+  // Issue #503: a merged finding takes its title, description and element
+  // sample from its first candidate, and candidates follow page order. The
+  // live run reads pages in crawl order and a refresh in directory order,
+  // which differs between filesystems, so the same stored scan produced
+  // different text and digests. Pages are put in one order first.
+  const input: NormalizeAuditInput = {
+    ...unorderedInput,
+    pages: [...unorderedInput.pages].sort((a, b) => compareCodeUnits(a.url, b.url)),
+  };
   const candidates = collectCandidates(input);
 
   const fineGroups = new Map<string, FindingCandidate[]>();

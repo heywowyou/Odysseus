@@ -43,8 +43,9 @@ describe('normalizeHtmlValidity', () => {
       selector: '[html-validate:no-dup-id]',
       snippet: 'no-dup-id at 10',
     });
-    expect(duplicateId?.description).toContain('2 instance(s) of "no-dup-id"');
-    expect(duplicateId?.description).toContain('(line 10)');
+    // Page-independent (issue #503): the count lives in the evidence.
+    expect(duplicateId?.description).toContain('"no-dup-id" validity rule');
+    expect(duplicateId?.description).not.toMatch(/\d+ instance/u);
     expect(duplicateId?.rawEvidenceForPage).toMatchObject({ ruleId: 'no-dup-id', issueCount: 2 });
   });
 

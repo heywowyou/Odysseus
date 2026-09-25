@@ -79,7 +79,10 @@ async function readPageInputs(
   artifactStore: ArtifactStore | undefined,
 ): Promise<NormalizePageInput[]> {
   const pagesDir = path.join(artifactsDir, 'pages');
-  const entries = await fs.readdir(pagesDir, { withFileTypes: true });
+  // Sorted: readdir order differs between filesystems (issue #503).
+  const entries = (await fs.readdir(pagesDir, { withFileTypes: true })).sort((a, b) =>
+    a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+  );
 
   const pages: NormalizePageInput[] = [];
   for (const entry of entries) {

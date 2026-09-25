@@ -198,7 +198,8 @@ export function extractGeoCandidates(
         severity: severityFromCustom(FAQ_CONTENT_WITHOUT_SCHEMA_RULE_ID),
         wcagCriteria: [],
         title: 'Question-and-answer content has no matching structured data',
-        description: `This page has ${page.questionHeadingCount} headings phrased as questions but no FAQPage or QAPage structured-data block. That content likely reads as an FAQ to a visitor but is not marked up as one, making it harder for an AI answer engine to extract as discrete question-and-answer pairs.`,
+        // Page-independent (issue #503): the count is in the evidence.
+        description: `This page has headings phrased as questions but no FAQPage or QAPage structured-data block. That content likely reads as an FAQ to a visitor but is not marked up as one, making it harder for an AI answer engine to extract as discrete question-and-answer pairs.`,
         pageUrl: page.pageUrl,
         element: null,
         rawEvidenceForPage: { questionHeadingCount: page.questionHeadingCount },

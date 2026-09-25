@@ -1231,3 +1231,30 @@ describe('normalizeAudit JSON-LD inside a @graph container', () => {
     });
   });
 });
+
+describe('page order never changes the findings (issue #503)', () => {
+  it('gives deep-equal findings for pages in crawl order and reversed', () => {
+    const page = (url: string, selector: string, mixed: string[]) =>
+      buildNormalizePageInput({
+        url,
+        axe: buildAxeResultsInput([
+          buildAxeViolation({
+            nodes: [buildAxeNode({ target: [selector], html: `<p class="${url}">x</p>` })],
+          }),
+        ]),
+        mixedContent: { pageUrl: url, isPageSecure: true, insecureResourceUrls: mixed },
+      });
+    const pages = [
+      page('https://example.com/b', '.footer', ['http://cdn.example.com/1.js']),
+      page('https://example.com/', '.footer', [
+        'http://cdn.example.com/1.js',
+        'http://cdn.example.com/2.js',
+      ]),
+      page('https://example.com/a', '.footer', []),
+    ];
+    const run = (ordered: typeof pages) =>
+      normalizeAudit({ auditId: 'audit-1', startedAt: STARTED_AT, pages: ordered });
+
+    expect(run([...pages].reverse())).toEqual(run(pages));
+  });
+});
