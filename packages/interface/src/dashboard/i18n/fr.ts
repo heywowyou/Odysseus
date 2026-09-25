@@ -1,6 +1,7 @@
 import type { DashboardStrings } from './types';
 import { nav } from './sections/nav';
 import { tools } from './sections/tools';
+import { storage } from './sections/storage';
 import { shell } from './sections/shell';
 import { common } from './sections/common';
 import { audits } from './sections/audits';
@@ -28,6 +29,7 @@ import { errorBoundary } from './sections/error-boundary';
 export const fr: DashboardStrings = {
   nav: nav.fr,
   tools: tools.fr,
+  storage: storage.fr,
   shell: shell.fr,
   common: common.fr,
   audits: audits.fr,

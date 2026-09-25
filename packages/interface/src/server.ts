@@ -4,6 +4,7 @@ import { migrateOutreachDraftThreadTouchIndex, verifyUniqueIndexes } from '@odys
 import { Router } from './router.js';
 import { registerScanRoutes } from './routes/scans.js';
 import { registerAuditRoutes } from './routes/audits.js';
+import { registerStorageStatusRoutes } from './routes/storage-status.js';
 import { registerReportPreparationRoutes } from './routes/report-preparation.js';
 import { registerProspectHubRoutes } from './routes/prospect-hub.js';
 import { registerHealthRoutes } from './routes/health.js';
@@ -22,6 +23,7 @@ import { runProspectingAuditJob } from './queue/pipeline/run-prospecting-audit-j
 import { runOutreachFullScanJob } from './queue/pipeline/run-outreach-full-scan-job.js';
 import { runProspectingJob } from './queue/pipeline/run-prospecting-job.js';
 import { startOptOutPoller } from './outreach/opt-out-poller.js';
+import { startRetentionSweeper } from './retention/retention-sweeper.js';
 import { startMailboxSyncPoller } from './outreach/mailbox-sync.js';
 import { startReferenceAuditReceiptPoller } from './reference-audit/reference-audit-poller.js';
 import { runOutreachDraftBatchJob } from './queue/pipeline/run-outreach-draft-batch-job.js';
@@ -58,6 +60,9 @@ export interface InterfaceAuthOptions {
   syncMailbox?: boolean;
   /** Consume optional first-party reference-link receipts. */
   pollReferenceAuditReceipts?: boolean;
+  /** Plan 077: run retention once a day. `serve` sets it only when the
+   *  deployment's compose file asks for it. */
+  retentionSweep?: boolean;
 }
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
@@ -69,6 +74,30 @@ const LOOPBACK_HOSTS = new Set(['127.0.0.1', '::1', 'localhost']);
 export function refusesUnprotectedNonLoopbackBind(host: string, authConfigured: boolean): boolean {
   if (authConfigured) return false;
   return !LOOPBACK_HOSTS.has(host.trim().toLowerCase());
+}
+
+/** Starts the timers `serve` asks for and returns one function that stops
+ *  them all. Each is off unless its option is exactly true, so tests and a
+ *  bare server start none of them. */
+export function startBackgroundPollers(
+  connection: Connection,
+  queue: Pick<JobQueue, 'listInFlightJobIds'>,
+  options: Pick<
+    InterfaceAuthOptions,
+    'pollOptOutRequests' | 'syncMailbox' | 'pollReferenceAuditReceipts' | 'retentionSweep'
+  >,
+): () => void {
+  const stops = [
+    options.pollOptOutRequests === true ? startOptOutPoller(connection) : undefined,
+    options.syncMailbox === true ? startMailboxSyncPoller(connection) : undefined,
+    options.pollReferenceAuditReceipts === true
+      ? startReferenceAuditReceiptPoller(connection)
+      : undefined,
+    options.retentionSweep === true ? startRetentionSweeper(connection, { queue }) : undefined,
+  ];
+  return () => {
+    for (const stop of stops) stop?.();
+  };
 }
 
 /** Boots the router, the job queue, and the node:http server, in that
@@ -134,6 +163,7 @@ export async function startInterfaceServer(
   registerScanRoutes(router, connection, queue);
   registerAuditRoutes(router, connection);
   registerReportPreparationRoutes(router, connection);
+  registerStorageStatusRoutes(router, connection);
   registerProspectHubRoutes(router, connection, queue);
   registerSessionRoutes(router, { getPasswordHash, sessionStore, rateLimiter });
   registerStaticFallback(router);
@@ -186,23 +216,14 @@ export async function startInterfaceServer(
     logger.info({ orphanedCount }, 'reset job(s) left running by an unclean shutdown');
   }
 
-  const stopOptOutPoller =
-    options.pollOptOutRequests === true ? startOptOutPoller(connection) : () => undefined;
-  const stopMailboxSync =
-    options.syncMailbox === true ? startMailboxSyncPoller(connection) : () => undefined;
-  const stopReferenceAuditReceipts =
-    options.pollReferenceAuditReceipts === true
-      ? startReferenceAuditReceiptPoller(connection)
-      : () => undefined;
+  const stopBackgroundPollers = startBackgroundPollers(connection, queue, options);
 
   return {
     server,
     queue,
     url: `http://${host}:${port}`,
     async close(): Promise<void> {
-      stopOptOutPoller();
-      stopMailboxSync();
-      stopReferenceAuditReceipts();
+      stopBackgroundPollers();
       await queue.stop();
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));

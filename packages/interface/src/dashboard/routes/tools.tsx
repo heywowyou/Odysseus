@@ -3,6 +3,7 @@ import { ExternalLink } from 'lucide-react';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Card } from '../components/ui/card';
 import { useI18n } from '../i18n/provider';
+import { StorageStatusCard } from './storage-status-card';
 
 /** Operator-maintained links to standalone claude.ai artifacts kept outside
  *  the dashboard (plan 040 slice 8). Each covers a job that is either
@@ -96,6 +97,10 @@ export function ToolsPage(): JSX.Element {
           ))}
         </ul>
       </Card>
+
+      <div className="mt-6">
+        <StorageStatusCard />
+      </div>
     </article>
   );
 }

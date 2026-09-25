@@ -1,6 +1,10 @@
 import type { Command } from 'commander';
 import { InvalidArgumentError } from 'commander';
-import { startInterfaceServer, getInterfacePort } from '@odysseus/interface';
+import {
+  getInterfacePort,
+  isRetentionSweepEnabled,
+  startInterfaceServer,
+} from '@odysseus/interface';
 import { connectToMongo, disconnectFromMongo } from '@odysseus/store';
 
 function parsePort(value: string): number {
@@ -30,6 +34,9 @@ export function registerServeCommand(program: Command): void {
           pollOptOutRequests: true,
           syncMailbox: true,
           pollReferenceAuditReceipts: true,
+          // Plan 077: only the VPS compose file sets the flag, so a local
+          // serve never deletes this machine's audits on its own.
+          retentionSweep: isRetentionSweepEnabled(),
         });
         console.log(`odysseus serve: listening at ${handle.url}`);
 

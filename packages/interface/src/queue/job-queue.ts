@@ -221,6 +221,11 @@ export class JobQueue {
     return this.inFlight.has(jobId);
   }
 
+  /** Every job whose runner is still executing here (see isJobInFlight). */
+  listInFlightJobIds(): string[] {
+    return [...this.inFlight];
+  }
+
   private async sleep(ms: number): Promise<void> {
     await new Promise<void>((resolve) => {
       this.wake = resolve;

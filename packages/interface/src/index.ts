@@ -67,6 +67,7 @@ export {
   type RetentionRunResult,
 } from './retention/apply-retention.js';
 export { RETENTION_GRACE_DAYS } from './retention/retention-policy.js';
+export { isRetentionSweepEnabled } from './retention/retention-sweeper.js';
 export {
   compactStoredScans,
   type CompactStoredScansResult,

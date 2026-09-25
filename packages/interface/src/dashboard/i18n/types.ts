@@ -7,6 +7,7 @@
  */
 import type { NavStrings } from './sections/nav';
 import type { ToolsStrings } from './sections/tools';
+import type { StorageStrings } from './sections/storage';
 import type { ShellStrings } from './sections/shell';
 import type { CommonStrings } from './sections/common';
 import type { AuditsStrings } from './sections/audits';
@@ -37,6 +38,8 @@ export interface DashboardStrings {
   nav: NavStrings;
   /** Footer link and page for /outils, plan 040 slice 8. */
   tools: ToolsStrings;
+  /** Plan 077: artifacts disk and retention status, on the Tools page. */
+  storage: StorageStrings;
   shell: ShellStrings;
   common: CommonStrings;
   audits: AuditsStrings;
