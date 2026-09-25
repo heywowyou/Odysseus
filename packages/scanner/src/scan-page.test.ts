@@ -135,6 +135,34 @@ describe('scanPage characterization', () => {
     });
   });
 
+  it('paces the retry of a blocked page before sending it (issue #491)', async () => {
+    const order: string[] = [];
+    const scheduler = {
+      pace: vi.fn(async () => {
+        order.push('pace');
+      }),
+      observeHostDocument: vi.fn(),
+    };
+    vi.mocked(renderDiff)
+      .mockImplementationOnce(async () => {
+        order.push('render');
+        return { renderedHttpStatus: 429, renderedTextLength: 10, rawTextLength: 10 } as never;
+      })
+      .mockImplementationOnce(async (_browser, _url, options) => {
+        order.push('render');
+        await options.onRenderedPage?.(page as never);
+        return { rawTextLength: 1, renderedTextLength: 2 } as never;
+      });
+
+    await scanPage(browser, 9222, 'https://example.com/', {
+      screenshotDir: '/tmp/pages',
+      skipLighthouse: true,
+      scheduler: scheduler as never,
+    });
+
+    expect(order).toEqual(['render', 'pace', 'render']);
+  });
+
   it('applies the pre-Lighthouse delay only when Lighthouse runs', async () => {
     vi.useFakeTimers();
     const pending = scanPage(browser, 9222, 'https://example.com/', {

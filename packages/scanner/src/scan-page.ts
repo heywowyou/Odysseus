@@ -1061,10 +1061,15 @@ export async function runRenderedAnalysis(
     };
     result.renderDiff = await renderDiff(browser, url, renderOptions);
     // A challenge or transient response is acquisition failure, but a single
-    // later attempt can recover a short-lived WAF/rate-limit wall. The
-    // scheduler has already applied backoff when the first response was
-    // observed; a second blocked result remains excluded from analysis.
+    // later attempt can recover a short-lived WAF/rate-limit wall. Observing
+    // the first response raised the scheduler's delay and set any Retry-After
+    // window, but that only spaces requests that wait for their turn: the
+    // retry's raw pass is not paced inside renderDiff, so it waits here, right
+    // when pacing matters most (issue #491). A second blocked result remains
+    // excluded from analysis.
     if (isBlockedRender(result.renderDiff)) {
+      if (options.scheduler !== undefined) await options.scheduler.pace();
+      else if (options.delayMs !== undefined) await sleep(options.delayMs);
       result.renderDiff = await renderDiff(browser, url, renderOptions);
     }
     if (isBlockedRender(result.renderDiff)) {
