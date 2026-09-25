@@ -695,6 +695,24 @@ describe('scanSite with fullAuditPlanning', () => {
     }
   });
 
+  it('hands every staged page the one run-wide canonical-target cache (issue #501)', async () => {
+    await scanSite(startUrl, {
+      browser: {} as never,
+      debugPort: 9222,
+      screenshotDir: '/tmp/pages',
+      concurrency: 3,
+      fullAuditPlanning: true,
+      skipLighthouse: true,
+    });
+
+    const caches = vi
+      .mocked(runRenderedAnalysis)
+      .mock.calls.map((call) => call[2].canonicalTargetCache);
+    expect(caches).toHaveLength(3);
+    expect(caches[0]).toBeInstanceOf(Map);
+    expect(new Set(caches).size).toBe(1);
+  });
+
   it('never calls Lighthouse when skipLighthouse is set, even for planner-selected pages', async () => {
     const result = await scanSite(startUrl, {
       browser: {} as never,

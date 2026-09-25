@@ -610,6 +610,9 @@ interface StagedScanContext {
   mentionsLegalesSearchedUrls: string[] | undefined;
   mentionsLegalesHomepageFallback: boolean;
   redirectHostCache: RedirectHostCache;
+  /** Issue #501: the same run-wide canonical-target cache the legacy lane
+   *  uses, so a canonical shared by many pages is fetched once per audit. */
+  canonicalTargetCache: Map<string, Promise<CanonicalTargetCheckResult | null>>;
   homepageUrl: string | undefined;
   sitemapCheck:
     (SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[] }) | undefined;
@@ -727,6 +730,7 @@ async function analyzePageInTurn(
         stateSurfaces: context.stateSurfaces,
         exclusionPatterns: context.exclusionPatterns,
         redirectHostCache: context.redirectHostCache,
+        canonicalTargetCache: context.canonicalTargetCache,
         guard: pageGuard,
         signal: pageAbortController.signal,
         ...(timeoutMs !== undefined ? { timeoutMs } : {}),
@@ -2901,6 +2905,7 @@ export async function scanSite(
         crawl.mentionsLegalesCandidateUrls ?? crawl.mentionsLegalesSearchedUrls,
       mentionsLegalesHomepageFallback,
       redirectHostCache,
+      canonicalTargetCache,
       homepageUrl: homepageUrlForScan,
       sitemapCheck,
       llmsTxtCheck: llmsTxtCheckForScan,
