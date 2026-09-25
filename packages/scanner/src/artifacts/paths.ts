@@ -67,10 +67,24 @@ export function hashUrl(url: string): string {
   return createHash('sha256').update(url).digest('hex').slice(0, PAGE_HASH_LENGTH);
 }
 
+/** Most filesystems cap one name at 255 bytes. The slug is ASCII, so its
+ *  length is its byte count, and `-` plus the hash follows it. */
+const MAX_PAGE_DIR_NAME_BYTES = 255;
+const MAX_PAGE_SLUG_LENGTH = MAX_PAGE_DIR_NAME_BYTES - 1 - PAGE_HASH_LENGTH;
+
 export function buildPageDir(url: string): string {
   const parsed = new URL(url);
   const slug = slugify(parsed.pathname) || 'root';
-  return `${slug}-${hashUrl(url)}`;
+  // Issue #498: a percent-encoded non-ASCII path turns each character into
+  // several slug characters (26 Japanese characters made a 261-byte name,
+  // and writing it failed with ENAMETOOLONG). Only a slug over the limit is
+  // cut, so every folder name written so far is unchanged, and the hash of
+  // the full URL still keeps two long paths apart.
+  const bounded =
+    slug.length > MAX_PAGE_SLUG_LENGTH
+      ? slug.slice(0, MAX_PAGE_SLUG_LENGTH).replace(/-+$/g, '')
+      : slug;
+  return `${bounded}-${hashUrl(url)}`;
 }
 
 /** Defensive shape check before a hostname is joined into a filesystem path
