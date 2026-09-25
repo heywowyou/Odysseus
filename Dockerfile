@@ -101,6 +101,13 @@ ENV ODYSSEUS_BUILT_AT=${ODYSSEUS_BUILT_AT}
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
 RUN node packages/scanner/node_modules/playwright/cli.js install --with-deps chromium
 
+# The base image's npm, npx and corepack are never run here, and the npm CLI
+# bundles its own dependencies, which the release gate's image scan flagged
+# (brace-expansion, ip-address, tar; 2026-09-25). Removing them leaves nothing
+# to patch.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+
 # Artifacts live in a volume so audit output survives image upgrades and is
 # the one thing a backup must capture.
 ENV ODYSSEUS_ARTIFACTS_ROOT=/data/artifacts
