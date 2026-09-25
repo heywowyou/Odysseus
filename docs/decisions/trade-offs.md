@@ -5370,6 +5370,21 @@ as the in-process path is today: every audit stays
 trade-off 92's accepted risk still covers the app container's PDF-render
 Chromium.
 
+**Amended 2026-09-25 (issue #525): the service is removed from compose.** Its
+command, `node packages/cli/dist/index.js scan-service`, never existed: plan
+059's slices 1 to 3 (the service command and the app-side dispatch client)
+were never built. Deploys start only `app`, so production was unaffected,
+but a full `docker compose up` crash-looped the container, and the runbook
+described enabling a service that could not run. The `scan` block, its smoke
+overlay entry, the commented `ODYSSEUS_SCAN_SERVICE_*` lines on `app` and the
+runbook's enablement and deployment-gate procedures are gone; the design and
+its checklist stay in `plans/archive/059-scan-container-design.md`.
+`deploy/compose.test.sh` now fails if any compose service runs a CLI
+subcommand `packages/cli/src` does not define, so the service can return only
+together with its command. Nothing else changes: every scan runs in-process,
+trade-off 92's accepted risk still covers it, and audits stay
+`environment-unapproved`. The crawl-knob anchor stays, used by `app` alone.
+
 ### 102. GPT-5.6 Luna at the highest reasoning effort writes the paid report (operator decision, 2026-09-18)
 
 Supersedes trade-off 67's model and `reasoning_effort: 'none'` choices; its

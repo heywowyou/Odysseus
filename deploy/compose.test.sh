@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
-# Plan 059 slice 4: static checks for the scan service in deploy/compose.yaml
-# and its smoke overlay. The scan container's whole isolation claim is a
-# property of THIS file (plan 059 section 7: "the gate checks shape, the
-# deployment review checks this list"), so the properties are asserted here,
-# not hoped for: no published ports, no env_file, the exact section 2.1
-# environment allow-list, the shared artifacts volume, the section 6/7
-# hardening, and an app block that stays on the in-process path with the
-# service URL unset.
+# Static checks for deploy/compose.yaml and its smoke overlay: the app's
+# crawl-knob anchor, its CPU cap, its unpublished port, the isolation profile
+# it must never claim, and that no service runs a command the image lacks.
+#
+# Issue #525: the plan 059 scan service ran `scan-service`, a CLI command that
+# never existed, so a full `docker compose up` crash-looped it. It was removed
+# (trade-off 101's amendment); check 1 keeps it from coming back unbuilt.
 set -Eeuo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -55,96 +54,38 @@ effective_block() {
   service_block "$1" "$2" | grep -v '^[[:space:]]*#'
 }
 
-# The environment variable names of a service block: keys at the environment
-# entry indent, all of which this file writes in caps.
-env_names() {
-  effective_block "$1" "$2" | grep -oE '^ {6}[A-Z][A-Z0-9_]*:' | tr -d ' :' | sort -u
-}
-
-APP_BLOCK="$(service_block "$COMPOSE" app)"
 APP_EFFECTIVE="$(effective_block "$COMPOSE" app)"
-SCAN_BLOCK="$(service_block "$COMPOSE" scan)"
-SCAN_EFFECTIVE="$(effective_block "$COMPOSE" scan)"
 ANCHOR_BLOCK="$(awk '/^x-crawl-knobs:/{inblock=1;next} inblock && /^[^ ]/{inblock=0} inblock{print}' "$COMPOSE")"
 
-# 1. The scan service runs the documented command on the same image as app.
-assert_contains "$SCAN_BLOCK" 'image: odysseus-app:' \
-  "scan service does not use the app image"
-assert_contains "$SCAN_EFFECTIVE" 'scan-service' \
-  "scan service does not run the scan-service command"
-
-# 2. Nothing is published. expose documents the internal port; ports would
-#    put the service on the host (plan 059 section 6).
-assert_contains "$SCAN_EFFECTIVE" "expose:" "scan service does not expose its internal port"
-assert_not_contains "$SCAN_EFFECTIVE" "ports:" \
-  "scan service publishes ports; the app must reach it over the compose network only"
-
-# 3. No env_file: the container's environment is exactly the explicit
-#    allow-list below, never a .env passthrough (plan 059 section 2.1).
-assert_not_contains "$SCAN_EFFECTIVE" "env_file:" \
-  "scan service declares an env_file; section 2.1 forbids any"
-assert_not_contains "$SCAN_BLOCK" "../.env" \
-  "scan service block references the operator .env"
-
-# 4. The environment allow-list, exactly (plan 059 section 2.1).
-ALLOWED_SCAN_ENV=(
-  MAX_PAGES MAX_CRAWL_DEPTH CRAWL_DELAY_MS SCAN_CONCURRENCY
-  PAGE_TIMEOUT_MS LIGHTHOUSE_TIMEOUT_MS RENDER_SETTLE_TIMEOUT_MS
-  ODYSSEUS_ARTIFACTS_ROOT ODYSSEUS_CHROMIUM_EXTRA_ARGS
-  ODYSSEUS_BROWSER_ISOLATION_PROFILE
-  ODYSSEUS_SCAN_SERVICE_TOKEN ODYSSEUS_SCAN_SERVICE_HOST ODYSSEUS_SCAN_SERVICE_PORT
-  CRUX_API_KEY
-)
-while IFS= read -r name; do
-  [[ -n "$name" ]] || continue
-  found=''
-  for allowed in "${ALLOWED_SCAN_ENV[@]}"; do
-    [[ "$name" == "$allowed" ]] && found='yes' && break
-  done
-  [[ -n "$found" ]] || fail "scan service sets non-allow-listed environment variable '$name'"
-done < <(env_names "$COMPOSE" scan)
-for required in ODYSSEUS_ARTIFACTS_ROOT ODYSSEUS_CHROMIUM_EXTRA_ARGS \
-  ODYSSEUS_BROWSER_ISOLATION_PROFILE ODYSSEUS_SCAN_SERVICE_TOKEN \
-  ODYSSEUS_SCAN_SERVICE_HOST ODYSSEUS_SCAN_SERVICE_PORT; do
-  assert_contains "$SCAN_EFFECTIVE" "$required" \
-    "scan service is missing required section 2.1 variable $required"
+# 1. Every service command exists. The only CLI entry the image runs is the
+#    app's default; a service whose command names a subcommand the CLI does
+#    not register must not ship (issue #525).
+while IFS= read -r subcommand; do
+  [[ -n "$subcommand" ]] || continue
+  grep -rqsE "\\.command\\('${subcommand}'" "$REPO_ROOT/packages/cli/src" ||
+    fail "a compose service runs 'odysseus $subcommand', which packages/cli/src does not define"
+done < <(grep -v '^[[:space:]]*#' "$COMPOSE" "$SMOKE" |
+  grep -oE "packages/cli/dist/index.js', '[a-z:-]+'" | sed -E "s/.*', '([a-z:-]+)'/\\1/" | sort -u)
+for file in "$COMPOSE" "$SMOKE"; do
+  if [[ -n "$(service_block "$file" scan)" ]]; then
+    fail "$file defines a scan service again; its command does not exist (issue #525)"
+  fi
 done
-# Forbidden by name: each is the reason the profile claim would be a lie.
-for forbidden in MONGODB_URI MONGODB_DB_NAME OPENAI_API_KEY ODYSSEUS_DASHBOARD_PASSWORD_HASH \
-  SENTRY_DSN ODYSSEUS_ARTIFACTS_BUCKET_ ODYSSEUS_PREVIEW_BUCKET_ ODYSSEUS_MAILBOX_ LANGFUSE_; do
-  assert_not_contains "$SCAN_EFFECTIVE" "$forbidden" \
-    "scan service sets forbidden credential variable $forbidden"
-done
-# The token arrives by interpolation, empty by default, so an unconfigured
-# deployment provisions nothing and the service must fail closed.
-assert_contains "$SCAN_EFFECTIVE" 'ODYSSEUS_SCAN_SERVICE_TOKEN: ${ODYSSEUS_SCAN_SERVICE_TOKEN:-}' \
-  "scan service token is not wired through compose interpolation with an empty default"
 
-# 5. The shared artifacts volume: both services mount the SAME named volume,
-#    because the lease and the crawl checkpoint are file protocols across the
-#    boundary (plan 059 sections 2 and 3.4).
-assert_contains "$SCAN_EFFECTIVE" 'artifacts:/data/artifacts' \
-  "scan service does not mount the shared artifacts volume"
+# 2. The app is never published: Caddy is the only front.
+assert_contains "$APP_EFFECTIVE" "expose:" "app does not document its internal port"
+assert_not_contains "$APP_EFFECTIVE" "ports:" "app publishes ports; Caddy must be the only front"
+
+# 3. The artifacts volume.
 assert_contains "$APP_EFFECTIVE" 'artifacts:/data/artifacts' \
-  "app service does not mount the shared artifacts volume"
+  "app service does not mount the artifacts volume"
 
-# 6. Section 6/7 hardening on the scan service.
-assert_contains "$SCAN_EFFECTIVE" "cap_drop:" "scan service does not declare cap_drop"
-assert_contains "$SCAN_EFFECTIVE" "- ALL" "scan service does not drop ALL capabilities"
-assert_contains "$SCAN_EFFECTIVE" "no-new-privileges" \
-  "scan service does not set no-new-privileges"
-for limit in pids_limit mem_limit cpus shm_size; do
-  assert_contains "$SCAN_EFFECTIVE" "$limit" "scan service does not set $limit"
-done
-
-# 6b. The app runs every in-process audit's Chromium, so it carries a CPU cap
-#     too: without one a long audit gets the whole VPS throttled by the host.
+# 4. The app runs every audit's Chromium, so it carries a CPU cap: without one
+#    a long audit gets the whole VPS throttled by the host.
 assert_contains "$APP_EFFECTIVE" 'cpus: ${ODYSSEUS_APP_CPUS:-' \
   "app service does not set an overridable cpus cap"
 
-# 7. The crawl knobs are defined once in the anchor and merged into BOTH
-#    services, so the clamp ceiling cannot drift across the boundary
-#    (plan 059 section 2.1).
+# 5. The crawl knobs are defined once in the anchor and merged into the app.
 for knob in MAX_PAGES MAX_CRAWL_DEPTH CRAWL_DELAY_MS SCAN_CONCURRENCY \
   PAGE_TIMEOUT_MS LIGHTHOUSE_TIMEOUT_MS RENDER_SETTLE_TIMEOUT_MS; do
   assert_contains "$ANCHOR_BLOCK" "$knob" "crawl-knob anchor is missing $knob"
@@ -155,32 +96,20 @@ assert_contains "$ANCHOR_BLOCK" "MAX_CRAWL_DEPTH: ''" \
   "MAX_CRAWL_DEPTH must stay pinned to '' (code-owned unlimited sentinel) in the anchor"
 assert_contains "$APP_EFFECTIVE" '<<: *crawl-knobs' \
   "app service does not merge the shared crawl-knob anchor"
-assert_contains "$SCAN_EFFECTIVE" '<<: *crawl-knobs' \
-  "scan service does not merge the shared crawl-knob anchor"
 
-# 8. The app stays on the in-process path by default: the flag gate is
-#    documented in the file but set nowhere, and the isolation profile is
-#    never set on app (plan 059 sections 2.1, 5 and 8).
-assert_contains "$APP_BLOCK" "ODYSSEUS_SCAN_SERVICE_URL" \
-  "app block lost the documented scan-service URL wiring"
-assert_not_contains "$APP_EFFECTIVE" "ODYSSEUS_SCAN_SERVICE_URL" \
-  "app sets ODYSSEUS_SCAN_SERVICE_URL; the committed default must leave it unset"
+# 6. The app never claims an isolation profile: it runs Chromium next to
+#    every secret, which is trade-off 92's accepted risk, not an isolation.
 assert_not_contains "$APP_EFFECTIVE" "ODYSSEUS_BROWSER_ISOLATION_PROFILE" \
   "app sets an isolation profile; app must keep failing any preflight it were to run"
 
-# 9. The smoke overlay: a fixed fake token on the scan service, no published
-#    ports, and the app still on the flag-unset default path.
-SMOKE_SCAN_EFFECTIVE="$(effective_block "$SMOKE" scan)"
+# 7. The smoke overlay loads .env.smoke and publishes nothing new.
 SMOKE_APP_EFFECTIVE="$(effective_block "$SMOKE" app)"
-assert_contains "$SMOKE_SCAN_EFFECTIVE" 'ODYSSEUS_SCAN_SERVICE_TOKEN: smoke-scan-service-token' \
-  "smoke overlay does not give the scan service its fake smoke token"
-assert_not_contains "$SMOKE_SCAN_EFFECTIVE" "ports:" "smoke scan service publishes ports"
-assert_not_contains "$SMOKE_APP_EFFECTIVE" "ODYSSEUS_SCAN_SERVICE_URL" \
-  "smoke app sets ODYSSEUS_SCAN_SERVICE_URL; the default smoke rehearses the flag-unset path"
+assert_contains "$SMOKE_APP_EFFECTIVE" '../.env.smoke' "smoke overlay does not load .env.smoke"
+assert_not_contains "$SMOKE_APP_EFFECTIVE" "ports:" "smoke app publishes ports"
 
-# 10. Structural validation with docker compose when it exists (CI and this
-#     machine have it): the line checks above cannot prove the file still
-#     parses, the anchor still merges, and the interpolation still resolves.
+# 8. Structural validation with docker compose when it exists (CI has it):
+#    the line checks above cannot prove the file still parses, the anchor
+#    still merges, and the interpolation still resolves.
 if docker compose version >/dev/null 2>&1; then
   docker compose -f "$COMPOSE" config --quiet ||
     fail "docker compose rejects deploy/compose.yaml"

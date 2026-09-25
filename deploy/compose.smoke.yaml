@@ -9,29 +9,16 @@ services:
     # Compose appends env_file entries from an overlay after the base file's,
     # so .env.smoke is applied last and wins over the real .env. It is loaded
     # here and never in compose.yaml, so a production server can never read it
-    # (issue #484).
+    # (issue #484). Optional, like the base .env, so `docker compose config`
+    # validates the overlay on a machine without the smoke file (runbook
+    # section 10 creates it before `up`).
     env_file:
       - path: ../.env.smoke
-        required: true
+        required: false
     # Lets the container reach the repo's test Mongo on host port 27018
     # through host.docker.internal.
     extra_hosts:
       - 'host.docker.internal:host-gateway'
-    # Plan 059: the default smoke rehearses the production default, which is
-    # the flag-unset, in-process scan path. To rehearse the enabled split
-    # locally before touching the server (runbook section 7C's enablement),
-    # uncomment the two lines below; the scan service in this overlay already
-    # carries the matching token.
-    # ODYSSEUS_SCAN_SERVICE_URL: http://scan:4700
-    # ODYSSEUS_SCAN_SERVICE_TOKEN: smoke-scan-service-token
-
-  # The scan service gets the one value production provisions by hand
-  # (runbook section 7C): a fixed, visibly fake smoke token, so section 10's
-  # checks exercise the service's real token behavior without any operator
-  # secret ever existing on a developer machine.
-  scan:
-    environment:
-      ODYSSEUS_SCAN_SERVICE_TOKEN: smoke-scan-service-token
 
   caddy:
     volumes:
