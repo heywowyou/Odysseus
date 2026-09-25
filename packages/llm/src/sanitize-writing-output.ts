@@ -8,7 +8,7 @@ import {
 } from './performance-evidence-guard.js';
 import { hasFindingCountViolation } from './finding-count-guard.js';
 import { hasExecutiveSummaryDigitViolation } from './executive-summary-digit-guard.js';
-import { hasInternalThemeKeyReference } from './internal-reference-guard.js';
+import { hasInternalReference } from './internal-reference-guard.js';
 import {
   writingPassOutputSchema,
   type WritingInput,
@@ -98,7 +98,7 @@ function sanitizeSentences(
       warning(warnings, 'deterministic-count-removed', field);
       continue;
     }
-    if (hasInternalThemeKeyReference(sentence)) {
+    if (hasInternalReference(sentence)) {
       warning(warnings, 'internal-reference-removed', field);
       continue;
     }
