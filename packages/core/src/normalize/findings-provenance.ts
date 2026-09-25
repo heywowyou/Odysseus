@@ -10,22 +10,32 @@ export interface FindingsProvenance {
   findingsDigest: string;
 }
 
-function canonicalize(value: unknown): unknown {
+/** Object keys in plain UTF-16 code-unit order (issue #504). `localeCompare`
+ *  uses ICU collation, which orders the punctuation and case in URL keys
+ *  (`rawEvidence.perPage`) differently from code units and can change between
+ *  Node or ICU versions; a digest must never depend on the machine. */
+function compareKeys(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/** The value in the one shape JSON.stringify serializes identically for
+ *  equal findings. Exported for its tests. */
+export function canonicalizeForFindingsDigest(value: unknown): unknown {
   if (value instanceof Date) return value.toISOString();
-  if (Array.isArray(value)) return value.map(canonicalize);
+  if (Array.isArray(value)) return value.map(canonicalizeForFindingsDigest);
   if (value !== null && typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>)
         .filter(([, child]) => child !== undefined)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, child]) => [key, canonicalize(child)]),
+        .sort(([left], [right]) => compareKeys(left, right))
+        .map(([key, child]) => [key, canonicalizeForFindingsDigest(child)]),
     );
   }
   return value;
 }
 
 export function buildFindingsProvenance(findings: readonly Finding[]): FindingsProvenance {
-  const canonical = JSON.stringify(canonicalize(findings));
+  const canonical = JSON.stringify(canonicalizeForFindingsDigest(findings));
   const findingsDigest = `sha256:${createHash('sha256').update(canonical).digest('hex')}`;
   return {
     findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
