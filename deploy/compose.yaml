@@ -84,6 +84,9 @@ services:
       # path wins over this value, so the server .env must not grow one.
       MONGODB_DB_NAME: test
       ODYSSEUS_ARTIFACTS_ROOT: /data/artifacts
+      # Plan 077: the daily retention sweep. Set here and nowhere else, so a
+      # local `odysseus serve` never removes a machine's calibration audits.
+      ODYSSEUS_RETENTION_SWEEP: 'on'
       # Rootless container Chromium cannot create its sandbox namespaces.
       # Running without the sandbox, next to every production secret, is a
       # recorded accepted risk (trade-offs.md 92, runbook section 7C).
