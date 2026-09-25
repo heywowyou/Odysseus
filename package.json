@@ -25,7 +25,7 @@
     "typecheck": "tsc -b --pretty && tsc -p packages/interface/tsconfig.dashboard.json --noEmit",
     "build": "tsc -b",
     "clean": "tsc -b --clean",
-    "test:store:up": "docker compose up -d mongo-test",
+    "test:store:up": "docker compose up -d --wait mongo-test",
     "test:store:down": "docker compose down",
     "serve": "tsx packages/cli/src/index.ts serve",
     "serve:full": "pnpm --filter @odysseus/cli... run build && pnpm run serve",

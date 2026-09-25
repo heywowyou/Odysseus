@@ -34,12 +34,13 @@ import {
   createReportQualityLeaseModel,
   createReportQualityRunModel,
 } from './schemas/report-quality.schema.js';
-import { probeMongoAvailability } from './test-support.js';
+import { isMongoTestRequired, probeMongoAvailability } from './test-support.js';
 
 const { available: mongoAvailable, connection } = await probeMongoAvailability();
 
-/** Transactions (atomic activation) need a replica set; standalone mongod,
- *  including the current docker-compose/CI mongo-test service, refuses them. */
+/** Transactions (atomic activation) need a replica set. The docker-compose
+ *  and CI mongo-test services run one (issue #515); a standalone mongod
+ *  refuses them, which may skip here only where Mongo tests are optional. */
 async function probeTransactionSupport(conn: Connection): Promise<boolean> {
   const probeModel = conn.model(
     'ReportQualityTransactionProbe',
@@ -52,7 +53,15 @@ async function probeTransactionSupport(conn: Connection): Promise<boolean> {
       await probeModel.create([{ v: 'probe' }], { session });
     });
     return true;
-  } catch {
+  } catch (error) {
+    if (isMongoTestRequired()) {
+      throw new Error(
+        'The test MongoDB does not support transactions, and Mongo integration tests are ' +
+          'required here (CI or REQUIRE_MONGO_TESTS is set). Run it as a replica set ' +
+          '(pnpm test:store:up) instead of skipping the atomic activation tests.',
+        { cause: error },
+      );
+    }
     return false;
   } finally {
     await session.endSession();
