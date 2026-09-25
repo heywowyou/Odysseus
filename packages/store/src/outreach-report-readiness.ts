@@ -60,7 +60,7 @@ export type ReadinessAnalysis = AnalysisRecordLike;
 /** The French analysis the report workflow currently selects for an audit,
  *  or null when no usable selection exists. The same resolution the preview
  *  and the report pipeline use. */
-export function selectedFrenchAnalysisId(
+function selectedFrenchAnalysisId(
   selection: WritingSelection | undefined,
   analyses: readonly ReadinessAnalysis[],
 ): string | null {
