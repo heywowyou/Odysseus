@@ -98,7 +98,11 @@ export {
   listArchivedProspectsWithAudits,
 } from './delete-audit.js';
 export type { AuditCascadeCounts } from './delete-audit.js';
-export { getSeverityRollup, getSeverityRollups } from './severity-rollup.js';
+export {
+  getStoredPrimarySeverityRollups,
+  loadSeverityPopulationInputs,
+  storePrimarySeverityRollup,
+} from './severity-rollup.js';
 export type { SeverityRollup } from './severity-rollup.js';
 export {
   getAudit,

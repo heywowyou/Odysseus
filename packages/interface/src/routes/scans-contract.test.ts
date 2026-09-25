@@ -19,7 +19,9 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   getProspectNames: vi.fn(async () => new Map()),
   listJobs: vi.fn(async () => []),
   findAuditsWithUnreadyReports: vi.fn(async () => new Set<string>()),
-  getSeverityRollups: vi.fn(async () => new Map()),
+  getStoredPrimarySeverityRollups: vi.fn(async () => new Map()),
+  loadSeverityPopulationInputs: vi.fn(async () => []),
+  storePrimarySeverityRollup: vi.fn(async () => undefined),
 }));
 
 const { artifactStore } = vi.hoisted(() => ({

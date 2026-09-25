@@ -16,6 +16,7 @@ import type {
   FindingsDeltaCoverage,
   GradeOverride,
   ReportPreparation,
+  Severity,
 } from '@odysseus/core';
 import { WRITING_SANITIZATION_WARNING_CODES } from '@odysseus/core';
 
@@ -59,7 +60,15 @@ export interface AuditDocumentFields extends Omit<
    *  manualFields. Every route that needs the raw evidence refuses an audit
    *  carrying it. */
   retention?: { slimmedAt: Date };
+  /** Issue #508: distinct findings per severity over the report's primary
+   *  population (@odysseus/report's primarySeverityRollup), written with the
+   *  findings so the Audits list poll never loads them. DB-only like
+   *  manualFields. Valid only while `findingsDigest` equals the audit's
+   *  current findingsProvenance digest; readers ignore it otherwise. */
+  primarySeverityRollup?: StoredPrimarySeverityRollup;
 }
+
+export type StoredPrimarySeverityRollup = Record<Severity, number> & { findingsDigest: string };
 
 export type AuditDocument = AuditDocumentFields;
 
@@ -389,6 +398,17 @@ const findingsProvenanceSchema = new Schema(
   { _id: false },
 );
 
+const primarySeverityRollupSchema = new Schema(
+  {
+    critical: { type: Number, required: true },
+    serious: { type: Number, required: true },
+    moderate: { type: Number, required: true },
+    minor: { type: Number, required: true },
+    findingsDigest: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 const privacySecurityCoverageSchema = new Schema(
   {
     securityHeaders: { type: String, required: true, enum: ['completed', 'unavailable'] },
@@ -697,6 +717,7 @@ export const auditSchema = new Schema<AuditDocument>(
     // reasoning as report-quality.schema.ts's modelCalls).
     evidenceCoverage: { type: Schema.Types.Mixed } as never,
     retention: { type: retentionSchema },
+    primarySeverityRollup: { type: primarySeverityRollupSchema },
   },
   { collection: 'audits' },
 );

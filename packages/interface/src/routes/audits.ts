@@ -74,7 +74,7 @@ import {
   resolveEffectiveGrade,
   RULE_TRANSLATIONS_FR,
   type ReportFreshness,
-  primaryFindingFilter,
+  primarySeverityRollup,
 } from '@odysseus/report';
 import { getPreviewPublicBaseUrl } from '../config.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
@@ -580,12 +580,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       getActiveReportBundle(connection, auditId),
       getLatestReportQualityRun(connection, auditId),
     ]);
-    const severityRollup = { critical: 0, serious: 0, moderate: 0, minor: 0 };
-    for (const finding of findings.filter(
-      primaryFindingFilter(audit as unknown as AuditManifest),
-    )) {
-      severityRollup[finding.severity] += 1;
-    }
+    // Issue #508: the same population function the Audits list's stored
+    // rollup comes from, so the two surfaces cannot count differently.
+    const severityRollup = primarySeverityRollup(audit, findings);
     // A failed regeneration advances the selected writing pair before PDF
     // rendering. Keep older report documents as history, but never advertise
     // them as the current pair: approval and download deliberately validate

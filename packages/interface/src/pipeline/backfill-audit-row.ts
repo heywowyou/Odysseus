@@ -17,6 +17,7 @@
  * asking nicely.
  */
 
+import { primarySeverityRollup } from '@odysseus/report';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
@@ -79,7 +80,13 @@ export async function backfillAuditRow(
   if (options.dryRun !== true) {
     // Upsert by auditId, the semantics persistAudit already has for a retried
     // scan: this is the same audit, re-stated from the same artifacts.
-    await persistAudit(connection, manifest, findings);
+    await persistAudit(
+      connection,
+      manifest,
+      findings,
+      undefined,
+      primarySeverityRollup(manifest, findings),
+    );
   }
 
   return {

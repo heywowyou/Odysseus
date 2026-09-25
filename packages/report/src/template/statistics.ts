@@ -8,11 +8,8 @@ import {
 import { buildConformanceRollup, pagesWithWcagFailures } from './conformance-rollup.js';
 import type { CATEGORY_ORDER } from './design-tokens.js';
 import { EVIDENCE_INCLUSION_THRESHOLD_PERCENT } from '../constants.js';
-import { isConfinedToThirdPartyFrame, isThirdPartyFinding } from './third-party-attribution.js';
-import {
-  isConfinedToUnlinkedSitemapPages,
-  unlinkedSitemapPageUrls,
-} from './unlinked-sitemap-pages.js';
+import { isThirdPartyFinding } from './third-party-attribution.js';
+import { reportPopulation, unlinkedSitemapPageUrls } from './unlinked-sitemap-pages.js';
 
 /** Deterministic counts for the statistics page (docs/archive/report-v2-refactor.md
  *  B10): nowhere in v1 did the document state pages scanned, finding
@@ -110,10 +107,7 @@ export function computeStatistics(
   let accessibilityOccurrences = 0;
   let accessibilityHeuristicOccurrences = 0;
   let thirdPartyAccessibilityOccurrences = 0;
-  let confinedThirdPartyFindingCount = 0;
-  let confinedThirdPartyOccurrenceCount = 0;
-  let unlinkedSitemapFindingCount = 0;
-  const unlinkedUrls = unlinkedSitemapPageUrls(manifest);
+  const population = reportPopulation(manifest, findings);
   let critical = 0;
   let serious = 0;
   let moderate = 0;
@@ -130,16 +124,7 @@ export function computeStatistics(
     privacy: 0,
   };
 
-  for (const finding of findings) {
-    if (isConfinedToThirdPartyFrame(finding)) {
-      confinedThirdPartyFindingCount += 1;
-      confinedThirdPartyOccurrenceCount += finding.occurrences;
-      continue;
-    }
-    if (isConfinedToUnlinkedSitemapPages(finding, unlinkedUrls)) {
-      unlinkedSitemapFindingCount += 1;
-      continue;
-    }
+  for (const finding of population.primary) {
     if (finding.category === 'accessibility') {
       if (HEURISTIC_RULE_IDS.has(finding.ruleId)) {
         accessibilityHeuristicOccurrences += finding.occurrences;
@@ -176,14 +161,17 @@ export function computeStatistics(
 
   return {
     pagesScanned,
-    totalFindings: findings.length - confinedThirdPartyFindingCount - unlinkedSitemapFindingCount,
+    totalFindings: population.primary.length,
     accessibilityOccurrences,
     accessibilityHeuristicOccurrences,
     thirdPartyAccessibilityOccurrences,
-    confinedThirdPartyFindingCount,
-    confinedThirdPartyOccurrenceCount,
-    unlinkedSitemapFindingCount,
-    unlinkedSitemapPageCount: unlinkedUrls.size,
+    confinedThirdPartyFindingCount: population.thirdPartyFrame.length,
+    confinedThirdPartyOccurrenceCount: population.thirdPartyFrame.reduce(
+      (sum, finding) => sum + finding.occurrences,
+      0,
+    ),
+    unlinkedSitemapFindingCount: population.unlinkedSitemap.length,
+    unlinkedSitemapPageCount: unlinkedSitemapPageUrls(manifest).size,
     pagesWithCritical: pagesWithCriticalSet.size,
     critical,
     serious,

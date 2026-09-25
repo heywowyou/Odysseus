@@ -7,6 +7,7 @@
  * rather than left as accepted duplication.
  */
 
+import { primarySeverityRollup } from '@odysseus/report';
 import * as fs from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
@@ -454,7 +455,13 @@ export async function runAuditStage(
     // persisted record, so a later re-audit's delta can judge what each
     // run could observe. No graph, no signature: the delta then degrades
     // to unknown-legacy instead of inventing comparability.
-    await persistAudit(connection, manifest, findings, evidenceGraph?.deltaCoverage);
+    await persistAudit(
+      connection,
+      manifest,
+      findings,
+      evidenceGraph?.deltaCoverage,
+      primarySeverityRollup(manifest, findings),
+    );
 
     // Plan 002 (issue #132): no checkpoint deletion here. The checkpoint
     // must survive until the JOB reaches its terminal state, because a

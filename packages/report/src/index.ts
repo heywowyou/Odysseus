@@ -54,6 +54,7 @@ export {
 export { buildRenderedPriorities } from './template/rendered-priorities.js';
 export {
   primaryFindingFilter,
+  primarySeverityRollup,
   unlinkedSitemapPageUrls,
 } from './template/unlinked-sitemap-pages.js';
 export type { RenderedPriority, PriorityEvidence } from './template/rendered-priorities.js';
