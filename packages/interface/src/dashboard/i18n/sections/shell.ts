@@ -5,6 +5,9 @@ export interface ShellStrings {
   groupMeasure: string;
   groupCampaign: string;
   navigation: string;
+  /** Accessible name of the sidebar landmark, which holds more than the
+   *  navigation (the reference audit and the tools link). */
+  sidebar: string;
   openMenu: string;
   closeMenu: string;
   language: string;
@@ -25,6 +28,7 @@ export const shell = {
     groupMeasure: 'Mesure',
     groupCampaign: 'Campagne',
     navigation: 'Navigation',
+    sidebar: 'Barre latérale',
     openMenu: 'Ouvrir le menu',
     closeMenu: 'Fermer le menu',
     checkAddress: 'Vérifier une adresse',
@@ -40,6 +44,7 @@ export const shell = {
     groupMeasure: 'Measurement',
     groupCampaign: 'Campaign',
     navigation: 'Navigation',
+    sidebar: 'Sidebar',
     openMenu: 'Open menu',
     closeMenu: 'Close menu',
     checkAddress: 'Check an address',

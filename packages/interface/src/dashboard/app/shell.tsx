@@ -174,7 +174,10 @@ export function AppShell() {
 
   return (
     <div className="min-h-dvh bg-base text-ink">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-panel md:flex">
+      <aside
+        aria-label={strings.shell.sidebar}
+        className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-panel md:flex"
+      >
         <div className="px-5 pb-6 pt-5">
           <Brand layout="sidebar" />
           <p className="mt-1 px-2 text-xs text-ink-muted">{strings.shell.tagline}</p>
@@ -202,7 +205,10 @@ export function AppShell() {
             className="absolute inset-0 animate-overlay-in bg-black/60"
             onClick={() => setMenuOpen(false)}
           />
-          <aside className="absolute inset-y-0 left-0 flex w-64 animate-drawer-in flex-col border-r border-line bg-panel">
+          <aside
+            aria-label={strings.shell.sidebar}
+            className="absolute inset-y-0 left-0 flex w-64 animate-drawer-in flex-col border-r border-line bg-panel"
+          >
             <div className="flex items-center justify-between px-4 py-3">
               <Brand layout="topbar" />
               <button

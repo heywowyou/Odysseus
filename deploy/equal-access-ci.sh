@@ -7,7 +7,7 @@ set -euo pipefail
 PORT="${ODYSSEUS_EQUAL_ACCESS_PORT:-4611}"
 BASE="http://127.0.0.1:${PORT}"
 LOG="$(mktemp)"
-TARGETS="$(mktemp)"
+TARGETS="$(mktemp --suffix=.txt)"
 SERVER_PID=""
 
 cleanup() {
@@ -47,4 +47,13 @@ fi
 # HTML rather than a synthetic accessibility fixture.
 printf '%s\n' "${BASE}/" >"${TARGETS}"
 
+# The checker drives Puppeteer, whose own browser download is a second
+# Chromium to fetch and needs unzip. Hand it the Playwright Chromium the test
+# suites already require instead.
+PUPPETEER_EXECUTABLE_PATH="${PUPPETEER_EXECUTABLE_PATH:-$(node -p "require('playwright').chromium.executablePath()")}"
+[[ -x "${PUPPETEER_EXECUTABLE_PATH}" ]] || {
+  echo "odysseus: no Chromium at ${PUPPETEER_EXECUTABLE_PATH}; run pnpm exec playwright install chromium" >&2
+  exit 1
+}
+export PUPPETEER_EXECUTABLE_PATH
 npx --yes --package accessibility-checker@4.0.34 achecker "${TARGETS}"

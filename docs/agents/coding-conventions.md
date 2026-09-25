@@ -233,7 +233,8 @@ The release gate runs IBM Equal Access `accessibility-checker` in addition to th
 axe/browser tests. The wrapper is `deploy/equal-access-ci.sh`, the checker is
 pinned to `4.0.34`, and `.achecker.yml` pins its rule archive to the
 tool-versioned archive with the WCAG 2.2 policy. IBM telemetry is explicitly
-disabled in the gate.
+disabled in the gate. The checker drives the Playwright Chromium the tests
+already use (`PUPPETEER_EXECUTABLE_PATH`), not a second Puppeteer download.
 
 This is an independent regression signal, not a replacement for axe or manual
 keyboard/screen-reader/zoom testing. A checker disagreement is investigated;
