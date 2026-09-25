@@ -12,6 +12,13 @@
  * `purgeProspectAuditStorage` the archive action uses, skipping any prospect
  * with a queued or running job. No network request reaches a prospect site.
  *
+ * `odysseus artifacts retention` (plan 077): superseded audits, reports,
+ * analyses and quality candidates past the grace period. Dry run by
+ * default; `--apply` removes them and records the run. A run over the
+ * per-audit cap refuses unless `--allow-large` is passed after reading the
+ * dry run. This process cannot see a report being produced inside a running
+ * server, so apply it while no report production is under way.
+ *
  * `odysseus artifacts compact-scans` (plan 077): stored scan.json files
  * rewritten into the compact shape new scans already get. Dry run by
  * default; `--apply` rewrites each file atomically and re-uploads it when a
@@ -22,6 +29,10 @@ import type { Command } from 'commander';
 import {
   compactStoredScans,
   createConfiguredArtifactStore,
+  RETENTION_GRACE_DAYS,
+  RETENTION_RUN_CAP,
+  runRetention,
+  type RetentionRunResult,
   DEFAULT_ORPHAN_MIN_AGE_MS,
   deleteAuditArtifacts,
   findRemoteArtifactOrphans,
@@ -89,6 +100,34 @@ export function registerArtifactsCommand(program: Command): void {
           }
         }
         if (failed > 0) process.exitCode = 1;
+      } finally {
+        await disconnectFromMongo(connection);
+      }
+    });
+
+  artifacts
+    .command('retention')
+    .description(
+      `Remove versions superseded more than ${RETENTION_GRACE_DAYS} days ago (dry run unless --apply)`,
+    )
+    .option('--apply', 'remove them and record the run', false)
+    .option('--allow-large', `allow more than ${RETENTION_RUN_CAP} audits in one run`, false)
+    .option('--json', 'print the result as JSON', false)
+    .action(async (options: { apply: boolean; allowLarge: boolean; json: boolean }) => {
+      const connection = await connectToMongo();
+      try {
+        const result = await runRetention({
+          connection,
+          artifactsRoot: getArtifactsRoot(),
+          store: createConfiguredArtifactStore(),
+          now: new Date(),
+          apply: options.apply,
+          allowLarge: options.allowLarge,
+          trigger: 'cli',
+        });
+        if (options.json) console.log(JSON.stringify(retentionJson(result), null, 2));
+        else printRetention(result, options.apply);
+        if (result.refusal !== undefined || result.failures.length > 0) process.exitCode = 1;
       } finally {
         await disconnectFromMongo(connection);
       }
@@ -170,4 +209,70 @@ export function registerArtifactsCommand(program: Command): void {
 
 function formatMegabytes(bytes: number): string {
   return `${(bytes / 1_000_000).toFixed(1)} MB`;
+}
+
+function retentionJson(result: RetentionRunResult): unknown {
+  const { plan, ...rest } = result;
+  return { ...rest, holds: plan.holds };
+}
+
+function printRetention(result: RetentionRunResult, applied: boolean): void {
+  const rows: string[][] = [
+    ...result.deleteAudits.map((audit) => [
+      'DELETE AUDIT',
+      `${audit.auditId} ${audit.siteUrl}`,
+      `replaced by ${audit.supersededBy}`,
+      formatMegabytes(audit.bytes),
+    ]),
+    ...result.slimAudits.map((audit) => [
+      'SLIM AUDIT',
+      `${audit.auditId} ${audit.siteUrl}`,
+      `delivered, replaced by ${audit.supersededBy}`,
+      formatMegabytes(audit.bytes),
+    ]),
+    ...result.items.map((item) => [
+      `DELETE ${item.kind.toUpperCase()}`,
+      `${item.auditId} ${item.id}`,
+      'superseded, no keep reason',
+      formatMegabytes(item.bytes),
+    ]),
+    ...result.plan.holds.map((hold) => ['HOLD', hold.auditId, hold.reason, '']),
+  ];
+  const widths = [0, 1, 2].map((column) =>
+    Math.max(0, ...rows.map((row) => (row[column] ?? '').length)),
+  );
+  for (const row of rows) {
+    console.log(
+      row
+        .map((cell, column) => cell.padEnd(widths[column] ?? 0))
+        .join('  ')
+        .trimEnd(),
+    );
+  }
+  for (const failure of result.failures) {
+    console.log(`FAILED    ${failure.auditId} (${failure.step}): ${failure.message}`);
+  }
+
+  console.log(
+    `\n${result.deleteAudits.length} audit(s) to delete, ${result.slimAudits.length} to slim, ` +
+      `${result.items.length} version(s) inside audits, ${result.plan.holds.length} held.`,
+  );
+  if (result.refusal !== undefined) {
+    console.log(
+      `Refused: more than ${RETENTION_RUN_CAP} audits in one run. Read the list above, then ` +
+        're-run with --apply --allow-large if it is right.',
+    );
+    return;
+  }
+  if (!applied) {
+    console.log(
+      `About ${formatMegabytes(result.bytesReclaimed.local)} to reclaim on this machine.`,
+    );
+    console.log('Dry run: re-run with --apply to remove them.');
+    return;
+  }
+  console.log(
+    `Reclaimed ${formatMegabytes(result.bytesReclaimed.local)} locally, ` +
+      `${result.remoteObjectsDeleted} bucket object(s) removed.`,
+  );
 }
