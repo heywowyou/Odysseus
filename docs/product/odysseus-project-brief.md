@@ -140,7 +140,10 @@ is the prospect hub described in Stage 6.
 | Proposal               | Written proposal page presenting the single paid audit       |
 | Delivery               | PDF report only (video walkthrough dropped 2026-08-07)        |
 | Follow-up              | Written question rounds, scoped and included in the price    |
-| Implementation kickoff | Written scope document plus a shared task board              |
+
+No implementation kickoff stage exists: implementation and monitoring were
+dropped on 2026-08-03 (section 9), and the paid work ends with the report and
+its question rounds.
 
 The dashboard exposes two operator scan intents with distinct runtime
 contracts (Plan 050). **Quick Check** is a one-page informational probe with no
@@ -443,7 +446,11 @@ offer documents linked at the top of this brief. Monitoring moved to milestone
 
 **Milestone 8.5c: wire reference-stat citations into the audit report.** Done 2026-08-17. Selection stays fully deterministic - the report calls `selectReferenceStats(theme.category, sector)` directly in `packages/report/src/template/sections/themes.ts` at render time, no LLM/prompt involvement and no change to the locked `llm-output.ts` `Theme` schema. Client sector now reaches the report through a new `ObligationAssessment.sector?: StatSector` field (`packages/core/src/types/compliance.ts`, not a locked contract), spliced on by `packages/interface/src/pipeline/obligation-stage.ts` from the same `OperatorProfile.naf` it already resolves via Sirene - no second lookup, and the derived two-value sector is stored rather than the raw NAF code for data minimisation. `geo` was added to `design-tokens.ts`'s `CATEGORY_ORDER`/`CATEGORY` (closing trade-off 14's appendix-rendering gap for ordinary findings too, not only citations), reusing `nocturne.css`'s previously-unused second accent hue scale rather than an invented hex, since geo postdates the canonical mockups. Each accessibility/seo theme citation shows once per category, on that category's highest-priority theme; `'performance'`/`'rendering'` themes get none, since the stat table has no rows for those categories. Geo findings, which can never reach the LLM-synthesized themes section (`Theme.category`'s locked enum has no `'geo'` option), get a citation in the findings-appendix's geo section instead, quarantined with an "emerging" badge. Report-only: the reference-stats module must never be imported by milestone 9c's outreach generation (not yet built), matching `docs/rules/llm-layer-rules.md` section 11's stricter "no statistics" rule for outreach; `estimateRevenueImpact` remains unwired in both paths. Full reasoning in CLAUDE.md trade-off 16.
 
-**Milestone 9b: prospecting throughput.** `computeBrokennessScore`, `isProspectingWorthy`, and `isAuditFallbackEligible` move into `packages/core` per `docs/rules/llm-layer-rules.md` section 10. Three changes in `runProspectingJob`: a bounded worker pool across distinct origins in place of the serial loop, safe because the per-origin lock already exists and the rate limit is per origin; Lighthouse removed from the prospecting config, since it is the serialisation bottleneck through the `perf_hooks` queue and performance score is the weakest outreach signal; prospecting page cap reduced to three (home, one listing page, one transactional page, the last retained because the flow detector needs it). Deterministic evidence screenshot selection.
+**Milestone 9b: prospecting throughput.** Status 2026-09-25: built
+(`packages/core/src/cost-gating/`,
+`packages/interface/src/queue/pipeline/run-prospecting-job.ts`); its
+outreach-generation cost gate is superseded by trade-off 83, since no model
+writes outreach. `computeBrokennessScore`, `isProspectingWorthy`, and `isAuditFallbackEligible` move into `packages/core` per `docs/rules/llm-layer-rules.md` section 10. Three changes in `runProspectingJob`: a bounded worker pool across distinct origins in place of the serial loop, safe because the per-origin lock already exists and the rate limit is per origin; Lighthouse removed from the prospecting config, since it is the serialisation bottleneck through the `perf_hooks` queue and performance score is the weakest outreach signal; prospecting page cap reduced to three (home, one listing page, one transactional page, the last retained because the flow detector needs it). Deterministic evidence screenshot selection.
 
 **Milestone 9b.5: sitemap-supplemented full-site scan coverage.** Done
 2026-08-27, after being added ahead of 9c on an operator decision made mid-review of a
@@ -485,7 +492,10 @@ the acceptance evidence for non-zero sitemap-only coverage and orphan
 preservation. Full reasoning is in the charter's build-order section and
 `docs/decisions/trade-offs.md`.
 
-**Milestone 9c: outreach generation.** Draft assembly per `docs/rules/outreach-rules.md`: deterministic evidence, deterministic facts block, generated connective prose, validator confirming the block survived unmodified and that identity, data origin, and opt-out are present (`docs/rules/llm-layer-rules.md` section 11). Draft queue, follow-up state machine keyed on reply detection, suppression check at draft time. Drafts created in the mailbox through the Gmail API, never sent. Separate sending domain with SPF, DKIM, DMARC.
+**Milestone 9c: outreach generation.** Superseded in part 2026-09-11
+(trade-off 83): outreach emails are fixed operator-approved templates, and no
+model writes outreach prose; the rest of this paragraph is the original plan.
+Draft assembly per `docs/rules/outreach-rules.md`: deterministic evidence, deterministic facts block, generated connective prose, validator confirming the block survived unmodified and that identity, data origin, and opt-out are present (`docs/rules/llm-layer-rules.md` section 11). Draft queue, follow-up state machine keyed on reply detection, suppression check at draft time. Drafts created in the mailbox through the Gmail API, never sent. Separate sending domain with SPF, DKIM, DMARC.
 
 **9c reconciled into execution plans, 2026-08-27.** The 14 numbered 9c plans
 replaced the earlier proposal drafts. They covered the hotel catalogue, exact
@@ -497,8 +507,9 @@ parts in favour of the prospect hub (Stage 6); the plans are archived under
 `plans/archive/`.
 
 **9c plan 016: hosted operator dashboard.** Completed 2026-08-31, including
-the live provisioning and backup restore drill. The dashboard serves from a
-Scaleway VPS behind Caddy and a password session at
+the live provisioning and backup restore drill. The dashboard served first
+from a Scaleway VPS and now from a Hostinger box (`deploy/runbook.md`
+section 7B), behind Caddy and a password session at
 `app.odysseusaudit.com`; Mongo stays on Atlas and drafting stays local, so
 mailbox credentials never move. Routine releases added 2026-09-01 are manually
 triggered and verify successful CI for the exact commit, use immutable commit
@@ -516,7 +527,11 @@ noindex, noarchive, no-referrer and bounded cache headers. The optional
 `/exemple-audit/r/<token>` path writes a minimal first-party receipt and always
 redirects to the canonical page, including when attribution storage fails.
 
-**Milestone 10: benchmark study and percentile.** Batch scan of a bounded
+**Milestone 10: benchmark study and percentile.** Status 2026-09-25: the
+percentile code exists (`packages/core/src/benchmark/percentile.ts`), but the
+study missed its 22 September target: the cohort scan stalled at 2 of 43
+sites (codebase audit of 2026-09-25) and nothing is published. The original
+plan follows. Batch scan of a bounded
 e-commerce cohort, aggregate percentile over stored findings, surface the
 percentile in the paid report, and publish the study in French on
 `odysseusaudit.com`. Target: before 22 September 2026, the Créteil hearing in
@@ -603,8 +618,8 @@ Two items outside the legal-claims-to-clients scope of 8.1 to 8.3, tracked becau
 **Sequence.**
 
 1. Milestone 9a qualifies domains deterministically (headcount, sector, resolvable SIREN, not on the suppression list) before any Chromium scan runs. `docs/rules/prospect-qualification.md`.
-2. Milestone 9b scans qualified prospects and gates which are worth the LLM cost of outreach generation (`docs/rules/llm-layer-rules.md` section 10).
-3. Milestone 9c assembles a draft: deterministic evidence selection, deterministic argument-B facts block spliced from `assessObligations()`, generated connective prose, then a validator confirming the block is byte-identical to what was spliced and that identity, data origin, and opt-out are present. A draft failing either check is discarded, not repaired. `docs/rules/outreach-rules.md` section 5 and `docs/rules/llm-layer-rules.md` section 11.
+2. Milestone 9b scans qualified prospects. (Its gate on the LLM cost of outreach generation is superseded by trade-off 83: no model writes outreach.)
+3. Milestone 9c assembles a draft from the operator-approved templates (trade-off 83, superseding the generated connective prose first planned here): deterministic evidence selection and the deterministic argument-B facts block spliced from `assessObligations()`, with identity, data origin, and opt-out present. `docs/rules/outreach-rules.md` section 5.
 4. Touch sequence, one new piece of information per touch: (1) render diff evidence, (2) one reproducible transactional failure plus age framing where the sector fits, (3) the argument-B facts block. Follow-ups generate only if no reply is detected. `docs/rules/outreach-rules.md` section 6.
 5. Drafts wait in a queue for a human send, never sent automatically. No sequencer tooling (no lemlist, Instantly, Smartlead). Volume ceiling of 20 to 40 sends per day per warmed mailbox, which is the binding constraint on the whole system, not drafting time. Telephone is closed as a prospecting channel since 11 August 2026; it is a follow-up channel only, for people who already replied. `docs/rules/outreach-rules.md` section 8.
 6. Interested prospect has already received the free outreach preview as part of the touch sequence above (step 4); no separate paid screening purchase step exists since 2026-08-16 (see 3.2). They complete the intake questionnaire for a full audit.
@@ -643,8 +658,8 @@ Two items outside the legal-claims-to-clients scope of 8.1 to 8.3, tracked becau
 ### Settled 2026-08-03
 
 - **Pricing structure.** Two tiers, not three. Screening at EUR 290 flat and published. Full audit at EUR 1,200 to 1,900, set by risk band rather than a continuous formula or a freehand quote. Implementation and monitoring dropped entirely. **Superseded 2026-08-16:** screening tier dropped, full audit is a flat published price, no risk band; EUR 1,600 HT then, EUR 990 HT since 2026-09-17. Full reasoning in 3.2.
-- **Cost gating for the LLM layer.** The LLM is not called when a scan has not produced enough to justify it, on both the audit path (static template fallback) and the prospecting path (worthiness gate before outreach generation is attempted). Thresholds in `docs/rules/llm-layer-rules.md`.
-- **Personalized outreach email generation.** Built on top of prospecting mode, evidence stays deterministic, output is a reviewed draft, never auto-sent. See 6.2 stage 6 and section 9.
+- **Cost gating for the LLM layer.** The LLM is not called when a scan has not produced enough to justify it, on both the audit path (static template fallback) and the prospecting path (worthiness gate before outreach generation is attempted). Thresholds in `docs/rules/llm-layer-rules.md`. **Superseded for outreach 2026-09-11 (trade-off 83):** no model writes outreach, so the prospecting-path gate has nothing to gate; the audit-path fallback stands.
+- **Personalized outreach email generation.** Built on top of prospecting mode, evidence stays deterministic, output is a reviewed draft, never auto-sent. See 6.2 stage 6 and section 9. **Superseded 2026-09-11 (trade-off 83):** outreach emails are fixed operator-approved templates; drafts are still reviewed and never auto-sent.
 - **Interface scope for milestone 7.** Progress indication with ETA, severity-roll-up-only completion feedback, a history log distinguishing full audit scans from prospecting scans, and per-origin concurrent scanning. Updated 7.1.
 
 ### Settled 2026-08-07

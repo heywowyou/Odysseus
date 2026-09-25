@@ -10,6 +10,14 @@ eleven issues already show closed on GitHub as of the migration (a state
 this migration does not verify - a future recurring sweep does that
 reconciliation properly). History is never deleted.
 
+> **Reading this ledger (issue #526, 2026-09-25).** "Open" here means *not
+> re-verified live by a sweep*, not *unfixed in code*. Most items listed open
+> have a closed GitHub issue: the fix is merged, and only the live re-check
+> this register requires before it writes FIXED is missing. For whether a
+> defect is fixed in code, the item's GitHub issue is the source of truth;
+> this ledger records what a live sweep has seen. The next sweep reconciles
+> the two and marks each item FIXED or REGRESSED.
+
 ## Run history
 
 | Run | Date | HEAD | New | Still open | Fixed | Regressions | Coverage | Parity |
