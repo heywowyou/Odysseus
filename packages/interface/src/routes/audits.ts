@@ -95,7 +95,7 @@ import {
   sendJson,
 } from '../http-utils.js';
 import { lookupOperatorProfile } from '../sirene/sirene-cache.js';
-import { pdfDigestOf } from '../pipeline/pdf-digest.js';
+import { localPdfDigest, pdfDigestOf } from '../pipeline/pdf-digest.js';
 import {
   releaseReportProduction,
   tryAcquireReportProduction,
@@ -194,14 +194,36 @@ async function readVerifiedReport(
   return digest === variant.pdfDigest ? pdf : undefined;
 }
 
+/** Whether the report's PDF for `theme` is present and matches its stored
+ *  digest, for the audit page's availability display (issue #511). A local
+ *  file is hashed once per version (localPdfDigest); a file only in the
+ *  bucket is read through readVerifiedReport, which caches it locally, so
+ *  the next poll takes the local path. */
+async function isReportPdfVerified(
+  auditDir: string,
+  report: ReportDocument,
+  hostname: string,
+  startedAt: Date,
+  store: ArtifactStore | undefined,
+  theme: ReportTheme = 'dark',
+): Promise<boolean> {
+  const variant = resolveReportVariant(report, theme);
+  if (variant.kind === 'unavailable') return false;
+  const localDigest = await localPdfDigest(path.join(auditDir, variant.fileRef));
+  if (localDigest !== undefined) return localDigest === variant.pdfDigest;
+  return (
+    (await readVerifiedReport(auditDir, report, hostname, startedAt, store, theme)) !== undefined
+  );
+}
+
 /** Pure over already-fetched reports and resolution, so a caller that has
  *  already paid for those reads (the dashboard's GET handler, which needs
- *  them for other fields anyway) does not pay for them twice. preReadPdfs
- *  carries those already-paid reads, produced by readVerifiedReport itself:
- *  a buffer exists exactly when the fresh read would have returned bytes,
- *  so supplying one cannot change the verdict. When it is absent (the
- *  approve-reports path via getFreshVerifiedPair, whose transaction must
- *  re-verify live) the pair is read fresh here, as before. */
+ *  them for other fields anyway) does not pay for them twice. preVerified
+ *  carries those already-made checks, produced by isReportPdfVerified: true
+ *  exactly when the PDF is present with its stored digest, so supplying
+ *  them cannot change the verdict. When it is absent (the approve-reports
+ *  path via getFreshVerifiedPair, whose transaction must re-verify live)
+ *  the pair is read and hashed fresh here, as before. */
 async function verifyFreshPair(
   fr: ReportDocument | null,
   en: ReportDocument | null,
@@ -211,8 +233,8 @@ async function verifyFreshPair(
   hostname: string,
   startedAt: Date,
   store: ArtifactStore | undefined,
-  preReadPdfs?: { fr: Buffer | undefined; en: Buffer | undefined },
-): Promise<{ reports: CurrentReportPair; pdfs: { fr: Buffer; en?: Buffer } } | undefined> {
+  preVerified?: { fr: boolean; en: boolean },
+): Promise<{ reports: CurrentReportPair } | undefined> {
   // Plan 067: French is the canonical required report. English participates
   // only when the selected writing version explicitly carries an English
   // analysis; an older unrelated English report must never make French
@@ -241,19 +263,19 @@ async function verifyFreshPair(
     return undefined;
   }
 
-  const frPdf =
-    preReadPdfs?.fr ?? (await readVerifiedReport(auditDir, fr, hostname, startedAt, store));
-  if (!frPdf) return undefined;
+  const frVerified =
+    preVerified?.fr ??
+    (await readVerifiedReport(auditDir, fr, hostname, startedAt, store)) !== undefined;
+  if (!frVerified) return undefined;
 
-  if (enAnalysis === undefined) {
-    return { reports: { fr }, pdfs: { fr: frPdf } };
-  }
+  if (enAnalysis === undefined) return { reports: { fr } };
 
-  const enPdf =
-    preReadPdfs?.en ??
-    (en ? await readVerifiedReport(auditDir, en, hostname, startedAt, store) : undefined);
-  if (!en || !enPdf) return undefined;
-  return { reports: { fr, en }, pdfs: { fr: frPdf, en: enPdf } };
+  const enVerified =
+    preVerified?.en ??
+    (en !== null &&
+      (await readVerifiedReport(auditDir, en, hostname, startedAt, store)) !== undefined);
+  if (!en || !enVerified) return undefined;
+  return { reports: { fr, en } };
 }
 
 /** Live-fetching wrapper for callers that need a fresh read on every call
@@ -269,7 +291,7 @@ async function getFreshVerifiedPair(
   hostname: string,
   startedAt: Date,
   store: ArtifactStore | undefined,
-): Promise<{ reports: CurrentReportPair; pdfs: { fr: Buffer; en?: Buffer } } | undefined> {
+): Promise<{ reports: CurrentReportPair } | undefined> {
   const [fr, en, resolution] = await Promise.all([
     getLatestReport(connection, auditId, 'fr'),
     getLatestReport(connection, auditId, 'en'),
@@ -609,44 +631,53 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     // Issue #91: resolve each language's PDF availability up front, so the
     // dashboard can render report rows that tell "the report is fine but
     // elsewhere" apart from "the report is gone" instead of asserting a
-    // freshness the endpoints cannot honour. These are the same
-    // digest-verified reads verifyFreshPair consumes below, so each
-    // language's PDF is read at most once per request (issue #139) and the
-    // buffers are shared; a bucket hit is cached locally by
-    // resolveArtifactFile, so one dashboard visit repairs availability for
-    // the next.
-    const [frPdf, enPdf, frLightPdf, enLightPdf] = await Promise.all([
-      currentFrReport === null
-        ? Promise.resolve(undefined)
-        : readVerifiedReport(auditDir, currentFrReport, hostname, audit.startedAt, artifactStore),
-      currentEnReport === null
-        ? Promise.resolve(undefined)
-        : readVerifiedReport(auditDir, currentEnReport, hostname, audit.startedAt, artifactStore),
-      activeQualityBundle !== null || currentFrReport === null
-        ? Promise.resolve(undefined)
-        : readVerifiedReport(
-            auditDir,
-            currentFrReport,
-            hostname,
-            audit.startedAt,
-            artifactStore,
-            'light',
-          ),
-      activeQualityBundle !== null || currentEnReport === null
-        ? Promise.resolve(undefined)
-        : readVerifiedReport(
-            auditDir,
-            currentEnReport,
-            hostname,
-            audit.startedAt,
-            artifactStore,
-            'light',
-          ),
-    ]);
-    const frPdfAvailable = frPdf !== undefined;
-    const enPdfAvailable = enPdf !== undefined;
-    const frLightPdfAvailable = frLightPdf !== undefined;
-    const enLightPdfAvailable = enLightPdf !== undefined;
+    // freshness the endpoints cannot honour. verifyFreshPair consumes these
+    // same checks below, so each language's PDF is checked at most once per
+    // request (issue #139), and a PDF on disk is hashed once per file
+    // version rather than on every poll (issue #511); a bucket hit is cached
+    // locally by resolveArtifactFile, so one dashboard visit repairs
+    // availability for the next.
+    const [frPdfAvailable, enPdfAvailable, frLightPdfAvailable, enLightPdfAvailable] =
+      await Promise.all([
+        currentFrReport === null
+          ? false
+          : isReportPdfVerified(
+              auditDir,
+              currentFrReport,
+              hostname,
+              audit.startedAt,
+              artifactStore,
+            ),
+        currentEnReport === null
+          ? false
+          : isReportPdfVerified(
+              auditDir,
+              currentEnReport,
+              hostname,
+              audit.startedAt,
+              artifactStore,
+            ),
+        activeQualityBundle !== null || currentFrReport === null
+          ? false
+          : isReportPdfVerified(
+              auditDir,
+              currentFrReport,
+              hostname,
+              audit.startedAt,
+              artifactStore,
+              'light',
+            ),
+        activeQualityBundle !== null || currentEnReport === null
+          ? false
+          : isReportPdfVerified(
+              auditDir,
+              currentEnReport,
+              hostname,
+              audit.startedAt,
+              artifactStore,
+              'light',
+            ),
+      ]);
     // Plan 072: whether a finalization exists per language, which is a
     // separate question from which report is current - a regeneration can
     // have overtaken one, and that is what the dashboard has to say out loud.
@@ -690,7 +721,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       hostname,
       audit.startedAt,
       artifactStore,
-      { fr: frPdf, en: enPdf },
+      { fr: frPdfAvailable, en: enPdfAvailable },
     );
     const analysed = Boolean(
       selectedPair.kind !== 'none' &&

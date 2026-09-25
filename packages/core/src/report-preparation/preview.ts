@@ -1,6 +1,5 @@
 import type { ReportLanguage } from '../types/llm-output.js';
-import type { Finding } from '../types/findings.js';
-import { resolveHookFamily } from './hook-family.js';
+import { resolveHookFamily, type HookFamilyFinding } from './hook-family.js';
 import type { ReportPreparation } from './preparation.js';
 import { HOOK_FAMILY_COPY, resolveGenericDecisionQuestion, type HookFamily } from './vocabulary.js';
 import {
@@ -51,8 +50,9 @@ export interface BuildPreviewInput {
   preparation: ReportPreparation;
   /** The confirmed commercial name, when manual fields carry one. */
   commercialName?: string | undefined;
-  /** On-disk findings; absent means the hook has no evidence. */
-  findings?: readonly Finding[] | undefined;
+  /** On-disk findings; absent means the hook has no evidence. Only their
+   *  category and severity are read. */
+  findings?: readonly HookFamilyFinding[] | undefined;
 }
 
 function resolveQuestion(pick: ReportLanguage, preparation: ReportPreparation): PreviewQuestion {
