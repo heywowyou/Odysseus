@@ -642,8 +642,8 @@ const writingSelectionSchema = new Schema(
 );
 
 // Situation, trigger, stakeholder names, journeys, and turnover were
-// retired from preparation; Mongoose's strict mode drops those keys from
-// legacy documents on the next preparation write.
+// retired from preparation; every preparation write in report-preparations.ts
+// unsets those keys on legacy documents.
 const reportPreparationSchema = new Schema(
   {
     customCoverQuestion: { type: localizedOptionalTextSchema },

@@ -70,7 +70,14 @@ async function storeAudit(
     ...(selectedEnglishAnalysisId !== undefined
       ? {
           reportPreparation: {
-            writingSelection: { selected: { enAnalysisId: selectedEnglishAnalysisId } },
+            writingSelection: {
+              selected: {
+                frAnalysisId: 'selected-fr-analysis',
+                enAnalysisId: selectedEnglishAnalysisId,
+                findingsProvenance: auditProvenance,
+              },
+            },
+            updatedAt: '2026-09-01T00:05:00.000Z',
           },
         }
       : {}),
