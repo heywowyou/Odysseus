@@ -149,7 +149,10 @@ For each new material defect:
 
 After each sweep:
 
-- Append the sweep's entry to `plans/defect-hunt-ledger.md`.
+- Update `plans/defect-hunt-ledger.md`: the stand and stop-rule count, the
+  next sweep's start list (every new slice's named target, for angle 13), the
+  sweeps table, the open doubts and minor items (mark each one settled, moot
+  or still open), then append the sweep's notes.
 - Run `pnpm run plans:check` and `npx prettier --write` on the touched
   Markdown.
 - Commit only the plan and ledger files, without pushing. Use a plain
@@ -188,13 +191,36 @@ Keep it short and plain, outcome first:
 # Defect hunt ledger
 
 Active plan: plans/0NN-....md
+Brief: docs/agents/audit-data-defect-hunt.md
 
-| Sweep | Date | Audits | Angles covered | New material defects | Plan sections touched |
-|---|---|---|---|---|---|
+## Where the hunt stands
+
+- Stop rule: N of 2, and why.
+- Data state: what is deployed and refreshed.
+- Next sweep: which audits, and where to start.
+
+## Sweep N+1 start list
+
+| Slice | Audit | Expected on the stored findings |
+|---|---|---|
+
+## Sweeps
+
+| Sweep | Date | Audits | Angles (brief numbering) | Complete | New material | Plan part |
+|---|---|---|---|---|---|---|
+
+## Open doubts
+
+| Doubt | Since | Angle | Smallest action that settles it |
+|---|---|---|---|
+
+## Minor items (not counted toward the stop rule)
+
+| Item | Found | Status |
+|---|---|---|
 
 ## Sweep N notes
 
 - Angle: what was checked, how many items were read, and the result
   (new / known / clean).
-- Open doubts carried to the next sweep.
 ```

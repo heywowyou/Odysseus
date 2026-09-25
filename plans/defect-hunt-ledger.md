@@ -1,22 +1,117 @@
 # Defect hunt ledger
 
-Plan: `plans/075-clean-true-audit-data.md` (reopened 2026-09-24 by sweep 7)
+Active plan: `plans/075-clean-true-audit-data.md` (reopened 2026-09-24 by
+sweep 7; Part H deployed in `ec24648c` the same day)
 
 Brief: `docs/agents/audit-data-defect-hunt.md`
 
-| Sweep | Date | Audits | Angles covered | New material defects | Plan sections touched |
-|---|---|---|---|---|---|
-| 1 | 2026-09-22 | 12 | Population, acquisition, per-rule (large rules), counting, measurements (partial) | About 25 | Evidence A, B, C; Parts A to D |
-| 2 | 2026-09-22 | 12 | Measurements, attribution (frames), absence (partial), stored products, preview selection | 9 | Evidence E; E1 to E8; Q1 to Q3 |
-| 3 | 2026-09-22 | 12 | Population (homepages, plugin objects), per-rule (small rules), absence, translations, production state | 8 | A9; E9 to E14; decisions; production state |
-| 4 | 2026-09-23 | 8 post-075 rescans (7 full, 1 capped pilot) | All 10 (fresh angle: terminal job state against its artifacts) | 7 | Part F (F1 to F7); rescan execution ledger |
-| 5 | 2026-09-23 | Same 8 | All 11 (fresh angle: run-to-run determinism) | 4 | Part F (F8 to F11, Q4) |
-| 6 | 2026-09-23 | hotelchateauroyal and grandhotelchicago rescans, their FR reports, the reference audit, the lacoorniche failure | Population, acquisition, counting, legal, stored products (partial: not all 11 angles) | 7 | Part G (G1 to G7) |
-| 7 | 2026-09-24 | Latest full audit of all 13 VPS sites (7 new since sweep 6), plus an in-memory re-normalization of each with `5abe9b7a` | All 12 except determinism (no repeated run) | 7 | Part H (H1 to H7, Q5); plan reopened |
+## Where the hunt stands
 
-These first three sweeps predate the brief and did not each cover every
-angle, so they do not count toward the stop rule. The next run starts at
-sweep 4, with all angles.
+- **Stop rule: 0 of 2.** The last complete sweep (7, 2026-09-24) found 7 new
+  material defects. Two consecutive complete sweeps with none are needed, the
+  second with a fresh angle.
+- **Data state.** Part H is deployed and all 13 stored audits were refreshed
+  on 2026-09-24. Their stored findings equal the in-memory replay recorded in
+  plan 075, Part H implementation record. No audit was rescanned for Part H.
+- **Next: sweep 8**, on the 13 refreshed audits (listed in plan 075, Part H
+  intro) plus any full audit completed since. Start with whistlerparis,
+  villasfoch, bellevigne-hotels, grand-hotel-opera and hotelpointfrance, then
+  work through the start list below.
+
+## Sweep 8 start list
+
+Angle 13 (replay against closed slices) has these named targets. A miss is a
+completion defect of the slice, as in sweep 7.
+
+| Slice | Audit | Expected on the refreshed findings |
+|---|---|---|
+| H1, Q5 | whistlerparis | one site-wide `image-alt` finding; 1 critical in total (was 59) |
+| H1, Q5 | villasfoch | `image-alt` at the Q5 shape; 2 critical in total (was 15) |
+| H2 | whistlerparis | `aria-prohibited-attr` at most 3 (was 10); no rule gained findings on any audit |
+| H3 | bellevigne-hotels | `aria-required-children` 1 (was 6); header logo `link-name` 1 (was 3) |
+| H3 | grand-hotel-opera | `button-name` 3, one per real component (dots, arrows, back-to-top) |
+| H4 | bellevigne-hotels | `hreflang-no-return-link` 1 (was 22), occurrences preserved |
+| H4 | hotelpointfrance | `broken-internal-link` 1 (was 11), occurrences preserved |
+| H5 | grandhotelchicago, grandhoteldesalpes, hotelpointfrance, whistlerparis | 0 `structured-data-entity-missing` |
+| H5 | whistlerparis | 0 `faq-content-without-schema` |
+| G7 | grandhotelbellevue | the four `/book` doorways are `redirect-interstitial`, outside the analysed and measured pages |
+
+Checks that only a new scan can answer (any full audit completed after
+`ec24648c`):
+
+- H6: the audit environment records the French locale, not
+  `chromium-default`. grandhoteldesalpes's `/fr/` pages are analysed only
+  after a rescan, which runs only if that hotel is to be contacted.
+- H7: no `structured-data` check fails with the tokenizer's
+  `failed to tokenize` error.
+
+Other carried checks:
+
+- Angle 11: hotelpointfrance's report step used to fail in the structure pass
+  (more than 20 themes, left outside plan 075). Read whether the 2026-09-24
+  refresh stored a report or the same failure.
+- Angle 9: the five previews sent on 2026-09-24 keep their pre-H totals by
+  decision (republishing would revoke the sent links). Check that every
+  preview built after the refresh carries the refreshed findings digest.
+  Trade-off 121 (2026-09-25) lets the operator send at their own pace, so more
+  previews may exist.
+- Angle 8: copy the refreshed FR PDFs this time. Sweep 7 read counts from the
+  findings only.
+
+## Sweeps
+
+| Sweep | Date | Audits | Angles (brief numbering) | Complete | New material | Plan part |
+|---|---|---|---|---|---|---|
+| 1 | 2026-09-22 | 12 | 1, 2, 3 (large rules), 4, 6 partly | before the brief | about 25 | Evidence A to C; Parts A to D |
+| 2 | 2026-09-22 | 12 | 5 partly, 6, 7 (frames), 9, preview selection | before the brief | 9 | Part E (E1 to E8; Q1 to Q3) |
+| 3 | 2026-09-22 | 12 | 1, 3 (small rules), 5, translation pairing, 9 | before the brief | 8 | A9; E9 to E14; decisions |
+| 4 | 2026-09-23 | 8 post-075 rescans (7 full, 1 capped pilot) | 1 to 10; fresh angle became 11 | yes | 7 | Part F (F1 to F7) |
+| 5 | 2026-09-23 | same 8 | 1 to 11; fresh angle became 12 | yes | 4 | Part F (F8 to F11, Q4) |
+| 6 | 2026-09-23 | hotelchateauroyal and grandhotelchicago rescans, their FR reports, the reference audit, the lacoorniche failure | 1, 2, 4, 8 (legal wording), 9 | no | 7 | Part G (G1 to G7) |
+| 7 | 2026-09-24 | latest full audit of all 13 VPS sites, replayed with `5abe9b7a` | 1 to 11 (12 not applicable: no repeated run); fresh angle became 13 | yes | 7 | Part H (H1 to H7, Q5); plan reopened |
+
+Trend of new material defects per sweep: 25, 9, 8, 7, 4, 7, 7. It has not
+converged. Sweep 7 read seven audits no earlier sweep had seen, and its new
+replay angle found two closed slices that never shipped.
+
+hotelchateauroyal, read in sweeps 4 to 6, was deleted from production on
+2026-09-23 under the territory rule (trade-off 112). Its findings stay here as
+history. They cannot be checked again.
+
+## Open doubts
+
+| Doubt | Since | Angle | Smallest action that settles it |
+|---|---|---|---|
+| Cause of the Lighthouse IndexedDB storage warning (E5). Plan 075's closure ledger expects the probe result to be recorded, and it never was. | sweep 2 | 6 | One Lighthouse probe of an already-audited page, with and without storage reset |
+| French copy has never had a full per-rule review against the writing style and obligation basis. It was read only for the rules each sweep touched. | sweep 4 | 8 | Read the refreshed FR PDFs rule by rule in sweep 8 |
+| `focus-order-mismatch` has never had a finding to sample | sweep 4 | 3 | None until an audit produces one; check again each sweep |
+| Why chicago's lab CLS runs are bimodal (whole-`body` shifts in some runs only). The finding side is covered by F9. | sweep 4 | 6 | One Lighthouse probe of the chicago homepage |
+
+Settled or moot:
+
+- hotelchateauroyal's `/en/` pages missing the 30 s `load` event is moot,
+  because the site was deleted (trade-off 112).
+- The outreach preview never having been read from stored data was settled in
+  sweep 7. The five sent previews were read from the database and the preview
+  bucket, and none shows a false claim.
+
+## Minor items (not counted toward the stop rule)
+
+| Item | Found | Status |
+|---|---|---|
+| `measure-audit-data-quality.mjs` does not pass `redirectTargetUrl`, so its after-pass drops `sitemap-lists-redirects` (and `sitemap-stale` on grandhoteldesalpes) by 1 or 2 occurrences | sweep 4 | open; still true on 2026-09-25; plan 075's closure record relies on this entry |
+| Stored English descriptions keep « (s) » placeholders. They are not rendered, but they are model input (for example `normalize-sitemap.ts:172`, `:229`, `normalize-accessibility-statement.ts:56`) | sweep 5 | open |
+| `skipped-external-redirect` pages store no redirect target, and `sitemap-lists-redirects` reports « 0 off-site » for sitemap entries skipped as external redirects | sweep 4 | not rechecked since G7; the only reproduction (hotelchateauroyal) is deleted |
+| A merged `hreflang-target-invalid` keeps one page's `perPage.targetUrl`, which can differ from its description | sweep 4 | not rechecked |
+| The Apidae agenda web component, outside a frame, is counted as the site's (`scrollable-region-focusable`) | sweep 4 | open |
+| Three « Report issue » job rows keep the failed status of the `occurrence(s)` render lint, which was fixed in `020286ad` | sweep 4 | not rechecked since the 2026-09-24 refresh |
+| whistlerparis writes partner links without a scheme, so they resolve under `/fr/page/` and land on the homepage. No rule reports it. | sweep 7 | open, no slice |
+| Titles of 61 to 65 characters flagged as « much longer than 60 » | sweep 4 | fixed by F13 |
+| villasfoch EN and ES pages carry French titles | sweep 5 | became F12, shipped |
+| chicago lab CLS doubt | sweep 4 | explained in sweep 5 as bimodal runs, covered by F9 |
+
+Outside the hunt: outreach threads left in `e1-drafted` after their drafts
+were deleted (outreach state, not audit data).
 
 ## Sweep 4 notes
 
@@ -48,29 +143,15 @@ grand-hotel-opera refusal for population. Read locally from a scratchpad copy
 - Measurements: lab LCP 3 to 8 times CrUX p75 on 6 audits (known, E5); 0
   runtime errors in stored runs.
 - Attribution: in-frame content labelled and kept out of the grade (clean);
-  Apidae agenda web component outside a frame counted as the site's
-  (`scrollable-region-focusable`, minor).
+  Apidae agenda web component outside a frame counted as the site's (minor).
 - Client surfaces: hotelchateauroyal priority 6 and the robots.txt syntax
   advice are false (F1, F5); villasfoch cover counts 15 critical, 14 of them
   split `image-alt` (F6).
 - Stored products: 11 reports, 0 approvals, 0 previews, 0 drafts on the 8
   audits (clean).
-- Fresh angle, terminal job state against its artifacts: the three
-  « Report issue » rows failed on the `occurrence(s)` render lint (fixed in
-  `020286ad`) and keep that status after the 2026-09-23 regeneration (minor,
-  dashboard state).
-
-Minor, not counted:
-
-- `skipped-external-redirect` pages store no redirect target, and
-  `sitemap-lists-redirects` reports « 0 off-site » for sitemap entries the
-  crawl skipped as external redirects (hotelchateauroyal).
-- `meta-title-length`: 64 of 123 flagged titles are 61 to 65 characters,
-  while the copy says « much longer than 60 ».
-- A merged `hreflang-target-invalid` keeps one page's `perPage.targetUrl`,
-  which can differ from its description.
-- `measure-audit-data-quality.mjs` does not pass `redirectTargetUrl`, so its
-  after-pass drops `sitemap-lists-redirects` (hotelchateauroyal 120 → 119).
+- Fresh angle, terminal job state against its artifacts (now angle 11): the
+  three « Report issue » rows failed on the `occurrence(s)` render lint
+  (minor, dashboard state).
 
 ## Sweep 5 notes
 
@@ -101,22 +182,19 @@ Same eight audits and local copy. Samples chosen apart from sweep 4's.
   priorities 1 to 4 read against the data: correct apart from F11's
   denominator.
 - Stored products: unchanged (11 reports, 0 approvals, previews, drafts).
-- Fresh angle, run-to-run determinism: two back-to-back haaitza runs of the
-  same 5 pages gave identical findings apart from one minor Lighthouse
-  diagnostic (clean; noise already covered by F9 and Q2).
+- Fresh angle, run-to-run determinism (now angle 12): two back-to-back
+  haaitza runs of the same 5 pages gave identical findings apart from one
+  minor Lighthouse diagnostic (clean; noise already covered by F9 and Q2).
 
-Minor, not counted:
+## Sweep 6 notes
 
-- Stored English descriptions keep « (s) » placeholders
-  (`cookie-non-essential-before-consent`, `tracker-request-before-consent`,
-  `accessibility-statement-missing`, `link-text`, `html-structural-validity`,
-  `sitemap-orphan-page`, `sitemap-lists-redirects`). They are not rendered,
-  but they are model input.
-- villasfoch's EN and ES pages carry French titles (« Chambres & suites
-  Bordeaux ») on all 16 translated pages. It is a real SEO defect that no
-  rule detects (a scope question, not a data error).
-- The chicago lab CLS doubt from sweep 4 is explained: the runs are
-  bimodal (0.00 against 0.8), which F9 now covers.
+A targeted sweep after the Part F fixes, not a complete one, so it does not
+count toward the stop rule. It read the operator's rescans of
+hotelchateauroyal and grandhotelchicago, their regenerated FR reports, the
+anonymized reference audit built from chicago, and the lacoorniche coverage
+gate failure. F1's goal held (no navigation-timeout errors, no
+timeout-driven link or hreflang finding). The evidence and slices are
+recorded in plan 075, Part G, rather than repeated here.
 
 ## Sweep 7 notes
 
@@ -160,53 +238,22 @@ ones on 12 of 13 (haaitza 55 → 56), so the defects are live in today's code.
   whistlerparis's cover counts 59 critical where the site has 7 images, and
   its priorities lead with them. PDFs were not copied; counts read from the
   findings the report is built from.
-- Stored products: whistlerparis has a generated FR report on the split
-  data (`2026-09-24T18-32-45Z`), not sent. Five first emails went out on
-  2026-09-24 with live v3 previews (read from the database and the preview
-  bucket through the app container, read-only): villasfoch, capdantibes,
-  atlantichotel, hoteldegarlande, grandhotelbellevue. Each preview's
-  `sourceFindingsDigest` equals its audit's. No false claim is shown, and all
-  three priority cards describe real defects. Totals are inflated where
-  splits exist: villasfoch « Critique 15 » (14 are H1's split `image-alt`),
-  grandhotelbellevue « Sérieux 23 » (12 `link-name`, known split),
-  capdantibes « Sérieux 17 » (10 `target-size`). hoteldegarlande's third
-  card (critical LCP) rests on lab runs only, since CrUX has no LCP for it
-  (E5). Republishing would revoke the links already sent, so the previews
-  stay; corrections go into the paid report after Part H.
+- Stored products: whistlerparis had a generated FR report on the split
+  data (`2026-09-24T18-32-45Z`), not sent; the refresh generated a new one. Five
+  first emails went out on 2026-09-24 with live v3 previews (read from the
+  database and the preview bucket through the app container, read-only):
+  villasfoch, capdantibes, atlantichotel, hoteldegarlande, grandhotelbellevue.
+  Each preview's `sourceFindingsDigest` equals its audit's. No false claim is
+  shown, and all three priority cards describe real defects. Totals are
+  inflated where splits exist: villasfoch « Critique 15 » (14 are H1's split
+  `image-alt`), grandhotelbellevue « Sérieux 23 » (12 `link-name`, known
+  split), capdantibes « Sérieux 17 » (10 `target-size`). hoteldegarlande's
+  third card (critical LCP) rests on lab runs only, since CrUX has no LCP for
+  it (E5). Republishing would revoke the links already sent, so the previews
+  stay; corrections go into the paid report.
 - Terminal state: hotelpointfrance's report step failure is the known
   structure-pass limit (recorded at 075 closure).
 - Determinism: no audit has two runs of the same pages this sweep.
-- Fresh angle, stored findings against a replay with today's code: it is how
-  the unshipped F6 and C5 slices surfaced (a closed slice whose target site
-  still fails on replay). Added to the brief as angle 13.
-
-## Where the hunt stands
-
-Sweep 7 (2026-09-24) found 7 new material defects and reopened plan 075
-with Part H, so the stop rule is not met. None of them needs a rescan of the
-stored audits except H6 (grandhoteldesalpes's French pages) and H7 (lost
-structured-data validation, not worth a rescan on its own): H1 to H5 are
-normalization and reach stored audits on refresh. Part H was deployed and
-all 13 stored audits were refreshed on 2026-09-24; their stored findings
-match the replay. The next sweep should start from those refreshed audits
-(whistlerparis, villasfoch, bellevigne-hotels, grand-hotel-opera and
-hotelpointfrance first) and whatever new audits exist then.
-
-## Open doubts carried forward
-
-- Why hotelchateauroyal's `/en/` pages miss the 30 s `load` event while the
-  HTML answers in 3.2 s (probably a hanging third-party resource). Settled
-  only by a short browser probe of one page.
-- What makes chicago's lab runs bimodal (whole-`body` shifts in some runs
-  only); the finding side is covered by F9. Settled only by a Lighthouse
-  probe of the homepage.
-- French copy was read in the stored PDFs for the rules touched by this
-  sweep only; a full per-rule review against the writing style and
-  obligation basis is still open (angle 8).
-- The outreach preview was not rendered from stored data: none of the eight
-  audits has a preview (angle 8).
-- `focus-order-mismatch` has no finding on the post-075 audits, so it has
-  still not been sampled.
-- The Lighthouse IndexedDB warning cause is unconfirmed (E5 probe).
-- The outreach threads left in `e1-drafted` after their drafts were deleted
-  (outreach state, outside data quality).
+- Fresh angle, stored findings against a replay with today's code (now
+  angle 13): it is how the unshipped F6 and C5 slices surfaced (a closed
+  slice whose target site still fails on replay).
