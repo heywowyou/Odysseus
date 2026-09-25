@@ -1,6 +1,6 @@
 # Plan 077: Keep the latest version, delete superseded ones after a grace period
 
-Status: IN PROGRESS. Priority P2. Effort L. Depends on: none. Revisits trade-off 5 ("analyses are inserted, never upserted") by adding a retention step after the insert. The insert itself stays.
+Status: DONE (2026-09-25), rollout recorded below. Priority P2. Effort L. Depends on: none. Revisits trade-off 5 ("analyses are inserted, never upserted") by adding a retention step after the insert. The insert itself stays.
 
 ## Context
 
@@ -282,6 +282,40 @@ draft index migration.
   schema, reverted), and `workflow.e2e.test.ts` (outreach outcome flow).
   CI on `main` was already failing before plan 077 started. They are left to
   their owners and reported to the operator.
+
+### Step 11: production rollout (2026-09-25, operator approved the apply)
+
+1. Deployed `597cebe1` with `ODYSSEUS_RETENTION_SWEEP` unset; the VPS was
+   idle (no job activity in the previous 30 minutes). Disk before: 27 GB of
+   197 GB used (15%).
+2. `artifacts compact-scans` dry run: 6,270 `scan.json` files, 4,833 to
+   compact, 3,316.3 MB → 1,497.3 MB. `--apply`: 4,833 compacted, 1,818.9 MB
+   reclaimed (**−54.8%** of the compacted files), no failure, bucket copies
+   re-uploaded. A second dry run found 0 to compact. Disk after: 25 GB (13%).
+3. `artifacts retention` dry run: 0 audits to delete, 0 to slim, 0
+   versions, 0 held. A read-only census explains it: database `test` holds
+   19 audits, the oldest started 2026-09-22, so nothing had been superseded
+   for 7 days yet (2 sites have more than one audit; 49 reports, 44
+   analyses, 0 quality runs, 0 approvals, 5 live previews).
+4. With the operator's go, `retention --apply` ran once (no `--allow-large`
+   needed): 0 removed, run recorded. Then `c1c1bfa8` added
+   `ODYSSEUS_RETENTION_SWEEP: 'on'` to `deploy/compose.yaml` and was
+   deployed; the container reports `on`. The sweeper's first run finished
+   at 2026-09-25 00:49:49 UTC, 15 minutes after start: all counts 0, 0
+   failures.
+5. `systemctl list-timers`: the live backup is the legacy nightly tar,
+   `odysseus-backup.timer` → `/srv/odysseus/deploy/backup-artifacts.sh`
+   (02:20 UTC), now keeping 14 days; the restic timers are not installed.
+   Recorded in the runbook, section 8.
+
+Closure evidence (2026-09-25): every row of the closure ledger maps to the
+artifact and test named in "Steps 2 to 9"; compaction losslessness is the
+step 1 digest record (25 of 25 audits equal); the byte targets are the
+step 1 (−56.5%, −61.2% local) and step 11 (−54.8% production) records, all
+above 40%; the production row is the step 11 record above. The 8 suite
+failures listed under step 10 predate this plan and are outside it. The
+first real deletion will happen once an audit has been superseded for 7
+days; that run's record appears on the Tools page and in `retentionRuns`.
 
 ## Definition of done
 

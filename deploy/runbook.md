@@ -796,6 +796,11 @@ The nightly job tars the artifacts volume and copies it to the existing
 private bucket `odysseus-previews` under `backups/`, keeping 14 days (plan
 077, down from 30).
 
+Live on the Hostinger VPS (checked 2026-09-25 with `systemctl list-timers`):
+this legacy path, `odysseus-backup.timer` running
+`/srv/odysseus/deploy/backup-artifacts.sh` nightly at 02:20 UTC. The restic
+timers of section 8.1 are not installed there.
+
 Install rclone and create the remote, as `deploy`, on the server. The
 credentials are the SAME ones as `ODYSSEUS_PREVIEW_BUCKET_ACCESS_KEY_ID` /
 `ODYSSEUS_PREVIEW_BUCKET_SECRET_KEY` in `/srv/odysseus/.env` (same bucket,
