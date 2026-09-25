@@ -67,6 +67,39 @@ describe('checkCookieConsent against a real page', () => {
     }
   }
 
+  it('still checks a page that keeps a request open forever (issue #494)', async () => {
+    const hanging = new Set<import('node:http').ServerResponse>();
+    const server = createServer((req, res) => {
+      if (req.url === '/hang') {
+        hanging.add(res);
+        return;
+      }
+      res
+        .writeHead(200, {
+          'content-type': 'text/html; charset=utf-8',
+          'set-cookie': ['_ga=GA1.1.9; Path=/'],
+        })
+        .end('<p>Bonjour</p><script>fetch("/hang")</script>');
+    });
+    const origin = await new Promise<string>((resolve) => {
+      server.listen(0, '127.0.0.1', () => {
+        resolve(`http://127.0.0.1:${(server.address() as AddressInfo).port}/`);
+      });
+    });
+    try {
+      const result = await checkCookieConsent(browser, origin, {
+        timeoutMs: 5_000,
+        settleTimeoutMs: 500,
+      });
+      expect(result.checkError).toBeUndefined();
+      expect(result.checked).toBe(true);
+      expect(result.nonEssentialCookies.map((c) => c.name)).toEqual(['_ga']);
+    } finally {
+      for (const res of hanging) res.destroy();
+      server.close();
+    }
+  }, 30_000);
+
   it('reports a clean site as clean', async () => {
     const result = await run('<p>Bonjour</p>', ['PHPSESSID=abc; Path=/']);
     expect(result.checked).toBe(true);

@@ -35,7 +35,7 @@
 import { classifyCookie } from '@odysseus/core';
 import type { Browser } from 'playwright';
 import { AUDIT_BROWSER_LOCALE } from '../audit-locale.js';
-import { getCrawlerUserAgent } from '../config.js';
+import { getCrawlerUserAgent, getRenderSettleTimeoutMs } from '../config.js';
 import type { PageWorkGuard } from '../page-work-guard.js';
 import {
   installBrowserNetworkSafety,
@@ -193,6 +193,9 @@ export function classifyTrackerUrl(rawUrl: string): { host: string; vendor: stri
 
 export interface CookieConsentCheckOptions {
   timeoutMs: number;
+  /** Best-effort wait for the network to fall idle after `load`, so late
+   *  trackers are seen. Defaults to the render settle timeout. */
+  settleTimeoutMs?: number;
   userAgent?: string;
   /** Issue #200: tracks this call's context so an external watchdog can
    *  force-close it if it never returns on its own. */
@@ -243,7 +246,19 @@ export async function checkCookieConsent(
     });
 
     const page = await context.newPage();
-    await page.goto(homepageUrl, { waitUntil: 'networkidle', timeout: options.timeoutMs });
+    // Issue #494: 'load', then a bounded best-effort idle wait, as the
+    // rendered pass does (render-diff.ts). networkidle never arrives on
+    // sites with a chat widget, analytics heartbeat or video, which are
+    // exactly the sites most likely to set trackers; as a hard wait it lost
+    // their consent evidence entirely.
+    await page.goto(homepageUrl, { waitUntil: 'load', timeout: options.timeoutMs });
+    try {
+      await page.waitForLoadState('networkidle', {
+        timeout: options.settleTimeoutMs ?? getRenderSettleTimeoutMs(),
+      });
+    } catch {
+      // Deliberately swallowed: what loaded by now is the evidence.
+    }
 
     const consentPlatforms = await page.evaluate(
       (markers) => {
