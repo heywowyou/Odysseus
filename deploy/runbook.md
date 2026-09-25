@@ -2,15 +2,18 @@
 
 Initial provisioning commands are meant to be run as shown, in order, by the
 operator with an assistant walking through them. Do not skip the STOP boxes.
-Sections 1 through 6 are the historical record of the original Scaleway box.
+Sections 1 to 3, 5 and 6 are the historical record of the original Scaleway
+box. Section 4 is current: the server's secrets list and the permanent
+reference-audit release workflow apply to the Hostinger box today.
 Routine production deployment is section 7B: run `deploy/odysseus-deploy.sh`
 from the operator's machine against the Hostinger box. Section 7A stays as
 reference for the disabled workflow mechanism.
 
 ## 1. What this stack is
 
-> Sections 1 through 6 describe the original 2025-08 provisioning on the
-> retired Scaleway VPS and are kept as history. Production now runs on the
+> Sections 1 to 3, 5 and 6 describe the original 2025-08 provisioning on the
+> retired Scaleway VPS and are kept as history. Section 4 (secrets on the
+> server, reference-audit releases) is current. Production now runs on the
 > Hostinger box; see section 7B.
 
 One Scaleway VPS runs two containers: the Odysseus app (built from this
@@ -102,6 +105,9 @@ Alternatively, `git clone` the repository to `/srv/odysseus` as `deploy`.
 
 ## 4. Secrets on the server
 
+> Current, not history: this list and the reference-audit workflow below
+> apply to the Hostinger box.
+
 The server reads one file: `/srv/odysseus/.env`. Create it BY HAND, with the
 operator present, from a copy of `.env.example`:
 
@@ -139,9 +145,10 @@ Fill in exactly these, leave everything else as shipped:
 - Optional `OPENAI_BASE_URL`: leave unset for the standard endpoint. Set it to
   the organization's enabled EU regional endpoint when EU data residency is
   required; regional processing carries a 10 percent uplift.
-- The application intentionally requests the generic `gpt-5.4-mini` alias.
-  Recheck report quality after OpenAI changes the alias target; the operator
-  explicitly prefers automatic minor upgrades over a dated snapshot pin.
+- The model is pinned in code, not configured here: `OPENAI_MODEL` in
+  `packages/llm/src/constants.ts` (trade-offs 102 and its 2026-09-23 GPT-6
+  Luna amendment). Changing it is a code change and a deploy; before one,
+  re-run the saved-audit comparison trade-off 102 describes.
 - The `ODYSSEUS_PREVIEW_BUCKET_*` block: the same Scaleway bucket values the
   local `.env` already uses.
   The server's `serve` process also polls the bucket's `opt-out-requests/`
