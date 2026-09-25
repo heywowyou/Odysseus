@@ -93,7 +93,9 @@ export function startBackgroundPollers(
     options.pollReferenceAuditReceipts === true
       ? startReferenceAuditReceiptPoller(connection)
       : undefined,
-    options.retentionSweep === true ? startRetentionSweeper(connection, { queue }) : undefined,
+    options.retentionSweep === true
+      ? startRetentionSweeper(connection, { inFlightJobIds: () => queue.listInFlightJobIds() })
+      : undefined,
   ];
   return () => {
     for (const stop of stops) stop?.();

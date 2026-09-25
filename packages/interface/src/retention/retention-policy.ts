@@ -143,7 +143,7 @@ function rankAsSuperseding(audit: RetentionAuditRow): number | undefined {
 }
 
 /** The earliest newer audit that replaces `older`, or undefined. */
-export function findSupersedingAudit(
+function findSupersedingAudit(
   older: RetentionAuditRow,
   audits: readonly RetentionAuditRow[],
 ): RetentionAuditRow | undefined {
@@ -164,7 +164,7 @@ export function findSupersedingAudit(
 
 /** Delivered work is slimmed, never deleted: a client received something
  *  from it, or a live link still shows it. */
-export function isDeliveredAudit(auditId: string, snapshot: RetentionSnapshot): boolean {
+function isDeliveredAudit(auditId: string, snapshot: RetentionSnapshot): boolean {
   return (
     snapshot.approvals.some((approval) => approval.auditId === auditId) ||
     snapshot.activeBundles.some((active) => active.auditId === auditId) ||

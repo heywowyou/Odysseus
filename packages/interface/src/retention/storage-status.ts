@@ -4,8 +4,8 @@
  * the server read the same thresholds.
  */
 
-export const DISK_WARNING_PERCENT = 75;
-export const DISK_DANGER_PERCENT = 90;
+const DISK_WARNING_PERCENT = 75;
+const DISK_DANGER_PERCENT = 90;
 
 export type DiskLevel = 'ok' | 'warning' | 'danger';
 

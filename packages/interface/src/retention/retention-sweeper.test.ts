@@ -41,7 +41,7 @@ describe('startRetentionSweeper', () => {
       failures: [],
     }));
     const stop = startRetentionSweeper({} as never, {
-      queue: { listInFlightJobIds: () => ['job-1'] },
+      inFlightJobIds: () => ['job-1'],
       run: run as never,
     });
 
@@ -66,7 +66,7 @@ describe('startRetentionSweeper', () => {
       throw new Error('database unavailable');
     });
     const stop = startRetentionSweeper({} as never, {
-      queue: { listInFlightJobIds: () => [] },
+      inFlightJobIds: () => [],
       run: run as never,
     });
 

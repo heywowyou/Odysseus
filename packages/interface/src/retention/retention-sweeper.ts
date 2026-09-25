@@ -15,7 +15,7 @@ import { logger } from '../logger.js';
 import { isReportProductionInFlight } from '../pipeline/report-production-lock.js';
 import { runRetention, type RetentionRunOptions } from './apply-retention.js';
 
-export const RETENTION_SWEEP_ENV_VAR = 'ODYSSEUS_RETENTION_SWEEP';
+const RETENTION_SWEEP_ENV_VAR = 'ODYSSEUS_RETENTION_SWEEP';
 export const RETENTION_SWEEP_FIRST_DELAY_MS = 15 * 60_000;
 export const RETENTION_SWEEP_INTERVAL_MS = 24 * 60 * 60_000;
 
@@ -25,7 +25,8 @@ export function isRetentionSweepEnabled(env: NodeJS.ProcessEnv = process.env): b
 }
 
 export interface RetentionSweeperDeps {
-  queue: { listInFlightJobIds(): readonly string[] };
+  /** The jobs the server's own queue is still running. */
+  inFlightJobIds: () => readonly string[];
   run?: (options: RetentionRunOptions) => ReturnType<typeof runRetention>;
 }
 
@@ -48,7 +49,7 @@ export function startRetentionSweeper(
         allowLarge: false,
         trigger: 'sweeper',
         inProcess: {
-          inFlightJobIds: () => deps.queue.listInFlightJobIds(),
+          inFlightJobIds: deps.inFlightJobIds,
           isReportProductionInFlight,
         },
       });

@@ -18,7 +18,7 @@ function fill(template: string, values: Record<string, string | number>): string
   );
 }
 
-export function formatBytes(bytes: number, language: DashboardLanguage): string {
+function formatBytes(bytes: number, language: DashboardLanguage): string {
   const locale = language === 'fr' ? 'fr-FR' : 'en-GB';
   const gigabytes = bytes / 1_000_000_000;
   if (gigabytes >= 1) {

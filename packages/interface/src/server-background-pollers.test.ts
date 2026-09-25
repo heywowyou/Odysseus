@@ -16,7 +16,7 @@ import { startRetentionSweeper } from './retention/retention-sweeper.js';
 import { startBackgroundPollers } from './server.js';
 
 const connection = {} as never;
-const queue = { listInFlightJobIds: () => [] };
+const queue = { listInFlightJobIds: () => ['job-1'] };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -37,7 +37,10 @@ describe('startBackgroundPollers', () => {
   it('starts it with the queue when the option is on, and stops it on close', () => {
     const stop = startBackgroundPollers(connection, queue, { retentionSweep: true });
 
-    expect(startRetentionSweeper).toHaveBeenCalledWith(connection, { queue });
+    expect(startRetentionSweeper).toHaveBeenCalledOnce();
+    const [calledWith, deps] = vi.mocked(startRetentionSweeper).mock.calls[0]!;
+    expect(calledWith).toBe(connection);
+    expect(deps.inFlightJobIds()).toEqual(['job-1']);
     const stopSweeper = vi.mocked(startRetentionSweeper).mock.results[0]!.value as () => void;
     stop();
     expect(stopSweeper).toHaveBeenCalledOnce();
