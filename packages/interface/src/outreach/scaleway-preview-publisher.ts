@@ -22,7 +22,7 @@
  * signs its own read on each visit instead.
  */
 
-import { AwsClient } from 'aws4fetch';
+import { createS3Bucket, type S3BucketOptions } from '../s3-bucket.js';
 import {
   PREVIEW_CONTENT_TYPE,
   PREVIEW_EXPIRY_METADATA_HEADER,
@@ -31,43 +31,12 @@ import {
   type PutPreviewObjectInput,
 } from './preview-publisher.js';
 
-export interface ScalewayPreviewPublisherOptions {
-  bucket: string;
-  /** Region endpoint origin, e.g. `https://s3.fr-par.scw.cloud`. The bucket is
-   *  addressed virtual-host style beneath it. */
-  endpoint: string;
-  region: string;
-  accessKeyId: string;
-  secretAccessKey: string;
-  /** Injected so the adapter is testable without credentials or a network.
-   *  Defaults to the runtime's own `fetch`. */
-  fetchImpl?: typeof globalThis.fetch;
-}
+export type ScalewayPreviewPublisherOptions = S3BucketOptions;
 
 export function createScalewayPreviewPublisher(
   options: ScalewayPreviewPublisherOptions,
 ): PreviewPublisher {
-  const client = new AwsClient({
-    accessKeyId: options.accessKeyId,
-    secretAccessKey: options.secretAccessKey,
-    service: 's3',
-    region: options.region,
-  });
-  const doFetch = options.fetchImpl ?? globalThis.fetch;
-  const endpoint = new URL(options.endpoint);
-  const origin = `${endpoint.protocol}//${options.bucket}.${endpoint.host}`;
-
-  function objectUrl(objectKey: string): string {
-    // Each path segment encoded separately: the key's own `/` is a delimiter,
-    // not data, and must survive as one.
-    const encoded = objectKey.split('/').map(encodeURIComponent).join('/');
-    return `${origin}/${encoded}`;
-  }
-
-  async function send(url: string, init: RequestInit): Promise<Response> {
-    const signed = await client.sign(url, init);
-    return doFetch(signed);
-  }
+  const { objectUrl, send } = createS3Bucket(options);
 
   return {
     async put(input: PutPreviewObjectInput): Promise<void> {
