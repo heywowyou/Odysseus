@@ -738,6 +738,50 @@ describe('prospect work model', () => {
     expect(stillDrafted.items.map((item) => item.kind)).toEqual(['draft']);
   });
 
+  it('shows no draft or first-email work once the operator confirmed a send made elsewhere', () => {
+    // La Corniche: its first email went out inside another prospect's
+    // message, so the draft is withdrawn and the thread closed by hand.
+    const work = deriveProspectWork(
+      { ...prospect, status: 'contacted' as const },
+      {
+        ...emptySources,
+        audits: [audit()],
+        reports: readyReports(),
+        threads: [
+          {
+            threadId: 'thread-confirmed',
+            prospectId: prospect.prospectId,
+            state: 'closed',
+            currentTouch: 1,
+            touches: [
+              {
+                touch: 1,
+                confirmedBy: 'operator',
+                sentAt: new Date('2026-09-28T00:00:00.000Z'),
+                detectedAt: new Date('2026-09-28T00:00:00.000Z'),
+              },
+            ],
+            spacing: { touch2AfterDays: 4, touch3AfterDays: 11, replyWindowDays: 14 },
+            updatedAt: new Date('2026-09-28T00:00:00.000Z'),
+          },
+        ],
+        drafts: [
+          {
+            draftId: 'draft-withdrawn',
+            prospectId: prospect.prospectId,
+            threadId: 'thread-confirmed',
+            touch: 1,
+            status: 'mailbox-delete-pending',
+            createdAt: new Date('2026-09-27T00:00:00.000Z'),
+          },
+        ],
+      },
+      new Date('2026-10-15T00:00:00.000Z'),
+    );
+    expect(work.items).toEqual([]);
+    expect(work.recommendation).toBeUndefined();
+  });
+
   it('offers the follow-up again once its draft was discarded', () => {
     const work = deriveProspectWork(
       prospect,

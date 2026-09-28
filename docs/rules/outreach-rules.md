@@ -345,6 +345,19 @@ touch 3 no earlier than day +11. A thread with no reply 14 days after
 touch 3 is confirmed sent moves to `sequence-complete` and is
 suppressed; no fourth touch exists.
 
+**A send the mailbox cannot see, 2026-09-28.** When one contact serves
+several prospects, the operator may merge their first emails into one
+message sent from one prospect's draft; that thread is detected as usual.
+Setting another prospect to `contacted` (or `follow-up`) by hand while its
+touch is still drafted records that touch as sent with
+`confirmedBy: 'operator'`, closes its draft as approved and removes it
+from the mailbox, and closes the thread (`operator-confirmed-send`). The
+thread closes because every later touch is drafted as a reply inside a
+Gmail conversation this send never belonged to; the follow-ups run on the
+thread that carried the merged message. Previews stay live, since the
+merged message links to them. Re-selecting the same status repairs a
+prospect set by hand before this existed.
+
 **Touch shape**, since trade-off 83 and Plan 071: the approved templates
 themselves. Touch 1 carries exactly two body links - first the published
 prospect preview and then `/exemple-audit` - plus the footer's opt-out and

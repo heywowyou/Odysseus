@@ -14,6 +14,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   appendProspectEvent: vi.fn(),
   attachAuditToProspect: vi.fn(),
   checkOutreachAction: vi.fn(),
+  confirmOutreachSentByOperator: vi.fn(),
   createProspectHub: vi.fn(),
   applyAutomaticProspectStatus: vi.fn(),
   createRandomIndependentProspectFromDirectory: vi.fn(),
@@ -98,6 +99,7 @@ vi.mock('../outreach/configured-preview-publisher.js', () => ({
 
 import {
   checkOutreachAction,
+  confirmOutreachSentByOperator,
   createProspectHub,
   applyAutomaticProspectStatus,
   createRandomIndependentProspectFromDirectory,
@@ -727,6 +729,50 @@ describe('prospect hub routes', () => {
     expect(deletePreview).toHaveBeenCalledWith('k/preview.html');
     expect(withdrawProspectOutreach).toHaveBeenCalledWith(fakeConnection, 'p-1', 'opted-out');
     expect(deleteMailboxDraft).toHaveBeenCalledWith('gmail-draft-9');
+  });
+
+  it('confirms a drafted first email sent elsewhere when the status is set to contacted', async () => {
+    vi.mocked(setProspectStatus).mockResolvedValue({
+      prospectId: 'p-1',
+      status: 'contacted',
+    } as never);
+    vi.mocked(confirmOutreachSentByOperator).mockResolvedValue({
+      touch: 1,
+      threadClosed: true,
+      providerDrafts: [{ draftId: 'd-1', providerDraftId: 'gmail-draft-1' }],
+    });
+    deleteMailboxDraft.mockResolvedValue(undefined);
+
+    const response = await handle('/api/prospects/p-1/status', 'PATCH', { status: 'contacted' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toEqual({
+      prospectId: 'p-1',
+      status: 'contacted',
+      sendConfirmed: { touch: 1, threadClosed: true },
+      mailboxDraftsNotRemoved: 0,
+    });
+    expect(confirmOutreachSentByOperator).toHaveBeenCalledWith(fakeConnection, 'p-1', 'contacted');
+    expect(deleteMailboxDraft).toHaveBeenCalledWith('gmail-draft-1');
+    expect(markOutreachDraftDeleted).toHaveBeenCalledWith(fakeConnection, 'd-1');
+    expect(deletePreview).not.toHaveBeenCalled();
+    expect(withdrawProspectOutreach).not.toHaveBeenCalled();
+  });
+
+  it('only sets the status when no drafted touch is waiting', async () => {
+    vi.mocked(setProspectStatus).mockResolvedValue({
+      prospectId: 'p-1',
+      status: 'contacted',
+    } as never);
+    vi.mocked(confirmOutreachSentByOperator).mockResolvedValue({
+      threadClosed: false,
+      providerDrafts: [],
+    });
+
+    const response = await handle('/api/prospects/p-1/status', 'PATCH', { status: 'contacted' });
+
+    expect(response.body).toEqual({ prospectId: 'p-1', status: 'contacted' });
+    expect(deleteMailboxDraft).not.toHaveBeenCalled();
   });
 
   it('withdraws outreach when the status selector records an opt-out', async () => {

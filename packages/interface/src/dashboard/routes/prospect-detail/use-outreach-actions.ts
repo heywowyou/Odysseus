@@ -221,8 +221,11 @@ export function useOutreachActions(shared: ProspectDetailShared) {
     try {
       const result = await sendJson<{
         withdrawn?: { mailboxDraftsNotRemoved?: number };
+        /** Set when the status confirmed a drafted touch sent elsewhere. */
+        mailboxDraftsNotRemoved?: number;
       }>(`/api/prospects/${prospect.prospectId}/status`, 'PATCH', { status });
-      const pending = result.withdrawn?.mailboxDraftsNotRemoved ?? 0;
+      const pending =
+        result.withdrawn?.mailboxDraftsNotRemoved ?? result.mailboxDraftsNotRemoved ?? 0;
       if (pending > 0) {
         setOutreachNotice(copy.mailboxDeletionWarning.replace('{count}', String(pending)));
       }

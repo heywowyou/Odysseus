@@ -29,9 +29,18 @@ import {
   type OutreachDraftDocument,
   type OutreachDraftReviewOutcome,
 } from './schemas/outreach-draft.schema.js';
+import { draftedOutreachTouch, type OutreachThreadState } from '@odysseus/core';
 import { advanceProspectStatus, appendProspectEvent } from './prospect-hub.js';
+import {
+  findOutreachThreadByProspect,
+  recordOutreachThreadTouchSent,
+  transitionOutreachThread,
+} from './outreach-threads.js';
 
 export type { OutreachDraftReviewOutcome };
+
+/** Thread state reason for a send the operator confirmed by hand. */
+const OPERATOR_CONFIRMED_SEND = 'operator-confirmed-send';
 
 /** Operational retention, per docs/rules/prospect-qualification.md section 7. */
 const OUTREACH_DRAFT_RETENTION_DAYS = 90;
@@ -188,6 +197,89 @@ export async function recordOutreachTouchSent(
     input.prospectId,
     input.touch === 1 ? 'contacted' : 'follow-up',
   );
+}
+
+export interface OperatorConfirmedOutreachSend {
+  /** The drafted touch now recorded as sent, or undefined when nothing was
+   *  waiting to be confirmed. */
+  touch?: number;
+  threadClosed: boolean;
+  /** Mailbox drafts the caller still has to delete at the provider. */
+  providerDrafts: Array<{ draftId: string; providerDraftId?: string }>;
+}
+
+/**
+ * The operator says the drafted touch went out in an email the mailbox sync
+ * cannot tie to this thread: sent from another thread (one message to a
+ * contact shared by several prospects) or from outside the tool. The draft
+ * leaves review as approved, the touch is recorded as operator-confirmed, and
+ * the thread closes, because every later touch is drafted as a reply inside
+ * the Gmail conversation this send never belonged to. Previews stay live: the
+ * email that went out may link to them.
+ *
+ * `status` is the manual prospect status that triggered this: `contacted`
+ * confirms touch 1, `follow-up` touch 2 or 3. Idempotent, and a rerun after a
+ * partial failure finishes the job, since drafts are withdrawn before the
+ * thread leaves its drafted state.
+ */
+export async function confirmOutreachSentByOperator(
+  connection: Connection,
+  prospectId: string,
+  status: 'contacted' | 'follow-up',
+  at = new Date(),
+): Promise<OperatorConfirmedOutreachSend> {
+  const nothing: OperatorConfirmedOutreachSend = { threadClosed: false, providerDrafts: [] };
+  const thread = await findOutreachThreadByProspect(connection, prospectId);
+  if (thread === null) return nothing;
+  const touch = draftedOutreachTouch(thread.state);
+  if (touch === undefined || (status === 'contacted') !== (touch === 1)) return nothing;
+
+  const Drafts = createOutreachDraftModel(connection);
+  const drafts = await Drafts.find({
+    threadId: thread.threadId,
+    touch,
+    status: { $in: ['created', 'mailbox-delete-pending'] },
+  })
+    .select({ draftId: 1, providerDraftId: 1, _id: 0 })
+    .lean<{ draftId: string; providerDraftId?: string }[]>();
+  // A discarded draft left nothing that could have been sent.
+  if (drafts.length === 0) return nothing;
+  await Drafts.updateMany(
+    { draftId: { $in: drafts.map((draft) => draft.draftId) }, status: 'created' },
+    { $set: { status: 'mailbox-delete-pending', reviewOutcome: 'approved', reviewedAt: at } },
+  );
+
+  await recordOutreachThreadTouchSent(connection, thread.threadId, {
+    touch,
+    confirmedBy: 'operator',
+    sentAt: at,
+    detectedAt: at,
+  });
+  const drafted = thread.state;
+  const sent = `e${touch}-sent` as OutreachThreadState;
+  await transitionOutreachThread(connection, {
+    threadId: thread.threadId,
+    from: [drafted],
+    to: sent,
+    at,
+    reason: OPERATOR_CONFIRMED_SEND,
+  });
+  const closed = await transitionOutreachThread(connection, {
+    threadId: thread.threadId,
+    from: [sent],
+    to: 'closed',
+    at,
+    reason: OPERATOR_CONFIRMED_SEND,
+  });
+
+  return {
+    touch,
+    threadClosed: closed.changed,
+    providerDrafts: drafts.map(({ draftId, providerDraftId }) => ({
+      draftId,
+      ...(providerDraftId === undefined ? {} : { providerDraftId }),
+    })),
+  };
 }
 
 function isDuplicateKeyError(error: unknown): boolean {

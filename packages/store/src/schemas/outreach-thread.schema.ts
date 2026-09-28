@@ -67,10 +67,13 @@ const OUTREACH_THREAD_STATES: readonly OutreachThreadState[] = [
 /** One touch the provider confirms was actually sent. `detectedAt` is when
  *  our own sync noticed it, kept apart from `sentAt` (the provider's own
  *  timestamp) because a batch may run long after the operator actually sent
- *  the message. */
+ *  the message. A send the operator confirmed by hand, because the message
+ *  went out in another email the mailbox sync cannot tie to this thread,
+ *  carries `confirmedBy: 'operator'` and no provider message id. */
 export interface OutreachThreadTouchRecord {
   touch: number;
-  providerMessageId: string;
+  providerMessageId?: string;
+  confirmedBy?: 'operator';
   sentAt: Date;
   detectedAt: Date;
 }
@@ -138,7 +141,8 @@ export type OutreachThreadDocument = OutreachThreadDocumentFields;
 const outreachThreadTouchSchema = new Schema<OutreachThreadTouchRecord>(
   {
     touch: { type: Number, required: true, min: 1, max: 3 },
-    providerMessageId: { type: String, required: true },
+    providerMessageId: { type: String },
+    confirmedBy: { type: String, enum: ['operator'] },
     sentAt: { type: Date, required: true },
     detectedAt: { type: Date, required: true },
   },

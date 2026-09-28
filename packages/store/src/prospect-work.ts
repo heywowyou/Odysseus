@@ -3,6 +3,7 @@ import {
   effectiveOutreachThreadState,
   normalizeAddressForHash,
   normalizeDomainForHash,
+  type OutreachThreadState,
   type Prospect,
   emailDomain,
   primaryWebsite,
@@ -299,6 +300,7 @@ function recommendation(
   websiteSuppressed: boolean,
   emailSuppressed: boolean,
   scanActive = false,
+  threadState?: OutreachThreadState,
 ): ProspectWorkRecommendation | undefined {
   if (TERMINAL_PROSPECT_STATUSES.has(prospect.status)) return undefined;
   if (item !== undefined) {
@@ -332,6 +334,9 @@ function recommendation(
       reason: 'no-contact',
     };
   }
+  // A thread past `open` already carries or awaits a first email; its next
+  // step, if any, is a work row (draft, follow-up, reply), never a new one.
+  if (threadState !== undefined && threadState !== 'open') return undefined;
   return {
     action: 'create-first-email',
     href: encodedProspectHref(prospect.prospectId, 'emails'),
@@ -540,6 +545,7 @@ export function deriveProspectWork(
           websiteSuppressed,
           emailSuppressed,
           activeScan !== undefined,
+          threadState,
         );
   return {
     prospectId: prospect.prospectId,

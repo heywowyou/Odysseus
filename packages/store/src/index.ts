@@ -203,6 +203,7 @@ export {
   recordOutreachDraft,
   recordFailedOutreachDraft,
   recordOutreachTouchSent,
+  confirmOutreachSentByOperator,
   findLiveOutreachDraft,
   markOutreachDraftDeleted,
   markOutreachDraftDeletionPending,

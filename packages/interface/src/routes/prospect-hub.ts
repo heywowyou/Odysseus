@@ -6,6 +6,7 @@ import {
   appendProspectEvent,
   attachAuditToProspect,
   checkOutreachAction,
+  confirmOutreachSentByOperator,
   createProspectHub,
   createRandomIndependentProspectFromDirectory,
   findProspectsByDomain,
@@ -836,6 +837,33 @@ export function registerProspectHubRoutes(
         : await setProspectStatus(connection, params['prospectId']!, requestedStatus);
     if (prospect === null) {
       sendError(res, 404, 'prospect not found');
+      return;
+    }
+    if (requestedStatus === 'contacted' || requestedStatus === 'follow-up') {
+      // A manual contacted/follow-up with a touch still drafted means the
+      // operator sent it in an email the mailbox sync cannot see (one message
+      // to a contact shared by several prospects). Confirm that send, or the
+      // draft stays in review forever. Rerunning the same status repairs a
+      // prospect set by hand before this existed.
+      const confirmed = await confirmOutreachSentByOperator(
+        connection,
+        prospect.prospectId,
+        requestedStatus,
+      );
+      if (confirmed.touch === undefined) {
+        sendJson(res, 200, prospect);
+        return;
+      }
+      const mailboxDraftsNotRemoved = await deletePendingMailboxDraftRows(
+        connection,
+        confirmed.providerDrafts,
+        createConfiguredMailboxDraftAdapter(),
+      );
+      sendJson(res, 200, {
+        ...prospect,
+        sendConfirmed: { touch: confirmed.touch, threadClosed: confirmed.threadClosed },
+        ...mailboxDraftDeletionWarningFields(mailboxDraftsNotRemoved),
+      });
       return;
     }
     if (status !== 'opted-out') {
