@@ -38,7 +38,11 @@ import { maxSeverity, severityFromRenderDiff } from './severity.js';
 import { computeDedupeKey } from './dedupe.js';
 import { assignFindingIds } from './finding-id.js';
 import { compareCriteria } from './wcag-tags.js';
-import { extractAxeCandidates, type AxeResultsInput } from './normalize-axe.js';
+import {
+  extractAxeCandidates,
+  markupWithoutGeneratedIds,
+  type AxeResultsInput,
+} from './normalize-axe.js';
 import {
   computeSupersededAudits,
   computeNonActionableSuccessorsToDrop,
@@ -681,8 +685,10 @@ function sampleElements(group: readonly FindingCandidate[]): FindingElement[] {
     // A site-wide finding is one identity by design, so its examples rotate
     // through its distinct elements instead: Whistler Paris's 20 examples
     // otherwise showed 4 of its 7 images, because each page repeats them.
+    // Generated ids are blanked first, or each copy of Le 37 bis's inlined
+    // logo would count as a distinct element (plan 075 J1).
     const identity = isSiteWideIdentity(dedupeIdentity)
-      ? `${dedupeIdentity}|${candidate.element.resourceUrl ?? candidate.element.snippet ?? candidate.element.selector}`
+      ? `${dedupeIdentity}|${candidate.element.resourceUrl ?? markupWithoutGeneratedIds(candidate.element.snippet)}`
       : dedupeIdentity;
     const bucket = byIdentity.get(identity);
     if (bucket) bucket.push(candidate.element);

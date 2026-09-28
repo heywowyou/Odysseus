@@ -604,23 +604,22 @@ check uses. `entity-data-incomplete` judges business entities only
 (Organization, LocalBusiness and its subtypes): a `WebSite` node proves an
 entity exists but is never expected to carry an address or telephone.
 
-`image-alt` is one site-wide finding, plus one per third-party frame origin
-(trade-off 30, Q5). Its image files are listed in `rawEvidence.resourceUrls`;
-an image embedded as a `data:` URI has no file and appears through its element
-sample only. `link-name` and `button-name` take the same site-wide shape (Q6),
-their examples rotating through distinct elements. `aria-roles` and
-`aria-required-children` are identified by the element's shape and failure
-summary; a page's `body` or `html` never is, because its classes change per
-page.
+Every axe rule is one site-wide finding, plus one per third-party frame origin
+(trade-off 30; Q5 for `image-alt`, Q6 for `link-name` and `button-name`, J1 for
+the rest). An axe rule states one instruction, so the finding is the rule and
+its occurrences, and its examples rotate through the distinct elements, with
+generated id values (`_r7krylvsd`, `email-487784791`) blanked so copies of one
+element read as one. Image files are listed in `rawEvidence.resourceUrls`; an
+image embedded as a `data:` URI has no file and appears through its element
+sample only. A frame's content never joins the site's own finding over the
+same pages: the shared-scope pass keys on the frame origin.
 
-An axe element's identity ignores what changes between page loads: runtime
-state classes (animation, player size, Webflow's `w--current`), the
-`aria-current` attribute, Swiper's generated `swiper-wrapper-<hex>` ids, and
-the order of classes within one compound selector. `button-name` joins the
-shape-identified rules with its failure statement, like `link-name`. The
-printed selector is never rewritten.
-
-axe's shortened tokens (`wi...`, `data-background-slid...`, a bare `...`) never
-enter a shape identity. `aria-prohibited-attr`, whose failure statement names
-the offending attribute, is identified by tag and complete class names only,
-so optional per-element settings of one CMS component do not split it.
+The exceptions are `color-contrast` and `link-in-text-block`, whose identity is
+axe's measured colour pair and ratio: each pair is its own design decision.
+Without that check data they fall back to the selector, which ignores what
+changes between page loads: runtime state classes (animation, player size,
+Webflow's `w--current`, jQuery UI's `ui-state-*` and `ui-tabs-active`), the
+`aria-current` attribute, generated ids (Swiper's `swiper-wrapper-<hex>`,
+`_` plus a random run with a digit, a prefix plus six or more digits), and the
+order of classes within one compound selector. The printed selector is never
+rewritten.

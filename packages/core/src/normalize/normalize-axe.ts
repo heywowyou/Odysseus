@@ -71,83 +71,28 @@ function truncateSnippet(html: string): string {
   return html.length > MAX_SNIPPET_LENGTH ? html.slice(0, MAX_SNIPPET_LENGTH) : html;
 }
 
-/** 2026-08-25 Lagnonu review, D4b, widened the same day after measurement.
+/** The element's authored *shape*: tag name, class list, and the sorted set
+ *  of its attribute NAMES, never their values (2026-08-25 Lagnonu review,
+ *  D4b). It is not selector normalization, which trade-offs 3 and 30 both
+ *  rejected: two elements share a shape only when the markup the site's own
+ *  author wrote is the same markup. Attribute values are what vary per
+ *  instance (`href="/en/press"`, `data-fancybox="gallery-15"`), and they are
+ *  exactly what is excluded.
  *
- *  Rules whose defect belongs to the template that emitted an element rather
- *  than to each element individually. A real report listed `link-name`
- *  seventy three times: forty nine were one photo gallery, twenty one were
- *  the one navigation menu repeated in three languages. A second site
- *  (haaitza.com) independently produced eighty one of the same rule with the
- *  same two shapes. The client has one thing to do per template and reads it
- *  seventy three times, which is the duplication trade-off 30 already calls a
- *  bug rather than a long annex.
- *
- *  The identity is the element's authored *shape*: tag name, class list, and
- *  the sorted set of its attribute NAMES, never their values. That is
- *  deliberately not selector normalization, which trade-offs 3 and 30 both
- *  rejected with real counter-examples: nothing here rewrites a selector or
- *  strips a pattern out of one, and two elements merge only when the markup
- *  the site's own author wrote is the same markup. Attribute values are what
- *  vary per instance (`href="/en/press"`, `data-fancybox="gallery-15"`), and
- *  they are exactly what is excluded.
+ *  axe rules no longer group by shape (plan 075 J1: every axe rule outside
+ *  the per-defect list below is one site-wide finding). The shape is still
+ *  the component identity of Lighthouse element audits, reflow, heading and
+ *  link rules, and names a site-wide finding's distinct examples.
  *
  *  `style` is dropped from the name set because inline styles are commonly
  *  written by script at runtime, so its presence splits one component into
- *  two by accident - measured: `scrollable-region-focusable` collapsed 19 to
- *  2 with it and 19 to 1 without.
+ *  two by accident.
  *
  *  A shape with no non-empty class and no attribute outside UNIVERSAL_ATTRS
  *  is not distinctive enough to merge on - a bare `<span class="">` says
  *  nothing about which component it belongs to. Those keep their own
  *  identity, the same "never merge on absent data" rule
- *  normalize-lighthouse.ts's resourceIdentityForItem follows.
- *
- *  Deliberately an allowlist, per trade-off 30's own warning that collapsing
- *  independent problems hides findings. Each entry is a rule where one
- *  template change fixes every occurrence:
- *   - link-name: the accessible name comes from the template writing the link.
- *   - button-name: the same, for the template writing the button (plan 075
- *     H3: one slider « previous » button was three critical findings on
- *     Grand Hôtel Opéra, named three ways by axe).
- *   - scrollable-region-focusable: one tabindex on one component.
- *   - target-size: one control group, one size rule.
- *   - aria-roles and aria-required-children: one role written by one
- *     component template (plan 075 I2: Hotel Europe's tab component,
- *     `<div class="tabPanel" role="tabs">` and its `ul[role=tablist]`, was
- *     two critical findings each, one short and one long selector). Keyed
- *     with the failure summary, so a different missing child stays apart.
- *
- *  link-name and button-name are listed but site-wide first (Q6, below),
- *  so their shape identity applies only if that changes.
- *
- *  Measured and NOT included: `color-contrast` (12 to 10 on the review site -
- *  the colour pair and the measured ratio differ per element, so a single row
- *  would state one ratio and imply it for the rest) and `image-alt` (writing
- *  alt text is a separate editorial decision per image, not one action over a
- *  set of files). Add a rule here only after measuring it against real
- *  scanner output, never on the assumption that it looks similar. */
-const SHAPE_IDENTIFIED_AXE_RULES: ReadonlySet<string> = new Set([
-  'link-name',
-  'button-name',
-  'scrollable-region-focusable',
-  'target-size',
-  'aria-prohibited-attr',
-  'aria-roles',
-  'aria-required-children',
-]);
-
-const PAGE_ROOT_ELEMENT = /^\s*<(?:body|html)\b/i;
-
-/** Shape rules whose failure summary is part of the identity: the same
- *  component can fail them in more than one way. */
-const SUMMARY_KEYED_SHAPE_RULES: ReadonlySet<string> = new Set([
-  'link-name',
-  'button-name',
-  'aria-prohibited-attr',
-  'aria-roles',
-  'aria-required-children',
-]);
-
+ *  normalize-lighthouse.ts's resourceIdentityForItem follows. */
 /** Attributes that carry no signal about which component an element belongs
  *  to, so their presence alone never makes a shape distinctive. */
 const UNIVERSAL_ATTRS: ReadonlySet<string> = new Set([
@@ -172,10 +117,12 @@ const ATTRIBUTE = /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')|([^\s=]+)/g;
  *  time into its selector, so the same footer logo was one finding as
  *  `.responsive-image` and another as `.fadeIn.responsive-image.slower`, and
  *  one YouTube player split by `ytp-small-mode` against
- *  `ytp-large-width-mode`. Measured on stored audits; add a class only when
- *  a real site shows it toggling. */
+ *  `ytp-large-width-mode`. jQuery UI marks the open tab and the hovered or
+ *  focused one with `ui-state-*` and `ui-tabs-active` (one tab strip on Grand
+ *  Hôtel Opéra, plan 075 J1). Measured on stored audits; add a class only
+ *  when a real site shows it toggling. */
 const RUNTIME_STATE_CLASS =
-  /^(?:animated|animatedParent|animateOnce|go|slow|slower|slowest|fast|faster|in-view|aos-animate|w--current)$|^fade(?:In|Out)\w*$|^animate__\w+$|^ytp-[\w-]*-mode$/;
+  /^(?:animated|animatedParent|animateOnce|go|slow|slower|slowest|fast|faster|in-view|aos-animate|w--current|ui-tabs-active|ui-state-(?:active|focus|hover))$|^fade(?:In|Out)\w*$|^animate__\w+$|^ytp-[\w-]*-mode$/;
 
 function isRuntimeStateClass(className: string): boolean {
   return RUNTIME_STATE_CLASS.test(className);
@@ -188,11 +135,36 @@ const RUNTIME_STATE_ATTRS: ReadonlySet<string> = new Set(['aria-current']);
 
 const RUNTIME_STATE_ATTRIBUTE_SELECTOR = /\[aria-current(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\]]*))?\]/g;
 
-/** Ids a library generates on every page load. Swiper names each slider
- *  wrapper `swiper-wrapper-<random hex>`, so one Webflow slider list was six
- *  critical findings on Bellevigne, one per page (trade-off 30 records the
- *  same token defeating file identity). */
-const RUNTIME_ID = /#swiper-wrapper-[0-9a-f]{8,}(?![\w-])/g;
+/** Id values a script generates on every page load, each shape confirmed on
+ *  a real site:
+ *   - Swiper names each slider wrapper `swiper-wrapper-<random hex>`: one
+ *     Webflow slider list was six critical findings on Bellevigne, one per
+ *     page (trade-off 30 records the same token defeating file identity);
+ *   - an SVG-inlining script gives every inlined logo a random
+ *     `aria-labelledby="_r7krylvsd"` (Le 37 bis, plan 075 J1: 33 findings);
+ *   - a form builder writes a random number into a field id,
+ *     `#email-487784791` (Hotel Europe, J1).
+ *  A plain word or slug id (`#swiper-wrapper-home`, `#popmake-12288`) is
+ *  never matched. */
+const GENERATED_ID_VALUE =
+  /^(?:swiper-wrapper-[0-9a-f]{8,}|_(?=[a-z0-9]*\d)[a-z0-9]{8,}|[a-z][\w-]*?[-_]\d{6,})$/;
+
+const ID_SELECTOR = /#((?:\\.|[\w-])+)/g;
+
+const ID_REFERENCE_ATTRIBUTE_SELECTOR =
+  /\[(id|aria-labelledby|aria-describedby)\s*=\s*(?:"([^"]*)"|'([^']*)')\]/g;
+
+function withoutGeneratedIds(selector: string): string {
+  return selector
+    .replace(ID_SELECTOR, (match, id: string) =>
+      GENERATED_ID_VALUE.test(id) ? '#<generated>' : match,
+    )
+    .replace(
+      ID_REFERENCE_ATTRIBUTE_SELECTOR,
+      (match, name: string, doubleQuoted?: string, singleQuoted?: string) =>
+        GENERATED_ID_VALUE.test(doubleQuoted ?? singleQuoted ?? '') ? `[${name}]` : match,
+    );
+}
 
 /** One compound selector with its classes in a fixed order. Scripts add
  *  classes in whatever order they run, and axe prints them as found: one
@@ -237,16 +209,29 @@ function splitCompounds(selector: string): string[] {
   return parts;
 }
 
+const ID_REFERENCE_ATTRIBUTE_IN_MARKUP =
+  /\s(id|aria-labelledby|aria-describedby)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+
+/** Element markup with generated id values blanked, so two copies of one
+ *  inlined logo read as one element when a site-wide finding picks its
+ *  distinct examples. */
+export function markupWithoutGeneratedIds(markup: string): string {
+  return markup.replace(
+    ID_REFERENCE_ATTRIBUTE_IN_MARKUP,
+    (match, name: string, doubleQuoted?: string, singleQuoted?: string) =>
+      GENERATED_ID_VALUE.test(doubleQuoted ?? singleQuoted ?? '') ? ` ${name}=""` : match,
+  );
+}
+
 /** The selector as an identity: runtime state classes, state attributes and
  *  generated ids removed, and classes sorted within each compound. Used as
  *  the identity only; the printed selector is untouched. */
 export function withoutRuntimeStateClasses(selector: string): string {
-  const stateFree = selector
+  const stateFree = withoutGeneratedIds(selector)
     .replace(/\.(-?[_a-zA-Z][\w-]*)/g, (match, className: string) =>
       isRuntimeStateClass(className) ? '' : match,
     )
-    .replace(RUNTIME_STATE_ATTRIBUTE_SELECTOR, '')
-    .replace(RUNTIME_ID, '#swiper-wrapper-*');
+    .replace(RUNTIME_STATE_ATTRIBUTE_SELECTOR, '');
   return splitCompounds(stateFree)
     .map((part) => (/^[>+~]$/.test(part) ? part : withSortedClasses(part)))
     .join(' ')
@@ -261,10 +246,7 @@ function isTruncatedToken(token: string): boolean {
   return token.endsWith('...');
 }
 
-export function shapeIdentity(
-  snippet: string,
-  options?: { classesOnly?: boolean },
-): string | undefined {
+export function shapeIdentity(snippet: string): string | undefined {
   const root = ROOT_ELEMENT.exec(snippet);
   if (root === null) return undefined;
   const tag = root[1]!.toLowerCase();
@@ -298,32 +280,10 @@ export function shapeIdentity(
     names.add(name);
   }
 
-  // Plan 075 H2: for a rule whose failure statement already names the
-  // offending attribute, the component is its tag and classes. A CMS grid
-  // cell on Whistler Paris carried optional per-cell settings
-  // (`hover-effect`, `data-row-level`, `data-tablet-*`) and a varying cut
-  // point, so one `aria-label` on one component was ten findings.
-  if (options?.classesOnly === true) return classList === '' ? undefined : `${tag}.${classList}`;
-
   const distinctive = classList !== '' || [...names].some((name) => !UNIVERSAL_ATTRS.has(name));
   if (!distinctive) return undefined;
 
   return `${tag}.${classList}[${[...names].sort().join(',')}]`;
-}
-
-/** Retained from the first, narrower version of D4b: where an element's own
- *  markup is not distinctive, two controls can still state the same parent in
- *  their selectors, and that is a claim the site made rather than one we
- *  inferred. Used only as a fallback, since the shape above is the better
- *  identity wherever it exists. */
-const CONTAINER_IDENTIFIED_AXE_RULES: ReadonlySet<string> = new Set(['target-size']);
-
-function containerIdentity(ruleId: string, selector: string): string | undefined {
-  if (!CONTAINER_IDENTIFIED_AXE_RULES.has(ruleId)) return undefined;
-  const lastCombinator = selector.lastIndexOf('>');
-  if (lastCombinator === -1) return undefined;
-  const container = selector.slice(0, lastCombinator).trim();
-  return container.length > 0 ? container : undefined;
 }
 
 /** 2026-09-19. WordPress core numbers each item it prints in a loop: every
@@ -340,8 +300,7 @@ function containerIdentity(ruleId: string, selector: string): string | undefined
  *  a generic pattern such as `#popmake-12288` stays distinct. Two elements
  *  merge only when axe's failure statement is also identical, so a card
  *  whose link measures a different colour pair or ratio - the reason
- *  `color-contrast` is kept out of the shape rules above - stays its own
- *  finding. */
+ *  `color-contrast` keeps a per-defect identity - stays its own finding. */
 const WORDPRESS_LOOP_ITEM_TOKEN = /([.#])(post|menu-item|page-item|cat-item)-\d+(?![\w-])/g;
 
 export function wordpressLoopIdentity(
@@ -352,28 +311,6 @@ export function wordpressLoopIdentity(
   if (!WORDPRESS_LOOP_ITEM_TOKEN.test(selector)) return undefined;
   const template = selector.replace(WORDPRESS_LOOP_ITEM_TOKEN, '$1$2-*');
   return `${template} | ${(failureSummary ?? '').trim()}`;
-}
-
-function templateIdentity(
-  ruleId: string,
-  selector: string,
-  snippet: string,
-  failureSummary: string | undefined,
-): string | undefined {
-  // The page's own root is no component: its classes are per page (Atlantic
-  // Hôtel's jQuery UI `<body role="tablist" class="page en …">` became 54
-  // shapes on 109 pages when aria-required-children was measured, plan 075
-  // I2), so it keeps the identity it had.
-  if (SHAPE_IDENTIFIED_AXE_RULES.has(ruleId) && !PAGE_ROOT_ELEMENT.test(snippet)) {
-    const shape = shapeIdentity(snippet, { classesOnly: ruleId === 'aria-prohibited-attr' });
-    if (shape !== undefined) {
-      if (SUMMARY_KEYED_SHAPE_RULES.has(ruleId)) {
-        return `${shape} | ${(failureSummary ?? '').trim()}`;
-      }
-      return shape;
-    }
-  }
-  return containerIdentity(ruleId, selector) ?? wordpressLoopIdentity(selector, failureSummary);
 }
 
 function stringField(value: unknown, key: string): string | undefined {
@@ -459,21 +396,31 @@ function frameIdentity(
  *  is one site-wide finding, with every image named in its evidence.
  *  « Write alt text for these images » is one instruction the client's
  *  agency carries out once, the same reading trade-off 30 gave Lighthouse's
- *  resource audits. Per-element identity failed on real sites in two ways:
- *  Whistler Paris named 7 footer images through links whose aria-label
- *  rotated per page, which made 59 critical findings, and Villas Foch's 226
- *  gallery images stayed 14 findings over different page sets. Content in
- *  a third-party frame keeps one finding per frame origin, so it stays
- *  outside the site's own totals (Q1).
+ *  resource audits. Whistler Paris named 7 footer images through links whose
+ *  aria-label rotated per page, which made 59 critical findings. Q6
+ *  (2026-09-28) extended it to `link-name` and `button-name`: Les Criquets
+ *  had 64 `link-name` findings for about six components.
  *
- *  Plan 075 Q6 (operator decision, 2026-09-28) extends this to links and
- *  buttons with no accessible name. Les Criquets had 64 `link-name`
- *  findings for about six components: bare `<a href="photo.jpg">` carousel
- *  slides carry no class, so shapeIdentity refuses them by design and each
- *  position became its own finding, while axe's truncated attribute names
- *  and presentational class variants split named components elsewhere.
- *  « Give these links a name » is one instruction, as for images. */
-const SITE_WIDE_AXE_RULES: ReadonlySet<string> = new Set(['image-alt', 'link-name', 'button-name']);
+ *  Plan 075 J1 (2026-09-28) makes it the default for every axe rule. Each
+ *  identity fix before it (runtime state classes, class order, Swiper ids,
+ *  truncated snippets, per-rule shapes) closed one site's markup habit, and
+ *  the next site brought its own: an SVG-inlining script's random
+ *  `aria-labelledby` made 33 `svg-img-alt` findings of one logo on Le 37
+ *  bis, a form builder's random field ids split one `label` finding on Hotel
+ *  Europe. An axe rule states one instruction (« give these fields a
+ *  label »), so the finding is the rule and its occurrences, with the
+ *  distinct components as its examples (normalize.ts sampleElements).
+ *  Measured on the 21 latest production audits: 445 axe findings to 243,
+ *  occurrences unchanged.
+ *
+ *  Content in a third-party frame keeps one finding per frame origin, so it
+ *  stays outside the site's own totals (Q1).
+ *
+ *  The exceptions are the rules whose identity is a measured value: each
+ *  colour pair of `color-contrast` and `link-in-text-block` is its own
+ *  design decision with its own ratio (checkDataIdentity below), and one
+ *  row would state one ratio and imply it for every other pair. */
+const PER_DEFECT_AXE_RULES: ReadonlySet<string> = new Set(['color-contrast', 'link-in-text-block']);
 
 function siteWideIdentity(
   ruleId: string,
@@ -481,7 +428,7 @@ function siteWideIdentity(
   pageUrl: string,
   frameOriginsBySelector: ReadonlyMap<string, string> | undefined,
 ): string | undefined {
-  if (!SITE_WIDE_AXE_RULES.has(ruleId)) return undefined;
+  if (PER_DEFECT_AXE_RULES.has(ruleId)) return undefined;
   const source = frameSource(selector, pageUrl, frameOriginsBySelector);
   return source === undefined ? SITE_WIDE_IDENTITY : `frame:${source}|${SITE_WIDE_IDENTITY}`;
 }
@@ -623,7 +570,7 @@ export function extractAxeCandidates(
           if (siteWide !== undefined) return { dedupeIdentity: siteWide };
           const identity =
             checkDataIdentity(violation.id, node.data, axeCheckData(node), violation.data) ??
-            templateIdentity(violation.id, selector, node.html, node.failureSummary);
+            wordpressLoopIdentity(selector, node.failureSummary);
           const frame = frameIdentity(
             selector,
             pageUrl,
@@ -636,6 +583,14 @@ export function extractAxeCandidates(
           const scoped =
             frame === undefined ? selectorIdentity : `${frame}|${identity ?? violation.id}`;
           return scoped === undefined ? {} : { dedupeIdentity: scoped };
+        })(),
+        // A frame's content never joins the site's own finding for the same
+        // rule over the same pages (normalize.ts aggregateSharedScope-
+        // Occurrences keys on this): the embed stays one finding per frame
+        // origin, outside the site's totals (plan 075 Q1).
+        ...(() => {
+          const source = frameSource(selector, pageUrl, options?.frameOriginsBySelector);
+          return source === undefined ? {} : { coarseGroupIdentity: `frame:${source}` };
         })(),
         rawEvidenceForPage: {
           impact: node.impact ?? violation.impact ?? null,

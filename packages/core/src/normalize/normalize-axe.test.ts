@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   extractAxeCandidates,
+  markupWithoutGeneratedIds,
   shapeIdentity,
   withoutRuntimeStateClasses,
 } from './normalize-axe.js';
@@ -175,11 +176,12 @@ describe('embedded frame identity (plan 075, E2)', () => {
 });
 
 describe('runtime state classes in identity (plan 075, F6)', () => {
-  // role-img-alt, not image-alt: image-alt is one site-wide finding (Q5), so
-  // it no longer exercises the per-element identity these cases are about.
+  // color-contrast without axe's check data: every other axe rule is one
+  // site-wide finding (plan 075 J1), so only a per-defect rule's fallback
+  // still exercises the selector identity these cases are about.
   const node = (target: string[], html: string) =>
     buildAxeResultsInput([
-      buildAxeViolation({ id: 'role-img-alt', nodes: [buildAxeNode({ target, html })] }),
+      buildAxeViolation({ id: 'color-contrast', nodes: [buildAxeNode({ target, html })] }),
     ]);
 
   it('merges one footer image whose animation classes differed between pages', () => {
@@ -298,6 +300,38 @@ describe('runtime ids, state attributes and class order in identity (plan 075, H
     expect(withoutRuntimeStateClasses('#swiper-wrapper-home')).toBe('#swiper-wrapper-home');
   });
 
+  // Plan 075 J1, the stored shapes: Hotel Europe's form builder, Le 37 bis's
+  // SVG-inlining script and Grand Hôtel Opéra's jQuery UI tab strip.
+  it('reads a random field id and a random label reference as generated', () => {
+    expect(withoutRuntimeStateClasses('#email-487784791')).toBe(
+      withoutRuntimeStateClasses('#email-348380454'),
+    );
+    expect(withoutRuntimeStateClasses('svg[aria-labelledby="_r7krylvsd"]')).toBe(
+      withoutRuntimeStateClasses('svg[aria-labelledby="_cwdhw1iyj"]'),
+    );
+  });
+
+  it('keeps plain word, slug and short numbered ids', () => {
+    expect(withoutRuntimeStateClasses('#popmake-12288')).toBe('#popmake-12288');
+    expect(withoutRuntimeStateClasses('#main-menu')).toBe('#main-menu');
+    expect(withoutRuntimeStateClasses('svg[aria-labelledby="logo-title"]')).toBe(
+      'svg[aria-labelledby="logo-title"]',
+    );
+  });
+
+  it('ignores the jQuery UI classes that mark the open or hovered tab', () => {
+    expect(
+      withoutRuntimeStateClasses('.ui-tabs-nav > .ui-tab.ui-tabs-active.ui-state-active > a'),
+    ).toBe(withoutRuntimeStateClasses('.ui-tabs-nav > .ui-tab.ui-state-hover > a'));
+  });
+
+  it('blanks generated ids in markup so copies of one element read as one', () => {
+    expect(markupWithoutGeneratedIds('<svg class="logo" aria-labelledby="_r7krylvsd">')).toBe(
+      markupWithoutGeneratedIds('<svg class="logo" aria-labelledby="_ygr68hgvr">'),
+    );
+    expect(markupWithoutGeneratedIds('<svg id="brand-logo">')).toBe('<svg id="brand-logo">');
+  });
+
   it('reads classes in any order as the same compound selector', () => {
     expect(
       withoutRuntimeStateClasses('.heroscreen > .isSlide.fullGallery > .fullGallery-remoteCont'),
@@ -374,8 +408,8 @@ describe('aria-prohibited-attr identity survives truncation and optional setting
     expect(slider).toBe(image);
   });
 
-  it('keeps a different component apart', () => {
-    expect(cell('<div class="grid_cell_wrapper wi..." aria-label="x">')).not.toBe(
+  it('reports another component in the same site-wide finding (plan 075 J1)', () => {
+    expect(cell('<div class="grid_cell_wrapper wi..." aria-label="x">')).toBe(
       cell('<div class="gallery-item-media" aria-label="x">'),
     );
   });

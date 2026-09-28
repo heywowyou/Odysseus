@@ -124,13 +124,15 @@ describe('normalizeAudit', () => {
     );
   });
 
+  // A per-defect rule: every other axe rule is one site-wide finding (plan
+  // 075 J1), so only a colour rule without check data keeps selectors apart.
   it('does NOT merge the same rule with different selectors across pages', () => {
     const axeA = buildAxeResultsInput([
-      buildAxeViolation({ id: 'role-img-alt', nodes: [buildAxeNode({ target: ['#hero-img'] })] }),
+      buildAxeViolation({ id: 'color-contrast', nodes: [buildAxeNode({ target: ['#hero-img'] })] }),
     ]);
     const axeB = buildAxeResultsInput([
       buildAxeViolation({
-        id: 'role-img-alt',
+        id: 'color-contrast',
         nodes: [buildAxeNode({ target: ['#banner-img'] })],
       }),
     ]);
@@ -451,14 +453,15 @@ describe('B2: language-variant collapsing', () => {
   ];
 
   /** One defect in a shared template: the same rule, a per-instance
-   *  selector, once per language. Exactly the real shape. */
+   *  selector, once per language. Exactly the real shape, carried by a
+   *  per-defect rule since every other axe rule is site-wide (plan 075 J1). */
   const pages = gallery.map((url, index) => ({
     url,
     axe: {
       testEngine: { name: 'axe-core', version: '4.12.1' },
       violations: [
         {
-          id: 'aria-hidden-focus',
+          id: 'color-contrast',
           impact: 'serious',
           tags: ['wcag2a', 'wcag412'],
           help: 'ARIA hidden element must not be focusable or contain focusable elements',
@@ -475,12 +478,12 @@ describe('B2: language-variant collapsing', () => {
   const args = { auditId: 'a1', startedAt: new Date('2026-08-24T00:00:00Z'), pages };
 
   it('reports one finding per language without clusters', () => {
-    expect(normalizeAudit(args).filter((f) => f.ruleId === 'aria-hidden-focus')).toHaveLength(3);
+    expect(normalizeAudit(args).filter((f) => f.ruleId === 'color-contrast')).toHaveLength(3);
   });
 
   it('collapses them into one finding when the site declares them as translations', () => {
     const findings = normalizeAudit({ ...args, translationClusters: clusters }).filter(
-      (f) => f.ruleId === 'aria-hidden-focus',
+      (f) => f.ruleId === 'color-contrast',
     );
     expect(findings).toHaveLength(1);
     expect(findings[0]!.occurrences).toBe(3);
@@ -488,7 +491,7 @@ describe('B2: language-variant collapsing', () => {
 
   it('still records every real page URL on the collapsed finding', () => {
     const [finding] = normalizeAudit({ ...args, translationClusters: clusters }).filter(
-      (f) => f.ruleId === 'aria-hidden-focus',
+      (f) => f.ruleId === 'color-contrast',
     );
     expect([...finding!.pageUrls].sort()).toEqual([...gallery].sort());
   });

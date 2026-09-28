@@ -1307,6 +1307,23 @@ default cap instead; that decision is the operator's.
     per page, and Atlantic Hôtel's `<body role="tablist">` measured 54
     findings on 109 pages under it.
 
+    Amended 2026-09-28 (plan 075 J1). One site-wide finding per rule is now
+    the default for every axe rule, not an allowlist. Each identity fix
+    before it (state classes, class order, Swiper ids, truncated snippets,
+    per-rule shapes) closed one site's markup habit, and the next site
+    brought its own: Le 37 bis's SVG-inlining script gave each copy of its
+    logo a random `aria-labelledby`, 33 serious `svg-img-alt` findings for a
+    logo and an icon, and Hotel Europe's form builder split one `label`
+    finding with random field ids. Measured on the 21 latest production
+    audits (stored findings, grouped by rule and frame origin): 445 axe
+    findings to 243, occurrences unchanged; Le 37 bis 75 findings to 41,
+    Hotel Europe's criticals 11 to 5. `color-contrast` and
+    `link-in-text-block` stay per colour pair, the reason given above. A
+    frame's findings no longer merge with the site's own over the same
+    pages, which the shared-scope pass allowed before. The rejected
+    alternative was J1 as first written, a wider generated-token table: it
+    fixes the three sites measured and waits for the fourth.
+
 31. **A fourth review site (Domaine Lagnonu, lagnonu.fr) found a P0 the
     1345-test suite passed over, plus nine report defects**, 2026-08-24.
     Recorded because the finding pattern matters more than any one fix:

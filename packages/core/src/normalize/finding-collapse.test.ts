@@ -146,10 +146,12 @@ function axePage(
   } as unknown as NormalizePageInput;
 }
 
-describe('D4b: target-size collapses per control group', () => {
+// Plan 075 J1: every axe rule outside the colour rules is one site-wide
+// finding, so no site's markup habit can split one instruction again.
+describe('axe rules are one site-wide finding per rule', () => {
   /** A real report listed this twenty one times over four annex pages: twenty
    *  were the pagination dots of one carousel, differing only by
-   *  [aria-label="Go to slide N"]. One control group, one fix. */
+   *  [aria-label="Go to slide N"]. */
   it('reports one finding for the controls of a single container', () => {
     const findings = normalize([
       axePage('https://example.com/', [
@@ -165,35 +167,88 @@ describe('D4b: target-size collapses per control group', () => {
     expect(findings).toHaveLength(1);
   });
 
-  it('keeps separate containers separate, so two widgets are two fixes', () => {
+  it('merges two widgets into one finding and shows both among its examples', () => {
     const findings = normalize([
-      axePage('https://example.com/', [{ selector: '.slider-a > .bullet[aria-label="1"]' }]),
-      axePage('https://example.com/about', [{ selector: '.slider-b > .bullet[aria-label="1"]' }]),
+      axePage('https://example.com/', [
+        { selector: '.slider-a > .bullet[aria-label="1"]', html: '<span class="bullet a">' },
+      ]),
+      axePage('https://example.com/about', [
+        { selector: '.slider-b > .bullet[aria-label="1"]', html: '<span class="bullet b">' },
+      ]),
     ]).filter((f) => f.ruleId === 'target-size');
 
-    expect(findings).toHaveLength(2);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.occurrences).toBe(2);
+    expect(findings[0]!.elements.map((element) => element.selector).sort()).toEqual([
+      '.slider-a > .bullet[aria-label="1"]',
+      '.slider-b > .bullet[aria-label="1"]',
+    ]);
   });
 
-  it('never merges on a missing container across different scopes', () => {
-    // axe sometimes emits a bare selector with no ancestor path. Collapsing
-    // those onto a shared empty identity would merge unrelated controls, the
-    // same "never merge on absent data" rule the Lighthouse resource path
-    // follows. Two bare controls seen on two different pages are two
-    // findings: neither the element's own markup nor its scope says they
-    // are the same thing.
-    const findings = normalize([
-      axePage('https://example.com/', [{ selector: 'span[aria-label="Go to slide 18"]' }]),
-      axePage('https://example.com/about', [{ selector: 'span[aria-label="Go to slide 19"]' }]),
-    ]).filter((f) => f.ruleId === 'target-size');
-
-    expect(findings).toHaveLength(2);
-  });
-
-  it('leaves other axe rules on selector identity', () => {
+  it('merges any other axe rule the same way, whatever its selectors', () => {
     const findings = normalize([
       axePage('https://example.com/', [{ selector: 'nav > a.one' }], 'aria-hidden-focus'),
       axePage('https://example.com/about', [{ selector: 'nav > a.two' }], 'aria-hidden-focus'),
     ]).filter((f) => f.ruleId === 'aria-hidden-focus');
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.occurrences).toBe(2);
+  });
+
+  // Le 37 bis: an SVG-inlining script gives each copy of the logo a random
+  // aria-labelledby, 33 serious findings for the logo and one icon.
+  it('reports an inlined logo once, and lists the logo and the icon as its examples', () => {
+    const logo = (id: string) => ({
+      selector: `svg[aria-labelledby="${id}"]`,
+      html: `<svg xmlns="http://www.w3.org/2000/svg" data-name="Calque 2" viewBox="0 0 173.8 129.8" class="logo inlined-svg" aria-labelledby="${id}" role="img">`,
+    });
+    const icon = {
+      selector: 'svg[aria-labelledby="_wimzc4cyc"]',
+      html: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-labelledby="_wimzc4cyc" role="img">',
+    };
+    const findings = normalize([
+      axePage('https://example.com/', [logo('_r7krylvsd')], 'svg-img-alt'),
+      axePage('https://example.com/chambres', [logo('_cwdhw1iyj')], 'svg-img-alt'),
+      axePage('https://example.com/contact', [logo('_ygr68hgvr'), icon], 'svg-img-alt'),
+    ]).filter((f) => f.ruleId === 'svg-img-alt');
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.occurrences).toBe(4);
+    // Examples rotate through distinct elements before repeating one: with
+    // the random ids read as three logos, the icon would come fourth.
+    expect(findings[0]!.elements[1]!.selector).toBe(icon.selector);
+  });
+
+  // Hotel Europe: a form builder writes a random number into each field id.
+  it('reports one label finding for a field whose id is random on every page', () => {
+    const findings = normalize([
+      axePage(
+        'https://example.com/en/contact.html',
+        [{ selector: '#email-487784791', html: '<input type="email" id="email-487784791">' }],
+        'label',
+      ),
+      axePage(
+        'https://example.com/fr/contact.html',
+        [{ selector: '#email-348380454', html: '<input type="email" id="email-348380454">' }],
+        'label',
+      ),
+    ]).filter((f) => f.ruleId === 'label');
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.occurrences).toBe(2);
+  });
+
+  it('keeps content inside a third-party frame apart from the site', () => {
+    const findings = normalize([
+      axePage(
+        'https://example.com/',
+        [
+          { selector: '.header > button' },
+          { selector: 'iframe[src="https://www.youtube.com/embed/x"] >>> .ytp-button' },
+        ],
+        'button-name',
+      ),
+    ]).filter((f) => f.ruleId === 'button-name');
 
     expect(findings).toHaveLength(2);
   });
@@ -355,14 +410,16 @@ describe('findings covering the same scope for one rule are one problem (issue #
   });
 
   it('keeps a different scope apart, so a one-page defect is not folded into a site-wide one', () => {
+    // A per-defect rule (plan 075 J1): colour findings without axe's check
+    // data fall back to their selectors, where the scope rule applies.
     const findings = normalize([
       imagePage(
         'https://example.com/',
         [...gallery, { selector: '#hero > img', src: '/img/hero.jpg' }],
-        'role-img-alt',
+        'color-contrast',
       ),
-      imagePage('https://example.com/about', gallery, 'role-img-alt'),
-    ]).filter((f) => f.ruleId === 'role-img-alt');
+      imagePage('https://example.com/about', gallery, 'color-contrast'),
+    ]).filter((f) => f.ruleId === 'color-contrast');
 
     expect(findings).toHaveLength(2);
     expect(findings.map((f) => f.pageUrls.length).sort()).toEqual([1, 2]);

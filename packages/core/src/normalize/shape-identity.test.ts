@@ -80,35 +80,24 @@ describe('extractAxeCandidates template identity', () => {
     };
   }
 
-  it('applies the identity to an allowlisted rule', () => {
-    const [a, b] = extractAxeCandidates(
-      violation('link-name', [
-        '<a data-fancybox="g1" href="/a">',
-        '<a data-fancybox="g2" href="/b">',
-      ]),
-      PAGE,
-    );
-    expect(a?.dedupeIdentity).toBeDefined();
-    expect(a?.dedupeIdentity).toBe(b?.dedupeIdentity);
-  });
+  // Plan 075 J1: one finding per axe rule, whatever the markup says.
+  it.each(['link-name', 'role-img-alt', 'target-size', 'listitem'])(
+    'gives every %s node the site-wide identity',
+    (ruleId) => {
+      const [a, b] = extractAxeCandidates(
+        violation(ruleId, ['<a data-fancybox="g1" href="/a">', '<a href="#" class="">1</a>']),
+        PAGE,
+      );
+      expect(a?.dedupeIdentity).toBe('site-wide');
+      expect(b?.dedupeIdentity).toBe('site-wide');
+    },
+  );
 
-  it('leaves a rule off the allowlist alone, so its findings stay separate', () => {
-    // Each role="img" element needs its own name, so role-img-alt is not on
-    // the shape allowlist (trade-off 30's own warning).
+  it('leaves a per-defect colour rule on its own identity when axe gave no colour data', () => {
     const [a] = extractAxeCandidates(
-      violation('role-img-alt', ['<div role="img" class="lazy">', '<div role="img" class="lazy">']),
+      violation('color-contrast', ['<span class="price">', '<span class="price">']),
       PAGE,
     );
-    expect(a?.dedupeIdentity).toBeUndefined();
-  });
-
-  it('falls back to the container for a control whose own markup is not distinctive', () => {
-    const [a] = extractAxeCandidates(
-      violation('target-size', ['<a href="#" class="">1</a>']),
-      PAGE,
-    );
-    // Non-distinctive shape, and this selector has no ancestor path either,
-    // so the candidate keeps its own selector identity rather than merging.
     expect(a?.dedupeIdentity).toBeUndefined();
   });
 });
