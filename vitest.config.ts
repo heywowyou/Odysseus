@@ -34,10 +34,14 @@ import { fileURLToPath } from 'node:url';
  *
  * Aliases resolve `@odysseus/*` to package sources instead of built dist,
  * so test runs never depend on `tsc -b` having been executed first and can
- * never exercise stale build output. Every cross-package import in the
- * workspace is a root specifier (`@odysseus/core`, no subpaths), so exact
- * matches are sufficient; the copied config JSONs are read relative to
- * import.meta.url and exist under src, so source execution finds them.
+ * never exercise stale build output. A root specifier (`@odysseus/core`)
+ * maps to the package's src/index.ts; a subpath (`@odysseus/store/
+ * test-support.js`, which package.json's `./*` export sends to dist) maps to
+ * the matching src module, so a fresh clone with no dist runs the Mongo
+ * suites too (issue #544). scripts/workspace-subpath-imports.test.mjs fails
+ * on a subpath these aliases cannot resolve. The copied config JSONs are
+ * read relative to import.meta.url and exist under src, so source execution
+ * finds them.
  */
 /**
  * Every run uses UTC, so a test that formats a timestamp in the default time
@@ -54,12 +58,19 @@ process.env.TZ = 'UTC';
  */
 process.env.ODYSSEUS_ENV_FILE = fileURLToPath(new URL('./fixtures/env/test.env', import.meta.url));
 
-const workspaceSourceAliases = ['core', 'store', 'scanner', 'llm', 'interface', 'report'].map(
-  (name) => ({
+const WORKSPACE_SOURCE_PACKAGES = ['core', 'store', 'scanner', 'llm', 'interface', 'report'];
+const packagesRoot = fileURLToPath(new URL('./packages/', import.meta.url));
+
+const workspaceSourceAliases = [
+  ...WORKSPACE_SOURCE_PACKAGES.map((name) => ({
     find: new RegExp(`^@odysseus/${name}$`),
     replacement: fileURLToPath(new URL(`./packages/${name}/src/index.ts`, import.meta.url)),
-  }),
-);
+  })),
+  {
+    find: new RegExp(`^@odysseus/(${WORKSPACE_SOURCE_PACKAGES.join('|')})/(.+)\\.js$`),
+    replacement: `${packagesRoot}$1/src/$2.ts`,
+  },
+];
 
 export default defineConfig({
   /** The dashboard tsconfig's react-jsx setting is invisible to esbuild
