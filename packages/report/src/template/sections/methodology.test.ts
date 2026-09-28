@@ -1029,3 +1029,63 @@ describe('language-home scope sentence (issue #103)', () => {
     );
   });
 });
+
+describe('renderMethodology legal-notice coverage sentence', () => {
+  const lcen = (checkedPages: object, merged: boolean) => ({
+    findingId: 'f-lcen',
+    ruleId: 'lcen-mentions-legales-missing',
+    pageUrls: ['https://clos-sainte-marie.fr/'],
+    rawEvidence: merged
+      ? { perPage: { 'https://clos-sainte-marie.fr/': { siren: null, checkedPages } } }
+      : { checkedPages },
+  });
+
+  it('names the page reached from the legal-notice link when one was found', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [
+      lcen(
+        {
+          resolvedUrl: 'https://www.alexanderpark.fr/en/mentions-legales',
+          homepageFallback: false,
+          searchedUrls: ['https://www.alexanderpark.fr/en/mentions-legales'],
+        },
+        true,
+      ),
+    ]);
+    expect(html).toContain(
+      'la page atteinte depuis le lien Mentions légales (https://www.alexanderpark.fr/en/mentions-legales)',
+    );
+  });
+
+  it('never names a legal-notice link when the check fell back to the visited pages', async () => {
+    const manifest = await loadSmallSiteManifest();
+    const searchedUrls = [
+      'https://clos-sainte-marie.fr/',
+      'https://clos-sainte-marie.fr/',
+      'https://clos-sainte-marie.fr/chambres',
+      'https://clos-sainte-marie.fr/tarifs',
+      'https://clos-sainte-marie.fr/contact',
+      'https://clos-sainte-marie.fr/activites',
+    ];
+    for (const merged of [true, false]) {
+      const checked = {
+        resolvedUrl: 'https://clos-sainte-marie.fr/',
+        homepageFallback: true,
+        searchedUrls,
+      };
+      const fr = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [
+        lcen(checked, merged),
+      ]);
+      expect(fr).not.toContain('lien Mentions légales');
+      expect(fr).toContain('Aucun lien vers des mentions légales');
+      expect(fr).toContain(
+        'la vérification automatique a porté sur le texte des 5 pages visitées.',
+      );
+      const en = renderMethodology(getStrings('en'), 11, manifest, 'en', undefined, [
+        lcen(checked, merged),
+      ]);
+      expect(en).not.toContain('Mentions légales link');
+      expect(en).toContain('read the text of the 5 visited pages');
+    }
+  });
+});

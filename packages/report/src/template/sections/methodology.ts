@@ -394,15 +394,50 @@ const EXTENDED_PASS_RULE_IDS: readonly string[] = [
  *  fired; a compliant site has nothing to disclose here. */
 function renderMentionsLegalesCoverageNote(
   strings: ReportStrings,
+  language: ReportLanguage,
   findings: readonly (Pick<Finding, 'ruleId'> &
     Partial<Pick<Finding, 'rawEvidence' | 'pageUrls'>>)[],
 ): string {
   const finding = findings.find((f) => f.ruleId === LCEN_MENTIONS_LEGALES_RULE_ID);
   if (!finding) return '';
-  const checkedPages = finding.rawEvidence?.checkedPages as { resolvedUrl?: unknown } | null;
+  const checkedPages = mentionsLegalesCheckedPages(finding.rawEvidence);
+  const m = strings.methodology;
+  // Plan 075 K6: with no legal-notice link the check read the visited pages
+  // and recorded the homepage as its page; naming that page as "the page
+  // reached from the Mentions légales link" told the client of a link the
+  // site does not have.
+  if (checkedPages?.homepageFallback === true) {
+    const count = new Set(checkedPages.searchedUrls ?? []).size;
+    const pages =
+      count <= 1
+        ? m.mentionsLegalesFallbackPageSingular
+        : fillTemplate(m.mentionsLegalesFallbackPagePlural, {
+            count: formatNumber(count, language),
+          });
+    return fillTemplate(m.mentionsLegalesFallbackCoverageTemplate, { pages });
+  }
   const resolvedUrl = checkedPages?.resolvedUrl;
   const checkedUrl = typeof resolvedUrl === 'string' ? resolvedUrl : (finding.pageUrls?.[0] ?? '');
-  return fillTemplate(strings.methodology.mentionsLegalesCoverageTemplate, { url: checkedUrl });
+  return fillTemplate(m.mentionsLegalesCoverageTemplate, { url: checkedUrl });
+}
+
+/** The checked pages sit at the top of a single-page finding's evidence and
+ *  under its page's `perPage` entry once findings are merged, which is the
+ *  shape every stored audit carries. */
+function mentionsLegalesCheckedPages(
+  rawEvidence: Finding['rawEvidence'] | undefined,
+):
+  | { resolvedUrl?: unknown; homepageFallback?: unknown; searchedUrls?: readonly string[] }
+  | undefined {
+  const direct = rawEvidence?.['checkedPages'];
+  if (typeof direct === 'object' && direct !== null) return direct;
+  const perPage = rawEvidence?.['perPage'];
+  if (typeof perPage !== 'object' || perPage === null) return undefined;
+  for (const entry of Object.values(perPage as Record<string, unknown>)) {
+    const nested = (entry as { checkedPages?: unknown } | null)?.checkedPages;
+    if (typeof nested === 'object' && nested !== null) return nested;
+  }
+  return undefined;
 }
 
 /** item 1.7 (La Corniche pass): a real report had a video-captions
@@ -619,7 +654,11 @@ export function renderMethodology(
     resolvedSirenSourceUrl,
   );
   const extendedPassNote = renderExtendedPassNote(strings, language, findings);
-  const mentionsLegalesCoverageNote = renderMentionsLegalesCoverageNote(strings, findings);
+  const mentionsLegalesCoverageNote = renderMentionsLegalesCoverageNote(
+    strings,
+    language,
+    findings,
+  );
   const lighthouseFailureNote = summarizeLighthouseFailures(strings, manifest, language);
   const privacySecurityNote = privacySecurityCoverageNote(manifest, findings, strings);
 

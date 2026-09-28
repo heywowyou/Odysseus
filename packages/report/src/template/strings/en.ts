@@ -1079,6 +1079,10 @@ export const en: ReportStrings = {
     // parentheses. Never states breach, a deadline, or a sanction amount.
     mentionsLegalesCoverageTemplate:
       'The automated check covered the page reached from the Mentions légales link ({url}). No recognised identifier (SIREN, RCS mention, or VAT number) was found on that page. Legal information may exist elsewhere, for example on a page the scan did not visit, in a separate document, or with an external provider. This statement describes what the check observed and is not a conclusion about your obligations. We recommend confirming your situation with a qualified legal adviser.',
+    mentionsLegalesFallbackCoverageTemplate:
+      'No link to a legal notice was found, so the automated check read the text of {pages}. No recognised identifier (SIREN, RCS mention, or VAT number) was found there. Legal information may exist elsewhere, for example on a page the scan did not visit, in a separate document, or with an external provider. This statement describes what the check observed and is not a conclusion about your obligations. We recommend confirming your situation with a qualified legal adviser.',
+    mentionsLegalesFallbackPageSingular: 'the visited page',
+    mentionsLegalesFallbackPagePlural: 'the {count} visited pages',
     lighthouseFailureIntroSentence:
       'Performance measurement (Lighthouse) did not complete on this site for this audit. Failure detail:',
     lighthouseFailureReasonTemplate: '{count}/{total} pages: {reason}',

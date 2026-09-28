@@ -1214,6 +1214,10 @@ export const fr: ReportStrings = {
     // parentheses. Never states breach, a deadline, or a sanction amount.
     mentionsLegalesCoverageTemplate:
       "La vérification automatique a porté sur la page atteinte depuis le lien Mentions légales ({url}). Aucun identifiant reconnu (numéro SIREN, mention RCS ou numéro de TVA) n'y a été trouvé. Des informations légales peuvent exister ailleurs, par exemple sur une page non visitée par le contrôle, dans un document séparé ou auprès d'un prestataire externe. Cette constatation décrit ce que le contrôle a observé et ne constitue pas une conclusion sur vos obligations. Nous vous recommandons de confirmer votre situation auprès d'un conseil juridique.",
+    mentionsLegalesFallbackCoverageTemplate:
+      "Aucun lien vers des mentions légales n'a été trouvé : la vérification automatique a porté sur le texte {pages}. Aucun identifiant reconnu (numéro SIREN, mention RCS ou numéro de TVA) n'y a été trouvé. Des informations légales peuvent exister ailleurs, par exemple sur une page non visitée par le contrôle, dans un document séparé ou auprès d'un prestataire externe. Cette constatation décrit ce que le contrôle a observé et ne constitue pas une conclusion sur vos obligations. Nous vous recommandons de confirmer votre situation auprès d'un conseil juridique.",
+    mentionsLegalesFallbackPageSingular: 'de la page visitée',
+    mentionsLegalesFallbackPagePlural: 'des {count} pages visitées',
     // P0.1 (2026-08-21 La Corniche feedback pass): the generic "n'a pas
     // abouti... voir Méthodologie" pointer in the performance section used
     // to lead here and find nothing further. This states the real,

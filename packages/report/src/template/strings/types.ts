@@ -1536,6 +1536,14 @@ export interface ReportStrings {
      *  Never states breach, a deadline, or a sanction amount. Template:
      *  {url}. */
     mentionsLegalesCoverageTemplate: string;
+    /** Plan 075 K6: the same disclosure when no legal-notice link was
+     *  found and the check read the visited pages instead, so the report
+     *  never names a link the site does not have. Template: {pages}. */
+    mentionsLegalesFallbackCoverageTemplate: string;
+    /** {pages} for one visited page. */
+    mentionsLegalesFallbackPageSingular: string;
+    /** {pages} for several visited pages. Template: {count}. */
+    mentionsLegalesFallbackPagePlural: string;
     /** P0.1 (2026-08-21 La Corniche feedback pass): renders when Lighthouse
      *  failed on at least one page, giving the real per-reason failure
      *  counts instead of a dead-end pointer with no follow-through. */
