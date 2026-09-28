@@ -413,9 +413,11 @@ describe.skipIf(!mongoAvailable)('persistAudit', () => {
     const findingIndexKeys = (await FindingModel.collection.indexes()).map((idx) => idx.key);
 
     expect(auditIndexKeys).toContainEqual({ siteUrl: 1, startedAt: -1 });
-    expect(findingIndexKeys).toContainEqual({ auditId: 1 });
-    expect(findingIndexKeys).toContainEqual({ siteUrl: 1, dedupeKey: 1 });
+    expect(findingIndexKeys).toContainEqual({ auditId: 1, dedupeKey: 1 });
     expect(findingIndexKeys).toContainEqual({ auditId: 1, severity: 1 });
+    // Issue #549: both are prefixes of or unused beside the compound index.
+    expect(findingIndexKeys).not.toContainEqual({ auditId: 1 });
+    expect(findingIndexKeys).not.toContainEqual({ siteUrl: 1, dedupeKey: 1 });
   });
 
   it('removes every stored finding when a retry has zero findings', async () => {

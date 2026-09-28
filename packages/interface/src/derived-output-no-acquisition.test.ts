@@ -56,6 +56,10 @@ const SCANNER_NON_ACQUISITION = new Set([
   'ensureEnvLoaded',
   'findWorkspaceRoot',
   'UNLIMITED_MAX_PAGES',
+  // Artifact file names the retention slim removes; archiving a prospect
+  // slims its delivered audits (issue #560).
+  'CRAWL_CHECKPOINT_FILENAME',
+  'CRAWL_STATE_FILENAME',
   // Prints the locally rendered report HTML to PDF; the report page loads
   // no website (report-stage.ts).
   'launchBrowser',

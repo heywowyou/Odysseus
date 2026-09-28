@@ -280,6 +280,15 @@ export const REGISTRY_ACTIONS = [
     pendingPlan061: true,
   },
   {
+    // Issue #552: the operator confirms an unrecorded provider draft is gone
+    // from the mailbox, which releases the outreach guard.
+    action: 'confirmMailboxChecked',
+    owner: 'outreach',
+    routes: ['POST /api/prospects/:prospectId/outreach/mailbox-checked'],
+    protocol: 'reload-recheck',
+    pendingPlan061: true,
+  },
+  {
     action: 'syncMailbox',
     owner: 'outreach',
     routes: ['POST /api/outreach/mailbox-sync'],
