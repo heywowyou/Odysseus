@@ -155,6 +155,27 @@ describe('prospect page panels (issue #532)', () => {
     expect(identity.saveDetails).toHaveBeenCalled();
   });
 
+  it('summary: edits the sector through its label, keeping the stored code', async () => {
+    const identity: IdentityEdit = {
+      editedFields: {},
+      setEditedFields: vi.fn(),
+      fieldValue: (key) => String(PROSPECT[key] ?? ''),
+      sirenError: null,
+      identityNotes: [],
+      saveDetails: vi.fn(async () => undefined),
+    };
+    const container = await renderPanel((shared) =>
+      createElement(SummaryPanel, { shared, identity, contacts: contactActions() }),
+    );
+    const select = [...container.querySelectorAll('select')].find((candidate) =>
+      [...candidate.options].some((option) => option.value === 'restaurant'),
+    );
+    if (!select) throw new Error('sector select not found');
+    expect(select.value).toBe('hotel');
+    expect(select.selectedOptions[0]?.textContent).toBe('Hôtel');
+    expect(identity.setEditedFields).not.toHaveBeenCalled();
+  });
+
   it('contacts: adds a website and accepts the suggested address', async () => {
     const contacts = contactActions({ website: 'https://new.fixture.example' });
     const container = await renderPanel((shared) =>

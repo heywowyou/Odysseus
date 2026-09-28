@@ -16,12 +16,18 @@ export function formatDate(value: string | Date, language: DashboardLanguage): s
 /** A stored sector code through the label map. Legacy records stored the
  *  label itself (`Hôtel`), which matches case- and accent-insensitively. */
 export function formatSector(sector: string, labels: Record<string, string>): string {
+  return labels[sectorCode(sector, labels) ?? ''] ?? sector;
+}
+
+/** The known sector code a stored value stands for, legacy labels included,
+ *  or undefined for a value outside the label map. */
+export function sectorCode(sector: string, labels: Record<string, string>): string | undefined {
   const key = sector
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .trim()
     .toLowerCase();
-  return labels[key] ?? sector;
+  return Object.hasOwn(labels, key) ? key : undefined;
 }
 
 const COMMUNE_PARTICLES = new Set([

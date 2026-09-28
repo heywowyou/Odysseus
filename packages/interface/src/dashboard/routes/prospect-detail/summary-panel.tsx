@@ -5,8 +5,9 @@ import { ExternalLink } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
 import { Button } from '../../components/ui/button';
-import { formatCommune, formatSector } from '../../lib/format';
+import { formatCommune, formatSector, sectorCode } from '../../lib/format';
 import type { ProspectDetailShared } from './shared';
 import type { IdentityEdit } from './use-identity-edit';
 import type { ContactActions } from './use-contact-actions';
@@ -99,17 +100,27 @@ export function SummaryPanel(props: {
                 ['tradingName', copy.tradingName],
                 ['legalName', copy.legalName],
               ] as const
-            ).map(([key, title]) => (
-              <label key={key} className="grid gap-1">
-                <span className="text-xs text-ink-muted">{title}</span>
-                <Input
+            ).map(([key, title]) =>
+              key === 'sector' ? (
+                <SectorSelect
+                  key={key}
+                  label={title}
                   value={fieldValue(key)}
-                  onChange={(event) =>
-                    setEditedFields((current) => ({ ...current, [key]: event.target.value }))
-                  }
+                  labels={strings.common.sectorLabels}
+                  onChange={(sector) => setEditedFields((current) => ({ ...current, sector }))}
                 />
-              </label>
-            ))}
+              ) : (
+                <label key={key} className="grid gap-1">
+                  <span className="text-xs text-ink-muted">{title}</span>
+                  <Input
+                    value={fieldValue(key)}
+                    onChange={(event) =>
+                      setEditedFields((current) => ({ ...current, [key]: event.target.value }))
+                    }
+                  />
+                </label>
+              ),
+            )}
             <label className="grid gap-1">
               <span className="text-xs text-ink-muted">{copy.siren}</span>
               <Input
@@ -169,5 +180,30 @@ function SummaryField({ label: title, value }: { label: string; value: string })
       <dt className="text-xs text-ink-muted">{title}</dt>
       <dd className="mt-1 text-ink">{value}</dd>
     </div>
+  );
+}
+
+/** The sector as its label, storing the code. A stored legacy label
+ *  (`Hôtel`) selects its code; a value outside the map stays selectable so
+ *  opening the form never rewrites it. */
+function SectorSelect(props: {
+  label: string;
+  value: string;
+  labels: Record<string, string>;
+  onChange: (sector: string) => void;
+}): JSX.Element {
+  const code = sectorCode(props.value, props.labels);
+  return (
+    <label className="grid gap-1">
+      <span className="text-xs text-ink-muted">{props.label}</span>
+      <Select value={code ?? props.value} onChange={(event) => props.onChange(event.target.value)}>
+        {code === undefined ? <option value={props.value}>{props.value}</option> : null}
+        {Object.entries(props.labels).map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </Select>
+    </label>
   );
 }
