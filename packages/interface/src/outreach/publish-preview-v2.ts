@@ -183,6 +183,7 @@ const UNDER_CORRECTION_RULE_IDS = new Set<string>();
 const BLOCKED_PROOF_STATUSES = new Set<string>([
   'blocked',
   'redirect-interstitial',
+  'language-redirect',
   'soft-error-page',
   'http-error-status',
   'skipped-external-redirect',

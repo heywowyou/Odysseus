@@ -27,7 +27,7 @@ Angle 13 (replay against closed slices) targets:
 
 | Slice | Audit | Expected on the refreshed findings |
 |---|---|---|
-| I1 | grandhoteldesalpes | `sitemap-lists-redirects` no longer counts the 113 `/en/` and `/it/` translations or `/`; they are disclosed as other-language versions |
+| I1 | grandhoteldesalpes | `sitemap-lists-redirects` counts 40 redirected URLs, not 114; the 74 translations are `language-redirect`, disclosed as other-language versions |
 | I2, Q6 | lescriquets | `link-name` at the Q6 shape (1 under (a), about 6 under (b)), occurrences preserved |
 | I2 | heurope | `aria-roles` 1; one `aria-required-children` for the tablist |
 | I2 | fermesdemarie | `.kids-stamp` and `.season-switcher_link` one `link-name` each |

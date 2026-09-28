@@ -244,4 +244,35 @@ describe('sitemap-lists-redirects', () => {
       externalUrls: ['https://other.example/landing'],
     });
   });
+
+  // Plan 075 I1: grandhoteldesalpes's English pages were counted as
+  // redirected sitemap URLs because WPML sent our French browser to their
+  // translations. The scanner's redirected list can still carry them.
+  it('counts another-language pages neither as redirects nor as sitemap drift', () => {
+    const candidates = extractSitemapCandidates(
+      baseInput({
+        entries: [
+          { url: 'https://example.com/fr/' },
+          { url: 'https://example.com/en/legal-notices/' },
+          { url: 'https://example.com/fr/chambres/' },
+        ],
+        crawledUrls: ['https://example.com/fr/'],
+        discoveredUrls: ['https://example.com/fr/'],
+        redirectedUrls: [
+          'https://example.com/en/legal-notices/',
+          'https://example.com/fr/chambres/',
+        ],
+        languageAlternateUrls: ['https://example.com/en/legal-notices/'],
+      }),
+    );
+
+    expect(candidates.map((candidate) => candidate.ruleId)).toEqual([
+      SITEMAP_LISTS_REDIRECTS_RULE_ID,
+    ]);
+    expect(candidates[0]?.description).toContain('1 redirected URL(s)');
+    expect(candidates[0]?.rawEvidenceForPage).toEqual({
+      redirectedUrls: ['https://example.com/fr/chambres'],
+      externalUrls: [],
+    });
+  });
 });

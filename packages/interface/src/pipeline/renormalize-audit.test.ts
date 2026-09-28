@@ -106,3 +106,74 @@ describe('renormalizeAudit page population', () => {
     expect(findings.flatMap((finding) => finding.pageUrls)).not.toContain(leftover);
   });
 });
+
+// Plan 075 I1, on the stored grandhoteldesalpes shape: WPML sent our French
+// browser from each English page to its French translation, whose hreflang
+// lists the English page. A refresh re-marks it and the sitemap stops
+// counting it as a redirect; a genuine slug rename stays one.
+describe('renormalizeAudit language redirects', () => {
+  it('re-marks a translation redirect and keeps it out of the sitemap redirect count', async () => {
+    const fixture = JSON.parse(await fs.readFile(FIXTURE_MANIFEST, 'utf8')) as AuditManifest;
+    const home = fixture.pages[0]!;
+    const english = new URL('/en/legal-notices/', home.url).toString();
+    const renamed = new URL('/fr/chambres/', home.url).toString();
+    const { analysisCoverage: _coverage, ...homeWithoutCoverage } = home;
+    const redirectTo = (url: string, pageDir: string): AuditManifest['pages'][number] => ({
+      ...homeWithoutCoverage,
+      url,
+      pageDir,
+      status: 'redirect-interstitial',
+      redirectTargetUrl: home.url,
+    });
+    const manifest: AuditManifest = {
+      ...fixture,
+      pages: [home, redirectTo(english, 'pages/en'), redirectTo(renamed, 'pages/renamed')],
+    };
+    await fs.writeFile(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest));
+    await writePage(path.basename(home.pageDir ?? 'home'), {
+      url: home.url,
+      headMetadata: {
+        pageUrl: home.url,
+        title: 'Accueil',
+        metaDescription: null,
+        canonicalUrls: [],
+        openGraphTags: {},
+        jsonLdBlocks: [],
+        headings: [],
+        hreflangLinks: [{ href: english, lang: 'en' }],
+        languageSwitcherLinks: [],
+        robotsMeta: null,
+        googlebotMeta: null,
+        htmlLang: 'fr',
+        xRobotsTag: null,
+        anchors: [],
+      },
+      sitemapCheck: {
+        pageUrl: home.url,
+        found: true,
+        isSitemapIndex: false,
+        sitemapUrl: new URL('/sitemap.xml', home.url).toString(),
+        pageEntries: [{ url: home.url }, { url: english }, { url: renamed }],
+        redirectedUrls: [],
+        crawledUrls: [home.url],
+        discoveredUrls: [home.url, english, renamed],
+      },
+    });
+    await writePage('en', { url: english });
+    await writePage('renamed', { url: renamed });
+
+    await renormalizeAudit(auditDir, undefined);
+
+    const stored = JSON.parse(
+      await fs.readFile(path.join(auditDir, 'manifest.json'), 'utf8'),
+    ) as AuditManifest;
+    const statusOf = (url: string) => stored.pages.find((page) => page.url === url)?.status;
+    expect(statusOf(english)).toBe('language-redirect');
+    expect(statusOf(renamed)).toBe('redirect-interstitial');
+    const findings = JSON.parse(
+      await fs.readFile(path.join(auditDir, 'findings.json'), 'utf8'),
+    ) as { ruleId: string; description: string }[];
+    const redirects = findings.find((finding) => finding.ruleId === 'sitemap-lists-redirects');
+    expect(redirects?.description).toContain('1 redirected URL(s)');
+  });
+});

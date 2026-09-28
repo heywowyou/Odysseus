@@ -45,8 +45,15 @@ export function buildNormalizeAuditInput(
         page.status === 'redirect-interstitial' || page.status === 'skipped-external-redirect',
     )
     .map((page) => page.url);
+  // Plan 075 I1: another-language pages the site sent our French browser
+  // away from are neither redirects nor missing. The scanner's own
+  // redirected list can hold them too, so they are passed separately and
+  // the sitemap check drops them from every count and comparison.
+  const languageAlternateUrls = manifestPages
+    .filter((page) => page.status === 'language-redirect')
+    .map((page) => page.url);
   const pages =
-    sitemapRedirectedUrls.length === 0
+    sitemapRedirectedUrls.length === 0 && languageAlternateUrls.length === 0
       ? [...options.pages]
       : options.pages.map((page) =>
           page.sitemapCheck === undefined
@@ -61,6 +68,7 @@ export function buildNormalizeAuditInput(
                       ...sitemapRedirectedUrls,
                     ]),
                   ],
+                  ...(languageAlternateUrls.length > 0 ? { languageAlternateUrls } : {}),
                 },
               },
         );

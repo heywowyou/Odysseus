@@ -184,6 +184,12 @@ export const fr: ReportStrings = {
         singular: 'page de redirection',
         plural: 'pages de redirection',
       },
+      // Plan 075 I1: a translation the site sent our French browser away
+      // from; a real page, not analysed, never a redirect.
+      'language-redirect': {
+        singular: 'version dans une autre langue',
+        plural: 'versions dans une autre langue',
+      },
       'soft-error-page': { singular: 'page d’erreur', plural: 'pages d’erreur' },
       blocked: { singular: 'page bloquée', plural: 'pages bloquées' },
       'coverage-missing': {

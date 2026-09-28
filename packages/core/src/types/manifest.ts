@@ -294,6 +294,16 @@ export type ManifestPageStatus =
    *  the content-checked population and the report's analysed-page list
    *  with no extra logic in either place. */
   | 'redirect-interstitial'
+  /** Plan 075 I1: a 'redirect-interstitial' whose landing page lists this
+   *  URL among its own language alternates (hreflang or language
+   *  switcher). The site sent our browser to its translation because the
+   *  audit locale is French (trade-off 115); a visitor in the page's own
+   *  language stays on it. It is a real page left unanalysed, never a
+   *  redirect: no sitemap or hreflang rule counts it, and the coverage
+   *  discloses it as another-language version. Assigned after the whole
+   *  scan by markLanguageRedirects, since the landing page's alternates are
+   *  only known once it is scanned. */
+  | 'language-redirect'
   /** A 200 response that tells the visitor the page does not exist (issue
    *  #302): an error template served under its own URL. Decided post-hoc
    *  in write-audit.ts from the page's slug, title and h1, the same
@@ -460,8 +470,8 @@ export interface ManifestPageEntry {
    *  the in-memory crawl result, so `normalize <dir>` can re-derive that
    *  finding offline from stored artifacts alone. */
   discoveredFrom?: string;
-  /** Populated only for status 'redirect-interstitial': the URL the
-   *  browser actually landed on. Traceability only, not required for any
+  /** Populated only for statuses 'redirect-interstitial' and
+   *  'language-redirect': the URL the browser actually landed on. Traceability only, not required for any
    *  coverage or dedupe logic. */
   redirectTargetUrl?: string;
   /** Plan 021. Optional for historical manifests; absence on a current

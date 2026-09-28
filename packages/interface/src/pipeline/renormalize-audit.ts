@@ -20,6 +20,7 @@ import {
   isBlockedRender,
   lighthouseFinalUrl,
   lighthouseLandedOffSite,
+  markLanguageRedirects,
   normalizeAudit,
   type AuditManifest,
   type NormalizePageInput,
@@ -159,7 +160,7 @@ export async function renormalizeAudit(
   // to a booking engine that our render did not follow; newer scans record
   // it as a redirect, and a refresh applies the same reading to older ones.
   const scanForUrl = new Map(pages.map((page) => [page.url, page]));
-  const classifiedPages = manifest.pages.map((entry) => {
+  const offSiteClassifiedPages = manifest.pages.map((entry) => {
     const lighthouse = scanForUrl.get(entry.url)?.lighthouse;
     if (entry.status !== 'visited' || lighthouse === undefined) return entry;
     if (!lighthouseLandedOffSite(lighthouse, entry.url)) return entry;
@@ -171,6 +172,19 @@ export async function renormalizeAudit(
       ...(target !== undefined ? { redirectTargetUrl: target } : {}),
     };
   });
+
+  // Plan 075 I1: a redirect onto the page's own translation only chose a
+  // language, which the stored landing pages' alternates show.
+  const classifiedPages = markLanguageRedirects(
+    offSiteClassifiedPages,
+    pages.map((page) => ({
+      pageUrl: page.url,
+      alternateUrls: [
+        ...(page.headMetadata?.hreflangLinks ?? []).map((link) => link.href),
+        ...(page.headMetadata?.languageSwitcherLinks ?? []).map((link) => link.href),
+      ],
+    })),
+  );
 
   const manifestPageByUrl = new Map(classifiedPages.map((entry) => [entry.url, entry]));
   const translationClusters: TranslationCluster[] = buildTranslationClusters(

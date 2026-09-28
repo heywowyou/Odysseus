@@ -581,6 +581,11 @@ finding. Relative links that resolve to the same identity do not create a
 self-nesting finding; genuine relative nesting is bounded and reported once.
 Sitemap entries that redirect or point off-site use the separate minor
 `sitemap-lists-redirects` rule and are removed from stale/orphan comparisons.
+A `language-redirect` page (plan 075 I1) is neither: the site sent our French
+browser to its translation, and the landing page lists it among its hreflang
+or language-switcher alternates. It is counted by no sitemap rule, left out
+of every sitemap comparison, never an invalid hreflang or broken-link target,
+and disclosed in the coverage as a version in another language.
 
 The fine/coarse dedupe passes still preserve occurrences and provenance. They
 may merge only identical rule statements and fixes. Third-party frame content

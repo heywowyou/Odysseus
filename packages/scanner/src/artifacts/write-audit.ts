@@ -32,6 +32,7 @@ import {
   isBlockedRender,
   lighthouseFinalUrl,
   lighthouseLandedOffSite,
+  markLanguageRedirects,
   type AuditConfigSnapshot,
   type AuditManifest,
   type AuditManifestSiteSignals,
@@ -775,7 +776,18 @@ export async function writeAuditArtifacts(
     tool,
     config: input.config,
     crawl: input.siteResult.crawl,
-    pages: manifestPages,
+    // Plan 075 I1: a redirect onto the page's own translation only chose a
+    // language; the landing page's alternates are known only now.
+    pages: markLanguageRedirects(
+      manifestPages,
+      normalizePages.map((page) => ({
+        pageUrl: page.url,
+        alternateUrls: [
+          ...(page.headMetadata?.hreflangLinks ?? []).map((link) => link.href),
+          ...(page.headMetadata?.languageSwitcherLinks ?? []).map((link) => link.href),
+        ],
+      })),
+    ),
     ...(input.siteResult.pushbackEvents !== undefined
       ? { pushbackEvents: [...input.siteResult.pushbackEvents] }
       : {}),

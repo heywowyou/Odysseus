@@ -43,6 +43,11 @@ export interface SitemapCheckInput {
    *  sitemap population for a separate, minor hygiene finding rather than
    *  contaminating stale/orphan absence comparisons. */
   redirectedUrls?: string[];
+  /** Plan 075 I1: sitemap URLs that are real pages in another language,
+   *  left unanalysed because the site sent our French browser to their
+   *  translation. Neither redirects nor absent pages, so they are counted
+   *  by no sitemap rule and left out of the stale and orphan comparisons. */
+  languageAlternateUrls?: string[];
   /** Every page the crawl actually visited, so staleness can be judged
    *  by how well the sitemap's own URL list matches what is really
    *  there - not by an arbitrary "how old is too old" date threshold. */
@@ -147,8 +152,13 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
 
   const candidates: FindingCandidate[] = [];
 
+  const languageAlternateSet = new Set(
+    (input.languageAlternateUrls ?? []).map((url) => normalizeUrl(url, pageUrl)),
+  );
   const redirectedSet = new Set(
-    (input.redirectedUrls ?? []).map((url) => normalizeUrl(url, pageUrl)),
+    (input.redirectedUrls ?? [])
+      .map((url) => normalizeUrl(url, pageUrl))
+      .filter((url) => !languageAlternateSet.has(url)),
   );
   const redirectedUrls = pageEntries
     .map((entry) => normalizeUrl(entry.url, pageUrl))
@@ -156,7 +166,11 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
   const externalUrls = pageEntries
     .map((entry) => normalizeUrl(entry.url, pageUrl))
     .filter((url) => isOffSiteUrl(url, pageUrl));
-  const excludedFromComparisons = new Set([...redirectedUrls, ...externalUrls]);
+  const excludedFromComparisons = new Set([
+    ...redirectedUrls,
+    ...externalUrls,
+    ...languageAlternateSet,
+  ]);
   const eligiblePageEntries = pageEntries.filter(
     (entry) => !excludedFromComparisons.has(normalizeUrl(entry.url, pageUrl)),
   );

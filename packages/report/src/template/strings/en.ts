@@ -163,6 +163,10 @@ export const en: ReportStrings = {
       error: { singular: 'crawl error', plural: 'crawl errors' },
       'http-error-status': { singular: 'HTTP error', plural: 'HTTP errors' },
       'redirect-interstitial': { singular: 'redirect page', plural: 'redirect pages' },
+      'language-redirect': {
+        singular: 'version in another language',
+        plural: 'versions in another language',
+      },
       'soft-error-page': { singular: 'error page', plural: 'error pages' },
       blocked: { singular: 'blocked page', plural: 'blocked pages' },
       'coverage-missing': {

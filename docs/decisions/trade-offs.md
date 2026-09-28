@@ -6002,6 +6002,17 @@ context (crawl, render diff, consent, mobile, states, booking flow) and the
 Lighthouse tab would need the page's language before loading it. Revisit if a
 client needs a non-French version of such a site audited.
 
+Amended 2026-09-28 (plan 075 I1). The other-language pages this sends away
+are not redirects. The first rescan under this locale told Grand Hôtel des
+Alpes its sitemap listed 114 redirected URLs; 74 were English and Italian
+pages that answer 200 to their own visitors. A `redirect-interstitial` whose
+landing page lists the requested URL among its hreflang or language-switcher
+alternates is now `language-redirect`: unanalysed, disclosed as a version in
+another language, and counted by no sitemap or hreflang rule. A slug rename
+or a plugin object sent home is not listed as an alternate and stays a
+redirect. On the 22 latest VPS audits the rule matched those 74 pages and
+nothing else.
+
 ### 116. The crawl requests every URL without the cookies earlier pages set (build decision, 2026-09-24)
 
 The crawl opened every page in one browser context, so a cookie set by one

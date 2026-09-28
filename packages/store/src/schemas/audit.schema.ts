@@ -304,6 +304,9 @@ const manifestPageEntrySchema = new Schema(
         // redirected to. Absent until issue #302 added its neighbour
         // below, which meant saving an audit containing one was rejected.
         'redirect-interstitial',
+        // Plan 075 I1: a translation the site redirected our French browser
+        // away from. Listed here, or saving such an audit is rejected.
+        'language-redirect',
         // Issue #302: a 200 serving an error template.
         'soft-error-page',
         'error',
