@@ -6140,8 +6140,9 @@ against the replica-set test MongoDB with `REQUIRE_MONGO_TESTS=1`, the Trivy
 filesystem gate and its secret-gate self-test, the custom Semgrep rules, and
 a Trivy gate over a locally built production image. It refuses a dirty tree
 and records a pass for the exact commit under `.git/odysseus-gate/`.
-`deploy/odysseus-deploy.sh` refuses a dirty tree or a commit without a pass;
-`ODYSSEUS_DEPLOY_SKIP_GATE=1` overrides it for an emergency and is logged.
+`deploy/odysseus-deploy.sh` refused a dirty tree or a commit without a pass,
+with a logged `ODYSSEUS_DEPLOY_SKIP_GATE=1` override; trade-off 123 dropped
+the pass requirement.
 Without that check nothing would ever run the full suite before production:
 the pre-push hook deliberately runs only the static check.
 
@@ -6203,3 +6204,27 @@ findings, and absence checks that depended on them were already undetermined
 Rejected alternatives: removing the page-level block (it would bring back
 reports built over unseen coverage holes), and a blanket override with no URL
 set (a later scan with different gaps would pass without review).
+
+### 123. The release gate runs on demand, not before every deploy (operator decision, 2026-09-28)
+
+Trade-off 120 made `deploy/odysseus-deploy.sh` refuse any commit without a
+`pnpm run gate` pass. In practice the gate takes 10 to 25 minutes, and on
+2026-09-28 four runs in a row failed, each on a different timing-sensitive
+e2e test that passed on its own, so one deploy cost four gate runs. Deploys
+are frequent; that cost was not worth paying on each one.
+
+A deploy now needs only a clean checkout: the image is stamped with HEAD's
+id, so a dirty tree would run code no commit holds. The push hook still runs
+`pnpm run check` (docs, format, lint, typecheck, architecture, dead code),
+and the server's image build fails on code that does not compile. The full
+gate is run on demand: before a dependency upgrade, a Dockerfile or
+`deploy/` change, or as a periodic check. The override variable is gone with
+the requirement.
+
+Accepted cost: a unit or e2e regression can reach production when nobody ran
+the suite; the four gate runs of 2026-09-28 caught 29 test failures in one
+commit's own tests, none of them a production defect. Rejected alternatives:
+running the unit project on every deploy (a few minutes each time, which the
+operator declined), and requiring the gate only when the lockfile,
+Dockerfile or `deploy/` changed (more logic in the deploy script for a rule
+the operator applies by judgement).

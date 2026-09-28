@@ -148,8 +148,10 @@ cross-cutting outcomes unless the requested work intentionally revisits them:
 - Real-scan fixtures are de-identified and rebuilt through the repository
   scripts, never hand-edited or committed raw.
 - GitHub only versions the repository; no GitHub Actions workflow runs.
-  Production deploys through `deploy/odysseus-deploy.sh`, only for a commit
-  that passed the local release gate, `pnpm run gate`.
+  Production deploys through `deploy/odysseus-deploy.sh` from a clean
+  checkout. The push hook runs `pnpm run check`; the full release gate,
+  `pnpm run gate`, is on demand, not a push or deploy requirement
+  (trade-off 123).
 - Outreach wording comes from operator-approved deterministic templates; no
   model writes outreach copy at runtime.
 - Impeccable remains installed as an optional design workflow, but global
@@ -215,7 +217,7 @@ pnpm run check
 pnpm test <affected test paths>
 pnpm run test:e2e
 pnpm run test:all
-pnpm run gate   # everything CI used to run; required before a deploy
+pnpm run gate   # everything CI used to run; on demand, for risky changes
 ```
 
 A behavior change normally gets a focused test. Broaden verification when the

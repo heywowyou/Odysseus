@@ -10,9 +10,11 @@
 # and its self-test, the custom Semgrep rules, and the Trivy gate over the
 # production image. Needs Docker and Playwright's Chromium.
 #
-# A pass is recorded against the exact commit, and deploy/odysseus-deploy.sh
-# refuses to ship a commit without one. The gate therefore refuses a dirty
-# working tree: a pass must describe a commit, not uncommitted edits.
+# On demand, not a deploy requirement (trade-off 123): run it before a
+# dependency upgrade, a Dockerfile or deploy/ change, or as a periodic check.
+# A pass is recorded against the exact commit under .git/odysseus-gate/ as a
+# note, so the gate refuses a dirty working tree: a pass must describe a
+# commit, not uncommitted edits.
 set -Eeuo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1

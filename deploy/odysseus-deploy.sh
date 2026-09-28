@@ -40,21 +40,14 @@ ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP="${ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP:-4GB}"
 [[ "$ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP" =~ ^[1-9][0-9]*(B|KB|MB|GB|TB)$ ]] ||
   fail "ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP must be a positive whole-byte Docker size, such as 4GB"
 
-# GitHub Actions no longer runs (trade-off 120), so the local release gate is
-# the only proof a commit passed the full suite and the security scans. Ship
-# only a clean checkout of a commit `pnpm run gate` passed. The override
-# exists for an emergency fix; it is logged, never silent.
-GATE_COMMIT="$(git -C "$REPO_ROOT" rev-parse HEAD)"
-GATE_PASS="$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-common-dir)/odysseus-gate/$GATE_COMMIT"
-if [[ "${ODYSSEUS_DEPLOY_SKIP_GATE:-}" == 1 ]]; then
-  log "warning: ODYSSEUS_DEPLOY_SKIP_GATE=1, deploying $GATE_COMMIT without checking the release gate"
-else
-  [[ -z "$(git -C "$REPO_ROOT" status --porcelain)" ]] ||
-    fail "the working tree has uncommitted changes; commit them and run pnpm run gate first"
-  [[ -f "$GATE_PASS" ]] ||
-    fail "commit $GATE_COMMIT has not passed pnpm run gate (ODYSSEUS_DEPLOY_SKIP_GATE=1 overrides in an emergency)"
-  log "release gate passed for $GATE_COMMIT at $(<"$GATE_PASS")"
-fi
+# Ship exactly a commit: the image is stamped with HEAD's id, so a dirty
+# tree would run code no commit holds. The full release gate
+# (`pnpm run gate`) is an on-demand check, not a deploy requirement
+# (trade-off 123); the push hook runs the static check.
+DEPLOY_COMMIT="$(git -C "$REPO_ROOT" rev-parse HEAD)"
+[[ -z "$(git -C "$REPO_ROOT" status --porcelain)" ]] ||
+  fail "the working tree has uncommitted changes; commit them first"
+log "deploying $DEPLOY_COMMIT"
 
 SSH_OPTS=(-i "$ODYSSEUS_DEPLOY_SSH_KEY" -o BatchMode=yes)
 

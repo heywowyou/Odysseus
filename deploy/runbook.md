@@ -5,8 +5,8 @@ operator with an assistant walking through them. Do not skip the STOP boxes.
 Sections 1 to 3, 5 and 6 are the historical record of the original Scaleway
 box. Section 4 is current: the server's secrets list and the permanent
 reference-audit release workflow apply to the Hostinger box today.
-Routine production deployment is section 7B: run `pnpm run gate`, then
-`deploy/odysseus-deploy.sh`, from the operator's machine against the Hostinger
+Routine production deployment is section 7B: run
+`deploy/odysseus-deploy.sh` from a clean checkout, on the operator's machine against the Hostinger
 box. Section 7A records the retired GitHub release workflow.
 
 ## 1. What this stack is
@@ -368,23 +368,20 @@ Routine deploy, from the operator's machine, on a clean checkout of the
 commit to ship:
 
 ```sh
-pnpm run gate
 bash deploy/odysseus-deploy.sh
 ```
 
-`pnpm run gate` (`scripts/gate.sh`) is the release gate that GitHub Actions
-used to be: the static check, the builds, the IBM Equal Access engine, the
-deploy-script tests, the full test suite against the replica-set test MongoDB,
-and the Trivy and Semgrep security gates, including a Trivy scan of a locally
-built production image. It needs Docker and Playwright's Chromium, and records
-a pass for the exact commit under `.git/odysseus-gate/`. The deploy script
-refuses a dirty working tree or a commit without a pass. For an emergency fix
-that cannot wait for the gate, `ODYSSEUS_DEPLOY_SKIP_GATE=1 bash
-deploy/odysseus-deploy.sh` deploys anyway and logs the override.
+The script refuses a dirty working tree, so the image always matches a
+commit. It does not require the release gate (trade-off 123). Run
+`pnpm run gate` (`scripts/gate.sh`) on demand: before shipping a dependency
+upgrade, a Dockerfile or `deploy/` change, or as a periodic check. It runs the
+static check, the builds, the IBM Equal Access engine, the deploy-script
+tests, the full test suite against the replica-set test MongoDB, and the Trivy
+and Semgrep security gates, including a Trivy scan of a locally built
+production image. It needs Docker and Playwright's Chromium.
 
 To roll back a bad release, check out the last good commit (detached is fine)
-and deploy it the same way. A commit that passed the gate on this machine
-keeps its pass; an older one needs the gate run again, or the override.
+and deploy it the same way.
 
 The script, in order: renders the server compose file from the repo's own
 `deploy/compose.yaml` and writes it to the server, rsyncs the repo, builds

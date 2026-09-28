@@ -390,4 +390,4 @@ Before handing off, record which commands passed, failed, or were not run.
 `pnpm run check` covers agent documentation, formatting, lint, and workspace
 typechecking. `pnpm run test:all` runs the full suite; use it before a handoff
 that touched e2e suites or cross-package behavior. `pnpm run gate` runs
-everything before a deploy.
+everything, on demand (trade-off 123); it is not a deploy requirement.

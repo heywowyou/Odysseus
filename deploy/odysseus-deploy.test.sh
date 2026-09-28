@@ -48,16 +48,16 @@ printf '%s\n' \
   'ODYSSEUS_DEPLOY_COMPOSE_PROJECT=odysseus' \
   'ODYSSEUS_DEPLOY_BUILD_CACHE_KEEP=4GB' >"$CONFIG_FILE"
 
-# The release gate reads git state, so git is pointed at a throwaway
+# The clean-tree check reads git state, so git is pointed at a throwaway
 # one-commit repository: the result never depends on the real checkout's
 # commit or uncommitted edits. rsync is faked, so its content is irrelevant.
-GATE_REPO="$TEST_ROOT/gate-repo"
-mkdir -p "$GATE_REPO"
-git -C "$GATE_REPO" init -q
-git -C "$GATE_REPO" -c user.name=test -c user.email=test@example.invalid \
-  commit -q --allow-empty -m 'gate fixture'
-export GIT_DIR="$GATE_REPO/.git" GIT_WORK_TREE="$GATE_REPO"
-GATE_COMMIT="$(git rev-parse HEAD)"
+FIXTURE_REPO="$TEST_ROOT/fixture-repo"
+mkdir -p "$FIXTURE_REPO"
+git -C "$FIXTURE_REPO" init -q
+git -C "$FIXTURE_REPO" -c user.name=test -c user.email=test@example.invalid \
+  commit -q --allow-empty -m 'deploy fixture'
+export GIT_DIR="$FIXTURE_REPO/.git" GIT_WORK_TREE="$FIXTURE_REPO"
+FIXTURE_COMMIT="$(git rev-parse HEAD)"
 
 export FAKE_SSH_LOG="$TEST_ROOT/ssh.log"
 export FAKE_RSYNC_LOG="$TEST_ROOT/rsync.log"
@@ -77,21 +77,13 @@ assert_refused() {
   [[ ! -s "$FAKE_SSH_LOG" && ! -s "$FAKE_RSYNC_LOG" ]] || fail "reached the server although $1"
 }
 
-assert_refused 'the commit never passed the gate' 'has not passed pnpm run gate'
-
-mkdir -p "$GATE_REPO/.git/odysseus-gate"
-printf '2026-09-25T00:00:00Z\n' >"$GATE_REPO/.git/odysseus-gate/$GATE_COMMIT"
-: >"$GATE_REPO/uncommitted"
+: >"$FIXTURE_REPO/uncommitted"
 assert_refused 'the working tree is dirty' 'uncommitted changes'
-rm "$GATE_REPO/uncommitted"
+rm "$FIXTURE_REPO/uncommitted"
 
-rm "$GATE_REPO/.git/odysseus-gate/$GATE_COMMIT"
-ODYSSEUS_DEPLOY_SKIP_GATE=1 run_deploy >/dev/null || fail 'the logged override did not deploy'
-assert_contains "$TEST_ROOT/stderr.log" 'without checking the release gate'
-
-printf '2026-09-25T00:00:00Z\n' >"$GATE_REPO/.git/odysseus-gate/$GATE_COMMIT"
-run_deploy >/dev/null || fail 'a clean commit that passed the gate did not deploy'
-assert_contains "$TEST_ROOT/stderr.log" "release gate passed for $GATE_COMMIT"
+# No release-gate pass is needed (trade-off 123): a clean commit deploys.
+run_deploy >/dev/null || fail 'a clean commit did not deploy'
+assert_contains "$TEST_ROOT/stderr.log" "deploying $FIXTURE_COMMIT"
 
 assert_contains "$FAKE_RSYNC_LOG" '/srv/odysseus/'
 # rsync --delete removes server-only files unless they are excluded (#484):

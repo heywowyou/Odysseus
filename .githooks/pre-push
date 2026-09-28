@@ -3,7 +3,7 @@
 # lint, typecheck, dependency-cruiser architecture rules, fallow dead-code
 # audit) before a push leaves this machine. Skips the test suites deliberately:
 # they need Docker Mongo and Playwright Chromium, which not every push
-# should have to pay for; `pnpm run gate` runs them before every deploy.
+# should have to pay for. `pnpm run gate` runs them on demand (trade-off 123).
 #
 # Enabled once per clone with:
 #   git config core.hooksPath .githooks

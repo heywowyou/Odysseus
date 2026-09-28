@@ -74,14 +74,16 @@ licences, and encodings are described in `docs/rules/prospect-qualification.md`.
 ## Release gate
 
 GitHub only versions this repository; no GitHub Actions workflow runs
-(trade-off 120). Before every production deploy, on a clean checkout:
+(trade-off 120). A deploy needs only a clean checkout; the full gate runs on
+demand, for dependency upgrades, Dockerfile or deploy changes, or a periodic
+check (trade-off 123):
 
 ```bash
-pnpm run gate                  # static check, builds, all tests, Equal Access, Trivy, Semgrep
-bash deploy/odysseus-deploy.sh # refuses a commit the gate has not passed
+bash deploy/odysseus-deploy.sh # ships HEAD; refuses a dirty tree
+pnpm run gate                  # on demand: static check, builds, all tests, Equal Access, Trivy, Semgrep
 ```
 
-It needs Docker and Playwright's Chromium. See `deploy/runbook.md`, section 7B.
+The gate needs Docker and Playwright's Chromium. See `deploy/runbook.md`, section 7B.
 
 ## Running tests
 
