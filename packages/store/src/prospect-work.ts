@@ -145,6 +145,7 @@ export type ProspectWorkThread = Pick<
   | 'currentTouch'
   | 'touches'
   | 'spacing'
+  | 'stateEnteredAt'
   | 'updatedAt'
   | 'needsReview'
   | 'currentOutcome'
@@ -431,7 +432,8 @@ export function deriveProspectWork(
       action: 'record-outcome',
       prospectId: prospect.prospectId,
       href: encodedProspectHref(prospect.prospectId, 'outcome'),
-      since: new Date(thread.updatedAt).toISOString(),
+      // Not `updatedAt`: every mailbox sync moves it.
+      since: new Date(thread.stateEnteredAt).toISOString(),
     });
   }
   if (
@@ -691,6 +693,7 @@ export async function loadProspectWork(
         currentTouch: 1,
         touches: 1,
         spacing: 1,
+        stateEnteredAt: 1,
         updatedAt: 1,
         needsReview: 1,
         currentOutcome: 1,

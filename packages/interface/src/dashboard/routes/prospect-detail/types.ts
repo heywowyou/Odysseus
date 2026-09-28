@@ -76,6 +76,10 @@ export interface ProspectThread {
   threadId: string;
   state: string;
   currentTouch: number;
+  stateEnteredAt: string;
+  /** Confirmed sends, in touch order. `sentAt` is the provider's own send
+   *  time, or the moment the operator confirmed a send by hand. */
+  touches: { touch: number; sentAt: string }[];
   updatedAt: string;
   needsReview?: { reason: string; detectedAt: string };
 }

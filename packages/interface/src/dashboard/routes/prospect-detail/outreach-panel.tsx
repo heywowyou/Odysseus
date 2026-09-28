@@ -8,9 +8,20 @@ import { Card } from '../../components/ui/card';
 import { Select } from '../../components/ui/select';
 import { Button, buttonStyles } from '../../components/ui/button';
 import { scanAgeLabel } from '../prospect-hub-detail-model';
-import { daysSince } from './types';
+import { daysSince, type ProspectThread } from './types';
 import type { ProspectDetailShared } from './shared';
 import type { OutreachActions } from './use-outreach-actions';
+
+/** When the thread entered its shown state. A sent state is dated by the
+ *  send itself, since a sync can notice it days later. */
+export function threadStateDate(thread: ProspectThread): string {
+  const sentTouch = /^e(\d)-sent$/.exec(thread.state)?.[1];
+  const sent =
+    sentTouch === undefined
+      ? undefined
+      : thread.touches.find((touch) => touch.touch === Number(sentTouch));
+  return sent?.sentAt ?? thread.stateEnteredAt;
+}
 
 export function OutreachPanel(props: {
   shared: ProspectDetailShared;
@@ -91,12 +102,24 @@ export function OutreachPanel(props: {
             {strings.labels.thread[prospect.thread.state as keyof typeof strings.labels.thread] ??
               strings.common.vocabularyFallback}
             <span className="ml-2 text-xs text-ink-muted">
-              {formatDate(prospect.thread.updatedAt)}
+              {formatDate(threadStateDate(prospect.thread))}
             </span>
           </p>
         ) : (
           <p className="mt-1 text-sm text-ink-muted">{copy.noThread}</p>
         )}
+        {prospect.thread && prospect.thread.touches.length > 0 ? (
+          <ul className="mt-2 grid gap-1 text-xs text-ink-muted">
+            {prospect.thread.touches.map((sent) => (
+              <li key={sent.touch}>
+                {strings.labels.thread[
+                  `e${sent.touch}-sent` as keyof typeof strings.labels.thread
+                ] ?? strings.common.vocabularyFallback}{' '}
+                {formatDate(sent.sentAt)}
+              </li>
+            ))}
+          </ul>
+        ) : null}
         {drafts.length > 0 ? (
           <ul className="mt-3 grid gap-2">
             {drafts.slice(0, 3).map((draft) => (

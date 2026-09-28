@@ -13,7 +13,7 @@ import { I18nProvider } from '../../i18n/provider';
 import { ActionsPanel } from './actions-panel';
 import { ContactsEditor } from './contacts-editor';
 import { HistoryPanel } from './history-panel';
-import { OutreachPanel } from './outreach-panel';
+import { OutreachPanel, threadStateDate } from './outreach-panel';
 import { ProspectHeader } from './prospect-header';
 import { RecentActivityPanel } from './recent-activity-panel';
 import { RecommendedPanel } from './recommended-panel';
@@ -175,6 +175,19 @@ describe('prospect page panels (issue #532)', () => {
     expect(container.textContent).toContain('Une question pour votre établissement');
     await click(button(container, 'Supprimer le brouillon'));
     expect(outreach.discardDraft).toHaveBeenCalledWith('draft-1');
+  });
+
+  it('outreach: dates a sent state by the send, not by the last mailbox sync', () => {
+    const thread = {
+      threadId: 'thread-1',
+      state: 'e1-sent',
+      currentTouch: 1,
+      stateEnteredAt: '2026-09-28T08:00:00.000Z',
+      touches: [{ touch: 1, sentAt: '2026-09-24T15:12:00.000Z' }],
+      updatedAt: '2026-09-28T09:30:00.000Z',
+    };
+    expect(threadStateDate(thread)).toBe('2026-09-24T15:12:00.000Z');
+    expect(threadStateDate({ ...thread, state: 'e2-drafted' })).toBe('2026-09-28T08:00:00.000Z');
   });
 
   it('actions: publishes the preview and launches a quick check', async () => {

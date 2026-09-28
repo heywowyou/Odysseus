@@ -306,6 +306,7 @@ describe('prospect work model', () => {
               currentTouch: 1,
               touches: [],
               spacing: { touch2AfterDays: 3, touch3AfterDays: 7, replyWindowDays: 14 },
+              stateEnteredAt: new Date('2026-09-01T00:00:00.000Z'),
               updatedAt: new Date('2026-09-12T00:00:00.000Z'),
             },
           ] as never,
@@ -656,7 +657,9 @@ describe('prospect work model', () => {
           currentTouch: 1,
           touches: [],
           spacing: { touch2AfterDays: 3, touch3AfterDays: 7, replyWindowDays: 14 },
-          updatedAt: new Date(),
+          stateEnteredAt: new Date('2026-09-01T00:00:00.000Z'),
+          // A later mailbox sync moved updatedAt; the row still dates the reply.
+          updatedAt: new Date('2026-09-28T09:00:00.000Z'),
           needsReview: { reason: 'ambiguous', detectedAt: new Date() },
         },
       ],
@@ -664,6 +667,7 @@ describe('prospect work model', () => {
     expect(reply.items[0]).toMatchObject({
       action: 'record-outcome',
       href: `/prospects/${prospect.prospectId}#outcome`,
+      since: '2026-09-01T00:00:00.000Z',
     });
 
     const followUp = deriveProspectWork(
@@ -685,6 +689,7 @@ describe('prospect work model', () => {
               },
             ],
             spacing: { touch2AfterDays: 0, touch3AfterDays: 7, replyWindowDays: 14 },
+            stateEnteredAt: new Date('2026-09-01T00:00:00.000Z'),
             updatedAt: new Date(),
           },
         ],
@@ -707,6 +712,7 @@ describe('prospect work model', () => {
       currentTouch: 1,
       touches: [],
       spacing: { touch2AfterDays: 4, touch3AfterDays: 11, replyWindowDays: 14 },
+      stateEnteredAt: new Date('2026-09-01T00:00:00.000Z'),
       updatedAt: new Date('2026-09-17T22:07:22.780Z'),
     };
     const frenchOnly = readyReports().filter((report) => report.language === 'fr');
@@ -762,6 +768,7 @@ describe('prospect work model', () => {
               },
             ],
             spacing: { touch2AfterDays: 4, touch3AfterDays: 11, replyWindowDays: 14 },
+            stateEnteredAt: new Date('2026-09-01T00:00:00.000Z'),
             updatedAt: new Date('2026-09-28T00:00:00.000Z'),
           },
         ],
@@ -802,6 +809,7 @@ describe('prospect work model', () => {
               },
             ],
             spacing: { touch2AfterDays: 4, touch3AfterDays: 11, replyWindowDays: 14 },
+            stateEnteredAt: new Date('2026-09-01T00:00:00.000Z'),
             updatedAt: new Date('2026-09-06T00:00:00.000Z'),
           },
         ],
@@ -822,6 +830,7 @@ describe('prospect work model', () => {
           currentTouch: 1,
           touches: [],
           spacing: { touch2AfterDays: 3, touch3AfterDays: 7, replyWindowDays: 14 },
+          stateEnteredAt: new Date('2026-09-01T00:00:00.000Z'),
           updatedAt: new Date(),
           currentOutcome: 'outcome-1',
         },

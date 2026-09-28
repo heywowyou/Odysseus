@@ -89,6 +89,8 @@ export const PROSPECT: ProspectHubDetail = {
     threadId: 'thread-1',
     state: 'e1-drafted',
     currentTouch: 1,
+    stateEnteredAt: '2026-09-20T10:00:00.000Z',
+    touches: [],
     updatedAt: '2026-09-20T10:00:00.000Z',
   },
   drafts: [

@@ -496,6 +496,12 @@ export function registerProspectHubRoutes(
                     .map((draft) => draft.touch),
                 ),
                 currentTouch: thread.currentTouch,
+                // `updatedAt` moves on every mailbox sync, so it cannot date
+                // a state or a send; the panel reads these instead.
+                stateEnteredAt: thread.stateEnteredAt,
+                touches: [...thread.touches]
+                  .sort((a, b) => a.touch - b.touch)
+                  .map(({ touch, sentAt }) => ({ touch, sentAt })),
                 updatedAt: thread.updatedAt,
                 needsReview: thread.needsReview,
               },
