@@ -260,6 +260,7 @@ export type { ReportQualityLease } from './report-quality.js';
 
 export { verifyUniqueIndexes } from './unique-index-check.js';
 export { migrateOutreachDraftThreadTouchIndex } from './outreach-draft-index-migration.js';
+export { dropObsoleteFindingIndexes } from './finding-index-migration.js';
 
 // Plan 077: retention snapshot, targeted deletes and the run record.
 export {

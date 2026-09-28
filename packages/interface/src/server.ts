@@ -1,6 +1,10 @@
 import { createServer, type Server } from 'node:http';
 import type { Connection } from 'mongoose';
-import { migrateOutreachDraftThreadTouchIndex, verifyUniqueIndexes } from '@odysseus/store';
+import {
+  dropObsoleteFindingIndexes,
+  migrateOutreachDraftThreadTouchIndex,
+  verifyUniqueIndexes,
+} from '@odysseus/store';
 import { Router } from './router.js';
 import { registerScanRoutes } from './routes/scans.js';
 import { registerAuditRoutes } from './routes/audits.js';
@@ -139,6 +143,10 @@ export async function startInterfaceServer(
   const draftIndexMigration = await migrateOutreachDraftThreadTouchIndex(connection);
   if (draftIndexMigration === 'migrated') {
     logger.info('replaced the legacy outreach draft thread/touch unique index');
+  }
+  const droppedFindingIndexes = await dropObsoleteFindingIndexes(connection);
+  if (droppedFindingIndexes.length > 0) {
+    logger.info(`dropped obsolete finding indexes: ${droppedFindingIndexes.join(', ')}`);
   }
 
   // Issue #253: a no-op (NullTelemetrySink) unless SENTRY_DSN is set, so

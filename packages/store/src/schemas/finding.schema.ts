@@ -85,8 +85,11 @@ const findingSchema = new Schema<FindingDocument>(
   { collection: 'findings' },
 );
 
-findingSchema.index({ auditId: 1 });
-findingSchema.index({ siteUrl: 1, dedupeKey: 1 });
+// Issue #549: persistAuditFindings upserts on { auditId, dedupeKey }. With
+// only an auditId prefix, each upsert fetched every finding of the audit.
+// It also covers the auditId-only queries, so no separate auditId index is
+// kept; dropObsoleteFindingIndexes removes the old ones at startup.
+findingSchema.index({ auditId: 1, dedupeKey: 1 });
 findingSchema.index({ auditId: 1, severity: 1 });
 
 export function createFindingModel(connection: Connection): Model<FindingDocument> {
