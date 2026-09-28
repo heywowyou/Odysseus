@@ -149,6 +149,11 @@ a finding.
     open when it ran: a consent banner, a popup or a dialog. A check that
     measured the overlay instead of the page is a false finding or a false
     absence.
+16. **Same component, same verdict.** For each vendor component or CMS
+    default found on several audits (a shop's cart and account pages, a
+    consent banner, a slider, a booking widget), compare the rule, severity
+    and wording each audit gives it. Two verdicts for one component means at
+    least one is wrong.
 
 ## Recording
 

@@ -7,55 +7,45 @@ Brief: `docs/agents/audit-data-defect-hunt.md`
 
 ## Where the hunt stands
 
-- **Stop rule: 0 of 2.** The last complete sweep (9, 2026-09-28) found 3 new
+- **Stop rule: 0 of 2.** The last complete sweep (10, 2026-09-29) found 6 new
   material defects. Two consecutive complete sweeps with none are needed, the
   second with a fresh angle.
-- **Data state.** Production runs `fa806424` (Part I, deployed 2026-09-28).
-  The stored findings were not refreshed after that deploy: the 21 audits
-  still carry pre-I1/I2 findings, and their replay with the deployed core
-  equals the Part I targets. Four new sites were being scanned on the new
-  build during the sweep (clos-sainte-marie, domaine-d-auriac,
-  lodgekerisper, aflatta). Part J (J1 to J5), the canary audit, the
-  evaluation ledger and the unconfirmed-rule tier (trade-off 124) are
-  committed on 2026-09-28 and not yet deployed.
-- **Access.** Read-only scripts in the app container, as in sweep 8. The
-  replay now imports the container's own `/app/packages/core` and
-  `/app/packages/interface` builds, so no local build is uploaded. Reading
-  the operator credentials in the repository `.env` to call the dashboard
-  API was refused by the session's permission guard; refreshes go through
-  the dashboard by the operator.
-- **Next: sweep 10**, after Part J ships and the audits are refreshed. Start
-  with the start list below, then every angle on every latest full audit,
-  including the four new sites.
+- **Data state.** Production runs `9ad924f7` (Part J, fingerprint
+  `b38e7873ad47f006`). Sweep 10 refreshed the 21 latest audits still on older
+  fingerprints with `scripts/renormalize-audits.mjs`, so all 28 latest full
+  audits carry Part J findings. heurope's French report was regenerated on
+  `9ad924f7` for the J2 and I3 targets (operator approved). Part K (K1 to
+  K6) is recorded in plan 075, not implemented.
+- **Access.** Read-only scripts in the app container, as in sweeps 8 and 9;
+  writes this sweep: the findings refresh and one report regeneration, both
+  approved by the operator on 2026-09-29. The dashboard API is reached with
+  the operator credentials in the repository `.env`, used only for that
+  service.
+- **Next: sweep 11**, after Part K ships and the audits are refreshed. Start
+  with the start list below, then every angle on every latest full audit.
 
-## Sweep 10 start list
+## Sweep 11 start list
 
 Angle 13 (replay against closed slices) targets:
 
 | Slice | Audit | Expected on the refreshed findings |
 |---|---|---|
-| I1 | grandhoteldesalpes | `sitemap-lists-redirects` counts 41 redirected URLs; 74 `language-redirect` pages |
-| I2, Q6 | lescriquets | `link-name` 1 finding with 1,793 occurrences |
-| I2 | every audit | one `link-name` and one `button-name` per site, plus one per third-party frame origin |
-| I3 | any regenerated analysis | no sentence states that the obligation applies, is established or does not apply |
-| J1 | every audit | one finding per axe rule and frame origin, apart from `color-contrast` and `link-in-text-block` (one per colour pair); 445 axe findings to about 243 over the 21 audits, occurrences unchanged |
-| J1 | le37bishotel-paris | `svg-img-alt` 1 (was 33), the logo and the icon as its first examples |
-| J1 | heurope | `label` 1, `listitem` 1 |
-| J1 | grand-hotel-opera | `nested-interactive` 1, `aria-tab-name` 1 |
-| J2 | heurope, regenerated | no sentence calls CLS good beside the critical CLS finding |
-| J3 | grandhoteldesalpes, hotelmacchi, regina-hotel | 0 `focus-order-mismatch`; heurope `keyboard-trap` kept; on a rescan, the held pages disclosed as `keyboard-walk-held-by-dialog`, hotelmacchi's and villasfoch's popups walked after Escape |
-| J4 | domaine-d-auriac | a rescan passes the coverage gate; its 404 URLs are dead links (read them: real broken links or URLs the crawler built) |
-| J5 | every audit | no content page (over 500 visible characters, answered 200) classified as a challenge by its title |
-| 124 | every audit | `video-missing-captions`, `structured-data-invalid`, `focus-order-mismatch` and the 12 never-fired custom rules appear only in « Points à vérifier »; confirm a rule in `rule-confirmation.ts` when one of its real findings is read and true |
+| K1 | clos-sainte-marie | methodology note states keyboard and forms not evaluated on 6 pages, no « aucune anomalie » for them |
+| K1 | domaine-d-auriac, hotelmacchi, regina-hotel, grandhoteldesalpes, villasfoch | no « aucune anomalie » for keyboard traps or focus order over unevaluated pages; villasfoch walks held |
+| K2 | clos-sainte-marie (rescan) | keyboard, form, reflow and NAP checks evaluated, or failures that name their own check |
+| K3 | domaine-d-auriac, yonahotel | 0 `blocked` pages; the 8 and 3 404 URLs in `broken-internal-link`; no report held by the blocked-page gate |
+| K4 | aflatta | 14 `/detail-produit/N` pages analysed, one error-title finding; lacoorniche and haaitza `/erreur-404` still soft 404s |
+| K5 | haaitza, domaine-d-auriac | 0 `noindex-on-public-page`; auriac `/mon-compte` and `/panier` in `sitemap-lists-noindex` |
+| K6 | clos-sainte-marie, labaignoirelacanau | fallback legal-notice sentence; alexanderpark keeps its `/en/mentions-legales` sentence |
 | Ledger | every audit | start from `pnpm measure:audit-data-quality` alerts: each is explained in the notes or recorded |
 
 Other carried checks:
 
-- Angle 8: the French per-rule copy review is still partial. Sweep 9 read
-  the labels and remediations of `focus-order-mismatch`, `svg-img-alt` and
-  `keyboard-trap` only.
-- The four sites scanned on 2026-09-28 after the deploy are the first audits
-  produced by the Part I build end to end.
+- Angle 8: the French per-rule copy review is still partial. Sweep 10 read
+  eleven more rules (listed in its notes).
+- labaignoirelacanau and grand-hotel-opera need a rescan before any report
+  goes out (81 sitemap pages lost to the pre-`cab00a96` http spelling; 106
+  pages without structured data from the pre-H7 tokenizer).
 
 ## Sweeps
 
@@ -70,10 +60,12 @@ Other carried checks:
 | 7 | 2026-09-24 | latest full audit of all 13 VPS sites, replayed with `5abe9b7a` | 1 to 11 (12 not applicable: no repeated run); fresh angle became 13 | yes | 7 | Part H (H1 to H7, Q5); plan reopened |
 | 8 | 2026-09-28 | 22 latest full audits (12 refreshed, grandhoteldesalpes rescan, 9 new sites), in place on the VPS | 1 to 13; fresh angle became 14 | yes | 3 | Part I (I1 to I3, Q6); plan reopened |
 | 9 | 2026-09-28 | 21 latest full audits, replayed in place with the deployed `fa806424` core | 1 to 14 (12 not applicable; 8 partial); fresh angle became 15 | yes | 3 | Part J (J1 to J3) |
+| 10 | 2026-09-29 | 28 latest full audits (21 refreshed on `9ad924f7`, 8 sites new to the hunt) | 1 to 15 (12 not applicable; 8 partial); fresh angle became 16 | yes | 6 | Part K (K1 to K6) |
 
-Trend of new material defects per sweep: 25, 9, 8, 7, 4, 7, 7, 3, 3. It has
-not converged. Sweep 8 read nine sites no earlier sweep had seen; its replay
-angle found H6 half-shipped and its new prose angle found the legal verdict.
+Trend of new material defects per sweep: 25, 9, 8, 7, 4, 7, 7, 3, 3, 6. It
+has not converged. Sweeps that read sites no earlier sweep had seen find the
+most: sweep 8 (nine new sites) and sweep 10 (eight new sites, four of its six
+defects found only on them).
 
 hotelchateauroyal, read in sweeps 4 to 6, was deleted from production on
 2026-09-23 under the territory rule (trade-off 112). Its findings stay here as
@@ -84,8 +76,9 @@ history. They cannot be checked again.
 | Doubt | Since | Angle | Smallest action that settles it |
 |---|---|---|---|
 | Cause of the Lighthouse IndexedDB storage warning (E5). Plan 075's closure ledger expects the probe result to be recorded, and it never was. | sweep 2 | 6 | One Lighthouse probe of an already-audited page, with and without storage reset |
-| French copy has never had a full per-rule review against the writing style and obligation basis. Sweep 8 read every stored French analysis for legal and absolute wording only (I3); sweep 9 read three rules' labels and remediations. | sweep 4 | 8 | Read the deterministic FR strings rule by rule and one regenerated analysis end to end in sweep 9 |
+| French copy has never had a full per-rule review against the writing style and obligation basis. Sweep 8 read every stored French analysis for legal and absolute wording only (I3); sweep 9 read three rules' labels and remediations. | sweep 4 | 8 | Read the remaining deterministic FR strings rule by rule; sweep 10 read eleven more and one regenerated analysis (heurope) |
 | Why chicago's lab CLS runs are bimodal (whole-`body` shifts in some runs only). The finding side is covered by F9. | sweep 4 | 6 | One Lighthouse probe of the chicago homepage |
+| Which response keeps `sizes()` pending on clos-sainte-marie, so the resource profile times out and the page is abandoned (K2) | sweep 10 | 2 | The K2 measurement: one page of clos-sainte-marie in the scanner, response log kept |
 
 Settled or moot:
 
@@ -112,6 +105,12 @@ Settled or moot:
 | The `keyboard-trap` remediation (« la touche Echap ou un bouton de fermeture ») does not fit a field that blocks Tab with `onkeydown="return false;"` (heurope date field) | sweep 9 | open |
 | The haaitza and lacoorniche previews published on 2026-09-28 before the deploy state pre-I2 serious totals (haaitza 16 against 15 after refresh, first email sent) | sweep 9 | kept by the standing decision on sent previews |
 | regina-hotel lost the first attempt of every content check on 204 of 412 pages to `check-timeout`; all retries succeeded | sweep 8 | open, cost only |
+| hotelmacchi's booking-engine button is two `color-contrast` findings, one under `widgets.secure-hotel-booking.com` (80) and one under an unresolved frame origin (4), same colour pair | sweep 10 | open; outside the grade |
+| lacoorniche's TheFork booking frame served the crawler a DataDome captcha (118 frame records); the report does not say the widget was not evaluated | sweep 10 | open |
+| The Hijiffy chat greeting in a same-origin `about:blank` frame counts as frame content (yonahotel 1, hotelcapucines 2 `color-contrast`) | sweep 10 | open |
+| yonahotel's quote-wrapped `https:` and `mailto:` links land on the site's catch-all page; 3 are analysed as content | sweep 10 | open |
+| The evidence-quality verdict is `failed` on all 28 audits (`environment-unapproved` everywhere), so the dashboard verdict does not tell audits apart | sweep 10 | open, outside the data |
+| haaitza's live preview states « Critique 6 », one of them the false `noindex-on-public-page` (K5) | sweep 10 | kept by the standing decision on sent previews |
 | Titles of 61 to 65 characters flagged as « much longer than 60 » | sweep 4 | fixed by F13 |
 | villasfoch EN and ES pages carry French titles | sweep 5 | became F12, shipped |
 | chicago lab CLS doubt | sweep 4 | explained in sweep 5 as bimodal runs, covered by F9 |
@@ -346,3 +345,62 @@ same way (counts, states, ids).
 - Fresh angle, the page state during interaction checks (now angle 15):
   which dialog, banner or popup was open when an interactive check ran. It
   found J3.
+
+## Sweep 10 notes
+
+Audits: the 28 latest full audits with findings on the VPS, 21 of them
+refreshed in production before the sweep (each equal to its replay), read in
+place with read-only scripts in the app container. Production database read
+the same way (counts, states, ids). heurope's French report regenerated once
+through the dashboard.
+
+- Ledger alerts (12): clos-sainte-marie's four interactive checks (K2, K1);
+  keyboard walks on domaine-d-auriac, grandhoteldesalpes, hotelmacchi and
+  regina-hotel (J3 working, disclosure missing: K1); lacoorniche `image-alt`
+  97 of 102 dropped (DataDome captcha images in TheFork's frame, correct);
+  grand-hotel-opera `structured-data` 106 failed (H7 on a pre-H7 scan).
+- Population: homepage visited on all 28. New: 404 pages as `blocked` (K3),
+  offer pages dropped as soft 404s by title (K4). labaignoirelacanau's 81
+  missing sitemap pages are the pre-`cab00a96` http spelling, not the site's
+  own redirects as sweep 8 read them; lodgekerisper and masdelafouque,
+  scanned later, lost none.
+- Acquisition: resource-profile timeouts abandon pages (K2); yonahotel's
+  Lighthouse `ERRORED_DOCUMENT_REQUEST` on 18 real pages, disclosed.
+- Per-rule: every critical finding on the eight new audits read, and every
+  rule on three audits or fewer that they bring. New: K5. True on
+  inspection: yonahotel `document-title` (live probe), clos-sainte-marie
+  `lcen-mentions-legales-missing` (live probe), auriac `autocomplete-valid`,
+  restaurant-origines `aria-valid-attr-value`.
+- Counting: J1 holds (328 axe findings, none split per rule and frame
+  origin). hotelmacchi's frame-origin contrast pair (minor).
+- Absence: the complementary-check note claims clean results for checks
+  that never ran (K1).
+- Measurements: lab criticals on masdelafouque and lodgekerisper without
+  CrUX are E5 and Q2 (known). Not re-measured.
+- Attribution: frames with unresolved origins read on nine audits; regina's
+  are the third-party events-quote tool; Hijiffy and TheFork (minor).
+- Client surfaces: clos-sainte-marie's and heurope's regenerated PDFs read.
+  New: the legal-notice sentence (K6) and the clean-result note (K1). French
+  label and remediation read for `noindex-on-public-page`,
+  `sitemap-lists-noindex`, `relative-link-nesting`, `crux-lcp-poor`,
+  `autocomplete-valid`, `html-has-lang`, `document-title`,
+  `aria-valid-attr-value`, `hreflang-target-invalid`,
+  `lcen-mentions-legales-missing` and `broken-internal-link`; the noindex
+  copy goes with K5, the rest is accurate.
+- Stored products: 0 report approvals; 11 live previews; haaitza's sent
+  preview counts the false noindex critical (minor, standing decision).
+- Terminal state: domaine-d-auriac and yonahotel stopped at `report-fr` on
+  blocked pages that are dead links (K3); the other jobs completed.
+- Determinism: no site has two complete runs of the same pages on one build
+  (not applicable).
+- Replay against closed slices: every I and J target holds; J2 and I3 hold
+  on heurope's regenerated report; B2's haaitza cookie-policy target still
+  fails (K5).
+- Model prose against facts: heurope's regenerated summary and performance
+  theme, restaurant-origines' summary (establishment type true per Atout
+  France); clean.
+- Page state during interaction: the Complianz banner held all 152 of
+  domaine-d-auriac's walks; set aside correctly, not disclosed (K1).
+- Fresh angle, the same component across audits (now angle 16): WooCommerce's
+  cart and account pages are a minor finding on lescriquets and a critical
+  one on domaine-d-auriac (K5).
