@@ -253,6 +253,20 @@ export function renderStatistics(
           ),
         )}</p>`
       : '';
+  const unconfirmedRuleNote =
+    stats.unconfirmedRuleFindingCount > 0
+      ? `<p class="statistics-note">${escapeHtml(
+          fillTemplate(
+            pluralize(
+              language,
+              stats.unconfirmedRuleFindingCount,
+              s.unconfirmedRuleNoteSingularTemplate,
+              s.unconfirmedRuleNotePluralTemplate,
+            ),
+            { count: n(stats.unconfirmedRuleFindingCount) },
+          ),
+        )}</p>`
+      : '';
   const thirdPartyFrameNote =
     stats.confinedThirdPartyOccurrenceCount > 0
       ? `<p class="statistics-note">${escapeHtml(
@@ -289,8 +303,9 @@ export function renderStatistics(
     thirdPartyOccurrencesNote ||
     thirdPartyFrameNote ||
     unlinkedSitemapNote ||
+    unconfirmedRuleNote ||
     priorityOwnershipNote
-      ? `<div class="statistics-notes">${criticalDriverNote}${heuristicOccurrencesNote}${thirdPartyOccurrencesNote}${thirdPartyFrameNote}${unlinkedSitemapNote}${priorityOwnershipNote}</div>`
+      ? `<div class="statistics-notes">${criticalDriverNote}${heuristicOccurrencesNote}${thirdPartyOccurrencesNote}${thirdPartyFrameNote}${unlinkedSitemapNote}${unconfirmedRuleNote}${priorityOwnershipNote}</div>`
       : '<div class="statistics-notes"></div>';
 
   return sheet(

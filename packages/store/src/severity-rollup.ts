@@ -59,7 +59,7 @@ export interface SeverityPopulationInput {
   auditId: string;
   findingsDigest?: string;
   pages: ManifestPageEntry[];
-  findings: Pick<Finding, 'severity' | 'pageUrls' | 'elements'>[];
+  findings: Pick<Finding, 'severity' | 'pageUrls' | 'elements' | 'ruleId'>[];
 }
 
 export async function loadSeverityPopulationInputs(
@@ -87,8 +87,10 @@ export async function loadSeverityPopulationInputs(
       >(),
     createFindingModel(connection)
       .find({ auditId: { $in: [...auditIds] } })
-      .select({ _id: 0, auditId: 1, severity: 1, pageUrls: 1, 'elements.selector': 1 })
-      .lean<(Pick<Finding, 'severity' | 'pageUrls' | 'elements'> & { auditId: string })[]>(),
+      .select({ _id: 0, auditId: 1, ruleId: 1, severity: 1, pageUrls: 1, 'elements.selector': 1 })
+      .lean<
+        (Pick<Finding, 'severity' | 'pageUrls' | 'elements' | 'ruleId'> & { auditId: string })[]
+      >(),
   ]);
   const audit = new Map(audits.map((row) => [row.auditId, row]));
   return [...new Set(auditIds)].map((auditId) => {
@@ -99,7 +101,12 @@ export async function loadSeverityPopulationInputs(
       pages: audit.get(auditId)?.pages ?? [],
       findings: findings
         .filter((finding) => finding.auditId === auditId)
-        .map(({ severity, pageUrls, elements }) => ({ severity, pageUrls, elements })),
+        .map(({ severity, pageUrls, elements, ruleId }) => ({
+          severity,
+          pageUrls,
+          elements,
+          ruleId,
+        })),
     };
   });
 }

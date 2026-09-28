@@ -128,8 +128,14 @@ describe('getSeverityRollupsForPoll', () => {
         findingsDigest: 'digest-1',
         pages: [],
         findings: [
-          { severity: 'serious', pageUrls: ['https://example.com/'], elements: [] },
           {
+            ruleId: 'label',
+            severity: 'serious',
+            pageUrls: ['https://example.com/'],
+            elements: [],
+          },
+          {
+            ruleId: 'button-name',
             severity: 'critical',
             pageUrls: ['https://example.com/'],
             elements: [{ selector: 'iframe >>> button' } as never],

@@ -6270,3 +6270,31 @@ running the unit project on every deploy (a few minutes each time, which the
 operator declined), and requiring the gate only when the lockfile,
 Dockerfile or `deploy/` changed (more logic in the deploy script for a rule
 the operator applies by judgement).
+
+### 124. A custom rule counts only once a real finding has confirmed it (2026-09-28)
+
+Every custom rule is either confirmed or unconfirmed in
+`packages/core/src/rule-confirmation.ts`, a registry exhaustive over
+`CUSTOM_CHECK_SEVERITY`. A rule is confirmed once a real finding of it has
+been read on a production audit and found true; its basis names the audit or
+the sweep. Findings of an unconfirmed rule stay in the report, in their own
+annex block « Points à vérifier », but leave the grade, the totals, the
+priorities and the outreach proof cards through the fourth bucket of
+`reportPopulation`, and the statistics page says how many there are.
+
+Why: `focus-order-mismatch` shipped in August with unit tests, had its first
+finding read in sweep 9, and every one of its production findings was false
+(a consent banner holding the Tab walk, plan 075 J3). It counted in report
+totals the whole time. Classified on 2026-09-28 from the 21 latest production
+audits: 53 of 67 custom rules fired and were read in sweeps 4 to 9; the 14
+that never fired, plus `focus-order-mismatch`, are unconfirmed. A new custom
+rule starts unconfirmed, and confirming one is a one-line change with its
+evidence.
+
+Accepted cost: a true finding of an unconfirmed rule (a real
+`robots-blocks-indexing` on a homepage) is shown as a point to verify, not
+counted, until the operator confirms the rule. The operator reads every report
+before it goes out, and the note on the statistics page makes the block hard
+to miss. Rejected alternatives: suppressing unconfirmed rules entirely (that
+hides real defects, the opposite of the aim), and marking every custom rule
+confirmed by default (the failure above).

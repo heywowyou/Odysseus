@@ -163,6 +163,11 @@ export interface ReportStrings {
     thirdPartyFrameNotePluralTemplate: string;
     unlinkedSitemapNoteSingularTemplate: string;
     unlinkedSitemapNotePluralTemplate: string;
+    /** Template: {count}. Findings of custom rules no real finding has
+     *  confirmed yet (core's rule-confirmation.ts) stay in the annex's
+     *  points to verify and never enter the totals or the grade. */
+    unconfirmedRuleNoteSingularTemplate: string;
+    unconfirmedRuleNotePluralTemplate: string;
     priorityOwnership: PriorityOwnershipStrings;
     pagesWithCriticalTileLabel: string;
     criticalTileLabel: string;
@@ -1243,6 +1248,10 @@ export interface ReportStrings {
      *  known, rather than mixed with the client's own defects. */
     thirdPartyHeading: string;
     thirdPartyIntro: string;
+    /** The block of findings from custom rules not yet confirmed on real
+     *  sites: reported so the client can check them, never counted. */
+    toVerifyHeading: string;
+    toVerifyIntro: string;
     /** P2.3 (2026-08-21 La Corniche feedback pass): explains why a
      *  third-party finding can be counted among the headline "sérieux"
      *  total while this section separately notes the observed

@@ -71,6 +71,10 @@ export const en: ReportStrings = {
       'The sitemap publishes {pages} pages that no page of the site links to. {count} finding concerns only those pages: it is listed in the technical appendix and is counted neither in these totals nor in the primary grade.',
     unlinkedSitemapNotePluralTemplate:
       'The sitemap publishes {pages} pages that no page of the site links to. {count} findings concern only those pages: they are listed in the technical appendix and are counted neither in these totals nor in the primary grade.',
+    unconfirmedRuleNoteSingularTemplate:
+      'In addition, {count} finding comes from an automated check still being validated: it is listed in the technical appendix among the points to verify and is counted neither in these totals nor in the primary grade.',
+    unconfirmedRuleNotePluralTemplate:
+      'In addition, {count} findings come from automated checks still being validated: they are listed in the technical appendix among the points to verify and are counted neither in these totals nor in the primary grade.',
     priorityOwnership: {
       leadTemplate: 'Priorities: {clauses}.',
       firstPartySingularTemplate: '{count} to fix directly',
@@ -908,6 +912,9 @@ export const en: ReportStrings = {
     },
     geoEmergingLabel: 'Emerging research',
     thirdPartyHeading: 'To resolve with your third-party providers',
+    toVerifyHeading: 'Points to verify',
+    toVerifyIntro:
+      'These findings come from automated checks we have not yet confirmed on real sites. Check each one before acting: they are counted neither in the totals at the top of the report nor in the primary grade.',
     thirdPartyIntro:
       'These findings are in code belonging to a third-party plugin, widget, or embedded frame (booking engine, cookie banner, preview panel, form). This code cannot be edited directly in your site: the fix goes through the vendor or provider concerned.',
     thirdPartyCountedInTotalsNote:

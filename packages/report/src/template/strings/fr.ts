@@ -83,6 +83,10 @@ export const fr: ReportStrings = {
       'Le plan du site publie {pages} pages qu’aucune page du site ne relie. {count} constat ne concerne que ces pages : il figure dans l’annexe technique et n’est compté ni dans ces totaux ni dans la note principale.',
     unlinkedSitemapNotePluralTemplate:
       'Le plan du site publie {pages} pages qu’aucune page du site ne relie. {count} constats ne concernent que ces pages : ils figurent dans l’annexe technique et ne sont comptés ni dans ces totaux ni dans la note principale.',
+    unconfirmedRuleNoteSingularTemplate:
+      'En outre, {count} constat vient d’un contrôle automatique encore en cours de validation : il figure dans l’annexe technique parmi les points à vérifier et n’est compté ni dans ces totaux ni dans la note principale.',
+    unconfirmedRuleNotePluralTemplate:
+      'En outre, {count} constats viennent de contrôles automatiques encore en cours de validation : ils figurent dans l’annexe technique parmi les points à vérifier et ne sont comptés ni dans ces totaux ni dans la note principale.',
     priorityOwnership: {
       leadTemplate: 'Priorités : {clauses}.',
       firstPartySingularTemplate: '{count} constat à corriger directement',
@@ -1026,6 +1030,9 @@ export const fr: ReportStrings = {
     },
     geoEmergingLabel: 'Recherche émergente',
     thirdPartyHeading: 'À traiter avec vos prestataires tiers',
+    toVerifyHeading: 'Points à vérifier',
+    toVerifyIntro:
+      'Ces constats viennent de contrôles automatiques que nous n’avons pas encore confirmés sur des sites réels. Vérifiez chacun avant d’agir : ils ne sont comptés ni dans les totaux en tête de rapport ni dans la note principale.',
     thirdPartyIntro:
       "Ces constats concernent du code appartenant à un plugin, un widget ou un cadre tiers (moteur de réservation, bannière de cookies, aperçu, formulaire). Ce code ne peut pas être modifié directement dans votre site : la correction passe par le prestataire ou l'éditeur concerné.",
     // P2.3 (2026-08-21 La Corniche feedback pass): a real report counted

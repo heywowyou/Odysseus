@@ -10,7 +10,7 @@ import type {
   ReportLanguage,
   StatSector,
 } from '@odysseus/core';
-import { contentCheckedPageUrls, selectReferenceStats } from '@odysseus/core';
+import { contentCheckedPageUrls, isUnconfirmedRule, selectReferenceStats } from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import type { ReportStrings } from '../strings/i18n.js';
 import {
@@ -778,6 +778,42 @@ function renderThirdPartySection(
   `;
 }
 
+/** The findings of custom rules no real finding has confirmed yet, in one
+ *  block after the third-party one: each is shown with its evidence, and
+ *  the intro says none of them is counted. */
+function renderToVerifySection(
+  strings: ReportStrings,
+  language: ReportLanguage,
+  toVerifyFindings: Finding[],
+  missingPercentByUrl: ReadonlyMap<string, number>,
+  totalPagesScanned: number,
+  clusterLookup: ClusterLookup,
+  scopePageUrls: ReadonlySet<string>,
+): string {
+  if (toVerifyFindings.length === 0) return '';
+  const groupBlocks = groupAppendix(toVerifyFindings, scopePageUrls)
+    .map((group) =>
+      renderRuleGroup(
+        strings,
+        language,
+        group,
+        group.findings.every((f) => classifyDiversion(f, missingPercentByUrl) !== null),
+        totalPagesScanned,
+        clusterLookup,
+        scopePageUrls,
+        'to-verify',
+      ),
+    )
+    .join('');
+  return `
+    <div class="appendix-category" data-appendix-category="to-verify" style="margin-bottom:var(--space-12)">
+      <h4 class="appendix-category-head" data-appendix-category="to-verify">${escapeHtml(strings.findingsAppendix.toVerifyHeading)}</h4>
+      <p style="font-size:12px;opacity:0.55;margin-bottom:var(--space-4)">${escapeHtml(strings.findingsAppendix.toVerifyIntro)}</p>
+      ${groupBlocks}
+    </div>
+  `;
+}
+
 function renderCategorySection(
   strings: ReportStrings,
   language: ReportLanguage,
@@ -981,7 +1017,15 @@ export function renderFindingsAppendix(
   // one consistent partition - a finding renders in exactly one place
   // either way, so the annex-row-count invariant (item 0.7) still holds.
   const thirdPartyFindings = findings.filter((finding) => isThirdPartyFinding(finding));
-  const firstPartyFindings = findings.filter((finding) => !isThirdPartyFinding(finding));
+  // Findings of custom rules not yet confirmed on real sites (core's
+  // rule-confirmation.ts) get their own block, so a reader never takes one
+  // for a verified defect of its category.
+  const toVerifyFindings = findings.filter(
+    (finding) => !isThirdPartyFinding(finding) && isUnconfirmedRule(finding.ruleId),
+  );
+  const firstPartyFindings = findings.filter(
+    (finding) => !isThirdPartyFinding(finding) && !isUnconfirmedRule(finding.ruleId),
+  );
 
   const sections = CATEGORY_ORDER.map((category) => {
     const categoryFindings = firstPartyFindings.filter((finding) => finding.category === category);
@@ -1003,6 +1047,15 @@ export function renderFindingsAppendix(
     strings,
     language,
     thirdPartyFindings,
+    missingPercentByUrl,
+    crawledPages.length,
+    clusterLookup,
+    scopePageUrls,
+  );
+  const toVerifySection = renderToVerifySection(
+    strings,
+    language,
+    toVerifyFindings,
     missingPercentByUrl,
     crawledPages.length,
     clusterLookup,
@@ -1049,6 +1102,7 @@ export function renderFindingsAppendix(
     ${crawledPagesBlock}
     ${sections}
     ${thirdPartySection}
+    ${toVerifySection}
   `,
     'sheet-standalone',
     'section-12',

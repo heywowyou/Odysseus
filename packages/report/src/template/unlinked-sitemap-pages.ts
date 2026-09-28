@@ -1,4 +1,5 @@
 import type { AuditManifest, Finding, Severity } from '@odysseus/core';
+import { isUnconfirmedRule } from '@odysseus/core';
 import { isConfinedToThirdPartyFrame } from './third-party-attribution.js';
 
 /**
@@ -42,20 +43,24 @@ function isConfinedToUnlinkedSitemapPages(
   );
 }
 
+type PopulationFinding = Pick<Finding, 'elements' | 'pageUrls' | 'ruleId'>;
+
 /** The findings every headline count, priority and grade is built from. */
 export function primaryFindingFilter(
   manifest: PopulationManifest | undefined,
-): (finding: Pick<Finding, 'elements' | 'pageUrls'>) => boolean {
+): (finding: PopulationFinding) => boolean {
   const unlinked = manifest === undefined ? new Set<string>() : unlinkedSitemapPageUrls(manifest);
   return (finding) =>
-    !isConfinedToThirdPartyFrame(finding) && !isConfinedToUnlinkedSitemapPages(finding, unlinked);
+    !isConfinedToThirdPartyFrame(finding) &&
+    !isConfinedToUnlinkedSitemapPages(finding, unlinked) &&
+    !isUnconfirmedRule(finding.ruleId);
 }
 
-type PopulationFinding = Pick<Finding, 'elements' | 'pageUrls'>;
-
 /** The report's one split of an audit's findings (issue #508): the primary
- *  population every headline count, grade and priority reads, and the two
- *  buckets it leaves out, in the order they are tested. The Audits list, the
+ *  population every headline count, grade and priority reads, and the three
+ *  buckets it leaves out, in the order they are tested. The third holds the
+ *  findings of custom rules no real finding has confirmed yet (core's
+ *  rule-confirmation.ts): reported as points to verify, never counted. The Audits list, the
  *  audit page, the report statistics and the outreach preview all start from
  *  this, so no surface rebuilds the population its own way; a surface that
  *  narrows it further (the preview's proof filter) says so on top. */
@@ -63,6 +68,7 @@ export interface ReportPopulation<F extends PopulationFinding> {
   primary: F[];
   thirdPartyFrame: F[];
   unlinkedSitemap: F[];
+  unconfirmedRule: F[];
 }
 
 export function reportPopulation<F extends PopulationFinding>(
@@ -70,12 +76,18 @@ export function reportPopulation<F extends PopulationFinding>(
   findings: readonly F[],
 ): ReportPopulation<F> {
   const unlinked = manifest === undefined ? new Set<string>() : unlinkedSitemapPageUrls(manifest);
-  const population: ReportPopulation<F> = { primary: [], thirdPartyFrame: [], unlinkedSitemap: [] };
+  const population: ReportPopulation<F> = {
+    primary: [],
+    thirdPartyFrame: [],
+    unlinkedSitemap: [],
+    unconfirmedRule: [],
+  };
   for (const finding of findings) {
     if (isConfinedToThirdPartyFrame(finding)) population.thirdPartyFrame.push(finding);
     else if (isConfinedToUnlinkedSitemapPages(finding, unlinked)) {
       population.unlinkedSitemap.push(finding);
-    } else population.primary.push(finding);
+    } else if (isUnconfirmedRule(finding.ruleId)) population.unconfirmedRule.push(finding);
+    else population.primary.push(finding);
   }
   return population;
 }

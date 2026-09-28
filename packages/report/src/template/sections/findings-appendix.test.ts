@@ -1446,3 +1446,46 @@ describe('a finding whose pages all fall outside the analysed scope', () => {
     expect(html).not.toContain('0 page');
   });
 });
+
+// A custom rule no real finding has confirmed yet (core's
+// rule-confirmation.ts) renders in its own block, never inside a category.
+describe('renderFindingsAppendix points to verify', () => {
+  it('lists an unconfirmed-rule finding under its own heading, once', async () => {
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
+    const template = findings.find((f) => f.category === 'accessibility') ?? findings[0]!;
+    const unconfirmed: Finding = {
+      ...template,
+      findingId: 'unconfirmed-focus',
+      dedupeKey: 'unconfirmed-focus',
+      ruleId: 'focus-order-mismatch',
+      source: 'custom',
+      category: 'accessibility',
+      elements: [],
+    };
+
+    for (const language of ['fr', 'en'] as const) {
+      const strings = getStrings(language);
+      const html = renderFindingsAppendix(
+        strings,
+        12,
+        language,
+        [...findings, unconfirmed],
+        manifest,
+        'general',
+      );
+      const block = html.slice(html.indexOf('data-appendix-category="to-verify"'));
+
+      expect(block).toContain(strings.findingsAppendix.toVerifyHeading);
+      expect(block).toContain('id="annexref-unconfirmed-focus"');
+      expect((html.match(/id="annexref-unconfirmed-focus"/gu) ?? []).length).toBe(1);
+    }
+  });
+
+  it('renders no block when every rule is confirmed', async () => {
+    const findings = await loadSmallSiteFindings();
+    const manifest = await loadSmallSiteManifest();
+    const html = renderFindingsAppendix(getStrings('fr'), 12, 'fr', findings, manifest, 'general');
+    expect(html).not.toContain('data-appendix-category="to-verify"');
+  });
+});

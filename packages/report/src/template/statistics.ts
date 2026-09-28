@@ -52,6 +52,9 @@ export interface ReportStatistics {
   /** Plan 075, Q4: findings only on pages the sitemap alone reaches, when
    *  those pages are most of the analysed population. */
   unlinkedSitemapFindingCount: number;
+  /** Findings of custom rules no real finding has confirmed yet, outside
+   *  every count above (core's rule-confirmation.ts). */
+  unconfirmedRuleFindingCount: number;
   unlinkedSitemapPageCount: number;
   pagesWithCritical: number;
   critical: number;
@@ -171,6 +174,7 @@ export function computeStatistics(
       0,
     ),
     unlinkedSitemapFindingCount: population.unlinkedSitemap.length,
+    unconfirmedRuleFindingCount: population.unconfirmedRule.length,
     unlinkedSitemapPageCount: unlinkedSitemapPageUrls(manifest).size,
     pagesWithCritical: pagesWithCriticalSet.size,
     critical,

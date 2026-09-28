@@ -57,6 +57,7 @@ describe('computeStatistics', () => {
       confinedThirdPartyFindingCount: 0,
       confinedThirdPartyOccurrenceCount: 0,
       unlinkedSitemapFindingCount: 0,
+      unconfirmedRuleFindingCount: 0,
       unlinkedSitemapPageCount: 0,
       pagesWithCritical: 20,
       critical: 8,
@@ -252,6 +253,30 @@ describe('computeStatistics with a sitemap-only majority (plan 075, Q4)', () => 
     expect(after.unlinkedSitemapFindingCount).toBe(onlyUnlinked.length);
     expect(after.unlinkedSitemapPageCount).toBe(visited.length - linked.size);
     expect(after.totalFindings).toBe(before.totalFindings - onlyUnlinked.length);
+  });
+
+  // A custom rule no real finding has confirmed yet (core's
+  // rule-confirmation.ts): its findings leave every count and the grade.
+  it('keeps unconfirmed-rule findings out of every count', () => {
+    const findings = loadMultiPageFindings();
+    const manifest = loadMultiPageManifest();
+    const template = findings.find((finding) => finding.severity === 'critical') ?? findings[0]!;
+    const unconfirmed: Finding = {
+      ...template,
+      findingId: 'unconfirmed-1',
+      dedupeKey: 'unconfirmed-1',
+      ruleId: 'focus-order-mismatch',
+      source: 'custom',
+      category: 'accessibility',
+      severity: 'critical',
+    };
+
+    const before = computeStatistics(findings, manifest);
+    const after = computeStatistics([...findings, unconfirmed], manifest);
+
+    expect(after.unconfirmedRuleFindingCount).toBe(1);
+    expect(after.totalFindings).toBe(before.totalFindings);
+    expect(after.critical).toBe(before.critical);
   });
 
   it('counts sitemap-only pages like any other when they are a minority', () => {
