@@ -7,6 +7,7 @@ vi.mock('@odysseus/store', () => ({
 import { recordReferenceAuditRequest } from '@odysseus/store';
 import {
   processReferenceAuditReceipts,
+  REFERENCE_AUDIT_RECEIPTS_PER_TICK,
   type ReferenceAuditReceipt,
 } from './reference-audit-poller.js';
 import {
@@ -31,6 +32,22 @@ describe('reference audit receipt poller', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(recordReferenceAuditRequest).mockResolvedValue({ accepted: true, first: true });
+  });
+
+  it('consumes at most one tick batch of a flood and leaves the rest for later ticks (issue #551)', async () => {
+    const bucket = createInMemoryReferenceAuditReceiptBucket();
+    for (let i = 0; i < 5_000; i += 1) {
+      await bucket.putJson(
+        `${REFERENCE_AUDIT_RECEIPT_PREFIX}${String(i).padStart(4, '0')}.json`,
+        receipt(),
+      );
+    }
+
+    const result = await processReferenceAuditReceipts({ bucket, connection, now });
+
+    expect(result.processed).toBe(REFERENCE_AUDIT_RECEIPTS_PER_TICK);
+    expect(recordReferenceAuditRequest).toHaveBeenCalledTimes(REFERENCE_AUDIT_RECEIPTS_PER_TICK);
+    expect(bucket.keys()).toHaveLength(5_000 - REFERENCE_AUDIT_RECEIPTS_PER_TICK);
   });
 
   it('consumes only the bounded receipt shape and forwards no request metadata', async () => {

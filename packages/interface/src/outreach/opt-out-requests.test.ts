@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 import {
   createProspectHub,
   getProspectHub,
@@ -13,10 +13,15 @@ import {
   createInMemoryOptOutBucket,
   createOptOutLink,
   deriveOptOutLinkKey,
+  OPT_OUT_REQUEST_PREFIX,
   optOutRequestKey,
   storeOptOutLink,
 } from './opt-out-bucket.js';
-import { isPlausibleOptOutAddress, processOptOutRequests } from './opt-out-requests.js';
+import {
+  isPlausibleOptOutAddress,
+  OPT_OUT_REQUESTS_PER_POLL,
+  processOptOutRequests,
+} from './opt-out-requests.js';
 import type { MailboxDraftAdapter } from './mailbox-draft-adapter.js';
 import { createInMemoryPreviewPublisher } from './in-memory-preview-publisher.js';
 import { hashPreviewToken } from './preview-token.js';
@@ -187,6 +192,17 @@ describe.skipIf(!mongoAvailable)('processing opt-out requests', () => {
     });
     expect(result.applied).toBe(1);
     await expect(isSuppressed(connection!, 'x.fr', 'someone@elsewhere.fr')).resolves.toBe(true);
+  });
+
+  it('reads at most one poll batch of requests (issue #551)', async () => {
+    const bucket = createInMemoryOptOutBucket();
+    const list = vi.spyOn(bucket, 'list');
+    await processOptOutRequests({
+      connection: connection!,
+      bucket,
+      publisher: createInMemoryPreviewPublisher(),
+    });
+    expect(list).toHaveBeenCalledWith(OPT_OUT_REQUEST_PREFIX, OPT_OUT_REQUESTS_PER_POLL);
   });
 
   async function submit(address: string, token?: string): Promise<void> {

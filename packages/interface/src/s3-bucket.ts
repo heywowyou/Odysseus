@@ -42,8 +42,9 @@ export interface S3Bucket {
   /** Signs and sends one request, aborted once the deadline passes. */
   send(url: string, init: RequestInit): Promise<Response>;
   /** Every key under `prefix`, across as many ListObjectsV2 pages as it
-   *  takes. `label` names the bucket in an error message. */
-  listKeys(prefix: string, label: string): Promise<string[]>;
+   *  takes, or the first `maxKeys` of them. `label` names the bucket in an
+   *  error message. */
+  listKeys(prefix: string, label: string, maxKeys?: number): Promise<string[]>;
 }
 
 export function createS3Bucket(options: S3BucketOptions): S3Bucket {
@@ -67,13 +68,16 @@ export function createS3Bucket(options: S3BucketOptions): S3Bucket {
   return {
     objectUrl: (key) => `${origin}/${key.split('/').map(encodeURIComponent).join('/')}`,
     send,
-    async listKeys(prefix, label) {
+    async listKeys(prefix, label, maxKeys) {
       const keys: string[] = [];
       let continuationToken: string | undefined;
       do {
         const url = new URL(`${origin}/`);
         url.searchParams.set('list-type', '2');
         url.searchParams.set('prefix', prefix);
+        if (maxKeys !== undefined) {
+          url.searchParams.set('max-keys', String(Math.min(1000, maxKeys - keys.length)));
+        }
         if (continuationToken !== undefined) {
           url.searchParams.set('continuation-token', continuationToken);
         }
@@ -84,8 +88,8 @@ export function createS3Bucket(options: S3BucketOptions): S3Bucket {
         const page = parseListObjectsV2(await response.text());
         keys.push(...page.keys);
         continuationToken = page.nextContinuationToken;
-      } while (continuationToken !== undefined);
-      return keys;
+      } while (continuationToken !== undefined && (maxKeys === undefined || keys.length < maxKeys));
+      return maxKeys === undefined ? keys : keys.slice(0, maxKeys);
     },
   };
 }

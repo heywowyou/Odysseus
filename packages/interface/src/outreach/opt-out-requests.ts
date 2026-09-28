@@ -123,6 +123,10 @@ async function applyOptOut(
   return mailboxDraftsNotRemoved;
 }
 
+/** Issue #551: requests one poll consumes; the public form can be flooded,
+ *  and the rest wait for the next poll. */
+export const OPT_OUT_REQUESTS_PER_POLL = 200;
+
 export async function processOptOutRequests(
   options: ProcessOptOutRequestsOptions,
 ): Promise<ProcessOptOutRequestsResult> {
@@ -132,7 +136,7 @@ export async function processOptOutRequests(
     'mailbox' in options ? (options.mailbox ?? null) : createConfiguredMailboxDraftAdapter();
   let mailboxDraftsNotRemoved = await retryPendingMailboxDraftDeletions(connection, mailbox);
 
-  for (const key of await bucket.list(OPT_OUT_REQUEST_PREFIX)) {
+  for (const key of await bucket.list(OPT_OUT_REQUEST_PREFIX, OPT_OUT_REQUESTS_PER_POLL)) {
     try {
       const request = (await bucket.getJson(key)) as Record<string, unknown> | null;
       if (request === null) continue;

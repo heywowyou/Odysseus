@@ -47,6 +47,12 @@ export interface ProcessReferenceAuditReceiptResult {
   failed: number;
 }
 
+/** Issue #551: receipts one tick consumes. The public route can be hit by
+ *  anyone, so a flood waits in the bucket for later ticks instead of making
+ *  one tick list, read, delete and record without bound in the process that
+ *  also runs scans. */
+export const REFERENCE_AUDIT_RECEIPTS_PER_TICK = 200;
+
 export async function processReferenceAuditReceipts(options: {
   connection: Connection;
   bucket: ReferenceAuditReceiptBucket;
@@ -58,7 +64,10 @@ export async function processReferenceAuditReceipts(options: {
     discarded: 0,
     failed: 0,
   };
-  const keys = await options.bucket.list(REFERENCE_AUDIT_RECEIPT_PREFIX);
+  const keys = await options.bucket.list(
+    REFERENCE_AUDIT_RECEIPT_PREFIX,
+    REFERENCE_AUDIT_RECEIPTS_PER_TICK,
+  );
   for (const key of keys) {
     try {
       const raw = await options.bucket.getJson(key);

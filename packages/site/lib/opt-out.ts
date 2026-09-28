@@ -153,20 +153,26 @@ export const OPT_OUT_SUBMISSIONS_PER_WINDOW = 5;
 export const OPT_OUT_WINDOW_MS = 10 * 60 * 1000;
 const MAX_TRACKED_CLIENTS = 5_000;
 
-export function createSubmissionLimiter(now: () => number = Date.now) {
+export function createSubmissionLimiter(
+  now: () => number = Date.now,
+  limits: { perWindow: number; windowMs: number } = {
+    perWindow: OPT_OUT_SUBMISSIONS_PER_WINDOW,
+    windowMs: OPT_OUT_WINDOW_MS,
+  },
+) {
   const windows = new Map<string, { startedAt: number; count: number }>();
   return {
     /** Counts one submission and says whether it is within the limit. */
     allow(client: string): boolean {
       const at = now();
       const current = windows.get(client);
-      if (current === undefined || at - current.startedAt >= OPT_OUT_WINDOW_MS) {
+      if (current === undefined || at - current.startedAt >= limits.windowMs) {
         if (windows.size >= MAX_TRACKED_CLIENTS) windows.clear();
         windows.set(client, { startedAt: at, count: 1 });
         return true;
       }
       current.count += 1;
-      return current.count <= OPT_OUT_SUBMISSIONS_PER_WINDOW;
+      return current.count <= limits.perWindow;
     },
   };
 }

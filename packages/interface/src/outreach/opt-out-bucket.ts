@@ -38,7 +38,8 @@ export interface OptOutBucket {
   putJson(key: string, value: unknown): Promise<void>;
   getJson(key: string): Promise<unknown>;
   /** Keys under a prefix, first page only; the poller runs again soon. */
-  list(prefix: string): Promise<string[]>;
+  /** Keys under `prefix`, at most `maxKeys` when given. */
+  list(prefix: string, maxKeys?: number): Promise<string[]>;
   /** Idempotent, like preview deletion. */
   delete(key: string): Promise<void>;
 }
@@ -98,8 +99,8 @@ export function createScalewayOptOutBucket(options: ScalewayOptOutBucketOptions)
         throw new Error(`opt-out object read failed with status ${response.status}`);
       return JSON.parse(await response.text()) as unknown;
     },
-    list(prefix) {
-      return bucket.listKeys(prefix, 'opt-out');
+    list(prefix, maxKeys) {
+      return bucket.listKeys(prefix, 'opt-out', maxKeys);
     },
     async delete(key) {
       const response = await send(objectUrl(key), { method: 'DELETE' });
@@ -125,8 +126,9 @@ export function createInMemoryOptOutBucket(): InMemoryOptOutBucket {
       const stored = objects.get(key);
       return Promise.resolve(stored === undefined ? null : (JSON.parse(stored) as unknown));
     },
-    list(prefix) {
-      return Promise.resolve([...objects.keys()].filter((key) => key.startsWith(prefix)));
+    list(prefix, maxKeys) {
+      const keys = [...objects.keys()].filter((key) => key.startsWith(prefix)).sort();
+      return Promise.resolve(maxKeys === undefined ? keys : keys.slice(0, maxKeys));
     },
     delete(key) {
       objects.delete(key);

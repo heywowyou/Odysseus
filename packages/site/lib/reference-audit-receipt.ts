@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { AwsClient } from 'aws4fetch';
 
 const REFERENCE_AUDIT_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/u;
@@ -23,8 +23,11 @@ export function hashReferenceAuditToken(token: string): string {
   return createHash('sha256').update(token, 'utf8').digest('hex');
 }
 
-function referenceAuditReceiptKey(now = new Date()): string {
-  return `${REFERENCE_AUDIT_RECEIPT_PREFIX}${now.getTime()}-${randomUUID()}.json`;
+/** Issue #551: one object per token and UTC day, so a repeated or scripted
+ *  visit with the same link overwrites its receipt instead of adding one. */
+export function referenceAuditReceiptKey(receipt: ReferenceAuditReceipt): string {
+  const day = receipt.requestedAt.slice(0, 10);
+  return `${REFERENCE_AUDIT_RECEIPT_PREFIX}${day}/${receipt.tokenHash}.json`;
 }
 
 function validateReferenceAuditReceipt(value: unknown): ReferenceAuditReceipt {
@@ -77,7 +80,7 @@ function createReferenceAuditReceiptWriter(
   return {
     async write(receipt) {
       const safe = validateReferenceAuditReceipt(receipt);
-      const key = referenceAuditReceiptKey(new Date(safe.requestedAt));
+      const key = referenceAuditReceiptKey(safe);
       const response = await doFetch(
         await client.sign(objectUrl(key), {
           method: 'PUT',

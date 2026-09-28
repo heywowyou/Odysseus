@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { resolveReferenceAuditRedirect } from './reference-audit-redirect';
 import type { ReferenceAuditReader } from './reference-audit-object';
-import type { ReferenceAuditReceiptWriter } from './reference-audit-receipt';
+import {
+  hashReferenceAuditToken,
+  referenceAuditReceiptKey,
+  type ReferenceAuditReceiptWriter,
+} from './reference-audit-receipt';
 
 const token = 'A'.repeat(43);
 const manifest = {
@@ -60,5 +64,22 @@ describe('reference audit tracked redirect', () => {
     expect(response.status).toBe(307);
     expect(reader.readCurrent).not.toHaveBeenCalled();
     expect(writer.write).not.toHaveBeenCalled();
+  });
+
+  it('keys a receipt by token and day, so a repeat overwrites it (issue #551)', () => {
+    const receipt = (requestedAt: string, tokenHash = hashReferenceAuditToken(token)) => ({
+      tokenHash,
+      requestedAt,
+      referenceVersion: 'reference-release-v7',
+    });
+    const morning = referenceAuditReceiptKey(receipt('2026-09-20T08:00:00.000Z'));
+    expect(referenceAuditReceiptKey(receipt('2026-09-20T22:30:00.000Z'))).toBe(morning);
+    expect(referenceAuditReceiptKey(receipt('2026-09-21T08:00:00.000Z'))).not.toBe(morning);
+    expect(
+      referenceAuditReceiptKey(
+        receipt('2026-09-20T08:00:00.000Z', hashReferenceAuditToken('B'.repeat(43))),
+      ),
+    ).not.toBe(morning);
+    expect(morning).toMatch(/^reference-audit-receipts\/2026-09-20\/[0-9a-f]{64}\.json$/u);
   });
 });

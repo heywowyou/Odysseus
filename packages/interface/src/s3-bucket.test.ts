@@ -71,6 +71,32 @@ describe('createS3Bucket (issue #531)', () => {
     expect(requested[1]).toContain('continuation-token=page-2');
   });
 
+  it('stops a listing at maxKeys and asks for no more than it needs (issue #551)', async () => {
+    const requested: URLSearchParams[] = [];
+    const bucket = createS3Bucket({
+      ...CREDENTIALS,
+      endpoint: 'https://s3.fr-par.scw.cloud',
+      fetchImpl: (input) => {
+        const url = new URL((input as Request).url);
+        requested.push(url.searchParams);
+        const keys = ['a', 'b'].map((key) => `<Key>r/${key}.json</Key>`).join('');
+        return Promise.resolve(
+          new Response(
+            `<ListBucketResult><IsTruncated>true</IsTruncated>${keys}<NextContinuationToken>more</NextContinuationToken></ListBucketResult>`,
+            { status: 200 },
+          ),
+        );
+      },
+    });
+
+    expect(await bucket.listKeys('r/', 'reference receipt', 3)).toEqual([
+      'r/a.json',
+      'r/b.json',
+      'r/a.json',
+    ]);
+    expect(requested.map((params) => params.get('max-keys'))).toEqual(['3', '1']);
+  });
+
   it('names the bucket when a listing fails', async () => {
     const bucket = createS3Bucket({
       ...CREDENTIALS,
