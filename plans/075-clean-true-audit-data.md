@@ -1,6 +1,6 @@
 # Plan 075: Make the audit data clean and true before it reaches a report
 
-Status: IN PROGRESS (reopened 2026-09-24 and again 2026-09-28). Part I is deployed (`fa806424`, 2026-09-28); sweep 9 found three new defects (Part J), not implemented. Closure needs Part J, a refresh of the stored audits and two clean hunt sweeps. The earlier closure record stays below as history. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
+Status: IN PROGRESS (reopened 2026-09-24 and again 2026-09-28). Part I is deployed (`fa806424`, 2026-09-28); sweep 9 found three defects (Part J), implemented with J4, J5 and the canary audit on 2026-09-28. Closure needs Part J deployed, a refresh of the stored audits and two clean hunt sweeps. The earlier closure record stays below as history. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
 
 ## Context
 
