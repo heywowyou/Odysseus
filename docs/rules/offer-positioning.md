@@ -207,8 +207,9 @@ as a diagnostic, because that is the product.
 summary and risk badge, ranked priorities with effort and impact
 framing, full selector detail and affected pages, render diff evidence,
 the code-level appendix, the criteria-and-registry-data section per
-`docs/rules/obligation-basis.md` section 7, and a draft accessibility
-statement skeleton. No manual verification step of any kind: the report
+`docs/rules/obligation-basis.md` section 7, and, for an entity under the
+article 47 regime only, a draft accessibility statement skeleton (the section
+renders nothing for other regimes, which covers almost every hotel). No manual verification step of any kind: the report
 is fully automated, full stop. Still not a conformity rate. No video.
 
 **Amended 2026-09-02, plan 021 (`docs/decisions/trade-offs.md` entry 64).**

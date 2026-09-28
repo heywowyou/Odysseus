@@ -13,8 +13,9 @@ live tree the same day. The plan's drift check (`71da99a..HEAD` over
 categories, and the absence of any percentile-over-stored-findings
 implementation were all re-verified live on 2026-09-09.
 
-Status: awaiting the operator decisions in section 1. This document implements
-nothing; implementation happens in a follow-up plan after operator sign-off.
+Status: the operator decisions in section 1 were approved on 2026-09-10
+(`milestone-10-benchmark-permission-record.md`). This document implements
+nothing; implementation happens in a follow-up plan.
 
 ## Operator decisions required
 

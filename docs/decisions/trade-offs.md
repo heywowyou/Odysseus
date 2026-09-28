@@ -5608,56 +5608,6 @@ review burden); a multi-round critic-repair loop or a second critic
 (it is an improvement layer, not a gate); an environment variable switch
 (one code path to test and reason about).
 
-41. **An operator-finalized PDF is the delivered artifact, while the stored
-    analysis keeps the prose the model wrote.** A report is read page by page
-    before it reaches a client, and the defects that pass every automated gate
-    are editorial: a sentence the client disputes, a formulation agreed on a
-    call, a claim technically defensible but wrong for this reader. Before Plan
-    072 the operator patched the PDF by hand and nothing recorded what changed.
-
-    The finalizer renders locally from the hosted render bundle plus an
-    override file, uploads the result, and the dashboard shows it as
-    `Finalisé · N corrections` beside a link to the pipeline render. Three
-    consequences are deliberate:
-
-    - **The analysis is not rewritten.** The stored writing pass stays exactly
-      what the model produced, so provenance keeps describing the pipeline and
-      a later regeneration is not silently seeded with operator text. The
-      override file, kept beside the PDF and digested on the stored row, is the
-      link between the two texts. Reading the delivered wording therefore means
-      reading the PDF or the override file, not the analysis - accepted,
-      because the alternative makes "what did the model write" unanswerable.
-    - **It fails closed on lineage.** The override file repeats the analysis
-      and findings digests, the render refuses on any mismatch, and the upload
-      answers 409 when either moved on the server. Corrections are bound to the
-      exact text they were written against, the same rule the rest of the
-      pipeline applies to findings provenance.
-    - **Supersession is by insertion, not mutation.** `reports` is insert-only,
-      `getLatestReport` sorts by `generatedAt`, so the finalized row becomes
-      what preview and download serve, and a later regeneration takes over
-      again - correct, since the overrides no longer apply to it, and shown as
-      `Finalisation remplacée par une régénération` rather than resolved
-      silently.
-
-    Overrides reach only the prose-field registry `listWritingProseFields`
-    returns, which makes finding IDs, ranking, counts and severities unreachable
-    by construction rather than by rule, and the writing guards run on the
-    result. Sanitation rewriting an overridden field refuses the render: text
-    the operator did not write must never ship under their correction. A guard
-    the generated prose already failed is a warning, not a refusal - a stored
-    analysis can predate a guard, and refusing there would lock the operator out
-    of correcting the very sentence that trips it.
-
-    Rejected: editing the stored analysis in place (destroys the model's own
-    record and poisons regeneration); a free-text PDF patch with no bound
-    lineage (what exists today, and unauditable); rendering the finalized PDF on
-    the VPS (the corrections are written while reading locally, and a render
-    route would need the operator's uncommitted fixes); multipart upload (the
-    router's CSRF guard requires an exact `application/json` content type, so
-    the PDF travels base64); making the finalized report its own document kind
-    (it is a report of the same audit, and approval must keep working on
-    whatever row is current).
-
 ### 106. The paid report gets one permanent synthetic reference example, and Touch 1 names it beside the personalized preview (build decision, 2026-09-20, Plan 071)
 
 The personalized preview and the paid report answer different questions. The
@@ -6351,3 +6301,54 @@ sequence sent near day 90 keeps its thread, follow-ups and reply sync. Draft
 rows keep their 90 days from creation, and the daily sweep withdraws the
 mailbox copy a week earlier, so a row never expires over a draft still in
 the mailbox.
+
+### 126. An operator-finalized PDF is the delivered artifact, while the stored analysis keeps the prose the model wrote (Plan 072, 2026-09-20; numbered 41 by mistake until issue #558)
+
+A report is read page by page
+before it reaches a client, and the defects that pass every automated gate
+are editorial: a sentence the client disputes, a formulation agreed on a
+call, a claim technically defensible but wrong for this reader. Before Plan
+072 the operator patched the PDF by hand and nothing recorded what changed.
+
+The finalizer renders locally from the hosted render bundle plus an
+override file, uploads the result, and the dashboard shows it as
+`Finalisé · N corrections` beside a link to the pipeline render. Three
+consequences are deliberate:
+
+- **The analysis is not rewritten.** The stored writing pass stays exactly
+  what the model produced, so provenance keeps describing the pipeline and
+  a later regeneration is not silently seeded with operator text. The
+  override file, kept beside the PDF and digested on the stored row, is the
+  link between the two texts. Reading the delivered wording therefore means
+  reading the PDF or the override file, not the analysis - accepted,
+  because the alternative makes "what did the model write" unanswerable.
+- **It fails closed on lineage.** The override file repeats the analysis
+  and findings digests, the render refuses on any mismatch, and the upload
+  answers 409 when either moved on the server. Corrections are bound to the
+  exact text they were written against, the same rule the rest of the
+  pipeline applies to findings provenance.
+- **Supersession is by insertion, not mutation.** `reports` is insert-only,
+  `getLatestReport` sorts by `generatedAt`, so the finalized row becomes
+  what preview and download serve, and a later regeneration takes over
+  again - correct, since the overrides no longer apply to it, and shown as
+  `Finalisation remplacée par une régénération` rather than resolved
+  silently.
+
+Overrides reach only the prose-field registry `listWritingProseFields`
+returns, which makes finding IDs, ranking, counts and severities unreachable
+by construction rather than by rule, and the writing guards run on the
+result. Sanitation rewriting an overridden field refuses the render: text
+the operator did not write must never ship under their correction. A guard
+the generated prose already failed is a warning, not a refusal - a stored
+analysis can predate a guard, and refusing there would lock the operator out
+of correcting the very sentence that trips it.
+
+Rejected: editing the stored analysis in place (destroys the model's own
+record and poisons regeneration); a free-text PDF patch with no bound
+lineage (what exists today, and unauditable); rendering the finalized PDF on
+the VPS (the corrections are written while reading locally, and a render
+route would need the operator's uncommitted fixes); multipart upload (the
+router's CSRF guard requires an exact `application/json` content type, so
+the PDF travels base64); making the finalized report its own document kind
+(it is a report of the same audit, and approval must keep working on
+whatever row is current).

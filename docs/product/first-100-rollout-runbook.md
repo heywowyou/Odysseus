@@ -27,8 +27,9 @@ plan's constraints. Verified holds:
   `gmail.compose` plus `gmail.metadata`; `mailbox-draft-adapter.ts` exposes
   four methods and `FORBIDDEN_MAILBOX_CAPABILITIES` is asserted by test.
 - Suppression is checked immediately before every provider draft operation
-  (`create-outreach-draft.ts`, `create-follow-up-draft.ts`, both pre- and
-  post-generation, recording `suppressed-before-provider`).
+  (`packages/interface/src/outreach/draft-runtime.ts`, for the first email
+  and each follow-up: at the first gate and again right before the provider
+  call, recording `suppressed-before-provider`).
 - Role addresses only: drafts refuse any contact not in `found` state
   (allowlist plus MX confirmed); no draft path accepts a caller-supplied
   recipient address.

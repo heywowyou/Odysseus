@@ -150,7 +150,7 @@ The canonical sources for this behavior are `docs/product/odysseus-project-brief
 | [076](076-scan-pacing-that-cannot-spiral.md) | Keep full-audit pacing tied to the audited host's real pushback | P1 | L | none; shares challenge markers with 075 | DONE (2026-09-24): Haaitza and La Corniche acceptance runs recorded; time and ETA targets not demonstrated, closed by operator decision |
 
 Plan 072 shipped 2026-09-20 and is the current finalization workflow; its
-rationale is recorded as trade-off 41 and llm-layer-rules section 16.
+rationale is recorded as trade-off 126 (first numbered 41) and llm-layer-rules section 16.
 Plan 073 is approved report-presentation work as of 2026-09-21: the paid report keeps dark as its canonical default and gains an explicit light export variant bound to the same content, finalization and exact-artifact approval.
 Plan 074 is approved operator-workflow work as of 2026-09-21: Directory gains a one-click random independent prospect action that samples the full matching unlinked pool server-side, reuses the durable directory-to-prospect creation path, and opens the created prospect without scanning or outreach side effects.
 Plan 071 is approved next product work as of 2026-09-19: one permanent publication-safe reference audit, a second Touch-1 body link beside the personalized preview, and privacy-minimal optional link-request attribution. Plans 067-070 retain their own recorded execution/acceptance status; Plan 071 must not weaken Plan 069 preview expiry, lineage or suppression rules. Every plan before 067 lives under `archive/`.

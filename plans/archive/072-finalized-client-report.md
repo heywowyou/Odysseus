@@ -1,7 +1,7 @@
 # Plan 072 — Finalized client report
 
 - **Execution status:** DONE (2026-09-20): built, proved end to end on the
-  de-identified fixture audit, and documented as trade-off 41 and
+  de-identified fixture audit, and documented as trade-off 126 (first numbered 41) and
   llm-layer-rules section 16. See the closure ledger at the end of this file.
 
 ## Context
@@ -269,7 +269,7 @@ Executed 2026-09-20, one commit per slice on `main`.
 | 3+4 | `odysseus report:finalize`, root script `report:finalize-render`, `getReportsRoot()`, and `reports/` bundle read/write at `0600`. A dependency-cruiser `reachable` rule keeps `store`, `interface` and mongoose off the command's import graph. | `cad79a51` |
 | 5 | `origin` and `finalization` on the reports schema, the upload route, and `GET …/report/:language/generated`. Supersession needed no route change: `getLatestReport` already sorts by `generatedAt`. | `c0425a57` |
 | 6 | `Finalisé · N corrections` / `Finalisation remplacée par une régénération` badges and the generated-report link, French first. | `0d48f210` |
-| 7 | Bundle fetch, the render sidecar carrying the measured page count, the upload script, SKILL.md's Tooling section rewritten against the shipped system, trade-off 41 and llm-layer-rules section 16. | `603f8ae7`, this commit |
+| 7 | Bundle fetch, the render sidecar carrying the measured page count, the upload script, SKILL.md's Tooling section rewritten against the shipped system, trade-off 126 (first numbered 41) and llm-layer-rules section 16. | `603f8ae7`, this commit |
 
 Proved end to end on the de-identified fixture audit: bundle → one-field
 override → `report:finalize-render` → 36 pages, the operator's sentence present

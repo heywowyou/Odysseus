@@ -56,7 +56,9 @@ cp .env.example .env
 ```
 
 At minimum, `OPENAI_API_KEY` and `MONGODB_URI` are required to run a
-real audit end to end. The other variables have documented defaults in
+real audit end to end, plus `MONGODB_DB_NAME` unless the URI names its
+database in its path: the store refuses to fall back to the driver's default
+database. The other variables have documented defaults in
 `.env.example`.
 
 ## Prospecting source data

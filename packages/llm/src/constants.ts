@@ -27,39 +27,23 @@ export const OPENAI_MODEL = 'gpt-6-luna';
  *  well under a dollar at Luna's price. */
 export const OPENAI_REASONING_EFFORT = 'xhigh' as const;
 
-/** With reasoning on, GPT-5.6 accepted only the default temperature (1)
- *  and rejects 0.2 with a 400, so 1 is the value actually sent and
- *  persisted. The original rationale for 0.2 follows.
- *
- *  Determinism lever for a task with one correct, repeatable answer over
- *  the same findings, not a brainstorm: two runs over the same findings
- *  should not produce materially different priorities. 0.2 is a
- *  deliberate low value favoring repeatability over variety. Unlike
- *  Claude Opus 5 (which rejected the temperature parameter outright with
- *  an HTTP 400), the OpenAI Chat Completions API accepts values from 0 to 2,
- *  so this is a real
- *  sampling knob, not just a label. Revisit with real cost/quality data. Recorded
- *  on every persisted analysis (see docs/rules/llm-layer-rules.md section 3) so
- *  a temperature change never gets mistaken for the client's site
- *  changing. */
+/** Every pass sends temperature 1: with reasoning on, the model accepts only
+ *  its default and rejects a lower value with a 400. So priorities are no
+ *  longer made repeatable by a low temperature. Repeatability comes from the
+ *  deterministic inputs (normalized findings, fixed ordering), the schema and
+ *  guards, and reuse of a stored structure pass. The value is recorded on
+ *  every persisted analysis (docs/rules/llm-layer-rules.md section 3), so a
+ *  change is never mistaken for the client's site changing. An earlier
+ *  provider ran the structure pass at 0.2 for repeatable priorities; that
+ *  lever is gone. */
 export const OPENAI_TEMPERATURE = 1;
 
-/** Plan 027: the writing pass's own temperature, distinct from
- *  OPENAI_TEMPERATURE above (which still governs the structure and
- *  reviewer passes). The determinism argument for 0.2 is about repeatable
- *  priorities over the same findings; priorities are decided entirely by
- *  the structure pass, which keeps 0.2 unchanged. The writing pass only
- *  produces prose, which has no repeatability requirement, and 0.2 was
- *  measured to make near-verbatim reproduction of the prompt's own
- *  examples likely (see plans/027-french-report-prose-quality.md). Raised
- *  from an initial 0.7 to 1.0 (operator decision, 2026-09-07) for a
- *  stronger break from that pattern; still inside the range where strict
- *  JSON structured output remains reliable. This is not the per-pass model
- *  split trade-off 67 rejected - that rejection was about the single
- *  `model` provenance field on a reused structure pass, not temperature,
- *  and the persisted `temperature` field already records specifically the
- *  writing pass's own call (see docs/rules/llm-layer-rules.md section 3),
- *  so recording this value there stays accurate with no new field. */
+/** The writing pass's own temperature (plan 027), kept as a separate
+ *  constant so it can move independently of OPENAI_TEMPERATURE. It is 1 for
+ *  the same reason; the plan had also raised it (0.2, then 0.7, then 1.0 on
+ *  2026-09-07) because a low value made near-verbatim reproduction of the
+ *  prompt's own examples likely (plans/archive/027-french-report-prose-quality.md).
+ *  The persisted `temperature` field records this writing call's value. */
 export const WRITING_OPENAI_TEMPERATURE = 1.0;
 
 /** Generous enough for up to 20 themes of French or English prose (writing

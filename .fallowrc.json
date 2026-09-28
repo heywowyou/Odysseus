@@ -28,13 +28,6 @@
   // hardcodes the literal instead of importing this - test drift, not dead
   // code; noted in trade-offs.md#80's 2026-09-11 triage for whoever next
   // touches that test.
-  //
-  // CURRENT_OUTREACH_PROMPT_VERSION is a genuinely independent version knob
-  // in each of create-follow-up-draft.ts and create-outreach-draft.ts:
-  // first-touch and follow-up prompts can be revised on separate schedules.
-  // index.ts re-exports both, aliasing the follow-up one as
-  // FOLLOW_UP_PROMPT_VERSION to disambiguate. Deliberate duplication, not
-  // accidental.
   // Issue #530: the package indexes are internal, not a public API, so an
   // index re-export nothing imports is dead code like any other. Entry
   // files that tools load by convention keep their exports below.
@@ -77,14 +70,6 @@
     {
       "file": "packages/scanner/src/page-audit-profile.ts",
       "exports": ["SITE_WIDE_CHROME_SELECTOR"]
-    },
-    {
-      "file": "packages/interface/src/outreach/create-follow-up-draft.ts",
-      "exports": ["CURRENT_OUTREACH_PROMPT_VERSION"]
-    },
-    {
-      "file": "packages/interface/src/outreach/create-outreach-draft.ts",
-      "exports": ["CURRENT_OUTREACH_PROMPT_VERSION"]
     }
   ],
   // All three are pnpm-workspace.yaml CVE-fix pins on transitive

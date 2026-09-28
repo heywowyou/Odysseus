@@ -4,7 +4,7 @@ Document de référence pour la passe de rédaction française
 (`packages/llm/src/writing-prompt.ts`). Son contenu est repris tel quel dans
 le prompt système envoyé au modèle : ce fichier est la source, le prompt en
 est la copie d'exécution. Créé pour le plan 027
-(`plans/027-french-report-prose-quality.md`), qui documente le défaut
+(`plans/archive/027-french-report-prose-quality.md`), qui documente le défaut
 observé : dix-huit recommandations consécutives ouvrant sur la même phrase de
 sept mots, des impacts commerciaux systématiquement longs de deux phrases (le
 plafond exact), et une phrase de clôture copiée mot pour mot depuis l'exemple

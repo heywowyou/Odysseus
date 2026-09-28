@@ -1233,5 +1233,5 @@ What does still apply is everything downstream of generation.
   analysis can predate a guard, and refusing there would leave the operator
   unable to correct the very sentence that trips it.
 - **The analysis is not rewritten.** Overrides produce a render input, never a
-  stored writing pass. The analysis keeps the model's own text; see trade-off 41
+  stored writing pass. The analysis keeps the model's own text; see trade-off 126
   for why, and for how the delivered PDF is tied back to it.
