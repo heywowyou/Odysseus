@@ -99,6 +99,17 @@ export function getInterfacePort(): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_INTERFACE_PORT;
 }
 
+/** The host names, besides loopback, the dashboard answers to (issue #546):
+ *  `ODYSSEUS_PUBLIC_HOST`, comma-separated. Production sets the name Caddy
+ *  serves; a local `odysseus serve` leaves it unset. */
+export function getDashboardPublicHosts(): string[] {
+  ensureEnvLoaded();
+  return (process.env['ODYSSEUS_PUBLIC_HOST'] ?? '')
+    .split(',')
+    .map((host) => host.trim())
+    .filter((host) => host.length > 0);
+}
+
 export function getInterfaceHost(): string {
   ensureEnvLoaded();
   return process.env['ODYSSEUS_INTERFACE_HOST'] || DEFAULT_INTERFACE_HOST;

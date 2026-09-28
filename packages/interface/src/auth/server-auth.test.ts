@@ -1,5 +1,6 @@
 import { randomBytes, scrypt as scryptCallback } from 'node:crypto';
 import { promises as fs } from 'node:fs';
+import http from 'node:http';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -175,6 +176,30 @@ describe('startInterfaceServer auth composition', () => {
     await handle?.close();
     if (staticDir !== '') await fs.rm(staticDir, { recursive: true, force: true });
     vi.unstubAllEnvs();
+  });
+
+  it('refuses a DNS-rebinding Host before the guard and the routes (issue #546)', async () => {
+    const url = new URL(handle!.url);
+    const statusFor = (hostHeader: string): Promise<number> =>
+      new Promise((resolve, reject) => {
+        const request = http.request(
+          {
+            host: url.hostname,
+            port: url.port,
+            path: '/health/live',
+            headers: { host: hostHeader, origin: `http://${hostHeader}` },
+          },
+          (response) => {
+            response.resume();
+            resolve(response.statusCode ?? 0);
+          },
+        );
+        request.on('error', reject);
+        request.end();
+      });
+
+    expect(await statusFor(`rebind.attacker.example:${url.port}`)).toBe(421);
+    expect(await statusFor(`localhost:${url.port}`)).toBe(200);
   });
 
   it('issues and validates its own session across the login, guard and static paths', async () => {

@@ -13,6 +13,7 @@ import { registerReferenceAuditRoutes } from './routes/reference-audit.js';
 import { registerStaticFallback } from './routes/static.js';
 import { createAuthGuard, type AuthGuard } from './auth/auth-guard.js';
 import { applyBaseSecurityHeaders } from './security-headers.js';
+import { isAllowedDashboardHost } from './host-allowlist.js';
 import { registerSessionRoutes } from './auth/session-routes.js';
 import { createLoginRateLimiter, type LoginRateLimiter } from './auth/rate-limit.js';
 import { createInMemorySessionStore, type SessionStore } from './auth/session-store.js';
@@ -31,6 +32,7 @@ import { runOutreachFollowupBatchJob } from './queue/pipeline/run-outreach-follo
 import {
   DASHBOARD_PASSWORD_HASH_ENV_VAR,
   getDashboardPasswordHash,
+  getDashboardPublicHosts,
   getInterfaceHost,
   getInterfacePort,
   getQueueConcurrency,
@@ -49,6 +51,9 @@ export interface InterfaceServerHandle {
 export interface InterfaceAuthOptions {
   /** Overrides the env lookup so tests never race process.env. */
   getPasswordHash?: () => string | null;
+  /** Host names besides loopback the server answers to; defaults to
+   *  ODYSSEUS_PUBLIC_HOST (issue #546). */
+  publicHosts?: readonly string[];
   /** Injectable clock shared by the session store and the rate limiter. */
   now?: () => number;
   sessionStore?: SessionStore;
@@ -118,6 +123,7 @@ export async function startInterfaceServer(
   const configuredHash = getPasswordHash();
   const host = getInterfaceHost();
   const port = getInterfacePort();
+  const publicHosts = options.publicHosts ?? getDashboardPublicHosts();
 
   if (refusesUnprotectedNonLoopbackBind(host, configuredHash !== null)) {
     throw new Error(
@@ -182,6 +188,14 @@ export async function startInterfaceServer(
     // catch-handler 500 carry the same headers as routed responses.
     applyBaseSecurityHeaders(res, req);
     attachRequestContext(req, res);
+    // Issue #546: before the guard and every route, so a DNS-rebinding page
+    // is refused even in the no-password loopback mode.
+    if (!isAllowedDashboardHost(req.headers.host, publicHosts)) {
+      res.statusCode = 421;
+      res.setHeader('content-type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ error: 'Host not allowed' }));
+      return;
+    }
     void (async () => {
       if (guard !== undefined && !(await guard(req, res))) return;
       await router.handle(req, res);

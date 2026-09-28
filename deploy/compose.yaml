@@ -66,6 +66,10 @@ services:
       # caddy container; inside the compose network 0.0.0.0 is private to
       # it, and Caddy remains the only path in from the internet.
       ODYSSEUS_INTERFACE_HOST: 0.0.0.0
+      # The only name, besides loopback, the dashboard answers to (issue
+      # #546): the host Caddy serves and forwards unchanged. Any other Host
+      # header is refused before routing.
+      ODYSSEUS_PUBLIC_HOST: app.odysseusaudit.com
       # The production database on the shared Atlas cluster, pinned here so
       # the app never falls into a driver default when MONGODB_URI names no
       # database in its path. Without this pin, a scan run from any machine
