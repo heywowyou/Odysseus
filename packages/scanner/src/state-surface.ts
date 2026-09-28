@@ -276,9 +276,11 @@ export async function runConsentSurfaceAnalysis(
     context.setDefaultNavigationTimeout(timeoutMs);
     const page = await context.newPage();
     // A consent click can open a native dialog; it is dismissed, never
-    // accepted.
+    // accepted. The dismissal rejects when the context closes first (a
+    // watchdog, a navigation), and an unhandled rejection shuts the whole
+    // server down (issue #539), so its failure is swallowed.
     page.on('dialog', (dialog) => {
-      void dialog.dismiss();
+      void dialog.dismiss().catch(() => undefined);
     });
     const readFailures = watchSignificantResourceFailures(page);
     await options.beforeNavigation?.();

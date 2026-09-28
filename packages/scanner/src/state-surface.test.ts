@@ -47,6 +47,7 @@ interface FakePageSpec {
   hrefs?: string[];
   visibleAfterClick?: boolean;
   navigatingSelector?: string;
+  dismissRejects?: boolean;
 }
 
 function makeFakeBrowser(spec: FakePageSpec = {}): {
@@ -80,7 +81,14 @@ function makeFakeBrowser(spec: FakePageSpec = {}): {
       return {
         listeners: {} as Record<string, (...args: never[]) => void>,
         on: (event: string, handler: (...args: never[]) => void) => {
-          if (event === 'dialog') handler({ dismiss: async () => {} } as never);
+          if (event === 'dialog') {
+            handler({
+              dismiss: async () => {
+                if (spec.dismissRejects)
+                  throw new Error('Target page, context or browser has been closed');
+              },
+            } as never);
+          }
         },
         goto: async () => ({ status: () => 200 }),
         waitForLoadState: async () => {},
@@ -158,6 +166,15 @@ describe('runConsentSurfaceAnalysis', () => {
     });
     // Storage-fresh desktop context under the run's identity, closed after.
     expect(contextOptions[0]?.hasTouch).toBe(false);
+  });
+
+  it('swallows a dialog dismissal that rejects because the context already closed', async () => {
+    const { browser } = makeFakeBrowser({ consentSummaries: [summary()], dismissRejects: true });
+    const outcome = await runConsentSurfaceAnalysis(browser, 'https://example.com/', baseOptions);
+    // Vitest fails the run on an unhandled rejection; reaching here with a
+    // settled outcome is the assertion.
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(outcome.dismissed).toBeDefined();
   });
 
   it('never clicks when two CMP controls match: ambiguous is recorded, not guessed', async () => {
