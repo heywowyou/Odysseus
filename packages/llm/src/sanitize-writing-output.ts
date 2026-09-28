@@ -3,6 +3,7 @@ import { findBusinessClaimViolationsInFields } from './business-claim-guard.js';
 import { findLegalConsequenceViolationsInFields } from './legal-consequence-guard.js';
 import { hasPageCountViolation } from './page-count-guard.js';
 import {
+  ratesSevereMetricGood,
   SUPPRESSED_ACTION_PATTERNS,
   SUPPRESSED_METRIC_PATTERNS,
 } from './performance-evidence-guard.js';
@@ -79,9 +80,14 @@ function sanitizeSentences(
   field: string,
   language: ReportLanguage,
   warnings: WritingSanitizationWarning[],
+  severeMetrics: readonly WritingPerformanceMetric[] = [],
 ): string {
   const kept: string[] = [];
   for (const sentence of sentences(text)) {
+    if (ratesSevereMetricGood(sentence, language, severeMetrics)) {
+      warning(warnings, 'performance-contradiction-removed', field);
+      continue;
+    }
     if (businessViolation(sentence, field, language)) {
       warning(warnings, 'business-claim-removed', field);
       continue;
@@ -163,12 +169,14 @@ export function sanitizeWritingOutput(
 ): SanitizedWritingOutput {
   const warnings: WritingSanitizationWarning[] = [];
   const inputByKey = new Map(input.themes.map((theme) => [theme.themeKey, theme]));
+  const severeMetrics = input.performanceEvidence.severeFindingMetrics ?? [];
 
   const sanitizedSummary = sanitizeSentences(
     raw.executiveSummary,
     'executiveSummary',
     input.language,
     warnings,
+    severeMetrics,
   );
   const executiveSummary =
     sanitizePerformanceSentences(
@@ -178,7 +186,7 @@ export function sanitizeWritingOutput(
       input.performanceEvidence.suppressedLabRecommendations,
       warnings,
     ) || fallbackSummary(input.language);
-  const notes = sanitizeSentences(raw.notes, 'notes', input.language, warnings);
+  const notes = sanitizeSentences(raw.notes, 'notes', input.language, warnings, severeMetrics);
 
   const themes = raw.themes.map((theme, themeIndex) => {
     const source = inputByKey.get(theme.themeKey);
@@ -188,6 +196,7 @@ export function sanitizeWritingOutput(
       impactField,
       input.language,
       warnings,
+      severeMetrics,
     );
     const businessImpact =
       (source?.category === 'performance'
@@ -203,7 +212,7 @@ export function sanitizeWritingOutput(
     const recommendedActions: string[] = [];
     for (const [actionIndex, action] of theme.recommendedActions.entries()) {
       const field = `themes[${themeIndex}](${theme.themeKey}).recommendedActions[${actionIndex}]`;
-      let sanitized = sanitizeSentences(action, field, input.language, warnings);
+      let sanitized = sanitizeSentences(action, field, input.language, warnings, severeMetrics);
       if (sanitized && source?.category === 'performance') {
         sanitized = sanitizePerformanceSentences(
           sanitized,

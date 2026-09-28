@@ -166,6 +166,7 @@ export async function buildStageWritingInput(args: {
   const performanceEvidence = buildWritingPerformanceEvidence(
     manifest,
     diagnostics.clientLimitations,
+    allFindings,
   );
   const trustedRemediationsByTheme = buildTrustedRemediationsByTheme(
     args.structureThemes,

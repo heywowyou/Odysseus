@@ -117,6 +117,15 @@ function performanceEvidenceNote(
   const suppressed = evidence.suppressedLabRecommendations
     .map((metric) => PERFORMANCE_METRIC_LABEL[language][metric])
     .join(', ');
+  const severe = (evidence.severeFindingMetrics ?? [])
+    .map((metric) => PERFORMANCE_METRIC_LABEL[language][metric])
+    .join(', ');
+  const severeText =
+    severe === ''
+      ? ''
+      : language === 'fr'
+        ? ` Ces métriques portent un constat critique ou sérieux : ${severe}. Ne les qualifiez jamais de bonnes ou satisfaisantes, même si leur médiane l'est ; décrivez les pages qui dépassent le seuil.`
+        : ` These metrics carry a critical or serious finding: ${severe}. Never call them good or satisfactory, even when their median is; describe the pages that exceed the threshold.`;
   if (language === 'fr') {
     const concernText =
       concern === null
@@ -130,7 +139,7 @@ function performanceEvidenceNote(
       evidence.discordances.length === 0
         ? ''
         : ' Les entrées discordances décrivent des écarts champ/laboratoire déjà tranchés par la couche déterministe ; quand labNonRepresentativeForRecommendations vaut true, ne réinterprétez pas ce signal de laboratoire.';
-    return `\n\nLe paquet performanceEvidence fourni dans l'entrée est l'autorité unique pour la prose de performance. ${concernText}${suppressedText}${discordanceText} Ne contredisez jamais une mesure réelle utilisateur avec une anomalie de laboratoire. Pour un thème performance, fondez la première recommandation sur primaryConcern uniquement quand il existe.`;
+    return `\n\nLe paquet performanceEvidence fourni dans l'entrée est l'autorité unique pour la prose de performance. ${concernText}${suppressedText}${discordanceText}${severeText} Chaque observation de laboratoire donne la médiane des pages mesurées (value) et la pire page (worstValue, poorPageCount) : une médiane décrit la page typique, pas le site. Ne contredisez jamais une mesure réelle utilisateur avec une anomalie de laboratoire. Pour un thème performance, fondez la première recommandation sur primaryConcern uniquement quand il existe.`;
   }
   const concernText =
     concern === null
@@ -144,7 +153,7 @@ function performanceEvidenceNote(
     evidence.discordances.length === 0
       ? ''
       : ' The discordances entries are field/lab disagreements already resolved by the deterministic layer; when labNonRepresentativeForRecommendations is true, do not reinterpret that lab signal.';
-  return `\n\nThe performanceEvidence packet in the input is the sole authority for performance prose. ${concernText}${suppressedText}${discordanceText} Never contradict real-user measurements with a lab anomaly. For a performance theme, base the first recommendation on primaryConcern only when one exists.`;
+  return `\n\nThe performanceEvidence packet in the input is the sole authority for performance prose. ${concernText}${suppressedText}${discordanceText}${severeText} Each lab observation gives the median over the measured pages (value) and the worst page (worstValue, poorPageCount): a median describes the typical page, not the site. Never contradict real-user measurements with a lab anomaly. For a performance theme, base the first recommendation on primaryConcern only when one exists.`;
 }
 /** Plan 029 lever F: turns concrete, verified site facts into a prompt
  *  note. Returns an empty string when none are present, which keeps the

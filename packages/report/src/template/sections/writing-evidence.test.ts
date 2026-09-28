@@ -27,6 +27,48 @@ function measuredPage(
   } as AuditManifest['pages'][number];
 }
 
+// Plan 075 J2: Hotel Europe, CLS median good, five pages poor, and a
+// critical cumulative-layout-shift finding.
+describe('lab observations beside the findings they explain', () => {
+  const pages = [
+    ...Array.from({ length: 14 }, (_, i) => measuredPage(`https://example.com/p${i}`, 1800, 0.01)),
+    measuredPage('https://example.com/fr/contactez-nous.html', 1800, 0.593),
+    ...Array.from({ length: 4 }, (_, i) => measuredPage(`https://example.com/poor${i}`, 1800, 0.3)),
+  ];
+  const clsFinding = {
+    ruleId: 'cumulative-layout-shift',
+    severity: 'critical',
+  } as Finding;
+
+  it('gives the worst page and the poor-page count next to the median', () => {
+    const evidence = buildWritingPerformanceEvidence({ pages } as AuditManifest, [], [clsFinding]);
+    const cls = evidence.observations.find(
+      (entry) => entry.metric === 'cls' && entry.source === 'lab',
+    );
+
+    expect(cls).toMatchObject({
+      rating: 'good',
+      worstValue: 0.593,
+      worstRating: 'poor',
+      poorPageCount: 5,
+      measuredPageCount: 19,
+    });
+    expect(evidence.severeFindingMetrics).toEqual(['cls']);
+  });
+
+  it('lists no metric whose findings are moderate or minor', () => {
+    const evidence = buildWritingPerformanceEvidence(
+      { pages } as AuditManifest,
+      [],
+      [
+        { ...clsFinding, severity: 'moderate' } as Finding,
+        { ruleId: 'color-contrast', severity: 'critical' } as Finding,
+      ],
+    );
+    expect(evidence.severeFindingMetrics).toEqual([]);
+  });
+});
+
 describe('Plan 067 writing evidence', () => {
   it('prevents the Villas Foch class: good real-user LCP cannot outrank weak field CLS because of anomalous lab LCP', () => {
     const manifest = {

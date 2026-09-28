@@ -328,4 +328,59 @@ describe('Plan 067 writing contract', () => {
       findPerformanceEvidenceViolations(tbtSuppressed, unsafe).map((violation) => violation.field),
     ).toEqual(['themes[0](t1).recommendedActions[0]']);
   });
+
+  // Plan 075 J2: Hotel Europe's writer saw only the CLS median (0.016, good)
+  // beside a critical CLS finding on 19 pages, 5 of them poor.
+  describe('a metric with a critical finding is never rated good', () => {
+    const severeCls: WritingInput = {
+      ...baseInput,
+      themes: [{ ...baseInput.themes[0]!, category: 'performance' }],
+      performanceEvidence: {
+        ...emptyWritingPerformanceEvidence(),
+        severeFindingMetrics: ['cls'],
+      },
+    };
+
+    it('drops the stored verdicts and keeps a qualified median and unrelated prose', () => {
+      const unsafe = output({
+        executiveSummary:
+          "Les priorités portent sur l'accessibilité. La mesure du décalage cumulatif est bonne. Les pages restent lisibles.",
+      });
+      unsafe.themes[0]!.businessImpact =
+        "La mesure de laboratoire du décalage cumulatif est bonne. Elle n'étaye donc pas une instabilité notable de l'affichage. La valeur médiane du CLS reste bonne, mais cinq pages dépassent le seuil.";
+
+      const sanitized = sanitizeWritingOutput(severeCls, unsafe);
+
+      expect(sanitized.output.executiveSummary).toBe(
+        "Les priorités portent sur l'accessibilité. Les pages restent lisibles.",
+      );
+      expect(sanitized.output.themes[0]!.businessImpact).toBe(
+        'La valeur médiane du CLS reste bonne, mais cinq pages dépassent le seuil.',
+      );
+      expect(sanitized.warnings).toContainEqual({
+        code: 'performance-contradiction-removed',
+        field: 'executiveSummary',
+      });
+    });
+
+    it('drops the Baignoire sentence in French and its English equivalent', () => {
+      const french = output({ executiveSummary: 'La stabilité visuelle est bonne sur le site.' });
+      expect(sanitizeWritingOutput(severeCls, french).output.executiveSummary).not.toContain(
+        'stabilité visuelle',
+      );
+
+      const english = output({ executiveSummary: 'Visual stability is good across the site.' });
+      expect(
+        sanitizeWritingOutput({ ...severeCls, language: 'en' }, english).output.executiveSummary,
+      ).not.toContain('Visual stability');
+    });
+
+    it('leaves the same sentence alone when no severe finding carries the metric', () => {
+      const text = 'La mesure du décalage cumulatif est bonne.';
+      expect(
+        sanitizeWritingOutput(baseInput, output({ executiveSummary: text })).output
+          .executiveSummary,
+      ).toBe(text);
+    });
+  });
 });

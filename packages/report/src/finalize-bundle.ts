@@ -127,7 +127,7 @@ export function rebuildWritingInput(args: {
     // siteStats is computed from the unfiltered findings, not forModel, the
     // same way the analysis stage does it.
     computeSiteStats([...findings], manifest),
-    buildWritingPerformanceEvidence(manifest, qualityLimitations),
+    buildWritingPerformanceEvidence(manifest, qualityLimitations, findings),
     buildTrustedRemediationsByTheme(structureThemes, forModel, language),
     analysis.obligationAssessment === undefined
       ? 'unknown'

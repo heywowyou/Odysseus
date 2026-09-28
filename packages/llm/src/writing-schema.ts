@@ -129,8 +129,16 @@ export type WritingPerformanceRating = 'good' | 'mid' | 'poor';
 export interface WritingPerformanceObservation {
   metric: WritingPerformanceMetric;
   source: WritingPerformanceSource;
+  /** For a lab observation, the median over the measured pages. */
   value: number;
   rating: WritingPerformanceRating;
+  /** Lab only (plan 075 J2): a median describes the typical page, not the
+   *  site, and a finding takes its severity from the worst page. Hotel
+   *  Europe's CLS median was good while five pages were poor. */
+  worstValue?: number;
+  worstRating?: WritingPerformanceRating;
+  poorPageCount?: number;
+  measuredPageCount?: number;
 }
 
 export interface WritingPerformanceDiscordance {
@@ -154,6 +162,10 @@ export interface WritingPerformanceEvidence {
   /** Lab metrics that may be shown in the deterministic section but must not
    * drive generated recommendations because they contradict stronger field data. */
   suppressedLabRecommendations: WritingPerformanceMetric[];
+  /** Metrics with a critical or serious finding (lab or field). Prose may
+   *  never rate one of them good without saying what is wrong (plan 075
+   *  J2); sanitizeWritingOutput drops such a sentence. */
+  severeFindingMetrics?: WritingPerformanceMetric[];
 }
 
 /** Test/offline-tool neutral packet. Production report generation builds the
@@ -165,6 +177,7 @@ export function emptyWritingPerformanceEvidence(): WritingPerformanceEvidence {
     discordances: [],
     primaryConcern: null,
     suppressedLabRecommendations: [],
+    severeFindingMetrics: [],
   };
 }
 

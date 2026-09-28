@@ -19,11 +19,30 @@ function median(values: readonly number[]): number | null {
   return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
 }
 
-function labMedian(manifest: AuditManifest, metric: 'lcp' | 'cls' | 'tbt'): number | null {
-  const values = measuredPages(manifest)
+function labValues(manifest: AuditManifest, metric: 'lcp' | 'cls' | 'tbt'): number[] {
+  return measuredPages(manifest)
     .map((page) => page.coreWebVitals?.[metric]?.numericValue)
     .filter((value): value is number => value !== null && value !== undefined);
-  return median(values);
+}
+
+/** The finding rules that carry each metric's verdict, lab and field. */
+const METRIC_BY_FINDING_RULE: Readonly<Record<string, WritingPerformanceMetric>> = {
+  'largest-contentful-paint': 'lcp',
+  'cumulative-layout-shift': 'cls',
+  'total-blocking-time': 'tbt',
+  'crux-lcp-poor': 'lcp',
+  'crux-cls-poor': 'cls',
+  'crux-inp-poor': 'inp',
+};
+
+function severeFindingMetrics(findings: readonly Finding[]): WritingPerformanceMetric[] {
+  const metrics = new Set<WritingPerformanceMetric>();
+  for (const finding of findings) {
+    const metric = METRIC_BY_FINDING_RULE[finding.ruleId];
+    if (metric !== undefined && (finding.severity === 'critical' || finding.severity === 'serious'))
+      metrics.add(metric);
+  }
+  return [...metrics].sort((a, b) => METRIC_PRIORITY[a] - METRIC_PRIORITY[b]);
 }
 
 function threshold(metric: 'lcp' | 'cls' | 'tbt'): { good: number; needsImprovement: number } {
@@ -56,6 +75,7 @@ function concernOrder(a: WritingPerformanceObservation, b: WritingPerformanceObs
 export function buildWritingPerformanceEvidence(
   manifest: AuditManifest,
   qualityLimitations: readonly EvidenceLimitation[] = [],
+  findings: readonly Finding[] = [],
 ): WritingPerformanceEvidence {
   const observations: WritingPerformanceObservation[] = [];
   const labEvidenceLimited = qualityLimitations.some(
@@ -96,14 +116,22 @@ export function buildWritingPerformanceEvidence(
 
   if (!labEvidenceLimited) {
     for (const metric of ['lcp', 'cls', 'tbt'] as const) {
-      const value = labMedian(manifest, metric);
+      const values = labValues(manifest, metric);
+      const value = median(values);
       if (value === null) continue;
       const t = threshold(metric);
+      const worstValue = Math.max(...values);
       observations.push({
         metric,
         source: 'lab',
         value,
         rating: rateCoreWebVital(value, t.good, t.needsImprovement),
+        worstValue,
+        worstRating: rateCoreWebVital(worstValue, t.good, t.needsImprovement),
+        poorPageCount: values.filter(
+          (entry) => rateCoreWebVital(entry, t.good, t.needsImprovement) === 'poor',
+        ).length,
+        measuredPageCount: values.length,
       });
     }
   }
@@ -157,6 +185,7 @@ export function buildWritingPerformanceEvidence(
     discordances,
     primaryConcern: weakField[0] ?? weakLab[0] ?? null,
     suppressedLabRecommendations,
+    severeFindingMetrics: severeFindingMetrics(findings),
   };
 }
 

@@ -262,6 +262,13 @@ above, and only for the guards named here. Each guard is classified:
   not apply. The sanitizer drops such a sentence before the guards run and
   records `legal-claim-removed`; the status is written only by the
   deterministic legal section.
+  A performance metric that carries a critical or serious finding is never
+  rated good in prose (plan 075 J2, 2026-09-28). The writer receives each lab
+  metric's worst page and poor-page count beside its median, and
+  `severeFindingMetrics`; the sanitizer drops a sentence that names such a
+  metric with a good rating (« est bonne », « n'étaye pas… ») unless the same
+  sentence says what is wrong (« mais cinq pages dépassent le seuil »), and
+  records `performance-contradiction-removed`.
 - **style** - provider placement, provider phrase, prose register. On the
   **final** attempt only, if every remaining violation is style, the response
   is accepted, each escaped violation is logged, and the escape is recorded.
