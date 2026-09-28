@@ -111,6 +111,14 @@ function truncateSnippet(html: string): string {
  *     Grand Hôtel Opéra, named three ways by axe).
  *   - scrollable-region-focusable: one tabindex on one component.
  *   - target-size: one control group, one size rule.
+ *   - aria-roles and aria-required-children: one role written by one
+ *     component template (plan 075 I2: Hotel Europe's tab component,
+ *     `<div class="tabPanel" role="tabs">` and its `ul[role=tablist]`, was
+ *     two critical findings each, one short and one long selector). Keyed
+ *     with the failure summary, so a different missing child stays apart.
+ *
+ *  link-name and button-name are listed but site-wide first (Q6, below),
+ *  so their shape identity applies only if that changes.
  *
  *  Measured and NOT included: `color-contrast` (12 to 10 on the review site -
  *  the colour pair and the measured ratio differ per element, so a single row
@@ -124,6 +132,20 @@ const SHAPE_IDENTIFIED_AXE_RULES: ReadonlySet<string> = new Set([
   'scrollable-region-focusable',
   'target-size',
   'aria-prohibited-attr',
+  'aria-roles',
+  'aria-required-children',
+]);
+
+const PAGE_ROOT_ELEMENT = /^\s*<(?:body|html)\b/i;
+
+/** Shape rules whose failure summary is part of the identity: the same
+ *  component can fail them in more than one way. */
+const SUMMARY_KEYED_SHAPE_RULES: ReadonlySet<string> = new Set([
+  'link-name',
+  'button-name',
+  'aria-prohibited-attr',
+  'aria-roles',
+  'aria-required-children',
 ]);
 
 /** Attributes that carry no signal about which component an element belongs
@@ -338,10 +360,14 @@ function templateIdentity(
   snippet: string,
   failureSummary: string | undefined,
 ): string | undefined {
-  if (SHAPE_IDENTIFIED_AXE_RULES.has(ruleId)) {
+  // The page's own root is no component: its classes are per page (Atlantic
+  // Hôtel's jQuery UI `<body role="tablist" class="page en …">` became 54
+  // shapes on 109 pages when aria-required-children was measured, plan 075
+  // I2), so it keeps the identity it had.
+  if (SHAPE_IDENTIFIED_AXE_RULES.has(ruleId) && !PAGE_ROOT_ELEMENT.test(snippet)) {
     const shape = shapeIdentity(snippet, { classesOnly: ruleId === 'aria-prohibited-attr' });
     if (shape !== undefined) {
-      if (ruleId === 'link-name' || ruleId === 'button-name' || ruleId === 'aria-prohibited-attr') {
+      if (SUMMARY_KEYED_SHAPE_RULES.has(ruleId)) {
         return `${shape} | ${(failureSummary ?? '').trim()}`;
       }
       return shape;
@@ -438,8 +464,16 @@ function frameIdentity(
  *  rotated per page, which made 59 critical findings, and Villas Foch's 226
  *  gallery images stayed 14 findings over different page sets. Content in
  *  a third-party frame keeps one finding per frame origin, so it stays
- *  outside the site's own totals (Q1). */
-const SITE_WIDE_AXE_RULES: ReadonlySet<string> = new Set(['image-alt']);
+ *  outside the site's own totals (Q1).
+ *
+ *  Plan 075 Q6 (operator decision, 2026-09-28) extends this to links and
+ *  buttons with no accessible name. Les Criquets had 64 `link-name`
+ *  findings for about six components: bare `<a href="photo.jpg">` carousel
+ *  slides carry no class, so shapeIdentity refuses them by design and each
+ *  position became its own finding, while axe's truncated attribute names
+ *  and presentational class variants split named components elsewhere.
+ *  « Give these links a name » is one instruction, as for images. */
+const SITE_WIDE_AXE_RULES: ReadonlySet<string> = new Set(['image-alt', 'link-name', 'button-name']);
 
 function siteWideIdentity(
   ruleId: string,

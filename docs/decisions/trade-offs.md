@@ -1293,6 +1293,20 @@ default cap instead; that decision is the operator's.
     whether each image is informative or decorative is a decision the
     agency makes per file from the list.
 
+    Amended 2026-09-28 (plan 075 Q6, operator decision). `link-name` and
+    `button-name` take the same shape: one site-wide finding, plus one per
+    third-party frame origin. Per-component identity kept failing: Les
+    Criquets's carousel slides are bare `<a href="photo.jpg">` anchors that
+    only their position tells apart, which made 64 serious findings for
+    about six components. Replayed on 21 VPS audits, every `link-name` and
+    `button-name` collapsed to one finding, or two where a frame holds some,
+    with occurrences unchanged; Les Criquets went from 134 findings to 69.
+    `aria-roles` and `aria-required-children` join the shape rules instead
+    (Hotel Europe's tab component was two critical findings for each), with
+    a page's `body` or `html` kept out of shape identity: its classes change
+    per page, and Atlantic Hôtel's `<body role="tablist">` measured 54
+    findings on 109 pages under it.
+
 31. **A fourth review site (Domaine Lagnonu, lagnonu.fr) found a P0 the
     1345-test suite passed over, plus nine report defects**, 2026-08-24.
     Recorded because the finding pattern matters more than any one fix:

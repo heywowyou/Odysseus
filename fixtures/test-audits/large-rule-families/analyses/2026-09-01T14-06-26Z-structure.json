@@ -110,7 +110,7 @@
   "generatedAt": "2026-09-01T14:06:26.712Z",
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "41fa14648d126c24",
+    "normalizationFingerprint": "f711f917e7492d7c",
     "findingsDigest": "sha256:cec2d36bacb3e7fab91a71ced41648f3d96c35a90395490d8b075959d939dec2"
   }
 }

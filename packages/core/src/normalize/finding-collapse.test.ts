@@ -122,7 +122,7 @@ describe('D4a: the alt-text heuristic collapses per reason, with the files named
 
 function axePage(
   url: string,
-  nodes: Array<{ selector: string }>,
+  nodes: Array<{ selector: string; html?: string }>,
   ruleId = 'target-size',
 ): NormalizePageInput {
   return {
@@ -137,7 +137,7 @@ function axePage(
           description: 'Ensures touch targets are large enough',
           nodes: nodes.map((node) => ({
             target: [node.selector],
-            html: '<span></span>',
+            html: node.html ?? '<span></span>',
             impact: 'serious',
           })),
         },
@@ -191,11 +191,82 @@ describe('D4b: target-size collapses per control group', () => {
 
   it('leaves other axe rules on selector identity', () => {
     const findings = normalize([
-      axePage('https://example.com/', [{ selector: 'nav > a.one' }], 'link-name'),
-      axePage('https://example.com/about', [{ selector: 'nav > a.two' }], 'link-name'),
-    ]).filter((f) => f.ruleId === 'link-name');
+      axePage('https://example.com/', [{ selector: 'nav > a.one' }], 'aria-hidden-focus'),
+      axePage('https://example.com/about', [{ selector: 'nav > a.two' }], 'aria-hidden-focus'),
+    ]).filter((f) => f.ruleId === 'aria-hidden-focus');
 
     expect(findings).toHaveLength(2);
+  });
+
+  // Plan 075 Q6: Les Criquets's carousel slides are bare anchors that only
+  // their position tells apart, 64 findings for about six components.
+  it.each(['link-name', 'button-name'])(
+    'reports %s as one site-wide finding with every occurrence kept',
+    (ruleId) => {
+      const findings = normalize([
+        axePage(
+          'https://example.com/',
+          [
+            { selector: '.cloned.owl-item:nth-child(4) > a[href=""]' },
+            { selector: '#menulogo > a' },
+          ],
+          ruleId,
+        ),
+        axePage(
+          'https://example.com/seminaires',
+          [{ selector: '.container-instit:nth-child(2) > .container > .slider > a' }],
+          ruleId,
+        ),
+      ]).filter((f) => f.ruleId === ruleId);
+
+      expect(findings).toHaveLength(1);
+      expect(findings[0]!.occurrences).toBe(3);
+      expect(findings[0]!.pageUrls).toHaveLength(2);
+    },
+  );
+});
+
+// Plan 075 I2, on Hotel Europe's stored tab component: axe named one
+// element with a short and a long selector, which made two critical
+// findings for each rule.
+describe('ARIA role rules identify the component by its markup', () => {
+  const tabs = '<div class="tabPanel js-apyTab customTabs" role="tabs">';
+  const tablist = '<ul role="tablist" class="tabPanel-list">';
+
+  it.each([
+    ['aria-roles', tabs],
+    ['aria-required-children', tablist],
+  ])('reports one %s finding for one component named two ways', (ruleId, html) => {
+    const findings = normalize([
+      axePage('https://example.com/en/access.html', [{ selector: '.tabPanel', html }], ruleId),
+      axePage(
+        'https://example.com/en/tourism.html',
+        [{ selector: '.invert > .panel-wrapper > .panel-text > .tabPanel', html }],
+        ruleId,
+      ),
+    ]).filter((f) => f.ruleId === ruleId);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.occurrences).toBe(2);
+  });
+
+  it('keeps a page root out of shape identity, whose classes change per page', () => {
+    // Atlantic Hôtel's jQuery UI accordion writes role="tablist" on <body>;
+    // keyed by its per-page classes it became 54 findings over 109 pages.
+    const findings = normalize([
+      axePage(
+        'https://example.com/en/breaks.html',
+        [{ selector: 'body', html: '<body class="page en ui-accordion" role="tablist">' }],
+        'aria-required-children',
+      ),
+      axePage(
+        'https://example.com/fr/sejours.html',
+        [{ selector: 'body', html: '<body class="page fr sejours ui-accordion" role="tablist">' }],
+        'aria-required-children',
+      ),
+    ]).filter((f) => f.ruleId === 'aria-required-children');
+
+    expect(findings).toHaveLength(1);
   });
 });
 

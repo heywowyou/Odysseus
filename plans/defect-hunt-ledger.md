@@ -27,10 +27,10 @@ Angle 13 (replay against closed slices) targets:
 
 | Slice | Audit | Expected on the refreshed findings |
 |---|---|---|
-| I1 | grandhoteldesalpes | `sitemap-lists-redirects` counts 40 redirected URLs, not 114; the 74 translations are `language-redirect`, disclosed as other-language versions |
-| I2, Q6 | lescriquets | `link-name` at the Q6 shape (1 under (a), about 6 under (b)), occurrences preserved |
-| I2 | heurope | `aria-roles` 1; one `aria-required-children` for the tablist |
-| I2 | fermesdemarie | `.kids-stamp` and `.season-switcher_link` one `link-name` each |
+| I1 | grandhoteldesalpes | `sitemap-lists-redirects` counts 41 redirected URLs, not 114; the 74 translations are `language-redirect`, disclosed as other-language versions |
+| I2, Q6 | lescriquets | `link-name` 1 finding with 1,793 occurrences; 69 findings in all |
+| I2 | heurope (`2026-09-28T09-54-47Z`) | `aria-roles` 1; `aria-required-children` 2 (tablist and pagination menu) |
+| I2 | every audit | one `link-name` and one `button-name` per site, plus one per third-party frame origin |
 | I3 | any regenerated analysis | no sentence states that the obligation applies, is established or does not apply |
 
 Other carried checks:

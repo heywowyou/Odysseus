@@ -607,7 +607,11 @@ entity exists but is never expected to carry an address or telephone.
 `image-alt` is one site-wide finding, plus one per third-party frame origin
 (trade-off 30, Q5). Its image files are listed in `rawEvidence.resourceUrls`;
 an image embedded as a `data:` URI has no file and appears through its element
-sample only.
+sample only. `link-name` and `button-name` take the same site-wide shape (Q6),
+their examples rotating through distinct elements. `aria-roles` and
+`aria-required-children` are identified by the element's shape and failure
+summary; a page's `body` or `html` never is, because its classes change per
+page.
 
 An axe element's identity ignores what changes between page loads: runtime
 state classes (animation, player size, Webflow's `w--current`), the

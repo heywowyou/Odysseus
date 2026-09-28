@@ -458,12 +458,12 @@ describe('B2: language-variant collapsing', () => {
       testEngine: { name: 'axe-core', version: '4.12.1' },
       violations: [
         {
-          id: 'link-name',
+          id: 'aria-hidden-focus',
           impact: 'serious',
-          tags: ['wcag2a', 'wcag244', 'wcag412'],
-          help: 'Links must have discernible text',
-          description: 'Links must have discernible text',
-          helpUrl: 'https://dequeuniversity.com/rules/axe/4.12/link-name',
+          tags: ['wcag2a', 'wcag412'],
+          help: 'ARIA hidden element must not be focusable or contain focusable elements',
+          description: 'ARIA hidden element must not be focusable or contain focusable elements',
+          helpUrl: 'https://dequeuniversity.com/rules/axe/4.12/aria-hidden-focus',
           nodes: [
             { target: [`a[data-slide="21${index}0_23"]`], html: '<a></a>', failureSummary: '' },
           ],
@@ -475,12 +475,12 @@ describe('B2: language-variant collapsing', () => {
   const args = { auditId: 'a1', startedAt: new Date('2026-08-24T00:00:00Z'), pages };
 
   it('reports one finding per language without clusters', () => {
-    expect(normalizeAudit(args).filter((f) => f.ruleId === 'link-name')).toHaveLength(3);
+    expect(normalizeAudit(args).filter((f) => f.ruleId === 'aria-hidden-focus')).toHaveLength(3);
   });
 
   it('collapses them into one finding when the site declares them as translations', () => {
     const findings = normalizeAudit({ ...args, translationClusters: clusters }).filter(
-      (f) => f.ruleId === 'link-name',
+      (f) => f.ruleId === 'aria-hidden-focus',
     );
     expect(findings).toHaveLength(1);
     expect(findings[0]!.occurrences).toBe(3);
@@ -488,7 +488,7 @@ describe('B2: language-variant collapsing', () => {
 
   it('still records every real page URL on the collapsed finding', () => {
     const [finding] = normalizeAudit({ ...args, translationClusters: clusters }).filter(
-      (f) => f.ruleId === 'link-name',
+      (f) => f.ruleId === 'aria-hidden-focus',
     );
     expect([...finding!.pageUrls].sort()).toEqual([...gallery].sort());
   });
