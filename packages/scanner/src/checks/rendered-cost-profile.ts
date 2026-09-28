@@ -26,35 +26,57 @@ export interface RenderedResourceTotals {
  * afterwards misses the document and everything the initial parse
  * requested, which is most of a page's weight.
  *
- * Returns an async snapshot function that awaits every in-flight size
- * lookup before reporting totals, so a response whose `sizes()` promise is
- * still pending when the caller reads the snapshot is never silently
- * undercounted.
+ * Returns an async snapshot function that waits, briefly, for in-flight
+ * size lookups before reporting totals; a lookup still pending then is
+ * counted as an unknown size, never silently dropped.
  */
-export function recordRenderedResourceTotals(page: Page): () => Promise<RenderedResourceTotals> {
+/** How long a snapshot waits for size lookups still in flight. Plan 075
+ *  K2: a response that never completes (a stream, a long poll) kept its
+ *  `sizes()` pending, the snapshot waited out its whole check budget on
+ *  every page of clos-sainte-marie, and the page analysis was abandoned
+ *  with it. A lookup still pending after this counts as an unknown size. */
+const RESOURCE_SIZE_SETTLE_MS = 1_500;
+
+export function recordRenderedResourceTotals(
+  page: Page,
+  settleMs: number = RESOURCE_SIZE_SETTLE_MS,
+): () => Promise<RenderedResourceTotals> {
   let resourceCount = 0;
   let knownTransferBytes = 0;
   let unknownTransferSizeCount = 0;
-  const pending: Promise<void>[] = [];
+  const pending = new Set<Promise<void>>();
 
   page.on('response', (response) => {
     resourceCount += 1;
-    pending.push(
-      response
-        .request()
-        .sizes()
-        .then((sizes) => {
-          knownTransferBytes += sizes.responseBodySize + sizes.responseHeadersSize;
-        })
-        .catch(() => {
-          unknownTransferSizeCount += 1;
-        }),
-    );
+    const lookup: Promise<void> = response
+      .request()
+      .sizes()
+      .then((sizes) => {
+        knownTransferBytes += sizes.responseBodySize + sizes.responseHeadersSize;
+      })
+      .catch(() => {
+        unknownTransferSizeCount += 1;
+      })
+      .finally(() => {
+        pending.delete(lookup);
+      });
+    pending.add(lookup);
   });
 
   return async () => {
-    await Promise.allSettled(pending);
-    return { resourceCount, knownTransferBytes, unknownTransferSizeCount };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      Promise.allSettled([...pending]),
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, settleMs);
+      }),
+    ]);
+    if (timer !== undefined) clearTimeout(timer);
+    return {
+      resourceCount,
+      knownTransferBytes,
+      unknownTransferSizeCount: unknownTransferSizeCount + pending.size,
+    };
   };
 }
 

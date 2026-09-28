@@ -93,6 +93,42 @@ describe('rendered-cost-profile against real pages', () => {
     }
   });
 
+  it('reports within its settle bound while a response never completes (plan 075 K2)', async () => {
+    const server = createServer((req, res) => {
+      if (req.url === '/stream') {
+        // Headers, one chunk, then nothing: the body never ends.
+        res.writeHead(200, { 'content-type': 'text/event-stream' });
+        res.write('data: open\n\n');
+        return;
+      }
+      res
+        .writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
+        .end(
+          `<body><script>fetch('/stream').then((r) => r.body.getReader().read());</script></body>`,
+        );
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const context = await browser.newContext();
+    try {
+      const page = await context.newPage();
+      const readTotals = recordRenderedResourceTotals(page, 500);
+      await page.goto(origin);
+      await page.waitForResponse((response) => response.url().endsWith('/stream'));
+      const started = Date.now();
+      const totals = await readTotals();
+      expect(Date.now() - started).toBeLessThan(3_000);
+      expect(totals.resourceCount).toBeGreaterThanOrEqual(2);
+      expect(totals.unknownTransferSizeCount).toBeGreaterThanOrEqual(1);
+      // The page still answers: nothing here holds it.
+      expect(await page.evaluate(() => 1 + 1)).toBe(2);
+    } finally {
+      await context.close();
+      server.closeAllConnections();
+      server.close();
+    }
+  });
+
   it('misses the document response when attached after navigation', async () => {
     const { server, origin } = await startStaticServer({
       '/': { contentType: 'text/html; charset=utf-8', body: '<body>late</body>' },
