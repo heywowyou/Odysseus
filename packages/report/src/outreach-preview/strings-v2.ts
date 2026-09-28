@@ -8,7 +8,7 @@
  * receives can never name different mailboxes.
  */
 
-import { OUTREACH_CONTACT, OUTREACH_SENDER_DISPLAY_NAME } from '@odysseus/core';
+import { OUTREACH_CONTACT, OUTREACH_SENDER_DISPLAY_NAME, severityHeadings } from '@odysseus/core';
 
 export interface OutreachPreviewStringsV2 {
   documentTitle: string;
@@ -121,12 +121,7 @@ const OUTREACH_PREVIEW_STRINGS_V2_FR: OutreachPreviewStringsV2 = {
   distinctFindings: 'Constats distincts',
   affectedPages: 'Pages concernées',
   severityHeading: 'Répartition par gravité',
-  severity: {
-    critical: 'Critique',
-    serious: 'Sérieux',
-    moderate: 'Modéré',
-    minor: 'Mineur',
-  },
+  severity: severityHeadings('fr'),
   scorecardLabel: 'Niveau global des constats',
   scorecardDisclaimer:
     'Cette note synthétise la gravité des constats mesurés ; elle ne constitue pas une ' +
@@ -221,12 +216,7 @@ const OUTREACH_PREVIEW_STRINGS_V2_EN: OutreachPreviewStringsV2 = {
   distinctFindings: 'Distinct findings',
   affectedPages: 'Pages affected',
   severityHeading: 'Breakdown by severity',
-  severity: {
-    critical: 'Critical',
-    serious: 'Serious',
-    moderate: 'Moderate',
-    minor: 'Minor',
-  },
+  severity: severityHeadings('en'),
   scorecardLabel: 'Overall findings level',
   scorecardDisclaimer:
     'This grade summarizes the severity of measured findings; it is not a legal assessment.',

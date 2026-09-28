@@ -81,6 +81,7 @@ export * from './normalize/severity.js';
 export * from './rule-confirmation.js';
 export * from './third-party-frame.js';
 export * from './report-population.js';
+export * from './severity-labels.js';
 export * from './normalize/constants.js';
 export * from './normalize/cwv-thresholds.js';
 export * from './normalize/wcag-tags.js';

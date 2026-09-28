@@ -1,3 +1,4 @@
+import { severityHeadings } from '@odysseus/core';
 import type { ReportStrings } from './types.js';
 
 export const fr: ReportStrings = {
@@ -1052,12 +1053,7 @@ export const fr: ReportStrings = {
     thirdPartyMixedTotalsNote:
       "Les constats situés dans un contenu tiers intégré au moyen d'un cadre (iframe) ne sont comptés ni dans les totaux en tête de rapport ni dans la note principale. Les autres restent comptabilisés dans les totaux de sévérité, classés selon la gravité générale de leur règle, même lorsque cette section précise que l'implémentation observée sur votre site est déjà correcte\u00a0: le total décrit la règle générale, l'observation décrit votre cas.",
     unknownVendorLabel: 'Composant tiers, éditeur non identifié',
-    severityLabels: {
-      critical: 'Critique',
-      serious: 'Sérieux',
-      moderate: 'Modéré',
-      minor: 'Mineur',
-    },
+    severityLabels: severityHeadings('fr'),
     findingIdColumnLabel: 'Constat',
     pagesColumnLabel: 'Pages',
     allPagesAnalyzedTemplate: 'Toutes les pages analysées ({count})',

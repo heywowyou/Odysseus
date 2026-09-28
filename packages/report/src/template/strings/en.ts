@@ -1,3 +1,4 @@
+import { severityHeadings } from '@odysseus/core';
 import type { ReportStrings } from './types.js';
 
 export const en: ReportStrings = {
@@ -930,12 +931,7 @@ export const en: ReportStrings = {
     thirdPartyMixedTotalsNote:
       'Findings inside third-party content embedded through a frame (iframe) are counted neither in the totals at the top of the report nor in the main grade. The others still count toward the severity totals, classified by the general severity of their rule, even when this section notes that the implementation observed on your site is already correct: the total describes the general rule, the observation describes your case.',
     unknownVendorLabel: 'Third-party component, provider not identified',
-    severityLabels: {
-      critical: 'Critical',
-      serious: 'Serious',
-      moderate: 'Moderate',
-      minor: 'Minor',
-    },
+    severityLabels: severityHeadings('en'),
     findingIdColumnLabel: 'Finding',
     pagesColumnLabel: 'Pages',
     allPagesAnalyzedTemplate: 'All pages analysed ({count})',

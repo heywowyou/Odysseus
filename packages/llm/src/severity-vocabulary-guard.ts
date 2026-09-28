@@ -1,23 +1,13 @@
-import type { ReportLanguage } from '@odysseus/core';
+import { SEVERITY_LABELS, type ReportLanguage } from '@odysseus/core';
 import type { WritingPassOutput } from './writing-schema.js';
 import { unicodeWords } from './unicode-word-boundary.js';
 
 /**
- * The report's canonical severity vocabulary (the tile labels in
- * packages/report/src/template/strings/{fr,en}.ts), duplicated here
- * deliberately: packages/llm depends on @odysseus/core only, never on
- * packages/report, so this guard owns its own small copy of the four
- * words per language rather than reaching across that boundary. Same
- * "duplicate a small table near a boundary, document why" precedent as
- * packages/report's own EFFECTIF_BAND_LABELS_EN in methodology.ts.
+ * The report's severity vocabulary, read from core's canonical table
+ * (issue #554) so the words this guard demands are always the words the
+ * report prints.
  */
-export const SEVERITY_VOCABULARY: Record<
-  ReportLanguage,
-  { critical: string; serious: string; moderate: string; minor: string }
-> = {
-  fr: { critical: 'critique', serious: 'sérieux', moderate: 'modéré', minor: 'mineur' },
-  en: { critical: 'critical', serious: 'serious', moderate: 'moderate', minor: 'minor' },
-};
+export const SEVERITY_VOCABULARY = SEVERITY_LABELS;
 
 /** item 3.7 (La Corniche pass): same duplication precedent as
  *  SEVERITY_VOCABULARY above (packages/report/src/template/strings/
