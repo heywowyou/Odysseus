@@ -3,6 +3,7 @@ import {
   extractKeyboardNavigationCandidates,
   KEYBOARD_TRAP_RULE_ID,
   FOCUS_ORDER_MISMATCH_RULE_ID,
+  isTabWalkHeldByDialog,
   type KeyboardNavigationCheckInput,
 } from './normalize-keyboard-navigation.js';
 
@@ -88,5 +89,94 @@ describe('focus-order-mismatch', () => {
     expect(
       extractKeyboardNavigationCandidates(baseInput({ tabbableCount: 0, focusSequence: [] })),
     ).toEqual([]);
+  });
+});
+
+// Plan 075 J3, on the stored walks: a consent banner or popup open on load
+// kept focus inside itself, so the walk measured the dialog, not the page.
+describe('a Tab walk held by a dialog', () => {
+  /** 60 presses cycling through `ids`, on a page of `tabbableCount`. */
+  function cycling(ids: number[], tabbableCount: number): KeyboardNavigationCheckInput {
+    return baseInput({
+      tabbableCount,
+      tabbableSelectors: Array.from({ length: tabbableCount }, (_, i) => `#t${i}`),
+      focusSequence: Array.from({ length: 60 }, (_, i) => ids[i % ids.length]!),
+    });
+  }
+
+  // Grand Hôtel des Alpes: Complianz's six banner controls, cycled ten times.
+  it('gives no finding when focus cycles through a consent banner', () => {
+    const walk = cycling([112, 113, 114, 115, 116, 117], 140);
+    expect(isTabWalkHeldByDialog(walk)).toBe(true);
+    expect(extractKeyboardNavigationCandidates(walk)).toEqual([]);
+  });
+
+  // Regina: Didomi's four controls, whose tab order is not DOM order, which
+  // counted as two backward jumps per cycle before.
+  it('gives no focus-order finding for a banner whose own order is not DOM order', () => {
+    const walk = cycling([301, 299, 300, 298], 420);
+    expect(extractKeyboardNavigationCandidates(walk)).toEqual([]);
+  });
+
+  it('uses the recorded containers when the scanner has them', () => {
+    const inBanner = {
+      ...cycling([10, 11, 12], 40),
+      tabbableContainers: Array.from({ length: 40 }, (_, i) =>
+        i >= 10 && i <= 12 ? '#didomi-host' : null,
+      ),
+    };
+    const outside = { ...inBanner, tabbableContainers: Array(40).fill(null) as null[] };
+    expect(isTabWalkHeldByDialog(inBanner)).toBe(true);
+    expect(isTabWalkHeldByDialog(outside)).toBe(false);
+  });
+
+  // Hotel Europe: `#date_evenement` returns false on keydown, a real trap.
+  it('still reports a single field that refuses Tab', () => {
+    const walk = baseInput({
+      tabbableCount: 30,
+      tabbableSelectors: Array.from({ length: 30 }, (_, i) =>
+        i === 7 ? '#date_evenement' : `#t${i}`,
+      ),
+      focusSequence: [5, 6, 7, ...Array<number>(40).fill(7)],
+    });
+    expect(isTabWalkHeldByDialog(walk)).toBe(false);
+    const traps = extractKeyboardNavigationCandidates(walk).filter(
+      (c) => c.ruleId === KEYBOARD_TRAP_RULE_ID,
+    );
+    expect(traps.map((c) => c.element?.selector)).toEqual(['#date_evenement']);
+  });
+
+  it('does not read a page walked end to end and wrapped round as held', () => {
+    const walk = baseInput({ focusSequence: [0, 1, 2, 3, null, 0, 1, 2, 3] });
+    expect(isTabWalkHeldByDialog(walk)).toBe(false);
+    expect(extractKeyboardNavigationCandidates(walk)).toEqual([]);
+  });
+});
+
+describe('focus-order inversions are counted within one pass', () => {
+  it('does not count the wrap from the last control back to the first', () => {
+    const walk = baseInput({
+      tabbableCount: 6,
+      tabbableSelectors: Array.from({ length: 6 }, (_, i) => `#t${i}`),
+      focusSequence: [0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4],
+    });
+    expect(
+      extractKeyboardNavigationCandidates(walk).filter(
+        (c) => c.ruleId === FOCUS_ORDER_MISMATCH_RULE_ID,
+      ),
+    ).toEqual([]);
+  });
+
+  it('still reports two real backward jumps in one pass', () => {
+    const walk = baseInput({
+      tabbableCount: 6,
+      tabbableSelectors: Array.from({ length: 6 }, (_, i) => `#t${i}`),
+      focusSequence: [3, 0, 4, 1, 5, 2, 3],
+    });
+    expect(
+      extractKeyboardNavigationCandidates(walk).filter(
+        (c) => c.ruleId === FOCUS_ORDER_MISMATCH_RULE_ID,
+      ),
+    ).toHaveLength(1);
   });
 });

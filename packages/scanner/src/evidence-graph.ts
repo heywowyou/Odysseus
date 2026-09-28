@@ -21,12 +21,14 @@ import {
   buildFindingsProvenance,
   canonicalDigest,
   FINDINGS_DELTA_COVERAGE_VERSION,
+  isTabWalkHeldByDialog,
   type AuditScopeSnapshot,
   type DeltaObservationCoordinates,
   type EvidenceCoverageSignature as ReportEvidenceCoverageSignature,
   type EvidenceLimitation,
   type FindingsDeltaCoverage,
   type Finding,
+  type KeyboardNavigationCheckInput,
   type Sha256Digest,
 } from '@odysseus/core';
 import { ACCESSIBILITY_CAPABILITY_REGISTRY } from './accessibility-capabilities.js';
@@ -132,6 +134,8 @@ export interface EvidencePageObservation {
    *  whose signals the report-facing semantic classifier reads. Absent for
    *  a page whose facts were never extracted, classified as unknown. */
   auditProfile?: PageAuditProfile;
+  /** The page's Tab walk, read for plan 075 J3's held-walk disclosure. */
+  keyboardNavigation?: KeyboardNavigationCheckInput;
 }
 
 export interface AuditEvidenceGraphInput {
@@ -1001,6 +1005,40 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
             `${n} pages' content kept loading while our analysis tool scrolled: those pages were analysed only up to the bound of that sweep.`,
         ),
         hydrationBoundPages,
+      ),
+    });
+  }
+  // Plan 075 J3: a Tab walk that an open dialog held measured the dialog,
+  // not the page, and core gives it no keyboard finding either way.
+  const keyboardHeldPages = input.pages
+    .filter(
+      (page) =>
+        page.keyboardNavigation !== undefined && isTabWalkHeldByDialog(page.keyboardNavigation),
+    )
+    .map((page) => page.url)
+    .sort();
+  if (keyboardHeldPages.length > 0) {
+    issues.add({
+      code: 'disclosed-scope-limitation',
+      severity: 'limitation',
+      resolution: 'operator',
+      summary: 'An open dialog held keyboard focus during the Tab walk on some pages.',
+      evidenceRefs: keyboardHeldPages,
+      disclosure: disclosure(
+        'keyboard-walk-held-by-dialog',
+        byCount(
+          keyboardHeldPages.length,
+          "Sur une page, une fenêtre ouverte au chargement (bandeau de consentement ou fenêtre surgissante) a retenu la navigation au clavier : l'ordre de tabulation et les pièges au clavier n'y ont pas été évalués.",
+          (n) =>
+            `Sur ${n} pages, une fenêtre ouverte au chargement (bandeau de consentement ou fenêtre surgissante) a retenu la navigation au clavier : l'ordre de tabulation et les pièges au clavier n'y ont pas été évalués.`,
+        ),
+        byCount(
+          keyboardHeldPages.length,
+          'On one page, a window open on load (a consent banner or a popup) held keyboard navigation: tab order and keyboard traps were not evaluated there.',
+          (n) =>
+            `On ${n} pages, a window open on load (a consent banner or a popup) held keyboard navigation: tab order and keyboard traps were not evaluated there.`,
+        ),
+        keyboardHeldPages,
       ),
     });
   }

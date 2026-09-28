@@ -426,6 +426,48 @@ describe('mobile surfaces in the evidence graph (plan 059 step 10)', () => {
   });
 });
 
+// Plan 075 J3: a consent banner held the Tab walk on the homepage, so its
+// keyboard navigation was not evaluated and the report must say so.
+describe('Tab walks held by a dialog in the evidence graph', () => {
+  const heldWalk = {
+    pageUrl: HOME,
+    tabbableCount: 40,
+    tabbableSelectors: Array.from({ length: 40 }, (_, i) => `#t${i}`),
+    tabbableContainers: Array.from({ length: 40 }, (_, i) => (i < 3 ? '#didomi-host' : null)),
+    focusSequence: Array.from({ length: 45 }, (_, i) => i % 3),
+  };
+
+  it('discloses the pages whose keyboard navigation was not evaluated', () => {
+    const graph = assembleAuditEvidenceGraph(
+      cleanInput({ pages: [{ ...page(HOME), keyboardNavigation: heldWalk }, page(ROOMS)] }),
+    );
+
+    const limitation = graph.quality.issues.find(
+      (issue) => issue.disclosure?.code === 'keyboard-walk-held-by-dialog',
+    );
+    expect(limitation?.severity).toBe('limitation');
+    expect(limitation?.evidenceRefs).toEqual([HOME]);
+    expect(limitation?.disclosure?.summary.fr).toContain('une fenêtre ouverte au chargement');
+  });
+
+  it('discloses nothing when the walk went through the page', () => {
+    const walked = {
+      ...heldWalk,
+      tabbableContainers: Array<string | null>(40).fill(null),
+      focusSequence: Array.from({ length: 45 }, (_, i) => i % 40),
+    };
+    const graph = assembleAuditEvidenceGraph(
+      cleanInput({ pages: [{ ...page(HOME), keyboardNavigation: walked }, page(ROOMS)] }),
+    );
+
+    expect(
+      graph.quality.issues.some(
+        (issue) => issue.disclosure?.code === 'keyboard-walk-held-by-dialog',
+      ),
+    ).toBe(false);
+  });
+});
+
 describe('hydration readiness in the evidence graph (plan 059 step 11)', () => {
   it('persists real hydration progress instead of a constant not-run', () => {
     const graph = assembleAuditEvidenceGraph(

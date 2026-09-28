@@ -66,6 +66,15 @@ intentional). Rule ID `focus-order-mismatch`. Visible focus indicators
 is a different property entirely and is not checked by this or any
 other rule; still genuinely manual.
 
+Both keyboard rules stay manual on a page where a dialog open on load (a
+consent banner, a marketing popup) kept focus inside itself for the whole
+walk (plan 075 J3). The walk then measured the dialog, not the page, so it
+gives neither finding and the report discloses the page as not evaluated
+for keyboard navigation. A popup that is not a consent banner is closed
+with one Escape press and the walk repeated; a consent banner is never
+dismissed. Inversions are counted within one pass through the page, so the
+wrap from the last control back to the first is not a backward jump.
+
 ### ~~Alt text quality~~ - partially resolved 2026-08-08
 A heuristic red-flag check (`packages/core/src/normalize/normalize-alt-text.ts`,
 rule ID `alt-text-quality-heuristic`) catches filename-pattern alt text

@@ -291,7 +291,7 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'focus-order-mismatch': {
-    text: "Align the tab order with the page's visual order by reordering the markup, rather than forcing tabindex values.",
+    text: "Remove positive tabindex values so that Tab follows the order of the page's code, and place elements in the code in the order they are displayed.",
     snippet: { kind: 'not-applicable' },
   },
   'font-display': {

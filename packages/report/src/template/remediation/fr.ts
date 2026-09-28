@@ -330,7 +330,7 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     snippet: { kind: 'not-applicable' },
   },
   'focus-order-mismatch': {
-    text: "Alignez l'ordre de tabulation sur l'ordre visuel de la page, en réorganisant le code plutôt qu'en forçant des valeurs de tabindex.",
+    text: "Retirez les valeurs de tabindex positives, pour que la tabulation suive l'ordre du code de la page, et placez les éléments dans le code dans l'ordre où ils s'affichent.",
     snippet: { kind: 'not-applicable' },
   },
   'font-display': {

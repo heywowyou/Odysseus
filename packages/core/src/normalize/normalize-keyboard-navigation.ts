@@ -21,7 +21,20 @@
  * inversions, not 1, since a single reordered element is common and
  * usually deliberate (e.g. moving one call-to-action earlier in tab
  * order), while multiple backward jumps indicate the whole sequence has
- * drifted from document structure.
+ * drifted from document structure. Inversions are counted within one pass
+ * through the page: when focus reaches an element it already visited, the
+ * walk has wrapped round, and the jump from the last control back to the
+ * first is not a backward jump (plan 075 J3).
+ *
+ * A walk held by a dialog is inconclusive (plan 075 J3). The walk starts
+ * from the loaded page, where a consent banner or a marketing popup is
+ * often still open and correctly keeps focus inside itself. On four of 21
+ * production audits focus never left one (Complianz, Didomi, a marketing
+ * popup, a notification modal), so the walk measured the dialog, not the
+ * page: each wrap counted as a backward jump, every `focus-order-mismatch`
+ * in production was false, and the absence of `keyboard-trap` on those
+ * pages said nothing. Such a walk gives neither finding, and the evidence
+ * graph discloses the pages as not evaluated for keyboard navigation.
  */
 
 import type { FindingCandidate } from './candidate.js';
@@ -37,7 +50,55 @@ export interface KeyboardNavigationCheckInput {
   tabbableCount: number;
   tabbableSelectors: string[];
   tabbableKinds?: Array<'ordinary' | 'native-substop' | 'embedded' | 'shadow-host'>;
+  /** For each tabbable, the selector of the dialog or consent banner that
+   *  contains it, or null. Absent on walks recorded before plan 075 J3. */
+  tabbableContainers?: Array<string | null>;
   focusSequence: Array<number | null>;
+  /** The walk was repeated once after Escape closed a popup that held it. */
+  escapeRetried?: boolean;
+}
+
+/** The walk only ever reached a small set of controls, moving on every
+ *  press and coming round again, while the page has many more: focus was
+ *  held, most likely by an open dialog. An element that keeps focus on
+ *  consecutive presses is a trap, never a held walk (Hotel Europe's date
+ *  field refuses Tab). With the scanner's container record, every cycled
+ *  control must sit in a dialog or consent banner; a stored walk without it
+ *  is judged by the cycle alone, over two controls or more. */
+export function isTabWalkHeldByDialog(input: KeyboardNavigationCheckInput): boolean {
+  const observed = input.focusSequence.filter((id): id is number => id !== null);
+  const distinct = new Set(observed);
+  if (distinct.size === 0) return false;
+  const staysPut = input.focusSequence.some(
+    (id, index) => id !== null && id === input.focusSequence[index + 1],
+  );
+  if (staysPut) return false;
+  const cycled = observed.length >= 2 * distinct.size;
+  const reachedLittle = distinct.size * 2 <= input.tabbableCount;
+  if (!cycled || !reachedLittle) return false;
+  if (input.tabbableContainers !== undefined) {
+    return [...distinct].every((id) => (input.tabbableContainers?.[id] ?? null) !== null);
+  }
+  return distinct.size >= 2;
+}
+
+/** Backward jumps within each pass through the page. A pass ends when focus
+ *  reaches an element it already visited in that pass. */
+function countInversions(focusSequence: ReadonlyArray<number | null>): number {
+  let inversions = 0;
+  let visited = new Set<number>();
+  let previous: number | undefined;
+  for (const id of focusSequence) {
+    if (id === null) continue;
+    if (visited.has(id)) {
+      visited = new Set<number>();
+      previous = undefined;
+    }
+    if (previous !== undefined && id < previous) inversions++;
+    visited.add(id);
+    previous = id;
+  }
+  return inversions;
 }
 
 export function extractKeyboardNavigationCandidates(
@@ -45,6 +106,7 @@ export function extractKeyboardNavigationCandidates(
 ): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
   const { pageUrl } = input;
+  if (isTabWalkHeldByDialog(input)) return candidates;
 
   for (let i = 0; i < input.focusSequence.length - 1; i++) {
     const current = input.focusSequence[i];
@@ -70,11 +132,7 @@ export function extractKeyboardNavigationCandidates(
     }
   }
 
-  const observedIds = input.focusSequence.filter((id): id is number => id !== null);
-  let inversions = 0;
-  for (let i = 0; i < observedIds.length - 1; i++) {
-    if (observedIds[i + 1]! < observedIds[i]!) inversions++;
-  }
+  const inversions = countInversions(input.focusSequence);
   if (inversions >= MIN_INVERSIONS_FOR_MISMATCH) {
     candidates.push({
       source: 'custom',

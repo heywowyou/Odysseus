@@ -110,6 +110,53 @@ describe('walkKeyboardNavigation against real pages', () => {
     expect(firstTwo).toEqual([1, 0]);
   });
 
+  // Plan 075 J3: a popup open on load that keeps focus inside itself.
+  const focusHoldingDialog = (attributes: string) => `<body>
+      <div ${attributes}>
+        <button id="d1">Accept</button>
+        <button id="d2">Close</button>
+      </div>
+      ${Array.from({ length: 12 }, (_, i) => `<a href="/p${i}">Page link ${i}</a>`).join('\n')}
+      <script>
+        const dialog = document.querySelector('[data-holder]');
+        const controls = [...dialog.querySelectorAll('button')];
+        controls[0].focus();
+        dialog.addEventListener('keydown', (e) => {
+          if (e.key === 'Tab') {
+            e.preventDefault();
+            const next = controls[(controls.indexOf(document.activeElement) + 1) % controls.length];
+            next.focus();
+          }
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && !dialog.hasAttribute('data-consent')) {
+            dialog.remove();
+            document.body.focus();
+          }
+        });
+      </script>
+    </body>`;
+
+  it('records the dialog that holds focus, and walks the page again after Escape closes it', async () => {
+    const result = await walkHtml(
+      focusHoldingDialog('data-holder role="dialog" aria-modal="true" id="promo"'),
+    );
+
+    expect(result.tabbableContainers.slice(0, 2)).toEqual(['#promo', '#promo']);
+    expect(result.tabbableContainers.slice(2).every((container) => container === null)).toBe(true);
+    expect(result.escapeRetried).toBe(true);
+    // The second walk reaches the page's own links (ids 2 onwards).
+    expect(result.focusSequence.some((id) => id !== null && id >= 2)).toBe(true);
+  });
+
+  it('never dismisses a consent banner, and leaves the held walk for core to set aside', async () => {
+    const result = await walkHtml(focusHoldingDialog('data-holder data-consent id="didomi-host"'));
+
+    expect(result.tabbableContainers.slice(0, 2)).toEqual(['#didomi-host', '#didomi-host']);
+    expect(result.escapeRetried).toBeUndefined();
+    expect(new Set(result.focusSequence)).toEqual(new Set([0, 1]));
+  });
+
   it('returns an empty walk for a page with nothing tabbable', async () => {
     const result = await walkHtml('<body><p>No interactive elements here.</p></body>');
     expect(result.tabbableCount).toBe(0);

@@ -253,7 +253,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     'focus-order-mismatch': {
       label: "L'ordre de tabulation ne suit pas la structure de la page",
       gloss:
-        'La navigation au clavier saute des éléments dans un ordre illogique par rapport à la mise en page visuelle.',
+        "La navigation au clavier ne suit pas l'ordre du code de la page : elle revient en arrière sur des éléments déjà dépassés.",
     },
     // item 2.3 [REGRESSION of report-feedback-haaitza.md item C7 for this
     // one rule]: rendered as the raw axe-core English title ("Frames must

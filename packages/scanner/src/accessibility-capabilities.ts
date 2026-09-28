@@ -50,13 +50,13 @@ const CAPABILITIES: readonly AccessibilityCheckCapability[] = [
   },
   {
     checkId: 'keyboard-navigation',
-    version: 'keyboard-navigation-v1',
+    version: 'keyboard-navigation-v2',
     criterionRefs: ['2.1.2', '2.4.3'],
     evidenceKind: 'deterministic',
     proves:
-      'Focus traps and focus-order inversions met by sequential Tab navigation from page load.',
+      'Focus traps and focus-order inversions met by sequential Tab navigation from page load, after one Escape press when a popup that is not a consent banner holds focus.',
     falseNegativeBoundary:
-      'Traps behind interactions the walk does not trigger, custom key handlers, and focus inside frames.',
+      'Traps behind interactions the walk does not trigger, custom key handlers, focus inside frames, and pages where a dialog open on load held the walk (disclosed, not judged).',
     traversal: DOCUMENT_ONLY,
     requiredInteractionStates: ['baseline'],
     requiredSurfaceProfiles: BASELINE_DESKTOP,

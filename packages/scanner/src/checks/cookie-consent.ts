@@ -99,6 +99,12 @@ const CMP_MARKERS: readonly { name: string; global?: string; selector?: string }
   { name: 'Cookie Script', global: 'CookieScript', selector: '#cookiescript_injected' },
 ];
 
+/** The container selectors of the consent platforms above, for checks that
+ *  must recognise an open consent banner without judging it. */
+export const CONSENT_BANNER_SELECTORS: readonly string[] = CMP_MARKERS.flatMap((marker) =>
+  marker.selector === undefined ? [] : [marker.selector],
+);
+
 export interface ObservedCookie {
   name: string;
   domain: string;

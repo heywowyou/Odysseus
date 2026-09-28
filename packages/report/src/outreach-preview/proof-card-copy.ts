@@ -537,8 +537,8 @@ export const OUTREACH_PROOF_CARD_COPY: Readonly<Record<string, OutreachProofCard
     en: 'A questions and answers section is not declared as such to search engines.',
   },
   'focus-order-mismatch': {
-    fr: "L'ordre de navigation au clavier ne suit pas l'ordre visible de la page.",
-    en: "The keyboard navigation order does not follow the page's visible order.",
+    fr: "L'ordre de navigation au clavier ne suit pas l'ordre du code de la page.",
+    en: "The keyboard navigation order does not follow the order of the page's code.",
   },
   'form-error-not-associated': {
     fr: "Une erreur de formulaire visible n'est pas annoncée aux technologies d'assistance.",

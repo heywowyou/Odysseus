@@ -107,6 +107,9 @@ export function readPersistedEvidenceInputs(
       // Plan 059 step 26: the page's persisted scheduling-side signals,
       // which the report-facing semantic classifier reads.
       ...(scan.auditProfile !== undefined ? { auditProfile: scan.auditProfile } : {}),
+      ...(scan.keyboardNavigation !== undefined
+        ? { keyboardNavigation: scan.keyboardNavigation }
+        : {}),
     });
     if (scan.structuralAnchor !== undefined) pageAnchors.push(scan.structuralAnchor);
   }
