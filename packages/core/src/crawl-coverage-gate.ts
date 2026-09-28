@@ -28,7 +28,31 @@ export interface CrawlCoverageAssessment {
   failedUrlCount: number;
   failureShare: number;
   failedHttpStatusCounts: ReadonlyMap<number, number>;
+  /** URLs that answered a definite 404 or 410 and were settled as dead
+   *  links: facts about the site, outside the failure share. Zero when the
+   *  bot-wall guard below counted them as failures instead. */
+  deadUrlCount: number;
   reasonCodes: readonly CrawlCoverageGateReason[];
+}
+
+/** A definite "this URL does not exist" answer. The crawl reached the
+ *  server and the server answered; a link to it is the site's broken link,
+ *  not the site turning the crawler away (domaine-d-auriac, 2026-09-28:
+ *  140 dead URLs while every sampled sitemap URL answered 200). */
+const DEAD_URL_HTTP_STATUSES: ReadonlySet<number> = new Set([404, 410]);
+
+function isDeadUrl(page: CrawlCoverageGatePage): boolean {
+  return (
+    page.status === 'http-error-status' &&
+    page.httpStatus !== undefined &&
+    DEAD_URL_HTTP_STATUSES.has(page.httpStatus)
+  );
+}
+
+function isFailedPage(page: CrawlCoverageGatePage): boolean {
+  return (
+    page.status === 'http-error-status' || page.status === 'blocked' || page.status === 'error'
+  );
 }
 
 function hasUnexplainedSitemapCoverageGap(sitemap: SitemapCoverageSummary | undefined): boolean {
@@ -51,12 +75,22 @@ function hasUnexplainedSitemapCoverageGap(sitemap: SitemapCoverageSummary | unde
  * input intentionally contains only persisted inventory facts, allowing the
  * same decision immediately after crawling and before any later regeneration. */
 export function assessCrawlCoverage(input: CrawlCoverageGateInput): CrawlCoverageAssessment {
+  const inventoriedUrlCount = input.pages.length;
+  const candidateDeadUrlCount = input.pages.filter(isDeadUrl).length;
+  const otherFailedUrlCount = input.pages.filter(
+    (page) => isFailedPage(page) && !isDeadUrl(page),
+  ).length;
+  const answeredUrlCount = inventoriedUrlCount - candidateDeadUrlCount - otherFailedUrlCount;
+  // Bot-wall guard: a server that answers 404 to more URLs than it serves
+  // normally is more likely hiding from the crawler than full of dead links,
+  // so its 404s count as failures, as they did before dead links existed.
+  const deadUrlsSettled = candidateDeadUrlCount <= answeredUrlCount;
+
   const failedHttpStatusCounts = new Map<number, number>();
   let failedUrlCount = 0;
-
   for (const page of input.pages) {
-    if (page.status !== 'http-error-status' && page.status !== 'blocked' && page.status !== 'error')
-      continue;
+    if (!isFailedPage(page)) continue;
+    if (deadUrlsSettled && isDeadUrl(page)) continue;
     failedUrlCount += 1;
     if (page.httpStatus !== undefined) {
       failedHttpStatusCounts.set(
@@ -66,8 +100,9 @@ export function assessCrawlCoverage(input: CrawlCoverageGateInput): CrawlCoverag
     }
   }
 
-  const inventoriedUrlCount = input.pages.length;
-  const failureShare = inventoriedUrlCount === 0 ? 0 : failedUrlCount / inventoriedUrlCount;
+  const deadUrlCount = deadUrlsSettled ? candidateDeadUrlCount : 0;
+  const assessedUrlCount = inventoriedUrlCount - deadUrlCount;
+  const failureShare = assessedUrlCount === 0 ? 0 : failedUrlCount / assessedUrlCount;
   const reasonCodes: CrawlCoverageGateReason[] = [];
   if (failureShare > MAX_CRAWL_FAILURE_SHARE) reasonCodes.push('crawl-failure-share');
   if (hasUnexplainedSitemapCoverageGap(input.sitemapCoverage)) {
@@ -79,6 +114,7 @@ export function assessCrawlCoverage(input: CrawlCoverageGateInput): CrawlCoverag
     failedUrlCount,
     failureShare,
     failedHttpStatusCounts,
+    deadUrlCount,
     reasonCodes,
   };
 }
@@ -102,7 +138,12 @@ export class CrawlCoverageInsufficientError extends Error {
   readonly assessment: CrawlCoverageAssessment;
 
   constructor(assessment: CrawlCoverageAssessment) {
-    const failureDetail = `${assessment.failedUrlCount} of ${assessment.inventoriedUrlCount} inventoried URLs failed (${Math.round(assessment.failureShare * 100)}%)`;
+    const assessedUrlCount = assessment.inventoriedUrlCount - assessment.deadUrlCount;
+    const deadDetail =
+      assessment.deadUrlCount > 0
+        ? `, not counting ${assessment.deadUrlCount} URLs that answered a definite 404 or 410`
+        : '';
+    const failureDetail = `${assessment.failedUrlCount} of ${assessedUrlCount} inventoried URLs failed (${Math.round(assessment.failureShare * 100)}%)${deadDetail}`;
     const httpDetail = formatHttpStatusCounts(assessment.failedHttpStatusCounts);
     const sitemapDetail = assessment.reasonCodes.includes('sitemap-coverage')
       ? ' The sitemap also shows that the crawl reached too little of the site it declares.'

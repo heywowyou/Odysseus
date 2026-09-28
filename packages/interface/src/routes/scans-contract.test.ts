@@ -998,6 +998,7 @@ describe('GET /api/scans/:jobId declares the display outcome codes (plan 060 §5
       failedUrlCount: 8,
       failureShare: 0.8,
       failedHttpStatusCounts: new Map([[503, 8]]),
+      deadUrlCount: 0,
       reasonCodes: ['crawl-failure-share'],
     });
     vi.mocked(getJob).mockResolvedValue(detailJob({ error: gateError.message }) as never);

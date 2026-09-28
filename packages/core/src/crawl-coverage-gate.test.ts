@@ -57,6 +57,52 @@ describe('crawl coverage gate', () => {
     expect(assessCrawlCoverage(minorityBlocked).reasonCodes).toEqual([]);
   });
 
+  // domaine-d-auriac, 2026-09-28: 140 of 290 inventoried URLs answered 404
+  // while every sampled sitemap URL answered 200. Dead links are the site's
+  // own fact; the audit that would report them must not be refused.
+  it('leaves definite 404 and 410 answers out of the failure share', () => {
+    const input = {
+      pages: [
+        ...pages(150, 130, 404),
+        ...Array.from({ length: 10 }, () => ({ status: 'http-error-status', httpStatus: 410 })),
+      ],
+    };
+
+    const assessment = assessCrawlCoverage(input);
+
+    expect(assessment.deadUrlCount).toBe(140);
+    expect(assessment.failedUrlCount).toBe(0);
+    expect(assessment.reasonCodes).toEqual([]);
+  });
+
+  it('still counts real pushback beside dead links, over the pages that are not dead', () => {
+    const input = {
+      pages: [
+        ...pages(60, 40, 404),
+        ...Array.from({ length: 40 }, () => ({ status: 'blocked', httpStatus: 429 })),
+      ],
+    };
+
+    const assessment = assessCrawlCoverage(input);
+
+    expect(assessment.deadUrlCount).toBe(40);
+    expect(assessment.failedUrlCount).toBe(40);
+    expect(assessment.failureShare).toBe(0.4);
+    expect(() => assertSufficientCrawlCoverage(input)).toThrow(
+      /40 of 100 inventoried URLs failed \(40%\), not counting 40 URLs that answered a definite 404 or 410, including 40 HTTP 429/,
+    );
+  });
+
+  it('counts 404s as failures when the site answers 404 to more URLs than it serves', () => {
+    const input = { pages: pages(10, 90, 404) };
+
+    const assessment = assessCrawlCoverage(input);
+
+    expect(assessment.deadUrlCount).toBe(0);
+    expect(assessment.failedUrlCount).toBe(90);
+    expect(assessment.reasonCodes).toEqual(['crawl-failure-share']);
+  });
+
   it('stops an unexplained large sitemap coverage gap even when URL errors are absent', () => {
     const input = {
       pages: pages(3, 0),
