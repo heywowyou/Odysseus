@@ -40,9 +40,11 @@ describe('startRetentionSweeper', () => {
       bytesReclaimed: { local: 0, remote: 0 },
       failures: [],
     }));
+    const snapshotFunnel = vi.fn(async () => 1);
     const stop = startRetentionSweeper({} as never, {
       inFlightJobIds: () => ['job-1'],
       run: run as never,
+      snapshotFunnel,
     });
 
     await vi.advanceTimersByTimeAsync(RETENTION_SWEEP_FIRST_DELAY_MS - 1);
@@ -55,6 +57,8 @@ describe('startRetentionSweeper', () => {
 
     await vi.advanceTimersByTimeAsync(RETENTION_SWEEP_INTERVAL_MS);
     expect(run).toHaveBeenCalledTimes(2);
+    // Issue #561: every sweep stores the day's funnel counts.
+    expect(snapshotFunnel).toHaveBeenCalledTimes(2);
 
     stop();
     await vi.advanceTimersByTimeAsync(RETENTION_SWEEP_INTERVAL_MS);
@@ -65,14 +69,18 @@ describe('startRetentionSweeper', () => {
     const run = vi.fn(async () => {
       throw new Error('database unavailable');
     });
+    const snapshotFunnel = vi.fn(async () => 0);
     const stop = startRetentionSweeper({} as never, {
       inFlightJobIds: () => [],
       run: run as never,
+      snapshotFunnel,
     });
 
     await vi.advanceTimersByTimeAsync(RETENTION_SWEEP_FIRST_DELAY_MS + RETENTION_SWEEP_INTERVAL_MS);
 
     expect(run).toHaveBeenCalledTimes(2);
+    // A failed retention run still stores the funnel snapshot.
+    expect(snapshotFunnel).toHaveBeenCalledTimes(2);
     stop();
   });
 });

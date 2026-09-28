@@ -6,11 +6,17 @@
  * 15 minutes so a deploy restart does not sweep straight away; then once a
  * day. The sweeper never lifts the per-run cap: a run that would remove
  * more than the cap refuses and is recorded for the operator to read.
+ * Issue #561: each sweep also stores the day's outreach funnel counts, which
+ * outlive the 90-day thread and outcome expiry.
  */
 
 import type { Connection } from 'mongoose';
 import { getArtifactsRoot } from '@odysseus/scanner';
-import { listProspectAudits, listProspectScopeJobIds } from '@odysseus/store';
+import {
+  listProspectAudits,
+  listProspectScopeJobIds,
+  recordOutreachFunnelSnapshot,
+} from '@odysseus/store';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { logger } from '../logger.js';
 import { createConfiguredMailboxDraftAdapter } from '../outreach/configured-mailbox-draft-adapter.js';
@@ -43,6 +49,7 @@ export interface RetentionSweeperDeps {
   run?: (options: RetentionRunOptions) => ReturnType<typeof runRetention>;
   expireProspects?: (options: ProspectExpiryRunOptions) => ReturnType<typeof runProspectExpiry>;
   prospectExpiryEnabled?: boolean;
+  snapshotFunnel?: typeof recordOutreachFunnelSnapshot;
 }
 
 export function startRetentionSweeper(
@@ -51,6 +58,7 @@ export function startRetentionSweeper(
 ): () => void {
   const run = deps.run ?? runRetention;
   const expireProspects = deps.expireProspects ?? runProspectExpiry;
+  const snapshotFunnel = deps.snapshotFunnel ?? recordOutreachFunnelSnapshot;
   const prospectExpiryEnabled = deps.prospectExpiryEnabled ?? isProspectExpiryEnabled();
   const isProspectWorkInFlight = async (prospectId: string): Promise<boolean> => {
     const inFlight = new Set(deps.inFlightJobIds());
@@ -114,6 +122,12 @@ export function startRetentionSweeper(
       }
     } catch (error) {
       logger.error({ err: error }, 'prospect expiry failed');
+    }
+    try {
+      const campaigns = await snapshotFunnel(connection, new Date());
+      logger.info({ campaigns }, 'outreach funnel snapshot stored');
+    } catch (error) {
+      logger.error({ err: error }, 'outreach funnel snapshot failed');
     }
     try {
       const drafts = await withdrawExpiringOutreachDrafts({

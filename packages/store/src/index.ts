@@ -291,5 +291,9 @@ export type {
   RetentionRunDocument,
   RetentionRunFailure,
 } from './schemas/retention-run.schema.js';
-export { aggregateOutreachFunnel } from './outreach-funnel.js';
+export {
+  aggregateOutreachFunnel,
+  listOutreachFunnelSnapshots,
+  recordOutreachFunnelSnapshot,
+} from './outreach-funnel.js';
 export { listProspectExpiryRows, type ProspectExpiryRow } from './prospect-expiry.js';

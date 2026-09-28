@@ -108,7 +108,7 @@ export const aTraiter = {
       bounced: 'Rebonds',
       optedOut: 'Désinscriptions',
       won: 'Gagnés',
-      note: 'Compteurs seuls. Les fils expirent après 90 jours : exportez-les avant avec « odysseus outreach-funnel --json ».',
+      note: 'Compteurs seuls. Les fils expirent après 90 jours ; un relevé quotidien des compteurs est conservé (« odysseus outreach-funnel --history »).',
     },
     overview: {
       heading: 'Vue de campagne',
@@ -187,7 +187,7 @@ export const aTraiter = {
       bounced: 'Bounces',
       optedOut: 'Opt-outs',
       won: 'Won',
-      note: 'Counts only. Threads expire after 90 days: export them first with "odysseus outreach-funnel --json".',
+      note: 'Counts only. Threads expire after 90 days; a daily record of the counts is kept ("odysseus outreach-funnel --history").',
     },
     overview: {
       heading: 'Campaign overview',

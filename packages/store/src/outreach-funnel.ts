@@ -15,6 +15,10 @@ import {
   OUTREACH_OUTCOMES,
   type OutreachOutcome,
 } from '@odysseus/core';
+import {
+  createOutreachFunnelSnapshotModel,
+  type OutreachFunnelSnapshotDocument,
+} from './schemas/outreach-funnel-snapshot.schema.js';
 import { createOutreachOutcomeModel } from './schemas/outreach-outcome.schema.js';
 import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
 
@@ -118,4 +122,37 @@ export async function aggregateOutreachFunnel(
     if (outcome !== undefined) funnel.outcomes[outcome] += 1;
   }
   return [...funnels.values()].sort((a, b) => a.campaignVersion.localeCompare(b.campaignVersion));
+}
+
+/** Issue #561: stores today's funnel (UTC day) per campaign, replacing an
+ *  earlier snapshot of the same day, so a restart or a second sweep writes
+ *  no duplicate. Returns the number of campaigns written. */
+export async function recordOutreachFunnelSnapshot(
+  connection: Connection,
+  now: Date,
+): Promise<number> {
+  const day = now.toISOString().slice(0, 10);
+  const funnels = await aggregateOutreachFunnel(connection);
+  if (funnels.length === 0) return 0;
+  await createOutreachFunnelSnapshotModel(connection).bulkWrite(
+    funnels.map((funnel) => ({
+      replaceOne: {
+        filter: { day, campaignVersion: funnel.campaignVersion },
+        replacement: { day, ...funnel, takenAt: now },
+        upsert: true,
+      },
+    })),
+  );
+  return funnels.length;
+}
+
+/** Every stored snapshot, oldest day first. */
+export async function listOutreachFunnelSnapshots(
+  connection: Connection,
+): Promise<OutreachFunnelSnapshotDocument[]> {
+  return createOutreachFunnelSnapshotModel(connection)
+    .find({})
+    .select({ _id: 0, __v: 0 })
+    .sort({ day: 1, campaignVersion: 1 })
+    .lean<OutreachFunnelSnapshotDocument[]>();
 }

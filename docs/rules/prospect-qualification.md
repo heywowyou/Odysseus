@@ -205,7 +205,10 @@ its 90 days from creation, but its copy in the mailbox does not expire with
 it: the daily retention sweep withdraws a draft from the mailbox a week
 before its row would expire and keeps the row as a pending deletion until the
 mailbox confirms, so an unsent first email never leaves an untracked draft
-behind.
+behind. The same sweep stores the day's outreach funnel per campaign in
+`outreach_funnel_snapshots`, counts only with no prospect, domain, address or
+thread identifier, and without a TTL: aggregates outlive the records they
+count (issue #561).
 
 **Plan 071 reference-link attribution.** The optional private mapping from a
 Touch-1 reference-link token hash to its prospect, thread and draft follows

@@ -104,8 +104,11 @@ Kept deliberately small, and none of it changes what the prospect receives:
    `odysseus outreach-funnel --json` prints, per campaign, threads opened,
    first emails sent, replies (with the touch they followed, H4), bounces,
    opt-outs, wins and current outcomes, as counts only; the To do page shows
-   the same counts. Run it and keep the output before 2026-12-23, when the
-   first threads reach their 90-day TTL. The per-group tables for H1, H2,
+   the same counts. Since issue #561 the daily retention sweep also stores
+   those counts per day and campaign in `outreach_funnel_snapshots`, with no
+   TTL, and `odysseus outreach-funnel --history` reads them, so no manual
+   export is needed before the first threads expire on 2026-12-23. The
+   per-group tables for H1, H2,
    H3 and H5 still need the operator's D1 and D2 rulings before they can be
    grouped.
 4. **Bridge assignment, only if D1 is approved.** Derive the bridge from a

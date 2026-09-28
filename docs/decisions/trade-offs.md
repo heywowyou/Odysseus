@@ -6169,8 +6169,11 @@ complaint or provider warning, a wrong establishment match, a broken
 opt-out), the daily volume ceiling that protects the sending domain, manual
 sending, per-site scan permission, and suppression before every draft. They
 protect deliverability and legal compliance, not measurement. The campaign
-tag and `odysseus outreach-funnel` (issue #533) stay as plain reporting; an
-export before the first 90-day expiry (2026-12-23) is optional.
+tag and `odysseus outreach-funnel` (issue #533) stay as plain reporting.
+*Amended 2026-09-28, issue #561:* the daily retention sweep stores the funnel
+counts per day and campaign in a collection without TTL, read with
+`outreach-funnel --history`, so the brief's kill criteria stay readable after
+the first 90-day expiry (2026-12-23) without a manual export.
 
 What goes: decisions D1 to D3, D5 and D6 of that design, the daily written
 stop log, and the hash-assigned bridge, which is not built. D4 is unchanged:

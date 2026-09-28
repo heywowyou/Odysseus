@@ -16,6 +16,7 @@ import { createFindingModel } from './schemas/finding.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
 import { createJobQueueStateModel } from './schemas/job-queue-state.schema.js';
 import { createOutreachDraftModel } from './schemas/outreach-draft.schema.js';
+import { createOutreachFunnelSnapshotModel } from './schemas/outreach-funnel-snapshot.schema.js';
 import { createOutreachOutcomeModel } from './schemas/outreach-outcome.schema.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
 import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
@@ -48,6 +49,7 @@ export const MODEL_FACTORIES: ReadonlyArray<(connection: Connection) => Model<ne
   createJobModel,
   createJobQueueStateModel,
   createOutreachDraftModel,
+  createOutreachFunnelSnapshotModel,
   createOutreachOutcomeModel,
   createOutreachPreviewModel,
   createOutreachThreadModel,

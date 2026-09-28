@@ -213,8 +213,8 @@ export function registerProspectHubRoutes(
   }
 
   // Issue #533: the outreach funnel per campaign, counts only, for the To do
-  // page's campaign tile. Read-only; the CLI's outreach-funnel exports the
-  // same numbers before the threads expire.
+  // page's campaign tile. Read-only; the retention sweep keeps a daily copy
+  // of the same numbers that outlives the threads (issue #561).
   router.get('/api/outreach/funnel', async ({ res }) => {
     sendJson(res, 200, { campaigns: await aggregateOutreachFunnel(connection) });
   });

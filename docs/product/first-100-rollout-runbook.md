@@ -93,10 +93,11 @@ ruling recorded in the decision log below before the pilot starts.
    The leftover plan 030 manual real-hotel dashboard pass is still due before
    the pilot.
 
-5. Optional, around 2026-12-10: export the reply, bounce and opt-out counts
-   with `node packages/cli/dist/index.js outreach-funnel --json` if you want
-   to keep them. The first threads and outcomes expire on their 90-day TTL on
-   2026-12-23; which prospects became clients stays on the prospect record
+5. No export needed: the daily retention sweep stores the reply, bounce and
+   opt-out counts per day (issue #561), and
+   `node packages/cli/dist/index.js outreach-funnel --history` reads them
+   after the first threads and outcomes expire on their 90-day TTL on
+   2026-12-23. Which prospects became clients stays on the prospect record
    regardless.
 
 ## Pilot domain list (plan 014 Step 4), identified 2026-09-08
