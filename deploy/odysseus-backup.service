@@ -10,4 +10,7 @@ Type=oneshot
 # remote.
 User=deploy
 Group=deploy
+# Optional: ODYSSEUS_BACKUP_REMOTE, the private backup bucket's rclone remote
+# (runbook section 8). Missing file = the legacy previews-bucket location.
+EnvironmentFile=-/srv/odysseus/.backup.env
 ExecStart=/srv/odysseus/deploy/backup-artifacts.sh

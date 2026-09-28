@@ -7,9 +7,10 @@
  * outlived its signature would break early and unpredictably.
  *
  * Read-only by construction. There is no put and no delete here, and the
- * credentials this runs with are meant to be scoped the same way: publication
- * and revocation are the private side's job, and the public site never needs to
- * be able to change what it serves.
+ * credentials this runs with are scoped the same way by bucket policy
+ * (GetObject on previews/*, opt-out-links/* and reference-audit/*,
+ * deploy/runbook.md section 4): publication and revocation are the private
+ * side's job, and the public site never needs to change what it serves.
  */
 
 import { AwsClient } from 'aws4fetch';

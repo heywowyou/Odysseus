@@ -31,7 +31,12 @@ COMPOSE_ARGS=(-f "$COMPOSE_FILE")
 if [ -n "$COMPOSE_PROJECT_NAME" ]; then
   COMPOSE_ARGS=(-p "$COMPOSE_PROJECT_NAME" "${COMPOSE_ARGS[@]}")
 fi
-REMOTE="scaleway:odysseus-previews/backups"
+# Issue #556: the archive is unencrypted, so it belongs in a private bucket
+# with its own key, never the previews bucket the public site reads from.
+# The default keeps the legacy location only so an existing timer keeps
+# backing up until the operator moves it (runbook section 8).
+LEGACY_REMOTE="scaleway:odysseus-previews/backups"
+REMOTE="${ODYSSEUS_BACKUP_REMOTE:-$LEGACY_REMOTE}"
 # Plan 077: matches the restic dailies, so a deleted audit leaves backups
 # about two weeks after it leaves the live disk.
 RETENTION_DAYS=14
@@ -62,6 +67,9 @@ if [ ! -s "$ARCHIVE" ]; then
 fi
 log "archive ready: $(basename "$ARCHIVE") ($(du -h "$ARCHIVE" | cut -f1))"
 
+if [ "$REMOTE" = "$LEGACY_REMOTE" ]; then
+  log "warning: backing up into the previews bucket; set ODYSSEUS_BACKUP_REMOTE to a private backup bucket with its own key (runbook section 8)"
+fi
 log "copying to $REMOTE"
 rclone copy "$ARCHIVE" "$REMOTE"
 

@@ -154,11 +154,21 @@ Fill in exactly these, leave everything else as shipped:
   The server's `serve` process also polls the bucket's `opt-out-requests/`
   prefix once a minute and applies each public opt-out to the blacklist, so
   this key needs list, read and delete there.
-- On Vercel (`packages/site`), one-click opt-out needs, besides the existing
-  `PREVIEW_BUCKET_*` read values, `OPT_OUT_BUCKET_ACCESS_KEY_ID` and
+- On Vercel (`packages/site`), `PREVIEW_BUCKET_*` carries the same bucket,
+  endpoint and region as the server but its own key, never the server's
+  (issue #556). That key is limited by bucket policy to `GetObject` on
+  `previews/*`, `opt-out-links/*` and `reference-audit/*`: the site only
+  reads, and the bucket also holds the server's backups and every other
+  prefix. One-click opt-out also needs `OPT_OUT_BUCKET_ACCESS_KEY_ID` and
   `OPT_OUT_BUCKET_SECRET_KEY`: a separate Scaleway key limited by bucket policy
   to `PutObject` on `opt-out-requests/*`. Without them the form answers with
   its error message and the mailto fallback still works.
+- Key inventory, by type and never by value: the server key (app and, for
+  the legacy backup, rclone), the site read key, the site opt-out write key,
+  and the receipt write key. If one key was ever shared between Vercel and
+  the server or rclone, treat it as exposed: create the scoped replacement,
+  set it where it belongs, redeploy, then delete the old key in the Scaleway
+  console.
 
 - Plan 071's permanent reference PDF uses its own object namespace,
   `reference-audit/<sha256>.pdf` plus `reference-audit/current.json`, but not
@@ -492,9 +502,32 @@ scan container would stop carrying at all.
 
 ## 8. Backups
 
-The nightly job tars the artifacts volume and copies it to the existing
-private bucket `odysseus-previews` under `backups/`, keeping 14 days (plan
-077, down from 30).
+The nightly job tars the artifacts volume and copies it to the rclone remote
+in `ODYSSEUS_BACKUP_REMOTE`, keeping 14 days (plan 077, down from 30). The
+archive is not encrypted, so it must not share a bucket or key with anything
+the public site can read (issue #556): the preferred path is the encrypted
+restic repository of section 8.1, and short of that a separate private bucket
+with its own key. Left unset, the remote defaults to the legacy location, the
+previews bucket under `backups/`, and the job logs a warning on every run
+until it is moved.
+
+Moving it off the previews bucket, as the operator: create a private bucket
+(for example `odysseus-backups`) and a Scaleway key limited to it, add a
+second rclone remote with that key (`rclone config`, name `backups`, same
+answers as below), then:
+
+```sh
+echo 'ODYSSEUS_BACKUP_REMOTE=backups:odysseus-backups/artifacts' | sudo tee /srv/odysseus/.backup.env
+sudo chown deploy:deploy /srv/odysseus/.backup.env && sudo chmod 600 /srv/odysseus/.backup.env
+sudo cp /srv/odysseus/deploy/odysseus-backup.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl start odysseus-backup.service
+sudo journalctl -u odysseus-backup.service -n 20 --no-pager
+```
+
+The journal no longer shows the previews-bucket warning. Delete the old
+`backups/` prefix from the previews bucket once a restore drill from the new
+remote passes.
 
 Live on the Hostinger VPS (checked 2026-09-25 with `systemctl list-timers`):
 this legacy path, `odysseus-backup.timer` running
