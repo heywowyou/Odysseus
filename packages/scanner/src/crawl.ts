@@ -359,6 +359,10 @@ export interface QueueItem {
   isHomepage?: boolean;
 }
 
+/** How long link extraction waits for a client-side redirect's document
+ *  before reading its anchors again (issue #541). */
+const DOM_READ_RETRY_TIMEOUT_MS = 5_000;
+
 /**
  * Fallback for URLs whose extension doesn't reveal what they are;
  * links.ts's extension check already caught the common case (e.g.
@@ -869,6 +873,11 @@ export async function crawlSite(
   let { context, crawlGuard } = await openCrawlContext();
 
   const recordPage = (page: CrawledPage): void => {
+    // Issue #541: one URL, one record. A later failure in the same
+    // iteration (a client-side redirect destroying the context during link
+    // extraction) or a watchdog firing after the page was recorded must not
+    // add an error beside the visit the page already got.
+    if (pagesByUrl.has(page.url)) return;
     pages.push(page);
     pagesByUrl.set(page.url, page);
     ensureInventoryDiscovery(page.url, page.discoveryMethod, page.depth, page.discoveredFrom);
@@ -1402,15 +1411,26 @@ export async function crawlSite(
                 // numeric-text filter here must stay byte-identical to
                 // page-audit-profile.ts's page-level count, so the guard's
                 // evidence and the profile's fact can never diverge.
-                const anchors = await browserPage.$$eval('a[href]', (anchorEls) =>
-                  anchorEls.map((a) => ({
-                    href: a.getAttribute('href'),
-                    relNext: (a.getAttribute('rel') ?? '').split(/\s+/).includes('next'),
-                    isNumberedPaginationControl:
-                      a.matches('nav[class*="pag" i] a, [class*="pagination" i] a') &&
-                      /^\d+$/.test((a.textContent ?? '').trim()),
-                  })),
-                );
+                const readAnchors = () =>
+                  browserPage.$$eval('a[href]', (anchorEls) =>
+                    anchorEls.map((a) => ({
+                      href: a.getAttribute('href'),
+                      relNext: (a.getAttribute('rel') ?? '').split(/\s+/).includes('next'),
+                      isNumberedPaginationControl:
+                        a.matches('nav[class*="pag" i] a, [class*="pagination" i] a') &&
+                        /^\d+$/.test((a.textContent ?? '').trim()),
+                    })),
+                  );
+                // Issue #541: a JavaScript or meta redirect that fires just
+                // after load destroys the execution context under this read.
+                // The page is already recorded; read the document it landed
+                // on once it loads, and follow no links rather than fail it.
+                const anchors = await readAnchors().catch(async () => {
+                  await browserPage
+                    .waitForLoadState('load', { timeout: DOM_READ_RETRY_TIMEOUT_MS })
+                    .catch(() => undefined);
+                  return readAnchors().catch(() => []);
+                });
                 // Issue #497: a relative href resolves against the document's
                 // base URL, which <base href> can move away from the page's
                 // own URL; the browser (and checks/link-facts.ts, which reads

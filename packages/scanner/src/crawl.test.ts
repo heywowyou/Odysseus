@@ -689,6 +689,69 @@ describe('crawlSite non-2xx responses (issue #39)', () => {
  * denominator. The recording fake below proves the prevention at the
  * navigation level, not just in the manifest.
  */
+describe('crawlSite client-side redirect during link extraction (issue #541)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('records the page once as visited and still follows the landed document links', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    let anchorReads = 0;
+    const context = {
+      setDefaultTimeout: () => {},
+      setDefaultNavigationTimeout: () => {},
+      clearCookies: async () => {},
+      newPage: async () => {
+        let currentUrl = 'about:blank';
+        return {
+          goto: async (url: string) => {
+            currentUrl = url;
+            return {
+              status: () => 200,
+              headers: () => ({ 'content-type': 'text/html; charset=utf-8' }),
+            };
+          },
+          url: () => currentUrl,
+          waitForLoadState: async () => {},
+          $$eval: async (selector: string, fn: (elements: unknown[]) => unknown) => {
+            if (selector.includes('rel="alternate"')) return fn([]);
+            if (currentUrl === 'https://example.com/') {
+              anchorReads += 1;
+              // location.replace() right after load: the first read loses
+              // its execution context, the second reads the landed page.
+              if (anchorReads === 1) {
+                throw new Error(
+                  'Execution context was destroyed, most likely because of a navigation',
+                );
+              }
+              return fn([fakeAnchorElement({ href: '/chambres' })]);
+            }
+            return fn([]);
+          },
+          evaluate: async () => {
+            throw new Error('no DOM in unit mock');
+          },
+          close: async () => {},
+        };
+      },
+      close: async () => {},
+    };
+
+    const result = await crawlSite('https://example.com', {
+      browser: { newContext: async () => context } as unknown as Browser,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+    });
+
+    const homepageRecords = result.pages.filter((page) => page.url === 'https://example.com/');
+    expect(homepageRecords).toHaveLength(1);
+    expect(homepageRecords[0]!.status).toBe('visited');
+    expect(result.pages.some((page) => page.status === 'error')).toBe(false);
+    expect(result.pages.find((page) => page.url === 'https://example.com/chambres')).toBeDefined();
+  });
+});
+
 describe('crawlSite trailing-slash page identity (issue #102)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
