@@ -89,7 +89,7 @@ assert_contains "$FAKE_RSYNC_LOG" '/srv/odysseus/'
 # rsync --delete removes server-only files unless they are excluded (#484):
 # the restic credentials live next to the checkout, and a local smoke env
 # file must never be copied into production.
-for server_only in /.env.smoke /.restic.env /.restic-password; do
+for server_only in /.env.smoke /.restic.env /.restic-password /.backup.env; do
   assert_contains "$FAKE_RSYNC_LOG" "--exclude $server_only"
 done
 assert_contains "$FAKE_SSH_LOG" 'docker compose -p '\''odysseus'\'' -f '\''/docker/odysseus/docker-compose.yml'\'' build app'

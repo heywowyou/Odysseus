@@ -76,7 +76,8 @@ log "syncing $REPO_ROOT/ to $ODYSSEUS_DEPLOY_HOST:$ODYSSEUS_DEPLOY_REMOTE_PATH/"
 # --delete removes anything on the server that is not in the checkout, so
 # every server-only file must be excluded here (issue #484): the restic
 # credentials (runbook section 8.1) live next to the checkout and are never
-# committed, and a local .env.smoke (runbook section 10) must never reach the
+# committed, nor is the backup remote file (.backup.env, runbook section 8),
+# and a local .env.smoke (runbook section 10) must never reach the
 # server at all.
 rsync -az --delete \
   --exclude .git \
@@ -87,6 +88,7 @@ rsync -az --delete \
   --exclude /.env.smoke \
   --exclude /.restic.env \
   --exclude /.restic-password \
+  --exclude /.backup.env \
   --exclude /deploy/.deploy.local.env \
   -e "ssh ${SSH_OPTS[*]}" \
   "$REPO_ROOT/" "$ODYSSEUS_DEPLOY_HOST:$ODYSSEUS_DEPLOY_REMOTE_PATH/"
