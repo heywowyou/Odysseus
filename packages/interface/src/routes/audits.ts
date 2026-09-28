@@ -16,6 +16,7 @@ import {
   type ReportLanguage,
   type ReportTheme,
   type StatSector,
+  primarySeverityRollup,
 } from '@odysseus/core';
 import {
   clearAuditBlockedPagesAcknowledgment,
@@ -76,7 +77,6 @@ import {
   resolveEffectiveGrade,
   RULE_TRANSLATIONS_FR,
   type ReportFreshness,
-  primarySeverityRollup,
 } from '@odysseus/report';
 import { getPreviewPublicBaseUrl } from '../config.js';
 import { toAuditPageFinding } from './audit-finding-response.js';

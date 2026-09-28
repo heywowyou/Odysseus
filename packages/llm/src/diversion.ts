@@ -1,4 +1,5 @@
 import {
+  isUnconfirmedRule,
   LCEN_MENTIONS_LEGALES_RULE_ID,
   LEGAL_PATH_PATTERN,
   type AuditManifest,
@@ -22,9 +23,16 @@ export interface DivertedFinding {
 
 export interface PartitionedFindings {
   /** Never contains a diverted finding. Feed this, not the unfiltered
-   *  input, to buildStructureInput/buildWritingInput and to the
-   *  invented/unreferenced-finding guards. */
+   *  input, to buildWritingInput, which resolves a structure document's
+   *  finding IDs against it. */
   forModel: Finding[];
+  /** forModel without the findings of a custom rule no real finding has
+   *  confirmed (trade-off 124, issue #543). Those leave the priorities, so
+   *  the structure pass never groups them and the writer never describes
+   *  them (buildWritingInput drops them per theme). They stay in forModel
+   *  so a structure document written before this rule still resolves.
+   *  Feed this to buildStructureInput and analyzeStructure. */
+  forStructure: Finding[];
   diverted: DivertedFinding[];
 }
 
@@ -110,5 +118,9 @@ export function partitionFindings(
     }
   }
 
-  return { forModel, diverted };
+  return {
+    forModel,
+    forStructure: forModel.filter((finding) => !isUnconfirmedRule(finding.ruleId)),
+    diverted,
+  };
 }

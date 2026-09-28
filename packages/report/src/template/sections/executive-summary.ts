@@ -14,7 +14,7 @@ import {
   sheet,
 } from '../html-utils.js';
 import { computeStatistics } from '../statistics.js';
-import { primaryFindingFilter } from '../unlinked-sitemap-pages.js';
+import { primaryFindingFilter } from '@odysseus/core';
 import { sectionTitle } from '../section-registry.js';
 import { pickPrimaryBasis } from './methodology.js';
 import { selectRenderedThemes } from './themes.js';

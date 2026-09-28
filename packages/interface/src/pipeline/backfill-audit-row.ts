@@ -17,7 +17,7 @@
  * asking nicely.
  */
 
-import { primarySeverityRollup } from '@odysseus/report';
+import { primarySeverityRollup } from '@odysseus/core';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';

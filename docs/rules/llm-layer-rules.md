@@ -108,6 +108,23 @@ recommended fixing buttons that only the frame contained. A theme made only
 of frame findings keeps them. Stored structures stay valid: theme membership
 is unchanged, only the writing evidence narrows.
 
+**Unconfirmed-rule findings never shape a priority (trade-off 124, issue
+#543).** A finding of a custom rule no real finding has confirmed
+(`packages/core/src/rule-confirmation.ts`) is left out of the priorities,
+so the model never sees it as priority material: `partitionFindings`'s
+`forStructure` drops it from the structure input, and `buildWritingInput`
+drops it from a theme's writing evidence the same way it drops frame
+findings. It stays in `forModel` only so a structure written before this
+rule still resolves; the analysis stage regenerates such a structure rather
+than reusing it, except when English is attached to an exact French
+structure, where the pair must share one grouping. Third-party-frame and
+unlinked-sitemap findings stay model-visible: they are real defects on the
+site's pages, and the writer's frame filter and the render's primary
+population already keep them off the priority cards. `siteStats` and the
+plan 058 fact registry count the report's primary population
+(`reportPopulation`, now in core), the same one its statistics tiles count,
+so the model is never shown a total the PDF contradicts.
+
 **Post-structure-pass ranking rules, also added 2026-08-07, correct for
 two things a model cannot be trusted to weigh consistently: coverage and
 volume.** `packages/llm/src/structure-ranking.ts` runs immediately after

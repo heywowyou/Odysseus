@@ -273,6 +273,7 @@ async function loadOrGenerateStructure(
   analysesDir: string,
   auditId: string,
   forModel: readonly Finding[],
+  forStructure: readonly Finding[],
   siteContext: SiteContextInput,
   usedFallback: boolean,
   regenerate: boolean,
@@ -318,12 +319,26 @@ async function loadOrGenerateStructure(
         );
       }
 
-      return { structureDoc, reused: true, structurePath: existingPath };
+      // Issue #543: a structure that grouped an unconfirmed rule's findings
+      // predates trade-off 124's model rule, so it is regenerated rather
+      // than reused. English attached to an exact French structure keeps
+      // it: the pair must share one grouping, and the writer and the render
+      // both leave those findings out of the priorities anyway.
+      const groupable = new Set(forStructure.map((f) => f.findingId));
+      const outdated = [...referenced].some((id) => !groupable.has(id));
+      if (!outdated || requiredStructureGeneratedAt !== undefined) {
+        return { structureDoc, reused: true, structurePath: existingPath };
+      }
     }
   }
 
-  const structureInput = buildStructureInput(forModel, siteContext);
-  const structureResult = await analyzeStructure(structureInput, forModel, usedFallback, manifest);
+  const structureInput = buildStructureInput(forStructure, siteContext);
+  const structureResult = await analyzeStructure(
+    structureInput,
+    forStructure,
+    usedFallback,
+    manifest,
+  );
 
   const generatedAt = new Date();
   const structureDoc: StructureDocument = {
@@ -361,7 +376,7 @@ export async function runAnalysisStage(
   // floor, on the same set: forModel must be exactly what reaches the
   // structure and writing passes and their guards, never allFindings.
   const severityFiltered = filterFindingsForLlm(allFindings);
-  const { forModel } = partitionFindings(severityFiltered, manifest);
+  const { forModel, forStructure } = partitionFindings(severityFiltered, manifest);
   // Audit fallback gate (docs/rules/llm-layer-rules.md section 10, trade-off
   // 23, wired explicitly by issue #162). Evaluated on allFindings, the
   // audit's own findings, exactly as the rule reads: forModel is a
@@ -382,7 +397,7 @@ export async function runAnalysisStage(
   // here for the true isAuditFallbackEligible case too (an empty
   // allFindings already implies forModel.length === 0), not just added
   // alongside it.
-  const fallbackEligible = isAuditFallbackEligible(allFindings) || forModel.length === 0;
+  const fallbackEligible = isAuditFallbackEligible(allFindings) || forStructure.length === 0;
   const analysesDir = path.join(auditDir, 'analyses');
 
   let structurePath = '';
@@ -393,6 +408,7 @@ export async function runAnalysisStage(
       analysesDir,
       manifest.auditId,
       forModel,
+      forStructure,
       siteContext,
       usedFallbackContext,
       options.regenerateStructure ?? false,

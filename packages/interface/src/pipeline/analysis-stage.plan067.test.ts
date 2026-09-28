@@ -257,4 +257,57 @@ describe('Plan 067 analysis-stage provider budget', () => {
     expect(runWritingCritic).not.toHaveBeenCalled();
     expect(analyzeCorrectionReview).not.toHaveBeenCalled();
   });
+
+  describe('findings of an unconfirmed custom rule (issue #543)', () => {
+    const unconfirmed: Finding = {
+      ...finding,
+      findingId: 'f2',
+      source: 'custom',
+      ruleId: 'focus-order-mismatch',
+      dedupeKey: 'focus-order-mismatch',
+      severity: 'critical',
+    } as Finding;
+
+    it('never reach the structure input', async () => {
+      const findings = [finding, unconfirmed];
+      const m = { ...manifest(), findingsProvenance: buildFindingsProvenance(findings) };
+
+      await runAnalysisStage(auditDir, m, findings, { language: 'fr' }, {} as never);
+
+      const [structureInput, structureFindings] = vi.mocked(analyzeStructure).mock.calls[0]!;
+      expect(structureInput.findings.map((f) => f.findingId)).toEqual(['f1']);
+      expect(structureFindings.map((f) => f.findingId)).toEqual(['f1']);
+      const writingInput = vi.mocked(analyzeWriting).mock.calls[0]![0];
+      expect(writingInput.siteStats).toMatchObject({ totalFindings: 1, critical: 0 });
+    });
+
+    it('regenerate a stored structure that grouped them instead of reusing it', async () => {
+      const findings = [finding, unconfirmed];
+      const provenance = buildFindingsProvenance(findings);
+      const m = { ...manifest(), findingsProvenance: provenance };
+      const stored = structureResult();
+      stored.themes[0]!.findingIds = ['f1', 'f2'];
+      await mkdir(path.join(auditDir, 'analyses'), { recursive: true });
+      await writeFile(
+        path.join(auditDir, 'analyses', '2026-09-01T00-00-00Z-structure.json'),
+        JSON.stringify({
+          auditId: 'audit-067',
+          ...stored,
+          generatedAt: '2026-09-01T00:00:00.000Z',
+          findingsProvenance: provenance,
+        }),
+      );
+
+      const result = await runAnalysisStage(
+        auditDir,
+        m,
+        findings,
+        { language: 'fr', regenerateWriting: true },
+        {} as never,
+      );
+
+      expect(result.structureReused).toBe(false);
+      expect(analyzeStructure).toHaveBeenCalledTimes(1);
+    });
+  });
 });

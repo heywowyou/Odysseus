@@ -4,6 +4,7 @@ import {
   LCEN_MENTIONS_LEGALES_REGIME_ID,
   formatLocaleNumber,
   getRegime,
+  reportPopulation,
   type ApprovedAuditEvidencePayload,
   type Finding,
   type ReportFact,
@@ -208,6 +209,9 @@ export function buildReportFactRegistry(
   };
   const root = evidence.approval.auditEvidenceSnapshotDigest;
   const { manifest, findings } = evidence;
+  // Issue #543: the report's totals, severity tiles and category counts all
+  // read its primary population, so the facts they are checked against do.
+  const counted = reportPopulation(manifest, findings).primary;
 
   add({
     factId: 'audit.siteUrl',
@@ -222,7 +226,11 @@ export function buildReportFactRegistry(
       root,
     ]),
   );
-  add(numberFact('audit.findingCount', findings.length, 'confirmed findings in total', [root]));
+  add(
+    numberFact('audit.findingCount', counted.length, 'findings counted in the report totals', [
+      root,
+    ]),
+  );
   const auditDate = new Date(manifest.startedAt);
   if (!Number.isNaN(auditDate.getTime()))
     add({
@@ -245,16 +253,16 @@ export function buildReportFactRegistry(
     add(
       numberFact(
         `findings.severity.${severity}`,
-        findings.filter((finding) => finding.severity === severity).length,
+        counted.filter((finding) => finding.severity === severity).length,
         `findings of ${severity} severity`,
         [root],
       ),
     );
-  for (const category of [...new Set(findings.map((finding) => finding.category))].sort())
+  for (const category of [...new Set(counted.map((finding) => finding.category))].sort())
     add(
       numberFact(
         `findings.category.${category}`,
-        findings.filter((finding) => finding.category === category).length,
+        counted.filter((finding) => finding.category === category).length,
         `findings in the ${category} category`,
         [root],
       ),

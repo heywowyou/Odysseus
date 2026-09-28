@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { AuditManifest, Finding } from '@odysseus/core';
+import { computeSiteStats } from '@odysseus/llm';
 import { computeStatistics } from './statistics.js';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -290,5 +291,53 @@ describe('computeStatistics with a sitemap-only majority (plan 075, Q4)', () => 
       ),
     };
     expect(computeStatistics(findings, oneOrphan)).toEqual(computeStatistics(findings, manifest));
+  });
+});
+
+describe('the writing pass sees the totals the statistics tiles print (issue #543)', () => {
+  it('counts the same primary population with all four buckets present', () => {
+    const findings = loadMultiPageFindings();
+    const manifest = loadMultiPageManifest();
+    const visited = manifest.pages.filter((page) => page.status === 'visited');
+    const linked = new Set(visited.slice(0, Math.floor(visited.length / 3)).map((p) => p.url));
+    const withBacklog: AuditManifest = {
+      ...manifest,
+      pages: manifest.pages.map((page) =>
+        page.status === 'visited' && !linked.has(page.url)
+          ? { ...page, discoveryMethod: 'sitemap-only' }
+          : page,
+      ),
+    };
+    const template = findings[0]!;
+    const frameOnly: Finding = {
+      ...template,
+      findingId: 'frame-1',
+      dedupeKey: 'frame-1',
+      pageUrls: [[...linked][0]!],
+      elements: [{ ...template.elements[0]!, selector: 'iframe#booking >>> button' }],
+    };
+    const unconfirmed: Finding = {
+      ...template,
+      findingId: 'unconfirmed-1',
+      dedupeKey: 'unconfirmed-1',
+      ruleId: 'focus-order-mismatch',
+      source: 'custom',
+      pageUrls: [[...linked][0]!],
+    };
+    const all = [...findings, frameOnly, unconfirmed];
+
+    const tiles = computeStatistics(all, withBacklog);
+    const siteStats = computeSiteStats(all, withBacklog);
+
+    expect(tiles.unlinkedSitemapFindingCount).toBeGreaterThan(0);
+    expect(tiles.confinedThirdPartyFindingCount).toBe(1);
+    expect(tiles.unconfirmedRuleFindingCount).toBe(1);
+    expect(siteStats).toMatchObject({
+      totalFindings: tiles.totalFindings,
+      critical: tiles.critical,
+      serious: tiles.serious,
+      moderate: tiles.moderate,
+      minor: tiles.minor,
+    });
   });
 });

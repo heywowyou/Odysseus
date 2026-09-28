@@ -9,7 +9,7 @@ import { buildConformanceRollup, pagesWithWcagFailures } from './conformance-rol
 import type { CATEGORY_ORDER } from './design-tokens.js';
 import { EVIDENCE_INCLUSION_THRESHOLD_PERCENT } from '../constants.js';
 import { isThirdPartyFinding } from './third-party-attribution.js';
-import { reportPopulation, unlinkedSitemapPageUrls } from './unlinked-sitemap-pages.js';
+import { reportPopulation, unlinkedSitemapPageUrls } from '@odysseus/core';
 
 /** Deterministic counts for the statistics page (docs/archive/report-v2-refactor.md
  *  B10): nowhere in v1 did the document state pages scanned, finding

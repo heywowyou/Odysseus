@@ -1,5 +1,7 @@
 import {
   isConfinedToThirdPartyFrame,
+  isUnconfirmedRule,
+  reportPopulation,
   type AuditManifest,
   type Finding,
   type ObligationAssessment,
@@ -130,7 +132,11 @@ export function buildWritingInput(
     // embeds a booking frame, the only place the frame's findings were.
     // A theme made only of frame findings keeps them: it has nothing else
     // to describe and never becomes a card.
-    const siteFindings = themeFindings.filter((finding) => !isConfinedToThirdPartyFrame(finding));
+    // Trade-off 124 (issue #543): an unconfirmed rule's finding never
+    // reaches a priority card either, so the writer does not describe it.
+    const siteFindings = themeFindings.filter(
+      (finding) => !isConfinedToThirdPartyFrame(finding) && !isUnconfirmedRule(finding.ruleId),
+    );
     return {
       themeKey: theme.themeKey,
       category: theme.category,
@@ -154,7 +160,13 @@ export function buildWritingInput(
           priorityRank: theme.priorityRank,
         }))
         .sort((a, b) => a.priorityRank - b.priorityRank),
-      categoriesPresent: [...new Set(filteredFindings.map((finding) => finding.category))].sort(),
+      categoriesPresent: [
+        ...new Set(
+          filteredFindings
+            .filter((finding) => !isUnconfirmedRule(finding.ruleId))
+            .map((finding) => finding.category),
+        ),
+      ].sort(),
       performance: performanceEvidence,
       obligationStatus,
       limitations: [
@@ -179,12 +191,17 @@ export function computeSiteStats(
   allFindings: readonly Finding[],
   manifest: AuditManifest,
 ): WritingSiteStats {
+  // Issue #543: the report's primary population (core's reportPopulation),
+  // the one its totals and statistics tiles count, so the model is never
+  // shown a total the PDF contradicts. Frame-confined, unlinked-sitemap
+  // and unconfirmed-rule findings stay out, as they do on the tiles.
+  const counted = reportPopulation(manifest, allFindings).primary;
   const bySeverity = { critical: 0, serious: 0, moderate: 0, minor: 0 };
-  for (const finding of allFindings) bySeverity[finding.severity]++;
+  for (const finding of counted) bySeverity[finding.severity]++;
 
   return {
     pagesScanned: manifest.pages.filter((page) => page.status === 'visited').length,
-    totalFindings: allFindings.length,
+    totalFindings: counted.length,
     ...bySeverity,
   };
 }

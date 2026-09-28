@@ -7,7 +7,7 @@
  * rather than left as accepted duplication.
  */
 
-import { primarySeverityRollup } from '@odysseus/report';
+import { primarySeverityRollup } from '@odysseus/core';
 import * as fs from 'node:fs';
 import path from 'node:path';
 import type { Connection } from 'mongoose';

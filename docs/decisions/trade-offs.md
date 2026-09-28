@@ -6299,6 +6299,12 @@ to miss. Rejected alternatives: suppressing unconfirmed rules entirely (that
 hides real defects, the opposite of the aim), and marking every custom rule
 confirmed by default (the failure above).
 
+Amended 2026-09-28 (issue #543): the rule first stopped at the render. The
+model passes now follow it too: the structure pass never groups an
+unconfirmed rule's findings, the writer never describes them, and the totals
+the model and the plan 058 fact registry see are the primary population's
+(`docs/rules/llm-layer-rules.md` section 1).
+
 ### 125. Prospecting data expires 90 days after the last activity (operator decision, issue #538, 2026-09-28)
 
 The public `/bot` and `/confidentialite-prospection` pages promise that

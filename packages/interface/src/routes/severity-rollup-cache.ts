@@ -1,5 +1,5 @@
 import type { Connection } from 'mongoose';
-import { primarySeverityRollup } from '@odysseus/report';
+import { primarySeverityRollup } from '@odysseus/core';
 import {
   getStoredPrimarySeverityRollups,
   loadSeverityPopulationInputs,

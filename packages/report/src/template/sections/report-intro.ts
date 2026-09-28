@@ -14,7 +14,7 @@ import {
 import { sectionTitle, type SectionId } from '../section-registry.js';
 import { selectRenderedThemes } from './themes.js';
 import { isBelowSmeThresholds } from './legal-exposure.js';
-import { primaryFindingFilter } from '../unlinked-sitemap-pages.js';
+import { primaryFindingFilter } from '@odysseus/core';
 import type { RenderedPriority } from '../rendered-priorities.js';
 
 /** The deterministic complication facts (plan 018 step 5), all computed

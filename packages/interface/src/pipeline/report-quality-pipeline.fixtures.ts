@@ -79,13 +79,14 @@ export function findingFixture(findingId: string, overrides: Partial<Finding> = 
 export const DEFAULT_FINDINGS: Finding[] = [findingFixture('finding-contrastes')];
 
 export function manifestFixture(): AuditManifest {
-  // The pipeline reads auditId/siteUrl/startedAt plus crawl.visitedCount
-  // (fact registry); the full manifest shape is irrelevant to the run.
+  // The pipeline reads auditId/siteUrl/startedAt plus crawl.visitedCount and
+  // the page list (fact registry); the rest of the shape is irrelevant.
   return {
     auditId: AUDIT_ID,
     siteUrl: SITE_URL,
     startedAt: '2026-09-18T08:00:00.000Z',
     crawl: { visitedCount: 4 },
+    pages: [],
   } as unknown as AuditManifest;
 }
 

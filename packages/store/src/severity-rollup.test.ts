@@ -122,6 +122,7 @@ describe.skipIf(!mongoAvailable)('primary severity rollups (issue #508)', () => 
     expect(input!.findings).toEqual([
       {
         severity: 'critical',
+        ruleId: 'color-contrast',
         pageUrls: ['https://example.com/'],
         elements: [{ selector: 'iframe >>> button' }],
       },

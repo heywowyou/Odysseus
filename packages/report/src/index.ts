@@ -35,7 +35,6 @@ import {
 } from './reference-audit.js';
 export { readRenderBundleDir } from './render-bundle-files.js';
 export { buildRenderedPriorities } from './template/rendered-priorities.js';
-export { primaryFindingFilter, primarySeverityRollup } from './template/unlinked-sitemap-pages.js';
 export {
   isConfinedToThirdPartyFrame,
   summarizeThirdPartyFindings,

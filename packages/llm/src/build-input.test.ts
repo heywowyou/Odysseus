@@ -182,6 +182,40 @@ describe('buildWritingInput', () => {
     expect(input.themes[1]!.findings.map((f) => f.findingId)).toEqual(['f001', 'f002']);
   });
 
+  it('never shows the writer an unconfirmed rule finding beside the site findings of its theme (issue #543)', () => {
+    const base = filterFindingsForLlm(loadSmallSiteFindings())[0];
+    if (!base) throw new Error('expected at least one finding in the fixture');
+    const confirmed: Finding = { ...base, findingId: 'f010' };
+    const unconfirmed: Finding = {
+      ...base,
+      findingId: 'f011',
+      ruleId: 'focus-order-mismatch',
+      source: 'custom',
+    };
+
+    const input = buildWritingInput(
+      [
+        {
+          themeKey: 't1',
+          findingIds: ['f010', 'f011'],
+          category: base.category as StructureThemeWithKey['category'],
+          effort: 'low',
+          impact: 'high',
+          priorityRank: 1,
+        },
+      ],
+      [confirmed, unconfirmed],
+      buildFallbackSiteContext(),
+      'fr',
+      computeSiteStats(loadSmallSiteFindings(), loadSmallSiteManifest()),
+      emptyWritingPerformanceEvidence(),
+      {},
+      'unknown',
+    );
+
+    expect(input.themes[0]!.findings.map((f) => f.findingId)).toEqual(['f010']);
+  });
+
   it('groups each structure theme with the finding records for its findingIds', () => {
     const filtered = filterFindingsForLlm(loadSmallSiteFindings());
     const siteContext = buildFallbackSiteContext();

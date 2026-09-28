@@ -12,7 +12,7 @@ import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
 import { interpolateSnippet, remediationFor, snippetFor } from './remediation/index.js';
 import { resolveFindingDisplayLabel } from './rule-translations.js';
 import { isThirdPartyFinding } from './third-party-attribution.js';
-import { primaryFindingFilter } from './unlinked-sitemap-pages.js';
+import { primaryFindingFilter } from '@odysseus/core';
 import { MissingReviewedRemediationError } from '../errors.js';
 
 export const MAX_RENDERED_THEMES = 6;

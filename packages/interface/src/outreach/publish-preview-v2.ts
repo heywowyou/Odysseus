@@ -19,6 +19,7 @@ import {
   type OutreachPreviewSeverity,
   type OutreachPreviewSummaryV3,
   type OutreachProofCard,
+  primaryFindingFilter,
 } from '@odysseus/core';
 import type { AnalysisDocument, AuditDocumentFields } from '@odysseus/store';
 import {
@@ -28,7 +29,6 @@ import {
   OUTREACH_PROOF_CARD_COPY,
   OutreachPreviewLintError,
   isConfinedToThirdPartyFrame,
-  primaryFindingFilter,
 } from '@odysseus/report';
 import { createPreviewToken, deriveObjectKey, hashPreviewToken } from './preview-token.js';
 import type { PreviewPublisher } from './preview-publisher.js';

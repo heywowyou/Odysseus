@@ -154,4 +154,23 @@ describe('partitionFindings', () => {
     const divertedRuleIds = new Set(diverted.map((d) => d.finding.ruleId));
     expect(divertedRuleIds.has('is-crawlable')).toBe(true);
   });
+
+  it('keeps an unconfirmed rule finding out of the structure input but resolvable (issue #543)', () => {
+    const findings = loadMultiPageFindings();
+    const manifest = loadMultiPageManifest();
+    const { forModel } = partitionFindings(findings, manifest);
+    const unconfirmed: Finding = {
+      ...forModel[0]!,
+      findingId: 'unconfirmed-1',
+      ruleId: 'focus-order-mismatch',
+      source: 'custom',
+    };
+
+    const partition = partitionFindings([...findings, unconfirmed], manifest);
+
+    expect(partition.forModel.map((f) => f.findingId)).toContain('unconfirmed-1');
+    expect(partition.forStructure.map((f) => f.findingId)).not.toContain('unconfirmed-1');
+    expect(partition.forStructure).toHaveLength(partition.forModel.length - 1);
+    expect(partition.diverted.map((d) => d.finding.findingId)).not.toContain('unconfirmed-1');
+  });
 });

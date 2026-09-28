@@ -1,6 +1,7 @@
-import type { AuditManifest, Finding, Severity } from '@odysseus/core';
-import { isUnconfirmedRule } from '@odysseus/core';
-import { isConfinedToThirdPartyFrame } from './third-party-attribution.js';
+import { isUnconfirmedRule } from './rule-confirmation.js';
+import { isConfinedToThirdPartyFrame } from './third-party-frame.js';
+import type { AuditManifest } from './types/manifest.js';
+import type { Finding, Severity } from './types/findings.js';
 
 /**
  * Plan 075, Q4. A site whose sitemap publishes many pages that no page of the

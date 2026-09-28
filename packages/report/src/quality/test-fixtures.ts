@@ -114,6 +114,7 @@ export function buildPayload(
       auditId: 'audit-058',
       siteUrl: 'https://site.test',
       crawl: { visitedCount: 12 },
+      pages: [],
     } as unknown as AuditManifest,
     findings,
     ...(options?.patternEvidence ? { patternEvidence: options.patternEvidence } : {}),

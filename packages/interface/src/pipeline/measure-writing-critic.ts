@@ -134,15 +134,15 @@ async function measureAudit(auditDir: string, runStructure: boolean, outDir: str
 
   const usedFallbackContext = stored.siteContext === undefined;
   const siteContext = stored.siteContext ?? buildFallbackSiteContext();
-  const { forModel } = partitionFindings(filterFindingsForLlm(allFindings), manifest);
+  const { forModel, forStructure } = partitionFindings(filterFindingsForLlm(allFindings), manifest);
 
   const sink = new RecordingLlmTelemetrySink();
   configureLlmTelemetrySink(sink);
 
   if (runStructure) {
     await analyzeStructure(
-      buildStructureInput(forModel, siteContext),
-      forModel,
+      buildStructureInput(forStructure, siteContext),
+      forStructure,
       usedFallbackContext,
       manifest,
     );

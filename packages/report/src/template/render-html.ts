@@ -36,7 +36,7 @@ import type { RenderDiffEvidencePage } from '../screenshots.js';
 import { getStrings } from './strings/i18n.js';
 import { resolveLcenFinding } from './lcen-resolution.js';
 import { withPriorityConformance } from './priority-conformance.js';
-import { primaryFindingFilter } from './unlinked-sitemap-pages.js';
+import { primaryFindingFilter } from '@odysseus/core';
 import { SECTION_IDS, computeSectionNumbers, type SectionId } from './section-registry.js';
 import { renderCover } from './sections/cover.js';
 import { renderMetadataSheet } from './sections/metadata-sheet.js';
