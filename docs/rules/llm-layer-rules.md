@@ -396,6 +396,19 @@ and say so in the output, rather than inventing a business type or a
 primary goal. A model told the primary goal is "leads" when nobody said so
 will rank findings against a fiction.
 
+**Catalogue facts (issue #559).** When the audit's prospect has a hotel
+catalogue entry, every report pipeline (queued full audit, make report
+ready, regenerate writing, English version) gives the writing pass the facts
+that entry holds, through `catalogueContextOption`: the establishment type
+with its official rating in words (« Hôtel (quatre étoiles) »), the city in
+normal case without an arrondissement, and the sector. Nothing is shown in
+digits, because the executive summary's digit guard forbids any, and the
+room count never reaches the model (trade-off 63). A fact the catalogue lacks
+is simply absent, never guessed, and the intake fields stay the fallback's
+« unknown ». The structure pass does not receive these facts. The resolved
+context is persisted with the analysis, and a stored analysis is reused only
+when its context equals the one a fresh run would get.
+
 Language remains explicit at the writing boundary. French is the canonical
 required report. English is optional and is generated only by the dashboard's
 explicit English action, never as an automatic companion to French.

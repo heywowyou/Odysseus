@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Issue #559: no catalogue facts, as for an audit with no directory entry.
+vi.mock('./catalogue-site-context.js', () => ({ catalogueContextOption: vi.fn(async () => ({})) }));
 import { buildFindingsProvenance } from '@odysseus/core';
 
 vi.mock('@odysseus/store', () => ({

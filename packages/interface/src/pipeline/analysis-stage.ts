@@ -16,6 +16,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { Connection } from 'mongoose';
 import type {
+  HotelCatalogueWritingSiteContext,
   AuditManifest,
   Finding,
   FindingsProvenance,
@@ -71,6 +72,10 @@ export interface RunAnalysisStageOptions {
    *  this would otherwise come from doesn't exist yet (see
    *  docs/rules/llm-layer-rules.md section 4). */
   siteContext?: SiteContextInput;
+  /** Issue #559: establishment facts from the hotel catalogue
+   *  (resolveAuditCatalogueContext). Only the writing pass reads them; the
+   *  structure pass groups findings and needs no business facts. */
+  catalogueContext?: HotelCatalogueWritingSiteContext;
   regenerateStructure?: boolean;
   /** Plan 067: reuse this exact persisted structure. On-demand English uses
    * this so it cannot silently bind to a newer structure than French. */
@@ -370,8 +375,12 @@ export async function runAnalysisStage(
   assertFindingsProvenance(manifest.findingsProvenance, findingsProvenance, 'legacy manifest');
   const usedFallbackContext = options.siteContext === undefined;
   const siteContext = options.siteContext ?? buildFallbackSiteContext();
-  const writingSiteContext = siteContext;
-  const persistsSiteContext = options.siteContext !== undefined;
+  const writingSiteContext =
+    options.catalogueContext === undefined
+      ? siteContext
+      : { ...siteContext, ...options.catalogueContext };
+  const persistsSiteContext =
+    options.siteContext !== undefined || options.catalogueContext !== undefined;
   // Diversion (docs/archive/report-v2-refactor.md 4.1) runs after the severity
   // floor, on the same set: forModel must be exactly what reaches the
   // structure and writing passes and their guards, never allFindings.
@@ -445,6 +454,7 @@ export async function runAnalysisStage(
       auditId: manifest.auditId,
       findingsProvenance,
       structureGeneratedAt: structureDoc.generatedAt,
+      siteContext: persistsSiteContext ? writingSiteContext : undefined,
     });
     if (reusable) {
       const persisted = await getAnalysisById(

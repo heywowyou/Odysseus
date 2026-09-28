@@ -37,6 +37,7 @@ import {
   releaseReportProduction,
   tryAcquireReportProduction,
 } from '../../pipeline/report-production-lock.js';
+import { catalogueContextOption } from '../../pipeline/catalogue-site-context.js';
 
 export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): Promise<void> {
   const { connection } = ctx;
@@ -142,6 +143,7 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
           language: 'fr',
           obligationAssessment: auditResult.obligationAssessment,
           findingsProvenance,
+          ...(await catalogueContextOption(connection, auditResult.manifest.auditId)),
         },
         connection,
       );

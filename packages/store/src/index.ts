@@ -6,6 +6,7 @@ export type {
   BlockedPagesAcknowledgment,
 } from './schemas/audit.schema.js';
 export { persistAudit } from './persist-audit.js';
+export { findDirectoryEntryForAudit } from './audit-directory-entry.js';
 export type { AnalysisDocument, AnalysisDocumentFields } from './schemas/analysis.schema.js';
 export { persistAnalysis } from './persist-analysis.js';
 export { upsertSireneCache, getCachedSireneProfile } from './persist-sirene-cache.js';

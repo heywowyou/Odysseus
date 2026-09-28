@@ -28,6 +28,7 @@ import {
 import { runReportStage, type ReportStageResult } from './report-stage.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
+import { catalogueContextOption } from './catalogue-site-context.js';
 
 export class EnglishGenerationUnavailableError extends Error {
   constructor(message: string) {
@@ -110,6 +111,7 @@ export async function generateEnglishVersion(
       {
         language: 'en',
         findingsProvenance,
+        ...(await catalogueContextOption(connection, manifest.auditId)),
         regenerateWriting: true,
         ...(selectedFrench.structureGeneratedAt !== undefined
           ? { requiredStructureGeneratedAt: selectedFrench.structureGeneratedAt }

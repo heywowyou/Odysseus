@@ -20,6 +20,7 @@ const criteria = {
   auditId: 'audit-1',
   findingsProvenance: provenance('sha256:same'),
   structureGeneratedAt: '2026-09-17T10:00:00.000Z',
+  siteContext: undefined,
 };
 
 function storedAnalysis(overrides: Partial<StoredAnalysis> = {}): Partial<StoredAnalysis> {
@@ -60,6 +61,34 @@ function storedAnalysis(overrides: Partial<StoredAnalysis> = {}): Partial<Stored
 describe('isReusableAnalysis', () => {
   it('reuses an analysis a fresh run would reproduce', () => {
     expect(isReusableAnalysis(storedAnalysis(), criteria)).toBe(true);
+  });
+
+  it('refuses one written with other business facts than a fresh run would get (issue #559)', () => {
+    const catalogue = {
+      businessType: 'unknown (no intake context provided)',
+      primaryGoal: 'unknown (no intake context provided)',
+      languagesServed: [],
+      targetMarkets: [],
+      propertyType: 'Hôtel (quatre étoiles)',
+      city: 'Biarritz',
+      sector: 'hospitality',
+    };
+    // Written before the catalogue was wired: no facts at all.
+    expect(isReusableAnalysis(storedAnalysis(), { ...criteria, siteContext: catalogue })).toBe(
+      false,
+    );
+    expect(
+      isReusableAnalysis(storedAnalysis({ siteContext: catalogue }), {
+        ...criteria,
+        siteContext: { ...catalogue, city: 'Bayonne' },
+      }),
+    ).toBe(false);
+    expect(
+      isReusableAnalysis(storedAnalysis({ siteContext: catalogue }), {
+        ...criteria,
+        siteContext: { ...catalogue },
+      }),
+    ).toBe(true);
   });
 
   it('refuses one from another audit', () => {

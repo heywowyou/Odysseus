@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Issue #559: no catalogue facts, as for an audit with no directory entry.
+vi.mock('../../pipeline/catalogue-site-context.js', () => ({
+  catalogueContextOption: vi.fn(async () => ({})),
+}));
+
 vi.mock('../../pipeline/audit-stage.js', () => ({ runAuditStage: vi.fn() }));
 vi.mock('@odysseus/scanner', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@odysseus/scanner')>()),

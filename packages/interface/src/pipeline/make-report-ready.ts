@@ -53,6 +53,7 @@ import {
   NoAnalysisPairError,
   type AllReportsStageResult,
 } from './regenerate-reports.js';
+import { catalogueContextOption } from './catalogue-site-context.js';
 
 export type MakeReportReadyRefusal =
   | { kind: 'audit-not-found' }
@@ -115,6 +116,7 @@ async function refreshWritingCandidate(
     {
       language: 'fr',
       findingsProvenance,
+      ...(await catalogueContextOption(connection, manifest.auditId)),
       regenerateStructure: true,
       ...(manualFields?.siren !== undefined ? { manualSiren: manualFields.siren.value } : {}),
       ...(manualFields?.transactionalFlowOverride !== undefined

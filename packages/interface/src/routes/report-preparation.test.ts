@@ -2,6 +2,11 @@ import { Readable } from 'node:stream';
 import { promises as fs } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Issue #559: no catalogue facts, as for an audit with no directory entry.
+vi.mock('../pipeline/catalogue-site-context.js', () => ({
+  catalogueContextOption: vi.fn(async () => ({})),
+}));
 import {
   applyPreparationPatch,
   emptyReportPreparation,

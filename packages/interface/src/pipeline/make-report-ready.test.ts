@@ -1,5 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
+// Issue #559: no catalogue facts, as for an audit with no directory entry.
+vi.mock('./catalogue-site-context.js', () => ({ catalogueContextOption: vi.fn(async () => ({})) }));
+
 vi.mock('@odysseus/scanner', () => ({
   buildAuditDir: vi.fn(() => '/artifacts/example.com/2026-09-12T00-00-00Z'),
   getArtifactsRoot: vi.fn(() => '/artifacts'),

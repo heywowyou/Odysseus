@@ -35,7 +35,10 @@ export interface HotelCatalogueWritingSiteContextResolution {
 
 type HotelWritingContextCandidate = {
   accommodationType?: string;
-  starRating?: string;
+  /** The official star rating, 1 to 5. */
+  starRating?: number;
+  /** The catalogue's commune, as published (upper case, and a Paris, Lyon or
+   *  Marseille entry carries its arrondissement). */
   commune?: string;
 };
 
@@ -52,9 +55,57 @@ function missingAllFacts(
   };
 }
 
+/** Issue #559: the writing pass may name the property type and the city in
+ *  its executive summary, which the digit guard keeps free of any digit, so
+ *  the rating is written in words and the arrondissement is dropped. */
+const STAR_WORDS: Readonly<Record<number, string>> = {
+  1: 'une étoile',
+  2: 'deux étoiles',
+  3: 'trois étoiles',
+  4: 'quatre étoiles',
+  5: 'cinq étoiles',
+};
+
+/** Particles French place names keep in lower case after the first word. */
+const PLACE_NAME_PARTICLES = new Set([
+  'à',
+  'au',
+  'aux',
+  'd',
+  'de',
+  'des',
+  'du',
+  'en',
+  'et',
+  'l',
+  'la',
+  'le',
+  'les',
+  'lès',
+  'sous',
+  'sur',
+]);
+
+/** « PARIS 10E ARRONDISSEMENT » reads « Paris », « SAINT-JEAN-DE-LUZ »
+ *  reads « Saint-Jean-de-Luz ». A name that still holds a digit is left
+ *  unknown rather than shown. */
+function formatCommune(commune: string): string | undefined {
+  const withoutDistrict = commune
+    .replace(/\s+\d+\s*(?:E|ER|ÈME|EME)\s+ARRONDISSEMENT\s*$/iu, '')
+    .trim();
+  if (withoutDistrict === '' || /\d/u.test(withoutDistrict)) return undefined;
+  let index = 0;
+  return withoutDistrict.toLocaleLowerCase('fr-FR').replace(/\p{L}+/gu, (word) => {
+    const first = index === 0;
+    index += 1;
+    if (!first && PLACE_NAME_PARTICLES.has(word)) return word;
+    return word.charAt(0).toLocaleUpperCase('fr-FR') + word.slice(1);
+  });
+}
+
 /**
  * Resolves only facts the catalogue actually contains. `propertyType` keeps
- * the source typology verbatim and appends the official rating when present;
+ * the source typology and appends the official rating in words when present;
  * sector is the deterministic classification of that same hotel typology.
  */
 export function resolveHotelCatalogueWritingSiteContext(
@@ -69,17 +120,19 @@ export function resolveHotelCatalogueWritingSiteContext(
     unknownReasons.propertyType = 'missing-accommodation-type';
     unknownReasons.sector = 'missing-accommodation-type';
   } else {
+    const stars = candidate.starRating === undefined ? undefined : STAR_WORDS[candidate.starRating];
     siteContext.propertyType =
-      candidate.starRating === undefined
+      stars === undefined
         ? candidate.accommodationType
-        : `${candidate.accommodationType} (${candidate.starRating} étoiles)`;
+        : `${candidate.accommodationType} (${stars})`;
     siteContext.sector = 'hospitality';
   }
 
-  if (candidate.commune === undefined) {
+  const city = candidate.commune === undefined ? undefined : formatCommune(candidate.commune);
+  if (city === undefined) {
     unknownReasons.city = 'missing-commune';
   } else {
-    siteContext.city = candidate.commune;
+    siteContext.city = city;
   }
 
   return { siteContext, unknownReasons };

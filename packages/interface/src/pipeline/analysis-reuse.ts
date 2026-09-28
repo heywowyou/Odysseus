@@ -82,6 +82,18 @@ export interface AnalysisReuseCriteria {
   /** The `generatedAt` of the structure document the pass about to run will
    *  use, which identifies that document uniquely. */
   structureGeneratedAt: string;
+  /** Issue #559: the business facts the writing pass would be given, or
+   *  undefined when it would get none. Prose written with other facts (or
+   *  none) is not what a fresh run would write. */
+  siteContext: object | undefined;
+}
+
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, child: unknown) =>
+    typeof child === 'object' && child !== null && !Array.isArray(child)
+      ? Object.fromEntries(Object.entries(child).sort(([a], [b]) => a.localeCompare(b)))
+      : child,
+  );
 }
 
 /**
@@ -121,6 +133,7 @@ export function isReusableAnalysis(
   ) {
     return false;
   }
+  if (stableJson(stored.siteContext) !== stableJson(criteria.siteContext)) return false;
   // A re-normalized findings.json regenerates rather than pairing new
   // findings with old prose. `isSameFindingsProvenance` already refuses an
   // absent provenance.

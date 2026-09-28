@@ -55,6 +55,7 @@ import {
   NoAnalysisPairError,
   type AllReportsStageResult,
 } from './regenerate-reports.js';
+import { catalogueContextOption } from './catalogue-site-context.js';
 
 export { RegenerationConflictError } from './regeneration-conflict-error.js';
 export { isWritingRegenerationInFlight } from './report-production-lock.js';
@@ -174,6 +175,7 @@ export async function regenerateWriting(
       {
         language: 'fr',
         findingsProvenance,
+        ...(await catalogueContextOption(connection, manifest.auditId)),
         regenerateStructure,
         regenerateWriting: options.regenerateWriting ?? false,
         ...(audit.manualFields?.siren !== undefined
