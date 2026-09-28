@@ -2982,7 +2982,8 @@ with `node:crypto` scrypt and `timingSafeEqual`; it is configured only as a
 `scripts/hash-dashboard-password.mjs`, which reads the password on stdin so
 it never lands in shell history or a process list. Sessions are random
 256-bit tokens in an in-memory store with a 24-hour sliding expiry, carried
-in an HttpOnly, SameSite=Lax, host-only cookie. `Secure` is set when the
+in an HttpOnly, host-only cookie (SameSite=Lax, and since issue #557
+SameSite=Strict with a seven-day absolute cap on the sliding window). `Secure` is set when the
 request arrived over HTTPS (`X-Forwarded-Proto`, as Caddy sets it), so the
 local plain-HTTP compose smoke exercises the same code as production. A
 restart logs the operator in again, which is accepted for a single user.

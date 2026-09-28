@@ -1304,9 +1304,11 @@ export async function renderPdfWithPageCountFromHtml(
 ): Promise<RenderedPdfWithPageCount> {
   const pagedjsSource = await readPagedjsSource();
   const context = await browser.newContext();
-  await cutOffNetwork(context);
-  const page = await context.newPage();
+  // Issue #557: the try opens with the context, so a failed network cut-off
+  // or page creation closes it too instead of leaving it on a shared browser.
   try {
+    await cutOffNetwork(context);
+    const page = await context.newPage();
     let pagedjsLayoutFailure: string | undefined;
     let debugNodePromise: Promise<void> | undefined;
     page.on('console', (msg) => {

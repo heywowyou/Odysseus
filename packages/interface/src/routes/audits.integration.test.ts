@@ -592,6 +592,8 @@ describe.skipIf(!mongoAvailable)('audit routes against real mongo', () => {
     const res = await getViaRoute(chain.auditId, 'fr');
     expect(res.statusCode).toBe(200);
     expect(res.setHeader).toHaveBeenCalledWith('content-type', 'application/pdf');
+    // Issue #557: a client report is never cached by a browser or proxy.
+    expect(res.setHeader).toHaveBeenCalledWith('cache-control', 'private, no-store');
     expect(res.body).toEqual(chain.pdf);
 
     const stored = await getLatestReport(connection!, chain.auditId, 'fr');

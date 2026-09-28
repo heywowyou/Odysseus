@@ -10,8 +10,11 @@ services:
     # the container too, so the member address it advertises,
     # localhost:27018, is the one the host connects to.
     command: ['--replSet', 'rs0', '--port', '27018', '--bind_ip_all']
+    # Loopback only (issue #557): the test database has no authentication,
+    # so it must not be reachable from the LAN. --bind_ip_all stays inside
+    # the container for the replica-set member address.
     ports:
-      - '27018:27018'
+      - '127.0.0.1:27018:27018'
     # Initiates the replica set on first start; healthy once it has a primary.
     # `pnpm test:store:up` waits for it.
     healthcheck:

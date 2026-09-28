@@ -4,6 +4,7 @@ import {
   createInMemorySessionStore,
   readSessionCookieToken,
   SESSION_COOKIE_NAME,
+  SESSION_MAX_AGE_MS,
   SESSION_TTL_MS,
 } from './session-store.js';
 
@@ -67,6 +68,19 @@ describe('createInMemorySessionStore', () => {
     clock.advance(1_000);
     expect(store.validate(token)).toBe(true);
     clock.advance(SESSION_TTL_MS);
+    expect(store.validate(token)).toBe(false);
+  });
+
+  it('ends a session at the absolute cap even when it is used daily (issue #557)', () => {
+    const clock = clockAt(0);
+    const store = createInMemorySessionStore({ now: clock.now });
+    const token = store.create();
+    const day = 24 * 60 * 60 * 1000;
+    while (clock.now() + day < SESSION_MAX_AGE_MS) {
+      clock.advance(day - 60_000);
+      expect(store.validate(token)).toBe(true);
+    }
+    clock.advance(SESSION_MAX_AGE_MS - clock.now());
     expect(store.validate(token)).toBe(false);
   });
 });

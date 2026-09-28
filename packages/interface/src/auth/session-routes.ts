@@ -42,12 +42,12 @@ function clientIpFor(req: IncomingMessage): string {
 }
 
 function sessionCookie(token: string, secure: boolean): string {
-  const attributes = `Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_TTL_MS / 1000}`;
+  const attributes = `Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_TTL_MS / 1000}`;
   return `${SESSION_COOKIE_NAME}=${token}; ${attributes}${secure ? '; Secure' : ''}`;
 }
 
 function clearedSessionCookie(secure: boolean): string {
-  const attributes = 'Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
+  const attributes = 'Path=/; HttpOnly; SameSite=Strict; Max-Age=0';
   return `${SESSION_COOKIE_NAME}=; ${attributes}${secure ? '; Secure' : ''}`;
 }
 

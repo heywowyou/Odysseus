@@ -6,6 +6,10 @@ import type { IncomingMessage } from 'node:http';
  *  mid-action while an abandoned browser expires after a quiet day. */
 export const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
+/** Issue #557: however often it is used, a session ends seven days after
+ *  login, so a stolen cookie kept alive by daily use still expires. */
+export const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
 /** Host-only by omission: no Domain attribute is ever emitted, so the
  *  cookie can never travel to a sibling subdomain. */
 export const SESSION_COOKIE_NAME = 'odysseus_dashboard_session';
@@ -19,6 +23,7 @@ export interface SessionStore {
 }
 
 interface SessionRecord {
+  createdAt: number;
   expiresAt: number;
 }
 
@@ -32,18 +37,20 @@ export function createInMemorySessionStore(options: { now?: () => number } = {})
       // 256 bits as base64url: unpadded, so the cookie value never contains
       // a character that needs quoting inside a Set-Cookie header.
       const token = randomBytes(32).toString('base64url');
-      sessions.set(token, { expiresAt: now() + SESSION_TTL_MS });
+      const createdAt = now();
+      sessions.set(token, { createdAt, expiresAt: createdAt + SESSION_TTL_MS });
       return token;
     },
     validate(token) {
       const record = sessions.get(token);
       if (record === undefined) return false;
       const current = now();
-      if (current >= record.expiresAt) {
+      const cap = record.createdAt + SESSION_MAX_AGE_MS;
+      if (current >= record.expiresAt || current >= cap) {
         sessions.delete(token);
         return false;
       }
-      record.expiresAt = current + SESSION_TTL_MS;
+      record.expiresAt = Math.min(current + SESSION_TTL_MS, cap);
       return true;
     },
     delete(token) {

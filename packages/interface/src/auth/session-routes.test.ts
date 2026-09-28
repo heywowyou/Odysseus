@@ -95,7 +95,7 @@ describe('POST /api/session/login', () => {
     expect(cookie).toMatch(new RegExp(`^${SESSION_COOKIE_NAME}=[A-Za-z0-9_-]{43}`));
     expect(cookie).toContain('Path=/');
     expect(cookie).toContain('HttpOnly');
-    expect(cookie).toContain('SameSite=Lax');
+    expect(cookie).toContain('SameSite=Strict');
     expect(cookie).toContain('Max-Age=86400');
     expect(cookie).not.toContain('Secure');
     expect(cookie).not.toContain('Domain');

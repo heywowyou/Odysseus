@@ -1,7 +1,9 @@
+import type { ServerResponse } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { hostname as osHostname } from 'node:os';
 import path from 'node:path';
+import { logger } from '../logger.js';
 import type { Connection } from 'mongoose';
 import {
   buildFindingsProvenance,
@@ -125,6 +127,34 @@ import {
   type AuditEvidenceDiagnostics,
 } from '../pipeline/audit-evidence-diagnostics.js';
 import { refuseSlimmedAudit } from '../retention/slimmed-audit-guard.js';
+
+/** Issue #557: every report PDF is confidential client material, so no
+ *  browser or proxy cache may keep a copy, whichever route served it. */
+function sendPdf(
+  res: ServerResponse,
+  pdf: Uint8Array,
+  options: { etag?: string; disposition?: string } = {},
+): void {
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/pdf');
+  res.setHeader('cache-control', 'private, no-store');
+  if (options.etag !== undefined) res.setHeader('etag', options.etag);
+  if (options.disposition !== undefined) res.setHeader('content-disposition', options.disposition);
+  res.end(pdf);
+}
+
+/** Issue #557: a failure inside the report pipeline answers with its fixed
+ *  description; the thrown text (object keys, digests, pipeline state) goes
+ *  to the server log, not to the browser. */
+function sendInternalFailure(
+  res: ServerResponse,
+  statusCode: number,
+  description: string,
+  error: unknown,
+): void {
+  logger.warn({ err: error, statusCode }, description);
+  sendError(res, statusCode, description);
+}
 
 function isReportLanguage(value: string): value is ReportLanguage {
   return value === 'fr' || value === 'en';
@@ -1206,7 +1236,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         pdfs: outcome.kind === 'ready' ? 'generated' : outcome.refusal,
       });
     } catch (error) {
-      sendError(res, 409, error instanceof Error ? error.message : 'could not regenerate reports');
+      sendInternalFailure(res, 409, 'could not regenerate reports', error);
     }
   });
 
@@ -1254,7 +1284,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         findingsWereRefreshed: outcome.findingsWereRefreshed,
       });
     } catch (error) {
-      sendError(res, 409, error instanceof Error ? error.message : 'could not regenerate reports');
+      sendInternalFailure(res, 409, 'could not regenerate reports', error);
     }
   });
 
@@ -1271,10 +1301,11 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         reportQuality: await runReportQualityForAudit(connection, audit, artifactStore),
       });
     } catch (error) {
-      sendError(
+      sendInternalFailure(
         res,
         error instanceof Error && error.name === 'ReportQualityLeaseConflictError' ? 409 : 422,
-        error instanceof Error ? error.message : 'report quality run failed',
+        'report quality run failed',
+        error,
       );
     }
   });
@@ -1325,13 +1356,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
           candidate.privateObjectKey,
           candidate.pdfDigest,
         );
-        res.statusCode = 200;
-        res.setHeader('content-type', 'application/pdf');
-        res.setHeader('etag', `"${candidate.pdfDigest}"`);
-        res.setHeader('cache-control', 'private, no-store');
-        res.end(pdf);
+        sendPdf(res, pdf, { etag: `"${candidate.pdfDigest}"` });
       } catch (error) {
-        sendError(res, 409, error instanceof Error ? error.message : 'candidate bytes unavailable');
+        sendInternalFailure(res, 409, 'candidate bytes unavailable', error);
       }
     },
   );
@@ -1367,7 +1394,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         }),
       });
     } catch (error) {
-      sendError(res, 409, error instanceof Error ? error.message : 'bundle could not be promoted');
+      sendInternalFailure(res, 409, 'bundle could not be promoted', error);
     }
   });
 
@@ -1427,11 +1454,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         await persistReportApproval(connection, approval, session);
       });
     } catch (error) {
-      sendError(
-        res,
-        409,
-        error instanceof Error ? error.message : 'report pair could not be approved',
-      );
+      sendInternalFailure(res, 409, 'report pair could not be approved', error);
       return;
     }
     sendJson(res, 201, { approval });
@@ -1507,7 +1530,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         }),
       );
     } catch (error) {
-      sendError(res, 409, error instanceof Error ? error.message : 'render bundle refused');
+      sendInternalFailure(res, 409, 'render bundle refused', error);
     }
   });
 
@@ -1741,9 +1764,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 409, 'report PDF is missing or its digest does not match');
       return;
     }
-    res.statusCode = 200;
-    res.setHeader('content-type', 'application/pdf');
-    res.end(pdf);
+    sendPdf(res, pdf);
   });
 
   router.get('/api/audits/:auditId/report/:language/preview', async ({ res, params, query }) => {
@@ -1780,18 +1801,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
           candidate.objectKey,
           candidate.pdfDigest,
         );
-        res.statusCode = 200;
-        res.setHeader('content-type', 'application/pdf');
-        res.setHeader('etag', `"${candidate.pdfDigest}"`);
-        res.end(pdf);
+        sendPdf(res, pdf, { etag: `"${candidate.pdfDigest}"` });
       } catch (error) {
-        sendError(
-          res,
-          409,
-          error instanceof Error
-            ? error.message
-            : 'active report bytes failed integrity verification',
-        );
+        sendInternalFailure(res, 409, 'active report bytes failed integrity verification', error);
       }
       return;
     }
@@ -1818,9 +1830,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       sendError(res, 409, 'report PDF is missing or its digest does not match');
       return;
     }
-    res.statusCode = 200;
-    res.setHeader('content-type', 'application/pdf');
-    res.end(pdf);
+    sendPdf(res, pdf);
   });
 
   router.get('/api/audits/:auditId/report/:language', async ({ res, params, query }) => {
@@ -1859,19 +1869,9 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
           activeLanguage.objectKey,
           activeLanguage.pdfDigest,
         );
-        res.statusCode = 200;
-        res.setHeader('content-type', 'application/pdf');
-        res.setHeader('etag', `"${activeLanguage.pdfDigest}"`);
-        res.setHeader('cache-control', 'private, no-transform');
-        res.end(pdf);
+        sendPdf(res, pdf, { etag: `"${activeLanguage.pdfDigest}"` });
       } catch (error) {
-        sendError(
-          res,
-          409,
-          error instanceof Error
-            ? error.message
-            : 'active report bytes failed integrity verification',
-        );
+        sendInternalFailure(res, 409, 'active report bytes failed integrity verification', error);
       }
       return;
     }
@@ -1941,10 +1941,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    res.statusCode = 200;
-    res.setHeader('content-type', 'application/pdf');
-    res.setHeader('etag', `"${variant.pdfDigest}"`);
-    res.end(pdf);
+    sendPdf(res, pdf, { etag: `"${variant.pdfDigest}"` });
   });
 
   // Plan 037 slice 5: the four outreach-preview actions of the audit page.
@@ -1979,10 +1976,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
     const pdf = await generateOutreachPreviewPdf(outcome.html);
-    res.statusCode = 200;
-    res.setHeader('content-type', 'application/pdf');
-    res.setHeader('content-disposition', `attachment; filename="apercu-${auditId}.pdf"`);
-    res.end(pdf);
+    sendPdf(res, pdf, { disposition: `attachment; filename="apercu-${auditId}.pdf"` });
   });
 
   // Publication stays prospect-linked: the v2 preview is the scorecard of
