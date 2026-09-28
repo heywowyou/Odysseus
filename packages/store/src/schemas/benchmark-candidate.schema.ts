@@ -8,7 +8,8 @@
  * checkpoint: a restart re-queries for 'pending' rows and never re-fetches
  * a candidate that already reached a terminal status.
  *
- * Not subject to the 90 day prospects.schema.ts retention policy: this
+ * Not subject to the 90-day prospect expiry
+ * (packages/interface/src/retention/prospect-expiry.ts): this
  * collection holds no contact address and no outreach state, only
  * publicly-declared company identity facts about large, well-known
  * retailers used for an aggregate, never-individually-named statistic.

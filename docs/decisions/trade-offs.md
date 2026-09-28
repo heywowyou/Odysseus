@@ -6298,3 +6298,42 @@ before it goes out, and the note on the statistics page makes the block hard
 to miss. Rejected alternatives: suppressing unconfirmed rules entirely (that
 hides real defects, the opposite of the aim), and marking every custom rule
 confirmed by default (the failure above).
+
+### 125. Prospecting data expires 90 days after the last activity (operator decision, issue #538, 2026-09-28)
+
+The public `/bot` and `/confidentialite-prospection` pages promise that
+prospecting data, screenshots included, is deleted automatically after 90
+days, and `docs/rules/prospect-qualification.md` required that deletion be
+enforced by the system. Nothing enforced it for prospect records, their
+audits or their screenshots. The operator decided on 2026-09-28 to enforce
+the published promise rather than reword the pages.
+
+- The clock is the prospect's last activity: the latest of its record's
+  activity date, its newest event (a scan, an outreach touch, a reply, an
+  operator edit) and its newest audit. A prospect still being worked keeps
+  its data; one nobody touched for 90 days does not.
+- An expired prospect is deleted whole, through the same path as the
+  dashboard's Delete action: pending outreach withdrawn, every audit's files
+  and records removed, then the record, its events and its outreach rows.
+  The published wording (« données de prospection ») covers the record, so
+  stripping only the contact fields would not meet it. Suppression entries
+  (hashes) stay, because an objection must outlive the data.
+- A prospect that became a client, or is in a live commercial exchange, is
+  no longer prospecting data: `won`, `call` and `quoted`, and any prospect
+  owning an audit retention counts as delivered (trade-off 117), are exempt.
+  `lost` and `opted-out` prospects expire like any other.
+- It runs in the daily retention sweep, switched on per deployment with
+  `ODYSSEUS_PROSPECT_EXPIRY=on` once the operator has read a production dry
+  run (`odysseus artifacts prospect-expiry`, runbook section 7D). A run over
+  20 prospects refuses as a whole; the CLI lifts the cap deliberately.
+
+This supersedes, for prospects that meet the rule, trade-off 87's "retained
+until the operator deletes it", trade-off 91's rejection of an automatic
+scan expiry, and trade-off 117's rejection of deleting by age alone. Those
+decisions still hold for clients and for prospects with recent activity.
+
+Rejected alternatives: rewording the public pages (the operator chose the
+promise), anchoring on the last scan alone (a prospect in an active email
+exchange would lose its audit mid-conversation), and keeping the company
+record without the contact fields (the pages promise deletion of the
+prospecting data itself).

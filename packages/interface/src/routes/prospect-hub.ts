@@ -29,7 +29,6 @@ import {
   archiveProspect,
   countActiveProspectDeletionJobs,
   countProspectDeletionImpact,
-  deleteProspectPermanently,
   restoreProspect,
   markOutreachDraftDeletionPending,
   revokeOutreachPreview,
@@ -61,12 +60,10 @@ import {
   isAnyReportProductionInFlight,
   isReportProductionInFlight,
 } from '../pipeline/report-production-lock.js';
-import {
-  AuditArtifactDeletionError,
-  deleteAuditArtifacts,
-} from '../artifacts/delete-audit-artifacts.js';
+import { AuditArtifactDeletionError } from '../artifacts/delete-audit-artifacts.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import { purgeProspectAuditStorage } from '../artifacts/purge-prospect-audit-storage.js';
+import { deleteProspectWithStorage } from '../artifacts/delete-prospect-with-storage.js';
 import { readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { getPreviewPublicBaseUrl, isMailboxConfigured } from '../config.js';
 import { createConfiguredMailboxDraftAdapter } from '../outreach/configured-mailbox-draft-adapter.js';
@@ -1036,60 +1033,22 @@ export function registerProspectHubRoutes(
       sendError(res, 404, 'prospect not found');
       return;
     }
-    if ((await countActiveProspectDeletionJobs(connection, prospectId)) > 0) {
-      sendError(res, 409, 'prospect has an unfinished job; cancel it or wait for it to end');
-      return;
-    }
     if (await prospectWorkInFlight(prospectId)) {
       sendError(res, 409, 'work for this prospect is still finishing; try again shortly');
       return;
     }
-    const audits = await listProspectAudits(connection, prospectId);
-
-    try {
-      // Issue #273: the mailbox draft is withdrawn too, not orphaned. A
-      // provider failure keeps the prospect row available for retry.
-      const withdrawn = await withdrawOutreachForProspect(
-        connection,
-        prospectId,
-        'prospect-deleted',
-        {
-          publisher: createConfiguredPreviewPublisher,
-          mailbox: createConfiguredMailboxDraftAdapter(),
-        },
-      );
-      if (withdrawn.mailboxDraftsNotRemoved > 0) {
-        sendError(
-          res,
-          503,
-          `${withdrawn.mailboxDraftsNotRemoved} mailbox draft(s) remain; retry deletion after cleanup`,
-        );
-        return;
-      }
-    } catch {
-      sendError(res, 503, 'prospect previews or mailbox drafts could not be withdrawn');
+    const outcome = await deleteProspectWithStorage(connection, prospectId, {
+      artifactsRoot: getArtifactsRoot(),
+      store: createConfiguredArtifactStore(),
+      publisher: createConfiguredPreviewPublisher,
+      mailbox: createConfiguredMailboxDraftAdapter(),
+    });
+    if ('deleted' in outcome) {
+      sendJson(res, 200, outcome.deleted);
       return;
     }
-
-    const artifactStore = createConfiguredArtifactStore();
-    try {
-      for (const audit of audits) {
-        await deleteAuditArtifacts(audit, {
-          artifactsRoot: getArtifactsRoot(),
-          store: artifactStore,
-        });
-      }
-    } catch (error) {
-      if (!(error instanceof AuditArtifactDeletionError)) throw error;
-      sendError(res, 503, `${error.message}; the prospect was kept, retry the deletion`);
-      return;
-    }
-
-    const deleted = await deleteProspectPermanently(connection, prospectId);
-    if (deleted === null) {
-      sendError(res, 404, 'prospect not found');
-      return;
-    }
-    sendJson(res, 200, deleted);
+    const status =
+      outcome.refusal === 'not-found' ? 404 : outcome.refusal === 'active-job' ? 409 : 503;
+    sendError(res, status, outcome.detail);
   });
 }

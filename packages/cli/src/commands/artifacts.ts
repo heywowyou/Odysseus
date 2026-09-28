@@ -33,6 +33,10 @@ import {
   RETENTION_RUN_CAP,
   runRetention,
   type RetentionRunResult,
+  createConfiguredMailboxDraftAdapter,
+  createConfiguredPreviewPublisher,
+  PROSPECT_EXPIRY_DAYS,
+  runProspectExpiry,
   DEFAULT_ORPHAN_MIN_AGE_MS,
   deleteAuditArtifacts,
   findRemoteArtifactOrphans,
@@ -128,6 +132,63 @@ export function registerArtifactsCommand(program: Command): void {
         if (options.json) console.log(JSON.stringify(retentionJson(result), null, 2));
         else printRetention(result, options.apply);
         if (result.refusal !== undefined || result.failures.length > 0) process.exitCode = 1;
+      } finally {
+        await disconnectFromMongo(connection);
+      }
+    });
+
+  // Issue #538: the 90-day prospect expiry the public pages promise. The
+  // server runs it daily once ODYSSEUS_PROSPECT_EXPIRY=on; this is the dry
+  // run the operator reads first, and the way through a backlog above the cap.
+  artifacts
+    .command('prospect-expiry')
+    .description(
+      `Delete prospects inactive for ${PROSPECT_EXPIRY_DAYS} days, suppression kept (dry run unless --apply)`,
+    )
+    .option('--apply', 'delete them', false)
+    .option('--allow-large', `allow more than ${RETENTION_RUN_CAP} prospects in one run`, false)
+    .option('--json', 'print the result as JSON', false)
+    .action(async (options: { apply: boolean; allowLarge: boolean; json: boolean }) => {
+      const connection = await connectToMongo();
+      try {
+        const result = await runProspectExpiry({
+          connection,
+          artifactsRoot: getArtifactsRoot(),
+          store: createConfiguredArtifactStore(),
+          publisher: createConfiguredPreviewPublisher,
+          mailbox: createConfiguredMailboxDraftAdapter(),
+          now: new Date(),
+          apply: options.apply,
+          allowLarge: options.allowLarge,
+        });
+        if (options.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          for (const prospect of result.plan.expire) {
+            const deleted = result.deleted.includes(prospect.prospectId);
+            console.log(
+              `${options.apply ? (deleted ? 'DELETED ' : 'KEPT    ') : 'EXPIRES '} ${prospect.prospectId} ` +
+                `(${prospect.status}, last activity ${prospect.lastActivityAt.toISOString().slice(0, 10)})`,
+            );
+          }
+          for (const kept of result.plan.kept) {
+            console.log(`EXEMPT   ${kept.prospectId} (${kept.reason})`);
+          }
+          for (const skipped of result.skipped) {
+            console.log(`SKIPPED  ${skipped.prospectId}: ${skipped.reason}`);
+          }
+          if (result.refusal !== undefined) {
+            console.log(
+              `Refused: ${result.refusal.count} prospects exceed the cap of ${result.refusal.cap}; ` +
+                'read the dry run, then pass --allow-large.',
+            );
+          }
+          console.log(
+            `${result.plan.expire.length} prospect(s) ${options.apply ? 'expired' : 'would expire'}, ` +
+              `${result.plan.kept.length} exempt.`,
+          );
+        }
+        if (result.refusal !== undefined || result.skipped.length > 0) process.exitCode = 1;
       } finally {
         await disconnectFromMongo(connection);
       }

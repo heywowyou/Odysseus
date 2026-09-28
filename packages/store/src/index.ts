@@ -147,6 +147,7 @@ export {
   updateProspect,
   withdrawProspectOutreach,
 } from './prospect-hub.js';
+export type { ProspectCascadeCounts } from './prospect-hub.js';
 export {
   auditIdentityFromProspect,
   confirmedIdentityFromManualFields,
@@ -287,3 +288,4 @@ export type {
   RetentionRunFailure,
 } from './schemas/retention-run.schema.js';
 export { aggregateOutreachFunnel } from './outreach-funnel.js';
+export { listProspectExpiryRows, type ProspectExpiryRow } from './prospect-expiry.js';

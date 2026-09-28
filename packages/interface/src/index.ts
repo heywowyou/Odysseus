@@ -27,6 +27,13 @@ export {
   type RetentionRunResult,
 } from './retention/apply-retention.js';
 export { RETENTION_GRACE_DAYS } from './retention/retention-policy.js';
+export {
+  PROSPECT_EXPIRY_DAYS,
+  runProspectExpiry,
+  type ProspectExpiryRunResult,
+} from './retention/prospect-expiry.js';
+export { createConfiguredMailboxDraftAdapter } from './outreach/configured-mailbox-draft-adapter.js';
+export { createConfiguredPreviewPublisher } from './outreach/configured-preview-publisher.js';
 export { isRetentionSweepEnabled } from './retention/retention-sweeper.js';
 export { compactStoredScans } from './artifacts/compact-stored-scans.js';
 export {

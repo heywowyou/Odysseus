@@ -163,8 +163,15 @@ function findSupersedingAudit(
 }
 
 /** Delivered work is slimmed, never deleted: a client received something
- *  from it, or a live link still shows it. */
-function isDeliveredAudit(auditId: string, snapshot: RetentionSnapshot): boolean {
+ *  from it, or a live link still shows it. Also the rule archive (issue
+ *  #560) and the prospect expiry (issue #538) follow. */
+export function isDeliveredAudit(
+  auditId: string,
+  snapshot: Pick<
+    RetentionStoreSnapshot,
+    'approvals' | 'activeBundles' | 'bundles' | 'reports' | 'livePreviewAuditIds'
+  >,
+): boolean {
   return (
     snapshot.approvals.some((approval) => approval.auditId === auditId) ||
     snapshot.activeBundles.some((active) => active.auditId === auditId) ||

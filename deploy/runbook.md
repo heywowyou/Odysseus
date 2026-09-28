@@ -407,6 +407,29 @@ change the cap for a different plan, set `ODYSSEUS_APP_CPUS` in
 and redeploy. Check it took effect with
 `docker inspect --format '{{.HostConfig.NanoCpus}}' odysseus-app-1`.
 
+## 7D. Prospect data expiry (90 days)
+
+The public `/bot` and `/confidentialite-prospection` pages promise that
+prospecting data, screenshots included, is deleted automatically after 90
+days (trade-off 125, issue #538). The daily retention sweep enforces it once
+the server `.env` sets `ODYSSEUS_PROSPECT_EXPIRY=on`.
+
+A prospect expires when nothing has happened to it for 90 days (no scan, no
+outreach touch, no reply, no operator edit). It is deleted exactly as the
+dashboard's Delete action deletes it, audits and their files included.
+Suppression entries are kept. `won`, `call` and `quoted` prospects, and any
+prospect with a delivered audit, never expire.
+
+Before enabling it, and whenever the sweep logs a cap refusal:
+
+```bash
+docker compose exec app node packages/cli/dist/index.js artifacts prospect-expiry
+docker compose exec app node packages/cli/dist/index.js artifacts prospect-expiry --apply --allow-large
+```
+
+The first command is a dry run: record its counts, read the list, then apply.
+The sweep itself never lifts the cap of 20 prospects per run.
+
 ## 7C. Chromium sandbox (accepted risk)
 
 Production Chromium runs with `--no-sandbox`, in the same container and user

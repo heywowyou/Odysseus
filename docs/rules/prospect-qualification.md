@@ -187,6 +187,17 @@ Scanning thousands of third parties while breaching our own published
 policy would make the bot page a liability rather than a credibility
 signal.
 
+Enforced since issue #538 (trade-off 125) by the daily sweep
+(`packages/interface/src/retention/prospect-expiry.ts`), switched on per
+deployment with `ODYSSEUS_PROSPECT_EXPIRY=on` after a production dry run
+(`deploy/runbook.md` section 7D). The clock is the prospect's last activity:
+the latest of its record's activity date, its newest event (scan, outreach
+touch, reply, operator edit) and its newest audit. An expired prospect is
+deleted whole, audits and screenshots included; its suppression entries stay.
+A prospect that became a client or is in a live commercial exchange (`won`,
+`call`, `quoted`, or any delivered audit) is not prospecting data and is
+exempt.
+
 **Plan 071 reference-link attribution.** The optional private mapping from a
 Touch-1 reference-link token hash to its prospect, thread and draft follows
 the same 90-day boundary from draft creation. It stores no raw public token;
