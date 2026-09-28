@@ -539,6 +539,18 @@ function createDestinationHostCheck(
   };
 }
 
+const REDIRECT_NOT_FOLLOWED_PREFIX = 'Redirect could not be followed: ';
+const TRANSIENT_FOLLOW_FAILURE =
+  /Target (?:page, context or browser )?(?:has been )?closed|Timeout|timed out|aborted/i;
+
+function isTransientFollowFailure(check: Omit<TransactionalFlowRedirectCheck, 'pageUrl'>): boolean {
+  return (
+    check.resolution === 'undetermined' &&
+    check.detail.startsWith(REDIRECT_NOT_FOLLOWED_PREFIX) &&
+    TRANSIENT_FOLLOW_FAILURE.test(check.detail)
+  );
+}
+
 async function inspectDestinationPage(
   browser: Browser,
   linkUrl: string,
@@ -579,7 +591,7 @@ async function inspectDestinationPage(
     return {
       linkUrl,
       resolution: 'undetermined',
-      detail: `Redirect could not be followed: ${message}`,
+      detail: `${REDIRECT_NOT_FOLLOWED_PREFIX}${message}`,
     };
   } finally {
     guard?.untrack(context);
@@ -743,7 +755,16 @@ export async function findDelegatedBookingRedirectChecks(
       hostCache.set(cacheKey, resultPromise);
     }
 
-    const result = await resultPromise;
+    const pending = resultPromise;
+    const result = await pending.catch((error: unknown) => {
+      if (hostCache.get(cacheKey) === pending) hostCache.delete(cacheKey);
+      throw error;
+    });
+    // Issue #537: a follow cut short by a closed context or a timeout says
+    // nothing about the host, so it must not answer for every later page.
+    if (isTransientFollowFailure(result) && hostCache.get(cacheKey) === pending) {
+      hostCache.delete(cacheKey);
+    }
     // linkUrl is always overridden to the link actually found on this
     // page, even when the check itself was reused from cache -
     // destinationUrl/detail still describe whichever link first

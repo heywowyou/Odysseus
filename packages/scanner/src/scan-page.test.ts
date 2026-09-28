@@ -50,9 +50,14 @@ import { renderDiff } from './render-diff.js';
 import { extractMentionsLegales } from './checks/mentions-legales.js';
 import { walkKeyboardNavigation } from './checks/keyboard-navigation.js';
 import { checkFormErrorHandling } from './checks/form-error-handling.js';
+import { extractHeadMetadata } from './checks/head-metadata.js';
+import { checkCanonicalTarget } from './checks/canonical-target.js';
 import { scanPage, runRenderedAnalysis, runLighthouseAnalysis } from './scan-page.js';
 
-const page = { evaluate: vi.fn(async () => 'SIREN 732829320') };
+const page = {
+  evaluate: vi.fn(async (): Promise<unknown> => 'SIREN 732829320'),
+  isClosed: () => false,
+};
 const browser = {} as never;
 
 beforeEach(() => {
@@ -235,10 +240,80 @@ describe('runRenderedAnalysis', () => {
         checkTimeoutMs: 10,
       });
       await started;
-      await vi.advanceTimersByTimeAsync(10);
-      await pending;
+      await vi.advanceTimersByTimeAsync(1_000);
+      const result = await pending;
 
       expect(checkFormErrorHandling).not.toHaveBeenCalled();
+      expect(result.checkOutcomes['form-error-handling']).toBe('failed');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('fails only the check that timed out and runs every later check on a responsive page', async () => {
+    vi.useFakeTimers();
+    vi.mocked(runAxe).mockImplementationOnce(() => new Promise(() => {}));
+
+    try {
+      const pending = runRenderedAnalysis({} as never, 'https://example.com/', {
+        screenshotDir: '/tmp/pages',
+        checkTimeoutMs: 10,
+      });
+      await vi.advanceTimersByTimeAsync(1_000);
+      const result = await pending;
+
+      expect(result.checkOutcomes.axe).toBe('failed');
+      expect(result.axeError).toMatch(/check-timeout: axe/);
+      expect(result.checkOutcomes['head-metadata']).toBe('completed');
+      expect(result.checkOutcomes['keyboard-navigation']).toBe('completed');
+      expect(checkFormErrorHandling).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('abandons the page when it stops answering after a check timed out', async () => {
+    vi.useFakeTimers();
+    vi.mocked(runAxe).mockImplementationOnce(() => new Promise(() => {}));
+    page.evaluate.mockImplementation(() => new Promise(() => {}));
+
+    try {
+      const pending = runRenderedAnalysis({} as never, 'https://example.com/', {
+        screenshotDir: '/tmp/pages',
+        checkTimeoutMs: 10,
+      });
+      await vi.advanceTimersByTimeAsync(5_000);
+      const result = await pending;
+
+      expect(result.checkOutcomes.axe).toBe('failed');
+      expect(result.checkOutcomes['head-metadata']).toBe('failed');
+      expect(walkKeyboardNavigation).not.toHaveBeenCalled();
+    } finally {
+      page.evaluate.mockImplementation(async () => 'SIREN 732829320');
+      vi.useRealTimers();
+    }
+  });
+
+  it('evicts a canonical-target request that timed out, so a later page asks again', async () => {
+    vi.useFakeTimers();
+    vi.mocked(extractHeadMetadata).mockResolvedValueOnce({
+      canonicalUrls: ['https://example.com/canonical'],
+      jsonLdBlocks: [],
+    } as never);
+    vi.mocked(checkCanonicalTarget).mockImplementationOnce(() => new Promise(() => {}));
+    const canonicalTargetCache = new Map();
+
+    try {
+      const pending = runRenderedAnalysis({} as never, 'https://example.com/', {
+        screenshotDir: '/tmp/pages',
+        checkTimeoutMs: 10,
+        canonicalTargetCache,
+      });
+      await vi.advanceTimersByTimeAsync(1_000);
+      const result = await pending;
+
+      expect(result.checkOutcomes['canonical-target']).toBe('failed');
+      expect(canonicalTargetCache.size).toBe(0);
     } finally {
       vi.useRealTimers();
     }

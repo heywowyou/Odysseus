@@ -72,6 +72,9 @@ export interface CanonicalTargetCheckOptions {
   /** Shared run scheduler, notified when the canonical fetch receives host
    *  pushback so this extra request cannot bypass the audit's pacing policy. */
   scheduler?: HostRequestScheduler;
+  /** The caller already waited for the first request's slot, outside the
+   *  check's time budget (issue #537); later redirect hops still pace here. */
+  firstHopPaced?: boolean;
   /** Audit policy for pinned, DNS-rebinding-safe requests. */
   networkPolicy?: NetworkTargetPolicy;
   onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
@@ -124,7 +127,7 @@ export async function checkCanonicalTarget(
       // the client's site worth reporting, and must not be requested.
       if (options.networkPolicy === undefined && !(await hopIsAllowed(hop, pageHostname, options)))
         return null;
-      await options.scheduler?.pace();
+      if (redirects > 0 || options.firstHopPaced !== true) await options.scheduler?.pace();
       const request = {
         redirect: 'manual' as const,
         signal,

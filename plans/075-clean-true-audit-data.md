@@ -109,6 +109,7 @@ It runs read-only in the VPS container over `/data/artifacts`. After this plan i
   - Give each content check its own time budget under the page watchdog, so a timeout fails that check alone. The ledger already records outcomes per check.
   - A homepage content failure is shown as a blocking diagnostic on the audit page (plan 068's scoped diagnostics).
   - Tests: a scan-page e2e with a deliberately hanging check.
+  - Completed 2026-09-28 (issue #537): the first version aborted the whole page on any check timeout. A timeout now fails that check alone; the page is abandoned only when a probe evaluate also fails; a page-changing check waits briefly for a timed-out one and is skipped if it still runs; the canonical fetch is paced outside its budget; redirect follows fit their budget; failed canonical and transient redirect cache entries are evicted; the post-check passes have budgets. Covered by `scan-page.test.ts` and `checks/transactional-flow-cache.test.ts`.
 - **A6. URL identity gaps.**
   - Upper-case percent-escapes, and drop an empty query string, in `normalizePageIdentityUrl`.
   - Add a pre-enqueue guard for self-nesting relative links. Evidence comes from the anchor itself: a relative raw href on a page inside a directory that resolves to a repeated leading segment.

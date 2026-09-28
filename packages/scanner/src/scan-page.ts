@@ -1,4 +1,4 @@
-import type { Browser } from 'playwright';
+import type { Browser, Page } from 'playwright';
 import type { Result as LighthouseResult } from 'lighthouse';
 import type {
   TransactionalFlowAmbiguity,
@@ -404,39 +404,76 @@ function checkBudgetMs(options: Pick<ScanPageOptions, 'checkTimeoutMs' | 'timeou
   return Math.max(1_000, Math.min(Math.floor(pageTimeoutMs / 4), 60_000));
 }
 
-/** Runs one check without letting a stalled promise hold the whole rendered
- * page hostage. The late promise is observed after a timeout so a rejected
- * browser operation cannot become an unhandled rejection while the next
- * check is already running. */
 function abortReason(signal: AbortSignal): Error {
   return signal.reason instanceof Error ? signal.reason : new Error('page analysis aborted');
 }
 
+/** How long a page gets to answer a trivial evaluate after one of its checks
+ *  timed out. A page that cannot is unusable (a busy main thread, a crashed
+ *  renderer), so the rest of its analysis is abandoned. */
+const PAGE_PROBE_TIMEOUT_MS = 2_000;
+const POST_PASS_BUDGET_FACTOR = 4;
+const REDIRECT_CHECK_BUDGET_FACTOR = 4;
+
+/** Whether the page still answers a trivial evaluate. Bounded, never throws. */
+async function isPageResponsive(page: Page | undefined): Promise<boolean> {
+  if (page === undefined) return false;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const probe = Promise.resolve()
+    .then(async () => {
+      if (page.isClosed()) return false;
+      await page.evaluate(() => true);
+      return true;
+    })
+    .catch(() => false);
+  const expired = new Promise<boolean>((resolve) => {
+    timer = setTimeout(() => resolve(false), PAGE_PROBE_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([probe, expired]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
+/** Runs one check without letting a stalled promise hold the whole rendered
+ * page hostage. Each check gets its own abort signal, aborted when its budget
+ * expires, so a check that honours it stops. The late promise is observed
+ * after a timeout so a rejected browser operation cannot become an unhandled
+ * rejection while the next check is already running. `onTimeout` runs before
+ * the check is reported failed, so the caller can decide, before the next
+ * check starts, whether the page itself is still usable. */
 async function runWithCheckBudget<T>(
   checkId: string,
   action: (signal: AbortSignal) => Promise<T>,
   budgetMs: number,
   signal: AbortSignal,
-  onTimeout: (error: Error) => void,
+  onTimeout: (error: Error, abandoned: Promise<unknown>) => Promise<void>,
 ): Promise<T> {
   if (signal.aborted) throw abortReason(signal);
+  const checkController = new AbortController();
+  const relayPageAbort = (): void => checkController.abort(abortReason(signal));
+  signal.addEventListener('abort', relayPageAbort, { once: true });
   let timer: ReturnType<typeof setTimeout> | undefined;
   const work = Promise.resolve().then(() => {
-    if (signal.aborted) throw abortReason(signal);
-    return action(signal);
+    if (checkController.signal.aborted) throw abortReason(checkController.signal);
+    return action(checkController.signal);
   });
   work.catch(() => undefined);
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
       const error = new Error(`check-timeout: ${checkId} exceeded ${budgetMs}ms`);
-      onTimeout(error);
-      reject(error);
+      checkController.abort(error);
+      void onTimeout(error, work)
+        .catch(() => undefined)
+        .finally(() => reject(error));
     }, budgetMs);
   });
   try {
     return await Promise.race([work, timeout]);
   } finally {
     if (timer !== undefined) clearTimeout(timer);
+    signal.removeEventListener('abort', relayPageAbort);
   }
 }
 
@@ -500,21 +537,79 @@ export async function runRenderedAnalysis(
   const checkOutcomes: Partial<Record<CheckId, CheckExecutionOutcome>> = {};
   const result: Omit<RenderedAnalysisResult, 'checkOutcomes'> = { url };
   const perCheckBudgetMs = checkBudgetMs(options);
+  // The post-check passes scroll and explore the page in bounded steps
+  // (HYDRATION_MAX_STEPS alone settles for 7.5 s), so they get several
+  // check budgets rather than none: before, only the 420 s page watchdog
+  // bounded them, and hitting it discarded every completed check.
+  const postPassBudgetMs = perCheckBudgetMs * POST_PASS_BUDGET_FACTOR;
+  // Up to MAX_REDIRECT_FOLLOWS third-party navigations, each bounded by one
+  // check budget, fit inside this one.
+  const redirectCheckBudgetMs = perCheckBudgetMs * REDIRECT_CHECK_BUDGET_FACTOR;
   const analysisAbortController = new AbortController();
   const relayExternalAbort = (): void => {
     analysisAbortController.abort(options.signal?.reason ?? new Error('page analysis aborted'));
   };
   if (options.signal?.aborted) relayExternalAbort();
   else options.signal?.addEventListener('abort', relayExternalAbort, { once: true });
+  // Issue #537 (plan 075 A5): a check that exceeds its budget fails alone.
+  // The page's analysis is abandoned only when the page itself stops
+  // answering. A timed-out check that changes the page (input events,
+  // viewport, scrolling) may still be running, so the next such check waits
+  // for it to settle, briefly, and is skipped if it does not.
+  let renderedPage: Page | undefined;
+  const abandonedWork = new Set<Promise<unknown>>();
+  const runBudgeted = <T>(
+    checkId: string,
+    action: (signal: AbortSignal) => Promise<T>,
+    budgetMs: number,
+    changesPage: boolean,
+  ): Promise<T> =>
+    runWithCheckBudget(
+      checkId,
+      action,
+      budgetMs,
+      analysisAbortController.signal,
+      async (error, abandoned) => {
+        if (await isPageResponsive(renderedPage)) {
+          if (!changesPage) return;
+          abandonedWork.add(abandoned);
+          void abandoned.catch(() => undefined).finally(() => abandonedWork.delete(abandoned));
+          return;
+        }
+        analysisAbortController.abort(error);
+        void options.guard?.closeAll().catch(() => undefined);
+      },
+    );
   const withCheckBudget = <T>(
     checkId: string,
     action: (signal: AbortSignal) => Promise<T>,
     budgetMs = perCheckBudgetMs,
-  ): Promise<T> =>
-    runWithCheckBudget(checkId, action, budgetMs, analysisAbortController.signal, (error) => {
-      analysisAbortController.abort(error);
-      void options.guard?.closeAll().catch(() => undefined);
+  ): Promise<T> => runBudgeted(checkId, action, budgetMs, false);
+  const abandonedWorkSettled = async (): Promise<boolean> => {
+    if (abandonedWork.size === 0) return true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const settled = Promise.allSettled([...abandonedWork]).then(() => true);
+    const expired = new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => resolve(false), perCheckBudgetMs);
     });
+    try {
+      return await Promise.race([settled, expired]);
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  };
+  const withMutatingCheckBudget = async <T>(
+    checkId: string,
+    action: (signal: AbortSignal) => Promise<T>,
+    budgetMs = perCheckBudgetMs,
+  ): Promise<T> => {
+    if (!(await abandonedWorkSettled())) {
+      throw new Error(
+        `check-skipped: ${checkId} not started while a timed-out page-changing check still runs`,
+      );
+    }
+    return runBudgeted(checkId, action, budgetMs, true);
+  };
 
   if (options.sitemapCheck !== undefined && url === options.homepageUrl) {
     result.sitemapCheck = { ...options.sitemapCheck, pageUrl: url };
@@ -622,6 +717,7 @@ export async function runRenderedAnalysis(
         readResourceTotals = recordRenderedResourceTotals(page);
       },
       onRenderedPage: async (page) => {
+        renderedPage = page;
         try {
           axeResult = await withCheckBudget('axe', () => runAxe(page), perCheckBudgetMs);
           checkOutcomes.axe = 'completed';
@@ -690,7 +786,8 @@ export async function runRenderedAnalysis(
             () =>
               findDelegatedBookingRedirectChecks(page, url, {
                 browser,
-                ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
+                // Each destination navigation must fit this check's budget.
+                timeoutMs: Math.min(options.timeoutMs ?? getPageTimeoutMs(), perCheckBudgetMs),
                 ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
                 ...(options.redirectHostCache !== undefined
                   ? { hostCache: options.redirectHostCache }
@@ -700,7 +797,7 @@ export async function runRenderedAnalysis(
                   : {}),
                 ...(options.guard !== undefined ? { guard: options.guard } : {}),
               }),
-            perCheckBudgetMs,
+            redirectCheckBudgetMs,
           );
           checkOutcomes['transactional-flow-redirect-checks'] = 'completed';
           // Only a confirmed single-property redirect promotes to
@@ -783,21 +880,40 @@ export async function runRenderedAnalysis(
             const cacheKey = normalizePageIdentityUrl(canonicalUrl) ?? canonicalUrl;
             let request = options.canonicalTargetCache?.get(cacheKey);
             if (request === undefined) {
-              request = withCheckBudget(
-                'canonical-target',
-                () =>
-                  checkCanonicalTarget(url, canonicalUrl, options.timeoutMs ?? getPageTimeoutMs(), {
-                    ...(options.scheduler !== undefined ? { scheduler: options.scheduler } : {}),
-                    ...(options.networkPolicy !== undefined
-                      ? { networkPolicy: options.networkPolicy }
-                      : {}),
-                    ...(options.onNetworkSafetyBlocked !== undefined
-                      ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
-                      : {}),
-                  }),
-                perCheckBudgetMs,
-              );
-              options.canonicalTargetCache?.set(cacheKey, request);
+              const scheduler = options.scheduler;
+              const cache = options.canonicalTargetCache;
+              // Issue #537: waiting for a polite slot is not the check's
+              // work, so the first request is paced before its budget
+              // starts; a Crawl-delay alone used to exceed it.
+              const pending = (async () => {
+                await scheduler?.pace();
+                return withCheckBudget(
+                  'canonical-target',
+                  () =>
+                    checkCanonicalTarget(
+                      url,
+                      canonicalUrl,
+                      options.timeoutMs ?? getPageTimeoutMs(),
+                      {
+                        ...(scheduler !== undefined ? { scheduler, firstHopPaced: true } : {}),
+                        ...(options.networkPolicy !== undefined
+                          ? { networkPolicy: options.networkPolicy }
+                          : {}),
+                        ...(options.onNetworkSafetyBlocked !== undefined
+                          ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
+                          : {}),
+                      },
+                    ),
+                  perCheckBudgetMs,
+                );
+              })();
+              request = pending;
+              cache?.set(cacheKey, pending);
+              // A timeout or refusal is not a fact about the target: evict
+              // it so a later page, or the recovery retry, asks again.
+              pending.catch(() => {
+                if (cache?.get(cacheKey) === pending) cache.delete(cacheKey);
+              });
             }
             const cachedResult = await request;
             canonicalTargetResult =
@@ -943,7 +1059,7 @@ export async function runRenderedAnalysis(
         // reason about DOM state a Tab walk might have changed (focus
         // styles, a dropdown opened on :focus, etc.).
         try {
-          keyboardNavigationResult = await withCheckBudget(
+          keyboardNavigationResult = await withMutatingCheckBudget(
             'keyboard-navigation',
             (signal) => walkKeyboardNavigation(page, url, signal),
             perCheckBudgetMs,
@@ -960,7 +1076,7 @@ export async function runRenderedAnalysis(
         // never a real click or submit()). Kept last so nothing else
         // this hook does can be affected by it.
         try {
-          formErrorHandlingResult = await withCheckBudget(
+          formErrorHandlingResult = await withMutatingCheckBudget(
             'form-error-handling',
             (signal) => checkFormErrorHandling(page, url, signal),
             perCheckBudgetMs,
@@ -978,7 +1094,7 @@ export async function runRenderedAnalysis(
         // restores the original viewport in its own finally block, but
         // ordering it last means nothing depends on that having worked.
         try {
-          reflowResult = await withCheckBudget(
+          reflowResult = await withMutatingCheckBudget(
             'reflow',
             (signal) => checkReflow(page, url, signal),
             perCheckBudgetMs,
@@ -989,14 +1105,18 @@ export async function runRenderedAnalysis(
           checkOutcomes.reflow = 'failed';
         }
 
-        if (analysisAbortController.signal.aborted) return;
+        if (analysisAbortController.signal.aborted || !(await abandonedWorkSettled())) return;
 
         // Plan 059 step 13: the delivered consent/overlay state is read
         // off the page exactly as delivered, before anything (the sweep,
         // a toggle) changes it.
         if (options.stateSurfaces === true) {
           try {
-            result.consentBaseline = await observeBaselineConsentState(page);
+            result.consentBaseline = await withCheckBudget(
+              'consent-baseline',
+              () => observeBaselineConsentState(page),
+              perCheckBudgetMs,
+            );
           } catch {
             result.consentBaseline = { state: 'undetermined', controlCount: 0 };
           }
@@ -1009,13 +1129,22 @@ export async function runRenderedAnalysis(
         // can only extend what the page's own artifacts record afterwards.
         if (options.hydrationSweep === true) {
           try {
-            const sweep = await runHydrationSweep(page);
-            sweep.discoveredLinks = await collectSurfaceLinks(page, {
-              baseUrl: page.url(),
-              ...(options.exclusionPatterns !== undefined
-                ? { exclusionPatterns: options.exclusionPatterns }
-                : {}),
-            }).catch(() => []);
+            const sweep = await withMutatingCheckBudget(
+              'hydration-sweep',
+              () => runHydrationSweep(page),
+              postPassBudgetMs,
+            );
+            sweep.discoveredLinks = await withCheckBudget(
+              'surface-links',
+              () =>
+                collectSurfaceLinks(page, {
+                  baseUrl: page.url(),
+                  ...(options.exclusionPatterns !== undefined
+                    ? { exclusionPatterns: options.exclusionPatterns }
+                    : {}),
+                }),
+              perCheckBudgetMs,
+            ).catch(() => []);
             result.hydrationSweep = sweep;
             if (result.readiness !== undefined) {
               result.readiness = { ...result.readiness, hydrationProgress: sweep.progress };
@@ -1040,11 +1169,16 @@ export async function runRenderedAnalysis(
         // the sweep so both mutating passes are strictly post-baseline.
         if (options.stateSurfaces === true) {
           try {
-            result.localStates = await runLocalStateExploration(page, {
-              ...(options.exclusionPatterns !== undefined
-                ? { exclusionPatterns: options.exclusionPatterns }
-                : {}),
-            });
+            result.localStates = await withMutatingCheckBudget(
+              'local-state-exploration',
+              () =>
+                runLocalStateExploration(page, {
+                  ...(options.exclusionPatterns !== undefined
+                    ? { exclusionPatterns: options.exclusionPatterns }
+                    : {}),
+                }),
+              postPassBudgetMs,
+            );
           } catch (error) {
             result.surfaceLimitations = [
               ...(result.surfaceLimitations ?? []),
