@@ -655,16 +655,16 @@ export const prospectHub = {
       restore: 'Restaurer le prospect',
       archivedBadge: 'Archivé',
       archivedNotice:
-        'Prospect archivé le {date}. Ses contacts, notes et échanges sont conservés, ses scans et rapports ont été supprimés ; restaurez-le pour le remettre dans le travail en cours.',
+        'Prospect archivé le {date}. Ses contacts, notes et échanges sont conservés, ainsi que ses audits livrés ; ses autres scans et rapports ont été supprimés. Restaurez-le pour le remettre dans le travail en cours.',
       archivedNoRecommendation: 'Prospect archivé : aucune action recommandée.',
       archiveTitle: 'Archiver ce prospect ?',
       archiveKeeps:
-        'Les coordonnées, l’identité de l’entreprise, les notes et l’historique des échanges sont conservés.',
+        'Les coordonnées, l’identité de l’entreprise, les notes et l’historique des échanges sont conservés, ainsi que les audits livrés (rapport approuvé ou finalisé), allégés de leurs pages capturées.',
       archiveDeletes:
-        'Ses scans, constats, rapports et fichiers associés seront définitivement supprimés.',
+        'Ses autres scans, constats, rapports et fichiers associés seront définitivement supprimés.',
       archiveDeletesCounts:
-        'Ses scans, constats, rapports et fichiers associés seront définitivement supprimés : {impact}.',
-      archiveRestoreNote: 'Restaurer le prospect plus tard ne restaurera pas ces audits.',
+        'Ses autres scans, constats, rapports et fichiers associés seront définitivement supprimés, au plus : {impact}.',
+      archiveRestoreNote: 'Restaurer le prospect plus tard ne restaurera pas les audits supprimés.',
       archiveBlockedByJob:
         'Un scan de ce prospect est encore en cours. Annulez-le ou attendez sa fin, puis archivez.',
       archiveCleanupIncomplete:
@@ -1208,16 +1208,16 @@ export const prospectHub = {
       restore: 'Restore prospect',
       archivedBadge: 'Archived',
       archivedNotice:
-        'Prospect archived on {date}. Its contacts, notes, and correspondence are kept, and its scans and reports were deleted; restore it to return it to active work.',
+        'Prospect archived on {date}. Its contacts, notes, and correspondence are kept, as are its delivered audits; its other scans and reports were deleted. Restore it to return it to active work.',
       archivedNoRecommendation: 'Archived prospect: no recommended action.',
       archiveTitle: 'Archive this prospect?',
       archiveKeeps:
-        'The prospect’s contact details, company identity, notes, and outreach history will be kept.',
+        'The prospect’s contact details, company identity, notes, and outreach history will be kept, as will delivered audits (approved or finalized report), slimmed of their captured pages.',
       archiveDeletes:
-        'Its scans, findings, reports, and associated files will be permanently deleted.',
+        'Its other scans, findings, reports, and associated files will be permanently deleted.',
       archiveDeletesCounts:
-        'Its scans, findings, reports, and associated files will be permanently deleted: {impact}.',
-      archiveRestoreNote: 'Restoring the prospect later will not restore those audits.',
+        'Its other scans, findings, reports, and associated files will be permanently deleted, at most: {impact}.',
+      archiveRestoreNote: 'Restoring the prospect later will not restore the deleted audits.',
       archiveBlockedByJob:
         'A scan for this prospect is still running. Cancel it or wait for it to finish, then archive.',
       archiveCleanupIncomplete:

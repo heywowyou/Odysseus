@@ -91,7 +91,8 @@ export function ProspectHeader(props: {
           {lifecycleNotice}
         </p>
       ) : null}
-      {archived && audits.length > 0 ? (
+      {/* Issue #560: a slimmed delivered audit is kept, not pending deletion. */}
+      {archived && audits.some((audit) => audit.retention?.slimmedAt === undefined) ? (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-raised px-4 py-3 text-sm text-ink-soft">
           <p>{copy.archiveCleanupPending}</p>
           <Button

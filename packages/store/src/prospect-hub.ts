@@ -822,6 +822,7 @@ type ProspectAuditRow = Pick<
   'auditId' | 'siteUrl' | 'kind' | 'scanIntent' | 'startedAt' | 'finishedAt'
 > & {
   siteSignals?: { roleContact?: { address: string; sourceUrl: string } };
+  retention?: { slimmedAt?: Date };
 };
 
 export async function listProspectAudits(
@@ -838,6 +839,7 @@ export async function listProspectAudits(
       startedAt: 1,
       finishedAt: 1,
       'siteSignals.roleContact': 1,
+      'retention.slimmedAt': 1,
     })
     .sort({ startedAt: -1 })
     .lean<ProspectAuditRow[]>();

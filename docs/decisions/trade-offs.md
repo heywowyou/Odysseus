@@ -4919,7 +4919,11 @@ relationship record is small and durable. The action confirms with counts,
 refuses while a job is active, deletes files before records per audit so a
 failed purge is retried by archiving again (an archived prospect still owning
 audits is the incomplete state), and `odysseus artifacts archived-prospects`
-reconciles prospects archived earlier. Archive otherwise changes no status,
+reconciles prospects archived earlier. *Amended 2026-09-28, issue #560:* an
+audit trade-off 117 counts as delivered is slimmed instead (the same paths a
+retention run removes), keeping the approved report and the re-audit
+baseline; a slimmed audit on an archived prospect is kept by design, not an
+incomplete purge. Archive otherwise changes no status,
 suppression, preview, draft, or thread; archive and restore each record an event and are
 idempotent. Archived prospects leave the portfolio, Results, counts, and
 À traiter, and restore on the same `prospectId`. Directory adds claim the

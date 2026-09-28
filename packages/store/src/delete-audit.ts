@@ -111,7 +111,13 @@ export async function listArchivedProspectsWithAudits(
     .lean<{ prospectId: string; name: string }[]>();
   if (archived.length === 0) return [];
   const counts = await createAuditModel(connection).aggregate<{ _id: string; audits: number }>([
-    { $match: { prospectId: { $in: archived.map((prospect) => prospect.prospectId) } } },
+    // Issue #560: a delivered audit an archive slimmed stays by design.
+    {
+      $match: {
+        prospectId: { $in: archived.map((prospect) => prospect.prospectId) },
+        'retention.slimmedAt': { $exists: false },
+      },
+    },
     { $group: { _id: '$prospectId', audits: { $sum: 1 } } },
   ]);
   const byId = new Map(counts.map((row) => [row._id, row.audits]));

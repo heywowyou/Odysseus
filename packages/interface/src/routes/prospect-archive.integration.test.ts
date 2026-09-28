@@ -4,7 +4,8 @@
  * routes against real Mongo, return the exact same prospect with its
  * enrichment, correspondence, event history and directory link. Under the
  * issue #381 amendment the archive also purges the prospect's audits and
- * their files, and this test pins that scope too. Docker-gated: it skips
+ * their files, and this test pins that scope too; under issue #560 a
+ * delivered audit is slimmed and kept instead. Docker-gated: it skips
  * cleanly when mongo-test is down.
  */
 
@@ -20,6 +21,8 @@ import {
   createAuditModel,
   createDirectoryEntryModel,
   createProspectHubModel,
+  createReportModel,
+  listArchivedProspectsWithAudits,
   findOutreachThreadByProspect,
   isSuppressed,
   listDirectory,
@@ -150,6 +153,27 @@ describe.skipIf(!mongoAvailable)('prospect archive and restore through the route
       await fs.mkdir(auditDir, { recursive: true });
       await fs.writeFile(path.join(auditDir, 'manifest.json'), '{}');
 
+      // Issue #560: a delivered audit (finalized report) with captured pages.
+      const deliveredId = randomUUID();
+      const deliveredAt = new Date('2026-08-20T08:00:00.000Z');
+      await createAuditModel(connection!).collection.insertOne({
+        auditId: deliveredId,
+        prospectId,
+        kind: 'audit',
+        siteUrl: `https://${domain}/`,
+        startedAt: deliveredAt,
+      });
+      await createReportModel(connection!).collection.insertOne({
+        reportId: randomUUID(),
+        auditId: deliveredId,
+        origin: 'finalized',
+      });
+      const deliveredDir = buildAuditDir(artifactsRoot!, domain, deliveredAt);
+      await fs.mkdir(path.join(deliveredDir, 'pages'), { recursive: true });
+      await fs.writeFile(path.join(deliveredDir, 'pages', 'home.html'), '<html></html>');
+      await fs.writeFile(path.join(deliveredDir, 'manifest.json'), '{}');
+      await fs.writeFile(path.join(deliveredDir, 'report.pdf'), 'pdf');
+
       const rawProspect = () =>
         createProspectHubModel(connection!).collection.findOne({ prospectId });
       const stable = (doc: Record<string, unknown> | null) => {
@@ -162,7 +186,7 @@ describe.skipIf(!mongoAvailable)('prospect archive and restore through the route
 
       const archived = await call(`/api/prospects/${prospectId}/archive`, 'POST');
       expect(archived.statusCode).toBe(200);
-      expect(archived.body).toMatchObject({ changed: true, purged: { audits: 1 } });
+      expect(archived.body).toMatchObject({ changed: true, purged: { audits: 1, auditsKept: 1 } });
 
       // Archived: out of active work, still the same record, still linked.
       expect(stable(await rawProspect())).toStrictEqual(stable(before));
@@ -179,6 +203,19 @@ describe.skipIf(!mongoAvailable)('prospect archive and restore through the route
       // Issue #381: the audit and its files are gone.
       expect(await createAuditModel(connection!).countDocuments({ auditId })).toBe(0);
       await expect(fs.access(auditDir)).rejects.toThrow();
+      // Issue #560: the delivered audit stays, slimmed, and is not pending.
+      const delivered = await createAuditModel(connection!)
+        .findOne({ auditId: deliveredId })
+        .lean();
+      expect(delivered?.retention?.slimmedAt).toBeInstanceOf(Date);
+      await expect(fs.access(path.join(deliveredDir, 'pages'))).rejects.toThrow();
+      await expect(fs.access(path.join(deliveredDir, 'report.pdf'))).resolves.toBeUndefined();
+      await expect(fs.access(path.join(deliveredDir, 'manifest.json'))).resolves.toBeUndefined();
+      expect(
+        (await listArchivedProspectsWithAudits(connection!)).map((row) => row.prospectId),
+      ).not.toContain(prospectId);
+      const again = await call(`/api/prospects/${prospectId}/archive`, 'POST');
+      expect(again.body).toMatchObject({ purged: { audits: 0, auditsKept: 1 } });
 
       const restored = await call(`/api/prospects/${prospectId}/restore`, 'POST');
       expect(restored.statusCode).toBe(200);

@@ -254,7 +254,7 @@ export function registerArtifactsCommand(program: Command): void {
               store,
             });
             console.log(
-              `PURGED    ${row.prospectId} (${purged.audits} audit(s), ${purged.remoteObjectsDeleted} bucket object(s))`,
+              `PURGED    ${row.prospectId} (${purged.audits} audit(s) deleted, ${purged.auditsKept} delivered audit(s) kept slimmed, ${purged.remoteObjectsDeleted} bucket object(s))`,
             );
           } catch (error) {
             failed += 1;

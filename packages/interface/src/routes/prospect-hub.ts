@@ -1009,6 +1009,7 @@ export function registerProspectHubRoutes(
       return;
     }
     try {
+      // Issue #560: delivered audits come back slimmed (auditsKept), not deleted.
       const purged = await purgeProspectAuditStorage(connection, prospectId, {
         artifactsRoot: getArtifactsRoot(),
         store: createConfiguredArtifactStore(),

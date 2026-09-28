@@ -27,6 +27,8 @@ export interface ProspectAudit {
   scanIntent?: string;
   startedAt: string;
   finishedAt?: string;
+  /** Issue #560: set when retention or an archive slimmed the audit. */
+  retention?: { slimmedAt?: string };
 }
 
 export interface ProspectPreview {

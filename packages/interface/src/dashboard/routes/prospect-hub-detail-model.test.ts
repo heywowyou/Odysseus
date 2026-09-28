@@ -148,7 +148,7 @@ describe('archive confirmation and failure (issue #381)', () => {
   it('states what is kept, what is deleted with counts, and that restore does not bring audits back', () => {
     const description = archiveConfirmDescription(['2 scan(s)', '40 constat(s)'], copy);
     expect(description).toContain(copy.archiveKeeps);
-    expect(description).toContain('supprimés : 2 scan(s), 40 constat(s).');
+    expect(description).toContain('supprimés, au plus : 2 scan(s), 40 constat(s).');
     expect(description).toContain(copy.archiveRestoreNote);
     expect(archiveConfirmDescription([], en.prospectHub.detail)).toBe(
       `${en.prospectHub.detail.archiveKeeps} ${en.prospectHub.detail.archiveDeletes} ${en.prospectHub.detail.archiveRestoreNote}`,

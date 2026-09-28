@@ -41,10 +41,11 @@ afterEach(() => {
 /** Renders `panel(shared)` with the real shared state over the fixture. */
 async function renderPanel(
   panel: (shared: ProspectDetailShared) => ReactElement,
+  prospect: typeof PROSPECT = PROSPECT,
 ): Promise<HTMLElement> {
   function Harness(): ReactElement {
     const shared = useProspectDetailShared(
-      PROSPECT,
+      prospect,
       { refresh: () => undefined },
       { data: ACTIONABILITY, error: undefined, refresh: () => undefined },
     );
@@ -127,6 +128,29 @@ describe('prospect page panels (issue #532)', () => {
     expect(container.textContent).toContain('Hôtel Fixture');
     await click(button(container, 'Archiver le prospect'));
     expect(lifecycle.requestArchive).toHaveBeenCalled();
+  });
+
+  it('header: offers to finish the archive only while an audit is not slimmed (issue #560)', async () => {
+    const header = (shared: ProspectDetailShared) =>
+      createElement(ProspectHeader, {
+        shared,
+        lifecycle: lifecycleActions(),
+        outreach: outreachActions(),
+        returnTo: '/prospects',
+      });
+    const archivedAt = '2026-09-20T10:00:00.000Z';
+    const pending = await renderPanel(header, { ...PROSPECT, archivedAt });
+    expect(button(pending, 'Terminer la suppression des scans')).toBeDefined();
+    document.body.innerHTML = '';
+    const kept = await renderPanel(header, {
+      ...PROSPECT,
+      archivedAt,
+      audits: PROSPECT.audits!.map((audit) => ({
+        ...audit,
+        retention: { slimmedAt: archivedAt },
+      })),
+    });
+    expect(button(kept, 'Terminer la suppression des scans')).toBeUndefined();
   });
 
   it('recommended: runs the recommended first email', async () => {

@@ -147,7 +147,10 @@ interface AuditLocation {
   auditDir: string;
 }
 
-function locateAudit(artifactsRoot: string, audit: RetentionAuditRow): AuditLocation {
+function locateAudit(
+  artifactsRoot: string,
+  audit: Pick<RetentionAuditRow, 'siteUrl' | 'startedAt'>,
+): AuditLocation {
   const hostname = new URL(audit.siteUrl).hostname;
   return { hostname, auditDir: buildAuditDir(artifactsRoot, hostname, audit.startedAt) };
 }
@@ -228,6 +231,33 @@ async function deleteKey(store: ArtifactStore, key: string): Promise<number> {
   const present = (await store.list(key)).includes(key);
   await store.delete(key);
   return present ? 1 : 0;
+}
+
+/**
+ * Issue #560: slims one delivered audit outside a retention run, removing
+ * exactly what a run removes (SLIMMED_PATHS, locally and in the bucket), so
+ * archiving a prospect keeps the report, findings and manifest a client
+ * report and the re-audit delta read.
+ */
+export async function slimAuditStorage(
+  connection: Connection,
+  audit: Pick<RetentionAuditRow, 'auditId' | 'siteUrl' | 'startedAt'>,
+  options: { artifactsRoot: string; store: ArtifactStore | undefined; now: Date },
+): Promise<{ remoteObjectsDeleted: number }> {
+  const location = locateAudit(options.artifactsRoot, audit);
+  let remoteObjectsDeleted = 0;
+  for (const relativePath of SLIMMED_PATHS) {
+    await fs.rm(path.join(location.auditDir, relativePath), { recursive: true, force: true });
+    if (options.store !== undefined) {
+      const key = buildArtifactBucketKey(location.hostname, audit.startedAt, relativePath);
+      remoteObjectsDeleted +=
+        relativePath === 'pages'
+          ? await deletePrefix(options.store, `${key}/`)
+          : await deleteKey(options.store, key);
+    }
+  }
+  await markAuditSlimmed(connection, audit.auditId, options.now);
+  return { remoteObjectsDeleted };
 }
 
 function emptyCounts(): RetentionRunCounts {

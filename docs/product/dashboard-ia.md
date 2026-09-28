@@ -112,7 +112,12 @@ link. Since issue #381 it also permanently deletes the prospect's audits
 (findings, analyses, reports, approvals, their finished scan jobs, and the
 local and bucket artifact files), so it asks first: the confirmation states
 what is kept, the counts of what is deleted, and that restoring does not bring
-the audits back. It is refused while a job for the prospect is queued or
+the audits back. Since issue #560 a delivered audit (an approval, an active or
+approved bundle, a finalized report, a live preview) is not deleted but
+slimmed as a retention run would (captured pages and crawl state removed), so
+a won client's approved report and the baseline a paid re-audit compares
+against survive; the confirmation says so and its counts are an upper bound.
+It is refused while a job for the prospect is queued or
 running. If file deletion fails part-way, the prospect is archived, the
 remaining audits stay attached, and the detail page offers
 `Terminer la suppression des scans` / `Finish deleting scans`. Published

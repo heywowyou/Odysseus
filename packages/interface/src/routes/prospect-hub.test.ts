@@ -38,6 +38,18 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   listProspectEvents: vi.fn(),
   listProspectTodo: vi.fn(),
   listProspects: vi.fn(),
+  loadRetentionSnapshot: vi.fn(async () => ({
+    audits: [],
+    reports: [],
+    analyses: [],
+    approvals: [],
+    bundles: [],
+    activeBundles: [],
+    qualityRuns: [],
+    livePreviewAuditIds: [],
+    archivedProspectIds: [],
+  })),
+  markAuditSlimmed: vi.fn(),
   countActiveAndAuditedProspects: vi.fn(),
   aggregateOutreachFunnel: vi.fn(),
   loadProspectWork: vi.fn(),
@@ -583,7 +595,7 @@ describe('prospect hub routes', () => {
     const archived = await handle('/api/prospects/p-1/archive', 'POST');
     expect(archived).toMatchObject({
       statusCode: 200,
-      body: { changed: true, purged: { audits: 1, remoteObjectsDeleted: 1 } },
+      body: { changed: true, purged: { audits: 1, auditsKept: 0, remoteObjectsDeleted: 1 } },
     });
     expect(archiveProspect).toHaveBeenCalledWith(fakeConnection, 'p-1');
     expect(artifactStore.delete).toHaveBeenCalledWith(
