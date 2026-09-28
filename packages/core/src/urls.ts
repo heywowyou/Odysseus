@@ -7,7 +7,49 @@
  * scanner treats as the mentions-legales page.
  */
 export const LEGAL_PATH_PATTERN =
-  /(cgu|cgv|conditions|mentions?-legales?|cookies|confidentialite|privacy|terms|legal)/i;
+  /(cgu|cgv|conditions|mentions?-legales?|cookies?|confidentialite|privacy|terms|legal)/i;
+
+/**
+ * Account, cart, checkout and login pages. Shop and booking plugins mark
+ * them noindex by default (WooCommerce's `/mon-compte` and `/panier` on a
+ * real audit), so a noindex there is deliberate, like a legal page's. Whole
+ * path segments only: `/panier-garni-du-terroir` is a product, not a cart.
+ */
+const UTILITY_PATH_SEGMENTS = new Set([
+  'account',
+  'basket',
+  'carrello',
+  'carrito',
+  'cart',
+  'checkout',
+  'commande',
+  'commander',
+  'compte',
+  'connexion',
+  'il-mio-account',
+  'kasse',
+  'login',
+  'mein-konto',
+  'mi-cuenta',
+  'mon-compte',
+  'my-account',
+  'panier',
+  'warenkorb',
+  'wishlist',
+]);
+
+export function isUtilityPageUrl(url: string): boolean {
+  let pathname: string;
+  try {
+    pathname = new URL(url).pathname;
+  } catch {
+    return false;
+  }
+  return pathname
+    .toLowerCase()
+    .split('/')
+    .some((segment) => UTILITY_PATH_SEGMENTS.has(segment));
+}
 
 /**
  * Contact-page paths, added for milestone 9c plan 007. Narrower than

@@ -334,6 +334,53 @@ describe('noindex-on-public-page', () => {
     );
   });
 
+  it('recognises an English cookie policy as a legal page', () => {
+    const candidates = extractHeadMetadataCandidates(
+      baseInput({
+        pageUrl: 'https://haaitza.com/en/cookie-policy',
+        robotsMeta: 'noindex, follow',
+        publicEvidence: { isHreflangTarget: true },
+      }),
+    );
+    expect(candidates).toEqual([]);
+  });
+
+  it('reports a noindex cart listed in the sitemap only as a sitemap entry, even as a hreflang target', () => {
+    for (const path of ['/mon-compte', '/panier', '/en/my-account', '/commander']) {
+      const candidates = extractHeadMetadataCandidates(
+        baseInput({
+          pageUrl: `https://domaine-d-auriac.fr${path}`,
+          robotsMeta: 'noindex, follow',
+          publicEvidence: { inSitemap: true, isHreflangTarget: true },
+        }),
+      );
+      expect(ruleIds(candidates)).toEqual([SITEMAP_LISTS_NOINDEX_RULE_ID]);
+      expect(candidates[0]?.severity).toBe('minor');
+    }
+  });
+
+  it('reports nothing for a noindex account page outside the sitemap', () => {
+    const candidates = extractHeadMetadataCandidates(
+      baseInput({
+        pageUrl: 'https://example.com/mon-compte',
+        robotsMeta: 'noindex',
+        publicEvidence: { isHreflangTarget: true },
+      }),
+    );
+    expect(candidates).toEqual([]);
+  });
+
+  it('still reports a product whose slug only contains a utility word', () => {
+    const candidates = extractHeadMetadataCandidates(
+      baseInput({
+        pageUrl: 'https://example.com/boutique/panier-garni-du-terroir',
+        robotsMeta: 'noindex',
+        publicEvidence: { isHreflangTarget: true },
+      }),
+    );
+    expect(ruleIds(candidates)).toEqual([NOINDEX_ON_PUBLIC_PAGE_RULE_ID]);
+  });
+
   it('keeps the critical finding when another page also marks the noindex page as public', () => {
     const candidates = extractHeadMetadataCandidates(
       baseInput({

@@ -20,7 +20,7 @@
  * Lighthouse audits to drop on a page this check covered (trade-off 110).
  */
 
-import { LEGAL_PATH_PATTERN } from '../urls.js';
+import { isUtilityPageUrl, LEGAL_PATH_PATTERN } from '../urls.js';
 import type { FindingCandidate } from './candidate.js';
 import { extractLinkCandidates, type AnchorFactInput } from './normalize-links.js';
 import { shapeIdentity } from './normalize-axe.js';
@@ -453,13 +453,40 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
   // defect, not a hidden public page.
   const sitemapIsOnlySignal =
     publicSignals !== undefined && publicSignals.length === 1 && publicSignals[0] === 'inSitemap';
+  // An account, cart or checkout page is kept out of search on purpose; the
+  // hreflang a translation plugin writes between its language versions does
+  // not make it a public page. Only a sitemap entry for it is a defect.
+  const utilityPage = isUtilityPageUrl(pageUrl);
   const noindexEvidence = {
     robotsMeta: input.robotsMeta,
     ...(input.googlebotMeta !== undefined ? { googlebotMeta: input.googlebotMeta } : {}),
     ...(input.xRobotsTag !== undefined ? { xRobotsTag: input.xRobotsTag } : {}),
     ...(publicEvidence !== undefined ? { publicEvidence } : {}),
   };
-  if (noindexSources.length > 0 && !LEGAL_PATH_PATTERN.test(pageUrl) && sitemapIsOnlySignal) {
+  if (
+    noindexSources.length > 0 &&
+    !LEGAL_PATH_PATTERN.test(pageUrl) &&
+    utilityPage &&
+    publicEvidence?.inSitemap === true
+  ) {
+    candidates.push(
+      pageCandidate(
+        SITEMAP_LISTS_NOINDEX_RULE_ID,
+        'seo',
+        [],
+        'The sitemap lists pages that ask not to be indexed',
+        `This page asks search engines not to index it (${noindexSources.join('; ')}), yet the sitemap submits it for indexing. It is an account, cart or checkout page, which sites keep out of search on purpose, so the sitemap entry is the inconsistency. Remove the page from the sitemap.`,
+        pageUrl,
+        null,
+        noindexEvidence,
+      ),
+    );
+  } else if (
+    noindexSources.length > 0 &&
+    !LEGAL_PATH_PATTERN.test(pageUrl) &&
+    !utilityPage &&
+    sitemapIsOnlySignal
+  ) {
     candidates.push(
       pageCandidate(
         SITEMAP_LISTS_NOINDEX_RULE_ID,
@@ -475,6 +502,7 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
   } else if (
     noindexSources.length > 0 &&
     !LEGAL_PATH_PATTERN.test(pageUrl) &&
+    !utilityPage &&
     (publicSignals === undefined || publicSignals.length > 0)
   ) {
     candidates.push(
