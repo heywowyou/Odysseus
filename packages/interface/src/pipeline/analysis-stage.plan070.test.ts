@@ -7,6 +7,7 @@ import { buildFindingsProvenance, type AuditManifest, type Finding } from '@odys
 vi.mock('@odysseus/store', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   persistAnalysis: vi.fn(),
+  getAuditBlockedPagesAcknowledgment: vi.fn(async () => undefined),
 }));
 vi.mock('./obligation-stage.js', () => ({
   runObligationStage: vi.fn(async () => ({ status: 'undetermined', basis: [] })),

@@ -22,6 +22,7 @@ vi.mock('@odysseus/store', () => ({
   getAuditManualFields: vi.fn().mockResolvedValue(undefined),
   syncProspectIdentityIntoAudit: vi.fn(),
   getAuditGradeOverride: vi.fn().mockResolvedValue(undefined),
+  getAuditBlockedPagesAcknowledgment: vi.fn().mockResolvedValue(undefined),
   getReportPreparation: vi.fn().mockResolvedValue({
     updatedAt: '2026-09-01T00:00:00.000Z',
   }),

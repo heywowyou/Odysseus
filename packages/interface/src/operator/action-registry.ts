@@ -163,6 +163,22 @@ export const REGISTRY_ACTIONS = [
     pendingPlan061: true,
   },
   {
+    // Trade-off 122: the route re-reads the audit's blocked pages and
+    // refuses unless the posted URL set equals them exactly.
+    action: 'acceptBlockedPages',
+    owner: 'report-quality',
+    routes: ['PUT /api/audits/:auditId/blocked-pages-acknowledgment'],
+    protocol: 'reload-recheck',
+    pendingPlan061: true,
+  },
+  {
+    action: 'clearBlockedPagesAcknowledgment',
+    owner: 'report-quality',
+    routes: ['DELETE /api/audits/:auditId/blocked-pages-acknowledgment'],
+    protocol: 'reload-recheck',
+    pendingPlan061: true,
+  },
+  {
     // Plan 072: not a dashboard button. The operator uploads a locally
     // rendered, corrected PDF, which becomes the audit's current report
     // for that language. It is a mutation with a guard like any other -

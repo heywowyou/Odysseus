@@ -8,6 +8,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   persistAnalysis: vi.fn(),
   getAnalysisById: vi.fn(),
+  getAuditBlockedPagesAcknowledgment: vi.fn(async () => undefined),
 }));
 vi.mock('./obligation-stage.js', () => ({
   runObligationStage: vi.fn(async () => ({ status: 'undetermined', basis: [] })),
