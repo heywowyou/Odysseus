@@ -573,6 +573,13 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     text: 'Adjust the page title length so it is not cut off in search results, around 30 to 65 characters.',
     snippet: { kind: 'fill-in-blank', template: '<title><title of 30 to 65 characters></title>' },
   },
+  'title-announces-error': {
+    text: 'Give these pages a title that describes their content: a search engine can drop a page whose title announces an error.',
+    snippet: {
+      kind: 'fill-in-blank',
+      template: '<title><title describing this page content></title>',
+    },
+  },
   'title-not-translated': {
     text: 'Translate the title of each language version of the page: it is the headline shown at the top of the search result in that language.',
     snippet: {

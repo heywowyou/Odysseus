@@ -10,8 +10,9 @@
  * is known, and like that status it stays inventoried and disclosed while
  * never joining the content-checked population.
  *
- * Two independent signals, either sufficient, both requiring an explicit
- * match rather than a similarity score:
+ * Explicit matches rather than a similarity score, and a title alone is
+ * not enough when the page's first heading names other content (plan 075
+ * K4):
  *
  *  - the URL's own last path segment is an error slug. Whole-segment only,
  *    so a genuine article at /blog/comment-eviter-les-erreurs-404 is not
@@ -22,6 +23,7 @@
  *    the string: a page titled "404" is an error page, one titled
  *    "Nos chambres | Erreur 404 possible" is not a shape any CMS emits.
  */
+import { announcesMissingPage } from '@odysseus/core';
 
 const ERROR_SLUGS = new Set([
   '404',
@@ -37,9 +39,6 @@ const ERROR_SLUGS = new Set([
   'pagina-no-encontrada',
   'pagina-non-trovata',
 ]);
-
-const ERROR_TITLE_PATTERN =
-  /^\s*(?:erreur\s*(?:http\s*)?)?404\b|^\s*(?:page\s+)?(?:not\s+found|introuvable|non\s+trouv[ée]e?|no\s+encontrada|non\s+trovata)\b|^\s*(?:page|pagina|página)\s+(?:not\s+found|introuvable|non\s+trouv[ée]e?|no\s+encontrada|non\s+trovata)\b/i;
 
 export interface SoftErrorPageInput {
   url: string;
@@ -59,9 +58,13 @@ function lastPathSegment(url: string): string {
 
 export function isSoftErrorPage(page: SoftErrorPageInput): boolean {
   if (ERROR_SLUGS.has(lastPathSegment(page.url))) return true;
-  if (page.title !== null && page.title !== undefined && ERROR_TITLE_PATTERN.test(page.title)) {
-    return true;
-  }
   const firstH1 = page.headings?.find((heading) => heading.level === 1);
-  return firstH1 !== undefined && ERROR_TITLE_PATTERN.test(firstH1.text);
+  if (firstH1 !== undefined && announcesMissingPage(firstH1.text)) return true;
+  if (!announcesMissingPage(page.title)) return false;
+  // Plan 075 K4: an error title alone is an error page only when nothing
+  // on the page says otherwise. aflatta's shop template titled 14 offer
+  // pages « Page introuvable » while each led with its offer (« Pour 2
+  // personnes »); the page's first heading is the evidence.
+  const firstHeading = page.headings?.[0];
+  return firstHeading === undefined || announcesMissingPage(firstHeading.text);
 }

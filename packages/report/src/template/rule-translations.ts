@@ -396,6 +396,11 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss:
         "Trop court ou trop long pour s'afficher correctement dans les résultats de recherche.",
     },
+    'title-announces-error': {
+      label: 'Le titre de la page annonce une page introuvable',
+      gloss:
+        "La page a un contenu, mais son titre indique qu'elle n'existe pas ; un moteur de recherche peut la traiter comme une page d'erreur et l'écarter de ses résultats.",
+    },
     'title-not-translated': {
       label: 'Titre de page non traduit',
       gloss:

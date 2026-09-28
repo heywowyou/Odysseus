@@ -116,6 +116,15 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
       },
     },
   ],
+  'title-announces-error': [
+    {
+      id: 'title-announces-error-describe-content',
+      text: {
+        fr: 'Donnez à cette page un titre qui décrit son contenu : un moteur de recherche peut écarter une page dont le titre annonce une erreur.',
+        en: 'Give this page a title that describes its content: a search engine can drop a page whose title announces an error.',
+      },
+    },
+  ],
   'title-not-translated': [
     {
       id: 'title-not-translated-translate-title',

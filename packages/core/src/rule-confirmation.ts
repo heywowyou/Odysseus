@@ -57,6 +57,8 @@ export const CUSTOM_RULE_CONFIRMATION: Readonly<Record<string, RuleConfirmation>
   'hreflang-no-return-link': confirmed(),
   'hreflang-target-invalid': confirmed(),
   'title-not-translated': confirmed(),
+  // Read true on aflatta's offer pages (live probe, 2026-09-29).
+  'title-announces-error': confirmed(),
   'heading-hierarchy-skip': confirmed(),
   'multiple-h1': confirmed(),
   'no-h1': confirmed(),

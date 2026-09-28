@@ -14,6 +14,7 @@ import {
   NOINDEX_ON_PUBLIC_PAGE_RULE_ID,
   SITEMAP_LISTS_NOINDEX_RULE_ID,
   META_DESCRIPTION_MISSING_RULE_ID,
+  TITLE_ANNOUNCES_ERROR_RULE_ID,
   lighthouseAuditsCoveredByHeadMetadata,
   type HeadMetadataCheckInput,
 } from './normalize-head-metadata.js';
@@ -466,5 +467,24 @@ describe('canonical-missing', () => {
     ).map((c) => c.ruleId);
     expect(ids).not.toContain(CANONICAL_MISSING_RULE_ID);
     expect(ids).toContain(CANONICAL_CONFLICTING_RULE_ID);
+  });
+});
+
+describe('title-announces-error', () => {
+  it('reports a content page whose title announces a missing page', () => {
+    const candidates = extractHeadMetadataCandidates(
+      baseInput({ pageUrl: 'https://www.aflatta.com/detail-produit/1', title: 'Page introuvable' }),
+    );
+    expect(ruleIds(candidates)).toContain(TITLE_ANNOUNCES_ERROR_RULE_ID);
+    expect(candidates.find((c) => c.ruleId === TITLE_ANNOUNCES_ERROR_RULE_ID)?.severity).toBe(
+      'serious',
+    );
+  });
+
+  it('stays silent on a title that only mentions an error later on', () => {
+    const candidates = extractHeadMetadataCandidates(
+      baseInput({ title: 'Nos chambres | Erreur 404 possible' }),
+    );
+    expect(ruleIds(candidates)).not.toContain(TITLE_ANNOUNCES_ERROR_RULE_ID);
   });
 });

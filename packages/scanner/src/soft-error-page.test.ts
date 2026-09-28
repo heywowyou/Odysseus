@@ -22,10 +22,32 @@ describe('isSoftErrorPage (issue #302)', () => {
   });
 
   it('catches an error page whose URL says nothing, from its title', () => {
-    expect(isSoftErrorPage(page('https://example.com/oups', '404 - Page introuvable'))).toBe(true);
-    expect(isSoftErrorPage(page('https://example.com/oops', 'Page not found | Example'))).toBe(
+    expect(isSoftErrorPage(page('https://example.com/oups', '404 - Page introuvable', []))).toBe(
       true,
     );
+    expect(
+      isSoftErrorPage(
+        page('https://example.com/oops', 'Page not found | Example', [
+          { level: 2, text: 'Page not found' },
+        ]),
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps a content page whose title alone announces an error (plan 075 K4)', () => {
+    // aflatta, 2026-09-28: the shop template titled each offer page
+    // « Page introuvable » above the offer itself.
+    expect(
+      isSoftErrorPage(
+        page('https://www.aflatta.com/detail-produit/1', 'Page introuvable', [
+          { level: 2, text: 'Pour  2 personnes' },
+        ]),
+      ),
+    ).toBe(false);
+    // The same template with no offer behind it is an error page.
+    expect(
+      isSoftErrorPage(page('https://www.aflatta.com/detail-produit/13', 'Page introuvable', [])),
+    ).toBe(true);
   });
 
   it('catches one announced only in its h1', () => {

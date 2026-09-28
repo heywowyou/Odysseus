@@ -112,6 +112,8 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   'hreflang-no-return-link': 'serious',
   'hreflang-target-invalid': 'serious',
   'title-not-translated': 'minor',
+  // Plan 075 K4: a search engine can drop the page as a soft 404.
+  'title-announces-error': 'serious',
 
   // Document structure. Overlaps accessibility, deduped downstream.
   'heading-hierarchy-skip': 'moderate',

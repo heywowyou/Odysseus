@@ -22,6 +22,7 @@
 
 import { isUtilityPageUrl, LEGAL_PATH_PATTERN } from '../urls.js';
 import type { FindingCandidate } from './candidate.js';
+import { announcesMissingPage } from './error-title.js';
 import { extractLinkCandidates, type AnchorFactInput } from './normalize-links.js';
 import { shapeIdentity } from './normalize-axe.js';
 import { severityFromCustom } from './severity.js';
@@ -98,6 +99,7 @@ export const OPENGRAPH_MISSING_RULE_ID = 'opengraph-missing';
 export const NOINDEX_ON_PUBLIC_PAGE_RULE_ID = 'noindex-on-public-page';
 export const SITEMAP_LISTS_NOINDEX_RULE_ID = 'sitemap-lists-noindex';
 export const META_DESCRIPTION_MISSING_RULE_ID = 'meta-description-missing';
+export const TITLE_ANNOUNCES_ERROR_RULE_ID = 'title-announces-error';
 
 /** Directives that are themselves `name: value`, so their colon never
  *  names a user agent in an X-Robots-Tag header. */
@@ -241,6 +243,23 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
           pageUrl,
           null,
           { title: input.title, length },
+        ),
+      );
+    }
+    // Plan 075 K4: this page has content (the soft-404 classifier kept it),
+    // yet its title tells search engines it does not exist. aflatta's shop
+    // template titled 14 offer pages « Page introuvable ».
+    if (announcesMissingPage(input.title)) {
+      candidates.push(
+        pageCandidate(
+          TITLE_ANNOUNCES_ERROR_RULE_ID,
+          'seo',
+          [],
+          'The page title announces a missing page',
+          `The <title> is "${input.title}", which announces a page that does not exist, yet the page serves its own content. A search engine can treat it as an error page and leave it out of its results.`,
+          pageUrl,
+          null,
+          { title: input.title },
         ),
       );
     }

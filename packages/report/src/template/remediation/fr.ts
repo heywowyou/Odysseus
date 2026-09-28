@@ -618,6 +618,13 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     text: "Ajustez la longueur du titre de la page pour qu'il ne soit pas tronqué dans les résultats de recherche, entre 30 et 65 caractères.",
     snippet: { kind: 'fill-in-blank', template: '<title><titre de 30 à 65 caractères></title>' },
   },
+  'title-announces-error': {
+    text: 'Donnez à ces pages un titre qui décrit leur contenu : un moteur de recherche peut écarter une page dont le titre annonce une erreur.',
+    snippet: {
+      kind: 'fill-in-blank',
+      template: '<title><titre décrivant le contenu de cette page></title>',
+    },
+  },
   'title-not-translated': {
     text: "Traduisez le titre de chaque version linguistique de la page : c'est le titre affiché en tête du résultat de recherche dans cette langue.",
     snippet: {

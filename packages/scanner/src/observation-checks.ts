@@ -31,6 +31,7 @@ const CUSTOM_RULE_CHECKS: Readonly<Record<string, string>> = {
   'meta-title-missing': 'head-metadata',
   'meta-title-length': 'head-metadata',
   'title-not-translated': 'head-metadata',
+  'title-announces-error': 'head-metadata',
   'meta-description-missing': 'head-metadata',
   'meta-description-length': 'head-metadata',
   'canonical-missing': 'head-metadata',
