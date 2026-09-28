@@ -80,6 +80,16 @@ audit that has findings. Hold each finding to the evidence bar:
   turns out broader than recorded is a new finding only when its fix has to
   change.
 
+Start every sweep by running `pnpm measure:audit-data-quality` in place and
+reading its top-level `alerts`. For each audit it lists the page checks that
+evaluated fewer than half the analysed pages they applied to (failed,
+without a record, or inconclusive, like a Tab walk held by a consent banner),
+and the axe rules whose raw detections mostly became no finding. An alert is
+where to look, not a defect: a check that did not evaluate a site looks like a
+clean site, and a filter that eats real detections looks like a fixed false
+positive, so each alert is either explained in the sweep notes or recorded as
+a finding.
+
 ### Angles (every sweep covers all of them)
 
 1. **Page population.** For each audit, list page statuses. Then check:

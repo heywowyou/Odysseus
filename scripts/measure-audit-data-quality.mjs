@@ -8,11 +8,19 @@
  * audit with a fresh in-memory normalizeAudit pass when the local core build
  * is available, and prints a JSON table suitable for the VPS closure note.
  * A path may be supplied as argv[2]; production defaults to /data/artifacts.
+ *
+ * Each audit also carries its evaluation ledger (lib/audit-evaluation-
+ * ledger.mjs): per check, on how many analysed pages it completed, failed or
+ * could not conclude, and per axe rule, how many raw detections became no
+ * finding. The top-level `alerts` list gathers the thin ones, so a check
+ * that silently stopped evaluating, or a filter that started eating real
+ * detections, shows up on the next run instead of the next sweep.
  */
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { buildEvaluationLedger } from './lib/audit-evaluation-ledger.mjs';
 
 const artifactsRoot = path.resolve(
   process.argv[2] ?? process.env.ODYSSEUS_ARTIFACTS_ROOT ?? '/data/artifacts',
@@ -299,13 +307,23 @@ async function main() {
   }
 
   let normalizeAudit;
+  let isTabWalkHeldByDialog;
   try {
-    ({ normalizeAudit } = await import(
+    ({ normalizeAudit, isTabWalkHeldByDialog } = await import(
       pathToFileURL(path.join(repoRoot, 'packages/core/dist/index.js')).href
     ));
   } catch {
     // The stored-data table remains useful without a build; the after pass is
     // explicitly marked unavailable instead of silently pretending equality.
+  }
+  let registry = [];
+  try {
+    ({ CHECK_SCOPE_REGISTRY: registry } = await import(
+      pathToFileURL(path.join(repoRoot, 'packages/scanner/dist/check-scope-coverage.js')).href
+    ));
+  } catch {
+    // Without the scanner build the ledger still reports axe filtering; the
+    // per-check evaluation needs the registry and is left empty.
   }
 
   const audits = [];
@@ -319,14 +337,26 @@ async function main() {
       missingVisitedPageScanCount,
     } = await readPageScans(auditDir, manifest);
     const before = qualityStats(storedFindings, manifest, pages);
+    const ledgerFor = (findings) =>
+      buildEvaluationLedger({
+        manifest,
+        scans: pages,
+        findings,
+        registry,
+        helpers: { isTabWalkHeldByDialog },
+      });
+    const evaluationBefore = ledgerFor(storedFindings);
     let after = null;
+    let evaluationAfter = null;
     let normalizeError;
     let afterUnavailableReason;
     if (missingVisitedPageScanCount > 0) {
       afterUnavailableReason = `${missingVisitedPageScanCount} visited page scan artifact(s) missing; after-pass skipped`;
     } else if (normalizeAudit !== undefined) {
       try {
-        after = qualityStats(normalizeAudit(normalizeInput(manifest, pages)), manifest, pages);
+        const replayed = normalizeAudit(normalizeInput(manifest, pages));
+        after = qualityStats(replayed, manifest, pages);
+        evaluationAfter = ledgerFor(replayed);
       } catch (error) {
         normalizeError = error instanceof Error ? error.message : String(error);
       }
@@ -339,6 +369,7 @@ async function main() {
       missingVisitedPageScanCount,
       before,
       after,
+      evaluation: evaluationAfter ?? evaluationBefore,
       invariants: {
         occurrenceDelta: after === null ? null : after.occurrences - before.occurrences,
         occurrencesPreserved: after === null ? null : after.occurrences === before.occurrences,
@@ -350,7 +381,10 @@ async function main() {
     });
   }
 
-  console.log(JSON.stringify({ artifactsRoot, audits }, null, 2));
+  const alerts = audits.flatMap((audit) =>
+    audit.evaluation.alerts.map((alert) => `${audit.audit}: ${alert}`),
+  );
+  console.log(JSON.stringify({ artifactsRoot, alerts, audits }, null, 2));
 }
 
 main().catch((error) => {
