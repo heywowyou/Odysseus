@@ -79,7 +79,10 @@ export function isTabWalkHeldByDialog(input: KeyboardNavigationCheckInput): bool
   if (input.tabbableContainers !== undefined) {
     return [...distinct].every((id) => (input.tabbableContainers?.[id] ?? null) !== null);
   }
-  return distinct.size >= 2;
+  // Plan 075 K1: a walk that returns to one control after focus left the
+  // tabbables (villasfoch's notification modal: its close button, then the
+  // dialog itself, 25 of 25 pages) is held as surely as a cycle of two.
+  return distinct.size >= 2 || input.focusSequence.includes(null);
 }
 
 /** Backward jumps within each pass through the page. A pass ends when focus

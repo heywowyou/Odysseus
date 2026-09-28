@@ -1403,6 +1403,21 @@ export interface ReportStrings {
     extendedPassCheckCleanLabel: string;
     extendedPassCheckFoundSingular: string;
     extendedPassCheckFoundPlural: string;
+    /** Plan 075 K1: a check that ran on some analysed pages only. Template:
+     *  {result} (the clean label or a count), {evaluated}, {missing}. */
+    extendedPassCheckPartialTemplate: string;
+    /** Plan 075 K1: a check that concluded on no analysed page. Template:
+     *  {pages}. */
+    extendedPassCheckNotEvaluatedTemplate: string;
+    extendedPassEvaluatedPageSingular: string;
+    /** Template: {count}. */
+    extendedPassEvaluatedPagePlural: string;
+    extendedPassOtherPageSingular: string;
+    /** Template: {count}. */
+    extendedPassOtherPagePlural: string;
+    extendedPassAnalysedPageSingular: string;
+    /** Template: {count}. */
+    extendedPassAnalysedPagePlural: string;
     /** Rendered only when both deterministic privacy/security checks ran
      * clean. This is a check result, never a legal-compliance conclusion. */
     privacySecurityChecksClean: string;

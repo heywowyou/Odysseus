@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ObligationAssessment } from '@odysseus/core';
+import type { AuditManifest, ObligationAssessment } from '@odysseus/core';
 import {
   lowercaseInitial,
   renderLegalCitationParagraph,
@@ -1087,5 +1087,77 @@ describe('renderMethodology legal-notice coverage sentence', () => {
       expect(en).not.toContain('Mentions légales link');
       expect(en).toContain('read the text of the 5 visited pages');
     }
+  });
+});
+
+describe('renderMethodology complementary-check note over the pages each check concluded on', () => {
+  const withCoverage = async (
+    extendedFor: (index: number) => Record<string, unknown>,
+  ): Promise<AuditManifest> => {
+    const manifest = await loadSmallSiteManifest();
+    let index = 0;
+    return {
+      ...manifest,
+      pages: manifest.pages.map((page) =>
+        page.status !== 'visited'
+          ? page
+          : {
+              ...page,
+              analysisCoverage: {
+                plannerVersion: 'v3',
+                role: 'content',
+                confidence: 'high',
+                reasonCodes: [],
+                passes: {
+                  rendered: { outcome: 'completed' },
+                  axe: { outcome: 'completed' },
+                  extended: extendedFor(index++),
+                  lighthouse: { outcome: 'not-planned' },
+                },
+              },
+            },
+      ),
+    } as AuditManifest;
+  };
+
+  it('keeps the single clean sentence when every check concluded on every page', async () => {
+    const manifest = await withCoverage(() => ({ outcome: 'completed' }));
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
+    expect(html).toContain(getStrings('fr').methodology.extendedPassNoneFoundNote.slice(0, 40));
+  });
+
+  it('states no clean result for checks that never concluded (clos-sainte-marie, 2026-09-28)', async () => {
+    const manifest = await withCoverage(() => ({
+      outcome: 'partial',
+      failedCheckIds: ['form-error-handling', 'keyboard-navigation', 'reflow'],
+    }));
+    const fr = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
+    expect(fr).not.toContain('aucun piège au clavier');
+    expect(fr).toContain('pièges au clavier (contrôle non abouti sur les 11 pages analysées)');
+    expect(fr).toContain('ordre de focus (contrôle non abouti sur les 11 pages analysées)');
+    expect(fr).toContain(
+      'erreurs de formulaire non associées à leur champ (contrôle non abouti sur les 11 pages analysées)',
+    );
+    expect(fr).toContain('sous-titres vidéo (aucune anomalie détectée)');
+    const en = renderMethodology(getStrings('en'), 11, manifest, 'en');
+    expect(en).toContain('keyboard traps (the check did not complete on the 11 analysed pages)');
+  });
+
+  it('states a result only over the pages a held walk left (grandhoteldesalpes, 2026-09-24)', async () => {
+    const manifest = await withCoverage((index) =>
+      index < 4
+        ? { outcome: 'completed' }
+        : { outcome: 'completed', inconclusiveCheckIds: ['keyboard-navigation'] },
+    );
+    const fr = renderMethodology(getStrings('fr'), 11, manifest, 'fr', undefined, [
+      { findingId: 'f1', ruleId: 'keyboard-trap' },
+    ]);
+    expect(fr).toContain(
+      'pièges au clavier (1 constat détecté sur 4 pages évaluées, contrôle non abouti sur les 7 autres pages)',
+    );
+    expect(fr).toContain(
+      'ordre de focus (aucune anomalie détectée sur 4 pages évaluées, contrôle non abouti sur les 7 autres pages)',
+    );
+    expect(fr).toContain('sous-titres vidéo (aucune anomalie détectée)');
   });
 });

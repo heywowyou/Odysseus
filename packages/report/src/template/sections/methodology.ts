@@ -452,31 +452,104 @@ function renderExtendedPassNote(
   strings: ReportStrings,
   language: ReportLanguage,
   findings: readonly Pick<Finding, 'findingId' | 'ruleId'>[],
+  manifest: AuditManifest,
 ): string {
   const m = strings.methodology;
+  const coverage = extendedCheckCoverage(manifest);
   const anyFound = findings.some((f) => EXTENDED_PASS_RULE_IDS.includes(f.ruleId));
-  if (!anyFound) return m.extendedPassNoneFoundNote;
+  const everyCheckEverywhere =
+    coverage === undefined ||
+    [...coverage.evaluated.values()].every((count) => count === coverage.analysed);
+  if (!anyFound && everyCheckEverywhere) return m.extendedPassNoneFoundNote;
 
-  const checks: [string, string][] = [
-    [m.extendedPassCheckKeyboardTrapsLabel, KEYBOARD_TRAP_RULE_ID],
-    [m.extendedPassCheckFocusOrderLabel, FOCUS_ORDER_MISMATCH_RULE_ID],
-    [m.extendedPassCheckFormErrorsLabel, FORM_ERROR_NOT_ASSOCIATED_RULE_ID],
-    [m.extendedPassCheckVideoCaptionsLabel, VIDEO_MISSING_CAPTIONS_RULE_ID],
-    [m.extendedPassCheckPlaceholderLabelsLabel, PLACEHOLDER_ONLY_LABEL_RULE_ID],
+  const checks: [string, string, string][] = [
+    [m.extendedPassCheckKeyboardTrapsLabel, KEYBOARD_TRAP_RULE_ID, 'keyboard-navigation'],
+    [m.extendedPassCheckFocusOrderLabel, FOCUS_ORDER_MISMATCH_RULE_ID, 'keyboard-navigation'],
+    [m.extendedPassCheckFormErrorsLabel, FORM_ERROR_NOT_ASSOCIATED_RULE_ID, 'form-error-handling'],
+    [m.extendedPassCheckVideoCaptionsLabel, VIDEO_MISSING_CAPTIONS_RULE_ID, 'video-captions'],
+    [
+      m.extendedPassCheckPlaceholderLabelsLabel,
+      PLACEHOLDER_ONLY_LABEL_RULE_ID,
+      'placeholder-labels',
+    ],
   ];
+  const pages = (count: number, singular: string, plural: string): string =>
+    count === 1 ? singular : fillTemplate(plural, { count: formatNumber(count, language) });
 
   const checkList = checks
-    .map(([label, ruleId]) => {
+    .map(([label, ruleId, checkId]) => {
       const count = findings.filter((f) => f.ruleId === ruleId).length;
-      const status =
+      const result =
         count === 0
           ? m.extendedPassCheckCleanLabel
           : `${formatNumber(count, language)} ${pluralize(language, count, m.extendedPassCheckFoundSingular, m.extendedPassCheckFoundPlural)}`;
+      const evaluated = coverage?.evaluated.get(checkId) ?? coverage?.analysed;
+      if (coverage === undefined || evaluated === undefined || evaluated === coverage.analysed) {
+        return `${label} (${result})`;
+      }
+      // Plan 075 K1: a clean result holds only over the pages the check
+      // concluded on; the Tab walk held by a consent banner on all 151
+      // pages of one audit used to read 'aucune anomalie détectée'.
+      if (evaluated === 0 && count === 0) {
+        const status = fillTemplate(m.extendedPassCheckNotEvaluatedTemplate, {
+          pages: pages(
+            coverage.analysed,
+            m.extendedPassAnalysedPageSingular,
+            m.extendedPassAnalysedPagePlural,
+          ),
+        });
+        return `${label} (${status})`;
+      }
+      const status = fillTemplate(m.extendedPassCheckPartialTemplate, {
+        result,
+        evaluated: pages(
+          evaluated,
+          m.extendedPassEvaluatedPageSingular,
+          m.extendedPassEvaluatedPagePlural,
+        ),
+        missing: pages(
+          coverage.analysed - evaluated,
+          m.extendedPassOtherPageSingular,
+          m.extendedPassOtherPagePlural,
+        ),
+      });
       return `${label} (${status})`;
     })
     .join(', ');
 
   return fillTemplate(m.extendedPassResultTemplate, { checks: checkList });
+}
+
+/** Per extended-pass check, on how many analysed pages it concluded: the
+ *  pass ran, the check did not fail and did not end inconclusive. Undefined
+ *  for audits that predate page coverage, which keep the findings-only
+ *  note. */
+function extendedCheckCoverage(
+  manifest: AuditManifest,
+): { analysed: number; evaluated: Map<string, number> } | undefined {
+  const analysedPages = manifest.pages.filter((page) => page.status === 'visited');
+  if (
+    analysedPages.length === 0 ||
+    analysedPages.some((page) => page.analysisCoverage === undefined)
+  ) {
+    return undefined;
+  }
+  const checkIds = [
+    'keyboard-navigation',
+    'form-error-handling',
+    'video-captions',
+    'placeholder-labels',
+  ];
+  const evaluated = new Map(checkIds.map((id) => [id, 0]));
+  for (const page of analysedPages) {
+    const pass = page.analysisCoverage!.passes.extended;
+    if (pass.outcome !== 'completed' && pass.outcome !== 'partial') continue;
+    for (const id of checkIds) {
+      if (pass.failedCheckIds?.includes(id) || pass.inconclusiveCheckIds?.includes(id)) continue;
+      evaluated.set(id, evaluated.get(id)! + 1);
+    }
+  }
+  return { analysed: analysedPages.length, evaluated };
 }
 
 /** P0.1 (2026-08-21 La Corniche feedback pass): the generic "n'a pas
@@ -653,7 +726,7 @@ export function renderMethodology(
     findings,
     resolvedSirenSourceUrl,
   );
-  const extendedPassNote = renderExtendedPassNote(strings, language, findings);
+  const extendedPassNote = renderExtendedPassNote(strings, language, findings, manifest);
   const mentionsLegalesCoverageNote = renderMentionsLegalesCoverageNote(
     strings,
     language,

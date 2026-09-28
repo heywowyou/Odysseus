@@ -235,6 +235,7 @@ const auditPassCoverageSchema = new Schema(
       enum: ['completed', 'partial', 'failed', 'not-planned'],
     },
     failedCheckIds: { type: [String], default: undefined },
+    inconclusiveCheckIds: { type: [String], default: undefined },
   },
   { _id: false },
 );

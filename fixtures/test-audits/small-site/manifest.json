@@ -266,7 +266,7 @@
   ],
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "78133a9c18ac3e45",
+    "normalizationFingerprint": "ca51aaa849c029b5",
     "findingsDigest": "sha256:d6cf0ae36a391bd3c1d9c9a22eab152254655e7b67c0e2acf1cb5b90667579bc"
   }
 }

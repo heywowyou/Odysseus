@@ -999,6 +999,15 @@ export const en: ReportStrings = {
     extendedPassCheckCleanLabel: 'no issue detected',
     extendedPassCheckFoundSingular: 'finding detected',
     extendedPassCheckFoundPlural: 'findings detected',
+    extendedPassCheckPartialTemplate:
+      '{result} on {evaluated}; the check did not complete on {missing}',
+    extendedPassCheckNotEvaluatedTemplate: 'the check did not complete on {pages}',
+    extendedPassEvaluatedPageSingular: '1 evaluated page',
+    extendedPassEvaluatedPagePlural: '{count} evaluated pages',
+    extendedPassOtherPageSingular: 'the other page',
+    extendedPassOtherPagePlural: 'the {count} other pages',
+    extendedPassAnalysedPageSingular: 'the analysed page',
+    extendedPassAnalysedPagePlural: 'the {count} analysed pages',
     privacySecurityChecksClean:
       'The automated security-header and cookie-consent checks were completed. No issue was detected by those checks. This is not a legal-compliance conclusion.',
     privacySecurityChecksUnavailable:

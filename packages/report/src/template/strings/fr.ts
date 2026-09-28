@@ -1130,6 +1130,14 @@ export const fr: ReportStrings = {
     extendedPassCheckCleanLabel: 'aucune anomalie détectée',
     extendedPassCheckFoundSingular: 'constat détecté',
     extendedPassCheckFoundPlural: 'constats détectés',
+    extendedPassCheckPartialTemplate: '{result} sur {evaluated}, contrôle non abouti sur {missing}',
+    extendedPassCheckNotEvaluatedTemplate: 'contrôle non abouti sur {pages}',
+    extendedPassEvaluatedPageSingular: '1 page évaluée',
+    extendedPassEvaluatedPagePlural: '{count} pages évaluées',
+    extendedPassOtherPageSingular: "l'autre page",
+    extendedPassOtherPagePlural: 'les {count} autres pages',
+    extendedPassAnalysedPageSingular: 'la page analysée',
+    extendedPassAnalysedPagePlural: 'les {count} pages analysées',
     privacySecurityChecksClean:
       'Les contrôles automatisés des en-têtes de sécurité et du consentement aux cookies ont été exécutés. Aucun problème n’a été détecté par ces contrôles. Cela ne constitue pas une conclusion de conformité juridique.',
     privacySecurityChecksUnavailable:
@@ -1215,7 +1223,7 @@ export const fr: ReportStrings = {
     mentionsLegalesCoverageTemplate:
       "La vérification automatique a porté sur la page atteinte depuis le lien Mentions légales ({url}). Aucun identifiant reconnu (numéro SIREN, mention RCS ou numéro de TVA) n'y a été trouvé. Des informations légales peuvent exister ailleurs, par exemple sur une page non visitée par le contrôle, dans un document séparé ou auprès d'un prestataire externe. Cette constatation décrit ce que le contrôle a observé et ne constitue pas une conclusion sur vos obligations. Nous vous recommandons de confirmer votre situation auprès d'un conseil juridique.",
     mentionsLegalesFallbackCoverageTemplate:
-      "Aucun lien vers des mentions légales n'a été trouvé : la vérification automatique a porté sur le texte {pages}. Aucun identifiant reconnu (numéro SIREN, mention RCS ou numéro de TVA) n'y a été trouvé. Des informations légales peuvent exister ailleurs, par exemple sur une page non visitée par le contrôle, dans un document séparé ou auprès d'un prestataire externe. Cette constatation décrit ce que le contrôle a observé et ne constitue pas une conclusion sur vos obligations. Nous vous recommandons de confirmer votre situation auprès d'un conseil juridique.",
+      "Aucun lien vers des mentions légales n'a été trouvé : la vérification automatique a porté sur le texte {pages}. Aucun identifiant reconnu (numéro SIREN, mention RCS ou numéro de TVA) n'y a été trouvé. Des informations légales peuvent exister ailleurs, par exemple sur une page non visitée par le contrôle, dans un document séparé ou auprès d'un prestataire externe. Cette constatation décrit ce que le contrôle a observé et ne constitue pas une conclusion sur vos obligations. Nous vous recommandons de confirmer votre situation auprès d'un conseil juridique.",
     mentionsLegalesFallbackPageSingular: 'de la page visitée',
     mentionsLegalesFallbackPagePlural: 'des {count} pages visitées',
     // P0.1 (2026-08-21 La Corniche feedback pass): the generic "n'a pas

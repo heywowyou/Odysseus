@@ -32,6 +32,7 @@ import {
   isBlockedRender,
   lighthouseFinalUrl,
   lighthouseLandedOffSite,
+  markInconclusiveChecks,
   markLanguageRedirects,
   type AuditConfigSnapshot,
   type AuditManifest,
@@ -778,14 +779,24 @@ export async function writeAuditArtifacts(
     crawl: input.siteResult.crawl,
     // Plan 075 I1: a redirect onto the page's own translation only chose a
     // language; the landing page's alternates are known only now.
-    pages: markLanguageRedirects(
-      manifestPages,
+    pages: markInconclusiveChecks(
+      markLanguageRedirects(
+        manifestPages,
+        normalizePages.map((page) => ({
+          pageUrl: page.url,
+          alternateUrls: [
+            ...(page.headMetadata?.hreflangLinks ?? []).map((link) => link.href),
+            ...(page.headMetadata?.languageSwitcherLinks ?? []).map((link) => link.href),
+          ],
+        })),
+      ),
+      // Plan 075 K1: which checks ran without concluding, for the report.
       normalizePages.map((page) => ({
         pageUrl: page.url,
-        alternateUrls: [
-          ...(page.headMetadata?.hreflangLinks ?? []).map((link) => link.href),
-          ...(page.headMetadata?.languageSwitcherLinks ?? []).map((link) => link.href),
-        ],
+        ...(page.keyboardNavigation !== undefined
+          ? { keyboardNavigation: page.keyboardNavigation }
+          : {}),
+        ...(page.videoCaptions !== undefined ? { videoCaptions: page.videoCaptions } : {}),
       })),
     ),
     ...(input.siteResult.pushbackEvents !== undefined

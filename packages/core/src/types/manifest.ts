@@ -179,6 +179,10 @@ export interface AuditPassCoverage {
   /** Stable identifiers from the scanner check-scope registry. Raw error
    *  text remains in the existing page `errors` fields. */
   failedCheckIds?: string[];
+  /** Plan 075 K1: checks that ran on the page without concluding (a Tab walk
+   *  an open dialog held, a video whose audio could not be read). Their
+   *  clean result says nothing about the page. */
+  inconclusiveCheckIds?: string[];
 }
 
 export type SurfaceSampleReason =

@@ -20,6 +20,7 @@ import {
   isBlockedRender,
   lighthouseFinalUrl,
   lighthouseLandedOffSite,
+  markInconclusiveChecks,
   markLanguageRedirects,
   normalizeAudit,
   type AuditManifest,
@@ -237,7 +238,18 @@ export async function renormalizeAudit(
 
   const renormalizedManifest: AuditManifest = {
     ...manifest,
-    pages: manifestPages,
+    // Plan 075 K1: recorded from the stored results, so a refresh gives an
+    // older audit the same report note as a new scan.
+    pages: markInconclusiveChecks(
+      manifestPages,
+      pages.map((page) => ({
+        pageUrl: page.url,
+        ...(page.keyboardNavigation !== undefined
+          ? { keyboardNavigation: page.keyboardNavigation }
+          : {}),
+        ...(page.videoCaptions !== undefined ? { videoCaptions: page.videoCaptions } : {}),
+      })),
+    ),
     translationClusters,
     coverageLimitations: normalizeInput.coverageLimitations,
     renormalizedAt: new Date().toISOString(),

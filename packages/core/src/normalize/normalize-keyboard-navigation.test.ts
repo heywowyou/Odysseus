@@ -180,3 +180,28 @@ describe('focus-order inversions are counted within one pass', () => {
     ).toHaveLength(1);
   });
 });
+
+describe('a stored walk that returns to one control', () => {
+  // villasfoch, 2026-09-22: every walk alternated the close button of
+  // `#notificationModal` with a focus outside the tabbables, 25 of 25 pages.
+  const modalWalk = baseInput({
+    tabbableCount: 17,
+    tabbableSelectors: Array.from({ length: 17 }, (_, index) =>
+      index === 12
+        ? '#notificationModal > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > button:nth-child(1)'
+        : `a:nth-of-type(${index + 1})`,
+    ),
+    focusSequence: [12, null, 12, null, 12, null, 12, null, 12, null, 12, null],
+  });
+
+  it('is held, so it states nothing about the page', () => {
+    expect(isTabWalkHeldByDialog(modalWalk)).toBe(true);
+    expect(extractKeyboardNavigationCandidates(modalWalk)).toEqual([]);
+  });
+
+  it('is not held on a page with a single tabbable', () => {
+    expect(
+      isTabWalkHeldByDialog(baseInput({ tabbableCount: 1, focusSequence: [0, null, 0, null] })),
+    ).toBe(false);
+  });
+});
