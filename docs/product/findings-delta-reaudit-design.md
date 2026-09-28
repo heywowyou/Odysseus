@@ -137,6 +137,16 @@ rare cases this can merge a fixed defect and a new one of the same rule on the
 same pages; that was accepted because normalization already treats same-rule,
 same-scope selectors as one problem.
 
+**Split and merged scopes (issue #555, 2026-09-28).** That pairing is one to
+one, but normalization can store one defect as two findings in one run (two
+page scopes) and as one merged finding in the other. The finding left over
+after pairing is then the rest of the same defect: same rule, category and
+title on pages its counterpart covers beyond its own partner. It is counted
+`persistent`, with its own side only, instead of `resolved` or `new`. A
+finding that merely shares a page with a paired one (another surface, for
+example) overlaps no such remainder and keeps its own class, and a
+coverage-based class (`newly-observable`, `not-comparable`) always wins.
+
 Comparability boundary, on record: if `computeDedupeKey` ever changes (inputs,
 length, or pre-hash normalization), keys stop being comparable across that
 boundary for all historical runs. This document is the record of that.

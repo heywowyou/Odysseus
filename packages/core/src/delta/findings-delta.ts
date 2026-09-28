@@ -213,6 +213,33 @@ function pairRescopedFindings(
   return pairs;
 }
 
+/** Issue #555: one defect stored as two findings in one run (split page
+ *  scopes) and as one merged finding in the other pairs only once. The
+ *  paired finding then covers pages its partner does not, and the leftover
+ *  is the rest of the same defect: same rule, category and title on those
+ *  very pages. `remainders` holds, per paired finding, its pages outside its
+ *  partner. A separate finding that merely shares a page with a paired one
+ *  (another surface, say) overlaps no remainder and keeps its own class. */
+function isRestOfPairedDefect(
+  finding: DeltaFinding,
+  others: Iterable<DeltaFinding>,
+  remainders: ReadonlyMap<string, ReadonlySet<string>>,
+): boolean {
+  for (const other of others) {
+    const remainder = remainders.get(other.dedupeKey);
+    if (
+      remainder !== undefined &&
+      other.ruleId === finding.ruleId &&
+      other.category === finding.category &&
+      other.title === finding.title &&
+      finding.pageUrls.some((page) => remainder.has(page))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function compareKeys(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
@@ -305,7 +332,19 @@ export function computeFindingsDelta(
     title: finding.title,
     current: side(finding),
   });
+  const baselineRemainders = new Map<string, ReadonlySet<string>>();
+  const currentRemainders = new Map<string, ReadonlySet<string>>();
   const pushPaired = (prior: DeltaFinding, finding: DeltaFinding): void => {
+    const priorPages = new Set(prior.pageUrls);
+    const pages = new Set(finding.pageUrls);
+    baselineRemainders.set(
+      prior.dedupeKey,
+      new Set(prior.pageUrls.filter((page) => !pages.has(page))),
+    );
+    currentRemainders.set(
+      finding.dedupeKey,
+      new Set(finding.pageUrls.filter((page) => !priorPages.has(page))),
+    );
     const moved = prior.severity !== finding.severity && !changedSeveritySuppressed;
     rows.push({
       class: moved ? 'changed-severity' : 'persistent',
@@ -336,6 +375,13 @@ export function computeFindingsDelta(
      * had is Odysseus seeing further, not the site getting worse. One the
      * current instruments can no longer support is not called new either. */
     const observability = observationClass(finding, 'current');
+    if (
+      observability === undefined &&
+      isRestOfPairedDefect(finding, before.values(), baselineRemainders)
+    ) {
+      rows.push({ class: 'persistent', ...currentRow(finding) });
+      continue;
+    }
     rows.push({
       class:
         observability?.kind === 'newly-observable'
@@ -352,6 +398,20 @@ export function computeFindingsDelta(
     /* A finding whose check or surface is no longer comparable is not a
      * repair: the current run could not re-check it. */
     const observability = observationClass(prior, 'baseline');
+    if (
+      observability === undefined &&
+      isRestOfPairedDefect(prior, after.values(), currentRemainders)
+    ) {
+      rows.push({
+        class: 'persistent',
+        dedupeKey: prior.dedupeKey,
+        ruleId: prior.ruleId,
+        category: prior.category,
+        title: prior.title,
+        baseline: side(prior),
+      });
+      continue;
+    }
     rows.push({
       class: observability?.kind === 'not-comparable' ? 'not-comparable' : 'resolved',
       ...(observability !== undefined ? { coverage: observability } : {}),

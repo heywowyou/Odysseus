@@ -293,8 +293,9 @@ describe('rescoped findings', () => {
         run('after', findings),
       );
 
+      // The narrow finding is the rest of the same defect (issue #555).
       expect(delta.rows.map((row) => [row.class, row.dedupeKey, row.baseline?.findingId])).toEqual([
-        ['new', 'c-narrow', undefined],
+        ['persistent', 'c-narrow', undefined],
         ['persistent', 'c-wide', 'f-b1'],
       ]);
     }
@@ -315,5 +316,41 @@ describe('rescoped findings', () => {
       'changed-severity': 0,
     });
     expect(delta.rows.find((row) => row.class === 'persistent')?.dedupeKey).toBe('same');
+  });
+
+  // Issue #555: one defect stored as two findings in one run (split page
+  // scopes) and as one merged finding in the other.
+  it('reports no resolved finding when two baseline findings merged into one', () => {
+    const C = 'https://hotel.fr/c';
+    const delta = computeFindingsDelta(
+      run('before', [contrast('b-ab', 'serious', [HOME, A]), contrast('b-cd', 'serious', [B, C])]),
+      run('after', [contrast('c-all', 'serious', [HOME, A, B, C])]),
+    );
+
+    expect(delta.counts.resolved).toBe(0);
+    expect(delta.counts.new).toBe(0);
+    expect(delta.counts.persistent).toBe(2);
+  });
+
+  it('reports no new finding when one baseline finding split into two', () => {
+    const C = 'https://hotel.fr/c';
+    const delta = computeFindingsDelta(
+      run('before', [contrast('b-all', 'serious', [HOME, A, B, C])]),
+      run('after', [contrast('c-ab', 'serious', [HOME, A]), contrast('c-cd', 'serious', [B, C])]),
+    );
+
+    expect(delta.counts.new).toBe(0);
+    expect(delta.counts.resolved).toBe(0);
+    expect(delta.counts.persistent).toBe(2);
+  });
+
+  it('still resolves the part of a split defect whose pages are gone', () => {
+    const C = 'https://hotel.fr/c';
+    const delta = computeFindingsDelta(
+      run('before', [contrast('b-ab', 'serious', [HOME, A]), contrast('b-cd', 'serious', [B, C])]),
+      run('after', [contrast('b-ab', 'serious', [HOME, A])]),
+    );
+
+    expect(delta.counts).toMatchObject({ resolved: 1, persistent: 1, new: 0 });
   });
 });
