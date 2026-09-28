@@ -371,7 +371,9 @@ const DOM_READ_RETRY_TIMEOUT_MS = 5_000;
  * nothing here to justify dropping the page.
  */
 export function isNonHtmlContentType(contentType: string | undefined): boolean {
-  return contentType !== undefined && !contentType.toLowerCase().includes('text/html');
+  if (contentType === undefined) return false;
+  const type = contentType.toLowerCase();
+  return !type.includes('text/html') && !type.includes('application/xhtml+xml');
 }
 
 /** The crawl loop's mutable in-memory structures, rebuilt wholesale from a
@@ -1270,15 +1272,6 @@ export async function crawlSite(
                 ...(httpStatus !== undefined ? { httpStatus } : {}),
                 ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
               });
-            } else if (isNonHtmlContentType(contentType)) {
-              recordFromIteration({
-                url: item.url,
-                depth: item.depth,
-                status: 'skipped-non-html',
-                discoveryMethod,
-                ...(httpStatus !== undefined ? { httpStatus } : {}),
-                ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
-              });
             } else if (observed.auditedDocumentWall) {
               recordFromIteration({
                 url: item.url,
@@ -1302,6 +1295,18 @@ export async function crawlSite(
                 url: item.url,
                 depth: item.depth,
                 status: 'http-error-status',
+                discoveryMethod,
+                ...(httpStatus !== undefined ? { httpStatus } : {}),
+                ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+              });
+            } else if (isNonHtmlContentType(contentType)) {
+              // Issue #542: only a successful answer is a file to skip. A WAF
+              // or rate limiter's text/plain 429 or 403, or a bucket's XML 404,
+              // is a refusal or a dead link and is classified above.
+              recordFromIteration({
+                url: item.url,
+                depth: item.depth,
+                status: 'skipped-non-html',
                 discoveryMethod,
                 ...(httpStatus !== undefined ? { httpStatus } : {}),
                 ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),

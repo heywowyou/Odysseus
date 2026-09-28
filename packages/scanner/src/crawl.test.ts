@@ -29,6 +29,10 @@ describe('isNonHtmlContentType', () => {
   it('flags a PDF Content-Type as non-HTML', () => {
     expect(isNonHtmlContentType('application/pdf')).toBe(true);
   });
+
+  it('treats XHTML as HTML', () => {
+    expect(isNonHtmlContentType('application/xhtml+xml; charset=utf-8')).toBe(false);
+  });
 });
 
 describe('isSameSiteHostname', () => {
@@ -144,6 +148,7 @@ const ROBOTS_BODY = 'User-agent: *\nAllow: /\n';
 function makeStatusFakeBrowser(
   statusFor: (url: string) => number,
   anchorsFor: (url: string) => FakeAnchorSpec[] = () => [],
+  contentTypeFor: (url: string) => string = () => 'text/html; charset=utf-8',
 ): Browser {
   const context = {
     setDefaultTimeout: () => {},
@@ -156,7 +161,7 @@ function makeStatusFakeBrowser(
           currentUrl = url;
           return {
             status: () => statusFor(url),
-            headers: () => ({ 'content-type': 'text/html; charset=utf-8' }),
+            headers: () => ({ 'content-type': contentTypeFor(url) }),
           };
         },
         url: () => currentUrl,
@@ -582,6 +587,44 @@ describe('crawlSite robots.txt enforcement', () => {
 describe('crawlSite non-2xx responses (issue #39)', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('classifies a non-HTML error answer by its status, not as a skipped file (issue #542)', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    const statuses: Record<string, number> = {
+      'https://example.com/limited': 429,
+      'https://example.com/gone': 404,
+    };
+    const result = await crawlSite('https://example.com', {
+      browser: makeStatusFakeBrowser(
+        (url) => statuses[url] ?? 200,
+        (url) =>
+          url === 'https://example.com/'
+            ? [{ href: '/limited' }, { href: '/gone' }, { href: '/page.xhtml' }, { href: '/file' }]
+            : [],
+        (url) =>
+          url === 'https://example.com/limited'
+            ? 'text/plain'
+            : url === 'https://example.com/gone'
+              ? 'application/xml'
+              : url === 'https://example.com/page.xhtml'
+                ? 'application/xhtml+xml'
+                : url === 'https://example.com/file'
+                  ? 'application/json'
+                  : 'text/html',
+      ),
+      maxPages: 10,
+      maxDepth: 5,
+      delayMs: 0,
+    });
+
+    const byUrl = (path: string) =>
+      result.pages.find((page) => page.url === `https://example.com${path}`);
+    // A rate limiter's answer is a refusal the coverage gate counts.
+    expect(byUrl('/limited')).toMatchObject({ status: 'blocked', httpStatus: 429 });
+    expect(byUrl('/gone')).toMatchObject({ status: 'http-error-status', httpStatus: 404 });
+    expect(byUrl('/page.xhtml')?.status).toBe('visited');
+    expect(byUrl('/file')?.status).toBe('skipped-non-html');
   });
 
   it('records a 404 as http-error-status with its failure reason, not as visited', async () => {
