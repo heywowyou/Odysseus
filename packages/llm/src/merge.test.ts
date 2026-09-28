@@ -5,14 +5,18 @@ import { mergeAnalysisPasses } from './merge.js';
 import type { StructureDocument } from './structure-schema.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
-function buildFinding(findingId: string, wcagCriteria: string[]): Finding {
+function buildFinding(
+  findingId: string,
+  wcagCriteria: string[],
+  category: Finding['category'] = 'accessibility',
+): Finding {
   return {
     findingId,
     auditId: 'audit-1',
     schemaVersion: 1,
     source: 'axe',
     ruleId: 'color-contrast',
-    category: 'accessibility',
+    category,
     severity: 'serious',
     wcagCriteria,
     title: 'Insufficient color contrast',
@@ -27,10 +31,13 @@ function buildFinding(findingId: string, wcagCriteria: string[]): Finding {
   };
 }
 
-// f2 deliberately carries a wcagCriteria value even though its theme's
-// category is 'seo' - legalRelevance must gate on the theme's category,
-// not merely on whether the underlying finding happens to have a WCAG tag.
-const filteredFindings: Finding[] = [buildFinding('f1', ['1.4.3']), buildFinding('f2', ['1.1.1'])];
+// f2 deliberately carries a wcagCriteria value although it is an seo
+// finding - legalRelevance comes from the theme's accessibility findings,
+// not merely from any finding that happens to have a WCAG tag.
+const filteredFindings: Finding[] = [
+  buildFinding('f1', ['1.4.3']),
+  buildFinding('f2', ['1.1.1'], 'seo'),
+];
 
 function buildStructureDoc(): Pick<StructureDocument, 'themes' | 'quickWins' | 'overallRisk'> {
   return {
@@ -108,6 +115,20 @@ describe('mergeAnalysisPasses', () => {
       'Critère 1.4.3 (Contraste minimum), WCAG 2.2 niveau AA, référencé par la norme EN 301 549.',
     );
     expect(seoTheme?.legalRelevance).toBeUndefined();
+  });
+
+  it('builds legalRelevance for accessibility findings whatever category the model gave their theme', () => {
+    const structure = buildStructureDoc();
+    const merged = mergeAnalysisPasses(
+      structure,
+      buildWritingOutput(),
+      [buildFinding('f1', ['1.4.3']), buildFinding('f2', ['1.1.1'])],
+      'en',
+    );
+
+    expect(merged.themes.find((t) => t.findingIds.includes('f2'))?.legalRelevance).toContain(
+      '1.1.1',
+    );
   });
 
   it('carries structure-decided fields and writing-decided prose onto the same theme', () => {

@@ -12,6 +12,9 @@ export function assertSeniorReportPlan(
   evidence: ApprovedAuditEvidencePayload,
 ): void {
   const findings = new Set(evidence.findings.map((finding) => finding.findingId));
+  const categoryById = new Map(
+    evidence.findings.map((finding) => [finding.findingId, finding.category]),
+  );
   const keys = new Set<string>();
   const membership = new Map<string, string>();
   for (const project of plan.remediationProjects) {
@@ -23,6 +26,21 @@ export function assertSeniorReportPlan(
     const unknown = project.findingIds.filter((id) => !findings.has(id));
     if (unknown.length)
       throw new Error(`Remediation project references unknown finding(s): ${unknown.join(', ')}`);
+    // Issue #536: a project inherits the category of the findings it
+    // groups (llm-output.ts StoredThemeCategory). The category sets the
+    // card's badge, so the model may only pick one its findings carry; a
+    // geo finding may also sit under seo.
+    const carried = new Set(
+      project.findingIds.flatMap((id) => {
+        const category = categoryById.get(id);
+        if (category === undefined) return [];
+        return category === 'geo' ? ['geo', 'seo'] : [category];
+      }),
+    );
+    if (!carried.has(project.category))
+      throw new Error(
+        `Remediation project ${project.projectKey} is labelled ${project.category} but its findings are ${[...carried].sort().join('/')}`,
+      );
     for (const id of project.findingIds) {
       const owner = membership.get(id);
       if (owner && owner !== project.projectKey)

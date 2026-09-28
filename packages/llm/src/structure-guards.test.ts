@@ -3,6 +3,7 @@ import type { Finding } from '@odysseus/core';
 import {
   findDuplicateStructureFindingIds,
   findInventedStructureFindingIds,
+  findThemeCategoryMismatches,
   findUnreferencedStructureFindingIds,
 } from './structure-guards.js';
 import { parseStructureDocument, type StructurePassOutput } from './structure-schema.js';
@@ -192,5 +193,42 @@ describe('findDuplicateStructureFindingIds', () => {
         generatedAt: '2026-09-23T00:00:00.000Z',
       }),
     ).toThrow('structure document contains repeated finding ID(s): f1');
+  });
+});
+
+describe('findThemeCategoryMismatches', () => {
+  const theme = (
+    findingIds: string[],
+    category: StructurePassOutput['themes'][number]['category'],
+  ) => ({
+    findingIds,
+    category,
+    effort: 'low' as const,
+    impact: 'high' as const,
+    priorityRank: 1,
+  });
+  const seoFinding = { ...buildFinding('s1'), category: 'seo' as const };
+  const geoFinding = { ...buildFinding('g1'), category: 'geo' as const };
+
+  it('rejects an accessibility theme labelled seo', () => {
+    expect(findThemeCategoryMismatches({ themes: [theme(['f1', 'f2'], 'seo')] }, findings)).toEqual(
+      ['theme 1 is labelled seo but its findings are accessibility'],
+    );
+  });
+
+  it('accepts a label one of its findings carries, and geo findings under seo', () => {
+    const all = [...findings, seoFinding, geoFinding];
+    expect(
+      findThemeCategoryMismatches(
+        {
+          themes: [
+            theme(['f1', 's1'], 'seo'),
+            theme(['g1'], 'seo'),
+            theme(['f2'], 'accessibility'),
+          ],
+        },
+        all,
+      ),
+    ).toEqual([]);
   });
 });

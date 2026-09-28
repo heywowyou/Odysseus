@@ -220,9 +220,12 @@ The mechanism is the outreach loop's, already measured there (section 11,
 issue #12); it strengthens every guard in the loop, not only the severity
 one. The guard itself is unchanged - rejection before render is the
 behavior that held the line - and the structure pass still re-sends an
-identical conversation: its only guards are invented-ID and schema shape
-over dense, short output, and it has no observed failure, so it keeps its
-blind retry until one appears.
+identical conversation: its only guards are invented-ID, repeated-ID,
+theme-category and schema shape over dense, short output, and it has no
+observed failure, so it keeps its blind retry until one appears. The
+theme-category guard (issue #536) rejects a theme whose `category` is not
+one its own findings carry (geo findings count as seo): the category sets
+the card's badge, so it may not depend on a model label.
 
 **Amended 2026-09-01 (plan 019 operator review): rate-limit errors are
 paced, not burned through.** An API-error retry in either pass now waits
@@ -842,8 +845,9 @@ on.
 **Merge** (`mergeAnalysisPasses`, `merge.ts`): zips the structure pass's
 themes with the writing pass's themes by `themeKey`, builds one
 locked-shape `Theme` per pair (grouping/ranking fields from structure,
-prose fields from writing, `legalRelevance` defensively stripped unless
-the theme's `category` is `accessibility`), assembles the final
+prose fields from writing, `legalRelevance` built only from the WCAG
+criteria of the theme's accessibility findings, whatever the theme's
+`category` (issue #536)), assembles the final
 `LlmOutput`, and validates it against the real, locked
 `llmOutputSchema.parse()`. `themeKey` is never assigned into the merged
 `Theme` object - it cannot leak into `analyses/<timestamp>-<language>.json`

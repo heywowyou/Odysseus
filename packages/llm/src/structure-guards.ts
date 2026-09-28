@@ -7,6 +7,7 @@
  * which hand-duplicate logic next to a file they are not allowed to
  * touch. Keep in sync by hand. See docs/rules/llm-layer-rules.md section 9.
  */
+import type { FindingCategory } from '@odysseus/core';
 import type { StructurePassOutput } from './structure-schema.js';
 
 /** Both guards need finding IDs and nothing else. Typed structurally rather
@@ -69,4 +70,38 @@ export function findUnreferencedStructureFindingIds(
     for (const id of theme.findingIds) referenced.add(id);
   }
   return inputFindings.map((f) => f.findingId).filter((id) => !referenced.has(id));
+}
+
+/** The theme category a finding supports: geo findings have no theme
+ *  category of their own and are grouped under seo, as the prompt says. */
+function themeCategoryOf(category: FindingCategory): FindingCategory {
+  return category === 'geo' ? 'seo' : category;
+}
+
+/** Issue #536: the category decides the card's badge, so it must be one
+ *  its own findings carry. A theme of accessibility findings labelled seo
+ *  would otherwise print an SEO badge over WCAG defects. Rejected and
+ *  retried like an invented ID. Returns one description per mislabelled
+ *  theme. Call with real IDs, after alias resolution. */
+export function findThemeCategoryMismatches(
+  output: Pick<StructurePassOutput, 'themes'>,
+  findings: readonly (HasFindingId & { readonly category: FindingCategory })[],
+): string[] {
+  const categoryById = new Map(
+    findings.map((finding) => [finding.findingId, themeCategoryOf(finding.category)]),
+  );
+  const mismatches: string[] = [];
+  output.themes.forEach((theme, index) => {
+    const carried = new Set(
+      theme.findingIds
+        .map((id) => categoryById.get(id))
+        .filter((category): category is FindingCategory => category !== undefined),
+    );
+    if (carried.size > 0 && !carried.has(theme.category)) {
+      mismatches.push(
+        `theme ${index + 1} is labelled ${theme.category} but its findings are ${[...carried].sort().join('/')}`,
+      );
+    }
+  });
+  return mismatches;
 }

@@ -62,6 +62,7 @@ describe('assertSeniorReportPlan', () => {
         buildProject({ projectKey: 'fix-contrast', findingIds: ['f-contrast'] }),
         buildProject({
           projectKey: 'fix-lcp',
+          category: 'performance',
           findingIds: ['f-lcp'],
           sharedDependencies: ['f-contrast'],
         }),
@@ -69,6 +70,16 @@ describe('assertSeniorReportPlan', () => {
       ['fix-contrast', 'fix-lcp'],
     );
     expect(() => assertSeniorReportPlan(plan, payload)).not.toThrow();
+  });
+
+  it('rejects a project labelled with a category none of its findings carry', () => {
+    const plan = buildPlan(
+      [buildProject({ projectKey: 'fix-contrast', category: 'seo', findingIds: ['f-contrast'] })],
+      ['fix-contrast'],
+    );
+    expect(() => assertSeniorReportPlan(plan, payload)).toThrow(
+      'Remediation project fix-contrast is labelled seo but its findings are accessibility',
+    );
   });
 
   it('rejects a project that references an unknown finding id', () => {

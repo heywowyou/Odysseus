@@ -3,8 +3,10 @@ import { buildLegalRelevance } from './legal-relevance.js';
 import type { StructureDocument, StructureThemeWithKey } from './structure-schema.js';
 import type { WritingPassOutput } from './writing-schema.js';
 
-/** Union of wcagCriteria across a theme's findingIds, used to build its
- *  legalRelevance sentence deterministically. Findings not present in
+/** Union of wcagCriteria across a theme's accessibility findings, used to
+ *  build its legalRelevance sentence deterministically. Taken from the
+ *  findings' own category, never the model's theme label (issue #536), the
+ *  same population the render's priority-conformance.ts uses. Findings not present in
  *  findingsById are skipped rather than throwing - by the time merge
  *  runs, findInventedStructureFindingIds has already guaranteed every
  *  findingId exists in the filtered set the structure pass saw. */
@@ -15,7 +17,7 @@ function themeWcagCriteria(
   const criteria = new Set<string>();
   for (const findingId of structureTheme.findingIds) {
     const finding = findingsById.get(findingId);
-    if (!finding) continue;
+    if (!finding || finding.category !== 'accessibility') continue;
     for (const criterion of finding.wcagCriteria) criteria.add(criterion);
   }
   return [...criteria];
@@ -57,10 +59,7 @@ export function mergeAnalysisPasses(
       );
     }
 
-    const wcagCriteria =
-      structureTheme.category === 'accessibility'
-        ? themeWcagCriteria(structureTheme, findingsById)
-        : [];
+    const wcagCriteria = themeWcagCriteria(structureTheme, findingsById);
     // Issue #81: buildLegalRelevance now drops AAA-only criteria (out of
     // scope for the "WCAG 2.2 level AA" sentence it builds), so a theme
     // whose only wcagCriteria are AAA gets '' back rather than a sentence -

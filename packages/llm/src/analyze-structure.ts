@@ -4,6 +4,7 @@ import { OPENAI_MODEL, OPENAI_TEMPERATURE, MAX_RETRIES } from './constants.js';
 import { applyStructureRankingRules } from './structure-ranking.js';
 import {
   findDuplicateStructureFindingIds,
+  findThemeCategoryMismatches,
   findInventedStructureFindingIds,
   findUnreferencedStructureFindingIds,
 } from './structure-guards.js';
@@ -93,6 +94,15 @@ export async function analyzeStructure(
       lastFailureReason = `response repeated finding ID(s): ${duplicateIds.join(', ')}`;
       console.error(
         `odysseus analyze (structure pass): attempt ${attempt}/${MAX_RETRIES + 1} rejected - repeated finding IDs: ${duplicateIds.join(', ')}`,
+      );
+      continue;
+    }
+
+    const mislabelled = findThemeCategoryMismatches(output, filteredFindings);
+    if (mislabelled.length > 0) {
+      lastFailureReason = `response labelled theme(s) with a category their findings do not carry: ${mislabelled.join('; ')}`;
+      console.error(
+        `odysseus analyze (structure pass): attempt ${attempt}/${MAX_RETRIES + 1} rejected - ${lastFailureReason}`,
       );
       continue;
     }

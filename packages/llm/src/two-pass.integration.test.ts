@@ -64,19 +64,25 @@ function buildFixedStructureOutput(findings: readonly Finding[]): StructurePassO
   const aliases = findings.map((_, index) => `x${index + 1}`);
   const firstHalf = aliases.slice(0, half);
   const secondHalf = aliases.slice(half);
+  // Each theme carries a category its own findings hold, as the structure
+  // guard requires (issue #536).
+  const categoryAt = (index: number): StructurePassOutput['themes'][number]['category'] => {
+    const category = findings[index]!.category;
+    return category === 'geo' ? 'seo' : category;
+  };
 
   return {
     themes: [
       {
         findingIds: firstHalf,
-        category: 'accessibility',
+        category: categoryAt(0),
         effort: 'low',
         impact: 'high',
         priorityRank: 1,
       },
       {
         findingIds: secondHalf,
-        category: 'performance',
+        category: categoryAt(half),
         effort: 'medium',
         impact: 'medium',
         priorityRank: 2,
