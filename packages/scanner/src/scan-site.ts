@@ -1520,7 +1520,15 @@ async function runDiscoveryWaves(args: {
       admittedPerReferrer.set(link.referrer, referrerCount + 1);
       admitted.push(link.url);
       args.depthByUrl.set(link.url, depth);
-      wavePages.push({ url: link.url, depth, status: 'visited', discoveryMethod: 'link' });
+      wavePages.push({
+        url: link.url,
+        depth,
+        status: 'visited',
+        discoveryMethod: 'link',
+        // Plan 075 K3: without its referrer a dead link found here could
+        // never become a broken-link finding.
+        discoveredFrom: link.referrer,
+      });
     }
     if (wavePages.length === 0) continue;
     args.growTotalPages(wavePages.length);

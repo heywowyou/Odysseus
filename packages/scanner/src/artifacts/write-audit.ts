@@ -32,6 +32,7 @@ import {
   isBlockedRender,
   lighthouseFinalUrl,
   lighthouseLandedOffSite,
+  isDeadLinkRender,
   markInconclusiveChecks,
   markLanguageRedirects,
   type AuditConfigSnapshot,
@@ -690,7 +691,10 @@ export async function writeAuditArtifacts(
       redirectTargetUrl !== undefined
         ? 'redirect-interstitial'
         : blockedPage
-          ? 'blocked'
+          ? // Plan 075 K3: the site's own 404 is a dead link, not a refusal.
+            isDeadLinkRender(scanJson.renderDiff)
+            ? 'http-error-status'
+            : 'blocked'
           : softErrorPage
             ? 'soft-error-page'
             : 'visited';

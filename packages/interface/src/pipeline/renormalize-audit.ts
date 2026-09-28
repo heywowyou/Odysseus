@@ -21,6 +21,7 @@ import {
   lighthouseFinalUrl,
   lighthouseLandedOffSite,
   markInconclusiveChecks,
+  reclassifyDeadLinkPages,
   markLanguageRedirects,
   normalizeAudit,
   type AuditManifest,
@@ -177,7 +178,21 @@ export async function renormalizeAudit(
   // Plan 075 I1: a redirect onto the page's own translation only chose a
   // language, which the stored landing pages' alternates show.
   const classifiedPages = markLanguageRedirects(
-    offSiteClassifiedPages,
+    // Plan 075 K3: a stored `blocked` page that is the site's own 404.
+    reclassifyDeadLinkPages(
+      offSiteClassifiedPages,
+      pages.map((page) => ({
+        url: page.url,
+        ...(page.renderDiff !== undefined ? { renderDiff: page.renderDiff } : {}),
+        // The stored scan.json carries the page's post-render links beside
+        // the normalize fields; they name the referrer of a dead link.
+        ...(Array.isArray((page as { surfaceLinks?: unknown }).surfaceLinks)
+          ? {
+              surfaceLinks: (page as unknown as { surfaceLinks: { url: string }[] }).surfaceLinks,
+            }
+          : {}),
+      })),
+    ),
     pages.map((page) => ({
       pageUrl: page.url,
       alternateUrls: [
