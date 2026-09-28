@@ -7,41 +7,48 @@ Brief: `docs/agents/audit-data-defect-hunt.md`
 
 ## Where the hunt stands
 
-- **Stop rule: 0 of 2.** The last complete sweep (8, 2026-09-28) found 3 new
+- **Stop rule: 0 of 2.** The last complete sweep (9, 2026-09-28) found 3 new
   material defects. Two consecutive complete sweeps with none are needed, the
   second with a fresh angle.
-- **Data state.** Production runs `35eb64d0` (deployed 2026-09-28). The 22 latest full
-  audits with findings equal an in-memory replay with that core, apart from
-  the two Lighthouse 13 insights `cf4092dc` removed, which leave each audit at
-  its next refresh. Part I is not implemented.
-- **Access.** Sweep 8 ran read-only scripts inside the app container and
-  printed counts, rule ids and selectors only. Copying audit directories to
-  the workstation was refused by the session's data-handling guard; keep the
-  in-place method.
-- **Next: sweep 9**, after Part I ships and the audits are refreshed. Start
-  with the start list below, then every angle on every latest full audit.
+- **Data state.** Production runs `fa806424` (Part I, deployed 2026-09-28).
+  The stored findings were not refreshed after that deploy: the 21 audits
+  still carry pre-I1/I2 findings, and their replay with the deployed core
+  equals the Part I targets. Four new sites were being scanned on the new
+  build during the sweep (clos-sainte-marie, domaine-d-auriac,
+  lodgekerisper, aflatta). Part J is not implemented.
+- **Access.** Read-only scripts in the app container, as in sweep 8. The
+  replay now imports the container's own `/app/packages/core` and
+  `/app/packages/interface` builds, so no local build is uploaded. Reading
+  the operator credentials in the repository `.env` to call the dashboard
+  API was refused by the session's permission guard; refreshes go through
+  the dashboard by the operator.
+- **Next: sweep 10**, after Part J ships and the audits are refreshed. Start
+  with the start list below, then every angle on every latest full audit,
+  including the four new sites.
 
-## Sweep 9 start list
+## Sweep 10 start list
 
 Angle 13 (replay against closed slices) targets:
 
 | Slice | Audit | Expected on the refreshed findings |
 |---|---|---|
-| I1 | grandhoteldesalpes | `sitemap-lists-redirects` counts 41 redirected URLs, not 114; the 74 translations are `language-redirect`, disclosed as other-language versions |
-| I2, Q6 | lescriquets | `link-name` 1 finding with 1,793 occurrences; 69 findings in all |
-| I2 | heurope (`2026-09-28T09-54-47Z`) | `aria-roles` 1; `aria-required-children` 2 (tablist and pagination menu) |
+| I1 | grandhoteldesalpes | `sitemap-lists-redirects` counts 41 redirected URLs; 74 `language-redirect` pages |
+| I2, Q6 | lescriquets | `link-name` 1 finding with 1,793 occurrences |
 | I2 | every audit | one `link-name` and one `button-name` per site, plus one per third-party frame origin |
 | I3 | any regenerated analysis | no sentence states that the obligation applies, is established or does not apply |
+| J1 | le37bishotel-paris | `svg-img-alt` at most 2 (was 33) |
+| J1 | heurope | `label` 1, `listitem` at most 2 |
+| J1 | grand-hotel-opera | `nested-interactive` 1, `aria-tab-name` 1 |
+| J2 | heurope, regenerated | no sentence calls CLS good beside the critical CLS finding |
+| J3 | grandhoteldesalpes, hotelmacchi, regina-hotel | 0 `focus-order-mismatch`; heurope `keyboard-trap` kept |
 
 Other carried checks:
 
-- Angle 8: the French PDFs still have not been read rule by rule. The
-  container has no PDF text tool; read the analysis JSON and the
-  deterministic strings instead, or render a page locally from a
-  de-identified fixture.
-- heurope's rescan of 2026-09-28 (job started 09:54 UTC) completed before
-  the `35eb64d0` deploy: read it as a new audit, its blocked pages, and
-  whether the operator accepted them under trade-off 122.
+- Angle 8: the French per-rule copy review is still partial. Sweep 9 read
+  the labels and remediations of `focus-order-mismatch`, `svg-img-alt` and
+  `keyboard-trap` only.
+- The four sites scanned on 2026-09-28 after the deploy are the first audits
+  produced by the Part I build end to end.
 
 ## Sweeps
 
@@ -55,9 +62,10 @@ Other carried checks:
 | 6 | 2026-09-23 | hotelchateauroyal and grandhotelchicago rescans, their FR reports, the reference audit, the lacoorniche failure | 1, 2, 4, 8 (legal wording), 9 | no | 7 | Part G (G1 to G7) |
 | 7 | 2026-09-24 | latest full audit of all 13 VPS sites, replayed with `5abe9b7a` | 1 to 11 (12 not applicable: no repeated run); fresh angle became 13 | yes | 7 | Part H (H1 to H7, Q5); plan reopened |
 | 8 | 2026-09-28 | 22 latest full audits (12 refreshed, grandhoteldesalpes rescan, 9 new sites), in place on the VPS | 1 to 13; fresh angle became 14 | yes | 3 | Part I (I1 to I3, Q6); plan reopened |
+| 9 | 2026-09-28 | 21 latest full audits, replayed in place with the deployed `fa806424` core | 1 to 14 (12 not applicable; 8 partial); fresh angle became 15 | yes | 3 | Part J (J1 to J3) |
 
-Trend of new material defects per sweep: 25, 9, 8, 7, 4, 7, 7, 3. It has not
-converged. Sweep 8 read nine sites no earlier sweep had seen; its replay
+Trend of new material defects per sweep: 25, 9, 8, 7, 4, 7, 7, 3, 3. It has
+not converged. Sweep 8 read nine sites no earlier sweep had seen; its replay
 angle found H6 half-shipped and its new prose angle found the legal verdict.
 
 hotelchateauroyal, read in sweeps 4 to 6, was deleted from production on
@@ -69,12 +77,13 @@ history. They cannot be checked again.
 | Doubt | Since | Angle | Smallest action that settles it |
 |---|---|---|---|
 | Cause of the Lighthouse IndexedDB storage warning (E5). Plan 075's closure ledger expects the probe result to be recorded, and it never was. | sweep 2 | 6 | One Lighthouse probe of an already-audited page, with and without storage reset |
-| French copy has never had a full per-rule review against the writing style and obligation basis. Sweep 8 read every stored French analysis for legal and absolute wording only (I3). | sweep 4 | 8 | Read the deterministic FR strings rule by rule and one regenerated analysis end to end in sweep 9 |
-| `focus-order-mismatch` has never had a finding to sample | sweep 4 | 3 | None until an audit produces one; check again each sweep |
+| French copy has never had a full per-rule review against the writing style and obligation basis. Sweep 8 read every stored French analysis for legal and absolute wording only (I3); sweep 9 read three rules' labels and remediations. | sweep 4 | 8 | Read the deterministic FR strings rule by rule and one regenerated analysis end to end in sweep 9 |
 | Why chicago's lab CLS runs are bimodal (whole-`body` shifts in some runs only). The finding side is covered by F9. | sweep 4 | 6 | One Lighthouse probe of the chicago homepage |
 
 Settled or moot:
 
+- `focus-order-mismatch` never having had a finding to sample was settled in
+  sweep 9: its three findings were read and all are false (J3).
 - hotelchateauroyal's `/en/` pages missing the 30 s `load` event is moot,
   because the site was deleted (trade-off 112).
 - The outreach preview never having been read from stored data was settled in
@@ -92,7 +101,9 @@ Settled or moot:
 | The Apidae agenda web component, outside a frame, is counted as the site's (`scrollable-region-focusable`) | sweep 4 | open |
 | Three « Report issue » job rows keep the failed status of the `occurrence(s)` render lint, which was fixed in `020286ad` | sweep 4 | not rechecked since the 2026-09-24 refresh |
 | whistlerparis writes partner links without a scheme, so they resolve under `/fr/page/` and land on the homepage. No rule reports it. | sweep 7 | open, no slice |
-| One missing logo alt reported twice, as `image-alt` on the image and `link-name` on its anchor (lescriquets category tiles, villasfoch social icons) | sweep 8 | open; folds into Q6 if (a) is chosen |
+| One missing logo alt reported twice, as `image-alt` on the image and `link-name` on its anchor (lescriquets category tiles, villasfoch social icons) | sweep 8 | open; with Q6 (a) it is one site-wide finding of each rule |
+| The `keyboard-trap` remediation (« la touche Echap ou un bouton de fermeture ») does not fit a field that blocks Tab with `onkeydown="return false;"` (heurope date field) | sweep 9 | open |
+| The haaitza and lacoorniche previews published on 2026-09-28 before the deploy state pre-I2 serious totals (haaitza 16 against 15 after refresh, first email sent) | sweep 9 | kept by the standing decision on sent previews |
 | regina-hotel lost the first attempt of every content check on 204 of 412 pages to `check-timeout`; all retries succeeded | sweep 8 | open, cost only |
 | Titles of 61 to 65 characters flagged as « much longer than 60 » | sweep 4 | fixed by F13 |
 | villasfoch EN and ES pages carry French titles | sweep 5 | became F12, shipped |
@@ -288,3 +299,43 @@ insights removed by `cf4092dc`.
   language-redirect record never shipped (I1).
 - Fresh angle, model prose against the deterministic facts it restates (now
   angle 14): found I3.
+
+## Sweep 9 notes
+
+Audits: the 21 latest full audits with findings (fermesdemarie's latest
+directory has no manifest; hotelchateauroyal is deleted), each re-normalized
+in memory with the deployed `fa806424` core inside the app container. The
+replay equals the local build's on every audit. Production database read the
+same way (counts, states, ids).
+
+- Population: heurope's rescan analyses 51 pages, 17 per language, homes
+  included, nothing blocked. `language-redirect` appears on
+  grandhoteldesalpes only (clean).
+- Acquisition: heurope's ledger holds only `not-applicable` legal-page
+  records (clean). Unchanged data elsewhere since sweep 8.
+- Per-rule: every rule on 3 or fewer audits listed; read
+  `focus-order-mismatch` (all false, J3), `keyboard-trap` (true),
+  `svg-img-alt`, `listitem`, `label`, `nested-interactive`,
+  `aria-tab-name` (true, split: J1).
+- Counting: shape grouping of every axe rule outside the allowlist found
+  only generated-token and state-class splits (J1).
+- Absence: the Tab walk never reached the page on 4 audits, so the absence
+  of `keyboard-trap` there says nothing (J3).
+- Measurements: lab medians against worst-page findings on 5 audits (J2).
+- Attribution: the dialogs holding focus are the sites' own consent banners
+  and popups (clean).
+- Client surfaces: FR `focus-order-mismatch` label overstates the check
+  (goes with J3); heurope's executive summary and stability theme contradict
+  its critical CLS finding (J2).
+- Stored products: 2 previews published on 2026-09-28 before the deploy
+  (minor); heurope's report generated at 11:11 before I3's deploy, and its
+  obligation sentence is a description (clean).
+- Terminal state: heurope's job completed with a French report (clean).
+- Determinism: no audit has two stored runs of the same pages (not
+  applicable).
+- Replay against closed slices: every I1 and I2 target holds; I3 needs a
+  regenerated analysis.
+- Model prose against facts: J2.
+- Fresh angle, the page state during interaction checks (now angle 15):
+  which dialog, banner or popup was open when an interactive check ran. It
+  found J3.

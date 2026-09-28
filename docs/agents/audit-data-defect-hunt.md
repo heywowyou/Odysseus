@@ -134,6 +134,11 @@ audit that has findings. Hold each finding to the evidence bar:
     stored analyses that restates a deterministic fact (the obligation
     status, a count, a page total, a coverage limit), compare it with the
     fact. Prose may describe the fact, never harden it into a verdict.
+15. **Page state during interaction checks.** For each check that interacts
+    with the page (the Tab walk, forms, reflow, consent), find what was
+    open when it ran: a consent banner, a popup or a dialog. A check that
+    measured the overlay instead of the page is a false finding or a false
+    absence.
 
 ## Recording
 
