@@ -1,5 +1,6 @@
 import type { ReportLanguage } from '@odysseus/core';
 import type { WritingPassOutput } from './writing-schema.js';
+import { unicodeWords } from './unicode-word-boundary.js';
 
 /**
  * Plan 028. Audit-rehearsal notes recorded reports that contradicted
@@ -28,8 +29,8 @@ const FINDING_COUNT_PATTERNS: Record<ReportLanguage, RegExp> = {
   // digit run followed by the finding noun or a canonical severity word,
   // with only spacing between. Deliberately does not match a bare digit
   // next to an unrelated noun ("ratio 4,5:1", "WCAG 2.2").
-  fr: /\b\d[\d\s.,]*\s*(constats?|critiques?|sérieux|modérés?|mineurs?)\b/iu,
-  en: /\b\d[\d\s.,]*\s*(findings?|critical|serious|moderate|minor)\b/iu,
+  fr: unicodeWords(/\b\d[\d\s.,]*\s*(constats?|critiques?|sérieux|modérés?|mineurs?)\b/iu),
+  en: unicodeWords(/\b\d[\d\s.,]*\s*(findings?|critical|serious|moderate|minor)\b/iu),
 };
 
 export interface FindingCountViolation {

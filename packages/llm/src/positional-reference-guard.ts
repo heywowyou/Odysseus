@@ -1,5 +1,6 @@
 import type { ReportLanguage } from '@odysseus/core';
 import type { WritingPassOutput } from './writing-schema.js';
+import { unicodeWords } from './unicode-word-boundary.js';
 
 /**
  * Plan 028. Audit-rehearsal notes recorded "la priorité 1 ci-dessus"
@@ -21,8 +22,10 @@ import type { WritingPassOutput } from './writing-schema.js';
  * phrase, not the bare word.
  */
 const POSITIONAL_REFERENCE_PATTERNS: Record<ReportLanguage, RegExp> = {
-  fr: /\bci-dessus\b|\bci-dessous\b/iu,
-  en: /\b(?:as (?:noted|stated|shown|outlined|described|mentioned) (?:above|below)|(?:the|this) (?:theme|priority|finding|section)s? (?:above|below)|above-mentioned|(?:the|see) above|(?:the|see) below)\b/iu,
+  fr: unicodeWords(/\bci-dessus\b|\bci-dessous\b/iu),
+  en: unicodeWords(
+    /\b(?:as (?:noted|stated|shown|outlined|described|mentioned) (?:above|below)|(?:the|this) (?:theme|priority|finding|section)s? (?:above|below)|above-mentioned|(?:the|see) above|(?:the|see) below)\b/iu,
+  ),
 };
 
 export interface PositionalReferenceViolation {

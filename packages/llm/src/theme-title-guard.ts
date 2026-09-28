@@ -1,5 +1,6 @@
 import type { ReportLanguage } from '@odysseus/core';
 import type { WritingPassOutput } from './writing-schema.js';
+import { unicodeWords } from './unicode-word-boundary.js';
 
 export interface ThemeTitleViolation {
   field: string;
@@ -8,13 +9,19 @@ export interface ThemeTitleViolation {
 }
 
 const ACTION_OPENERS: Record<ReportLanguage, RegExp> = {
-  fr: /^(?:corriger|am[eé]liorer|rendre|r[eé]duire|optimiser|s[eé]curiser|v[eé]rifier|ajouter|supprimer|remplacer|configurer|[ée]viter|mettre|permettre|garantir|renforcer|faciliter|prot[eé]ger)\b/iu,
-  en: /^(?:fix|improve|make|reduce|optimi[sz]e|secure|check|add|remove|replace|configure|avoid|ensure|strengthen|facilitate|protect)\b/iu,
+  fr: unicodeWords(
+    /^(?:corriger|am[eé]liorer|rendre|r[eé]duire|optimiser|s[eé]curiser|v[eé]rifier|ajouter|supprimer|remplacer|configurer|[ée]viter|mettre|permettre|garantir|renforcer|faciliter|prot[eé]ger)\b/iu,
+  ),
+  en: unicodeWords(
+    /^(?:fix|improve|make|reduce|optimi[sz]e|secure|check|add|remove|replace|configure|avoid|ensure|strengthen|facilitate|protect)\b/iu,
+  ),
 };
 
 const FINITE_VERBS: Record<ReportLanguage, RegExp> = {
-  fr: /\b(?:doit|doivent|devrait|devraient|il\s+faut|permet|permettent|am[eé]liore|am[eé]liorent|r[eé]duit|r[eé]duisent|garantit|garantissent|facilite|facilitent)\b/iu,
-  en: /\b(?:must|should|needs?|improves?|reduces?|ensures?|allows?|prevents?)\b/iu,
+  fr: unicodeWords(
+    /\b(?:doit|doivent|devrait|devraient|il\s+faut|permet|permettent|am[eé]liore|am[eé]liorent|r[eé]duit|r[eé]duisent|garantit|garantissent|facilite|facilitent)\b/iu,
+  ),
+  en: unicodeWords(/\b(?:must|should|needs?|improves?|reduces?|ensures?|allows?|prevents?)\b/iu),
 };
 
 /**

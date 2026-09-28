@@ -2,6 +2,7 @@ import { franc } from 'franc-min';
 import type { ReportLanguage } from '@odysseus/core';
 import type { ProseField } from './prose-fields.js';
 import type { WritingPassOutput } from './writing-schema.js';
+import { unicodeWords } from './unicode-word-boundary.js';
 
 const MIN_CHECKED_LENGTH = 20;
 const FRANC_CANDIDATES = ['fra', 'eng'];
@@ -14,7 +15,9 @@ const EXPECTED_FRANC_CODE: Record<ReportLanguage, 'fra' | 'eng'> = {
  *  in the dual detector below - see `findLanguageComplianceViolationsInFields`
  *  for why. */
 const FRENCH_ACCENT_CHARS = /[éèêàçùôîâœÉÈÊÀÇÙÔÎÂŒ]/;
-const FRENCH_STOPWORDS = /\b(le|la|les|de|des|un|une|et|pour|dans|avec|votre|vous|sur)\b/i;
+const FRENCH_STOPWORDS = unicodeWords(
+  /\b(le|la|les|de|des|un|une|et|pour|dans|avec|votre|vous|sur)\b/i,
+);
 
 function looksFrench(text: string): boolean {
   return FRENCH_ACCENT_CHARS.test(text) || FRENCH_STOPWORDS.test(text);

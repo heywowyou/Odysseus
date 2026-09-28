@@ -1,5 +1,6 @@
 import type { ReportLanguage } from '@odysseus/core';
 import type { WritingPassOutput } from './writing-schema.js';
+import { unicodeWords } from './unicode-word-boundary.js';
 
 /**
  * The report's canonical severity vocabulary (the tile labels in
@@ -54,17 +55,22 @@ export const FINDING_NOUN_VOCABULARY: Record<ReportLanguage, { singular: string;
  */
 export const BANNED_SYNONYMS: Record<ReportLanguage, RegExp[]> = {
   fr: [
-    /\bmajeur\b/i,
-    /\bmajeurs\b/i,
-    /\bmajeure\b/i,
-    /\bmajeures\b/i,
-    /\bgrave\b/i,
-    /\bgraves\b/i,
-    /\bsévère\b/i,
-    /\bsévères\b/i,
-    /\banodine?s?\b/i,
+    unicodeWords(/\bmajeur\b/i),
+    unicodeWords(/\bmajeurs\b/i),
+    unicodeWords(/\bmajeure\b/i),
+    unicodeWords(/\bmajeures\b/i),
+    unicodeWords(/\bgrave\b/i),
+    unicodeWords(/\bgraves\b/i),
+    unicodeWords(/\bsévère\b/i),
+    unicodeWords(/\bsévères\b/i),
+    unicodeWords(/\banodine?s?\b/i),
   ],
-  en: [/\bmajor\b/i, /\bsevere\b/i, /\btrivial\b/i, /\bnegligible\b/i],
+  en: [
+    unicodeWords(/\bmajor\b/i),
+    unicodeWords(/\bsevere\b/i),
+    unicodeWords(/\btrivial\b/i),
+    unicodeWords(/\bnegligible\b/i),
+  ],
 };
 
 /**

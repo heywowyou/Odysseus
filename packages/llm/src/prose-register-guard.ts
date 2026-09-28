@@ -1,6 +1,7 @@
 import type { ReportLanguage } from '@odysseus/core';
 import type { ProseField } from './prose-fields.js';
 import type { WritingPassOutput } from './writing-schema.js';
+import { unicodeWords } from './unicode-word-boundary.js';
 
 /**
  * Issue #309: two register defects found in the production reports of
@@ -17,19 +18,27 @@ export const FRENCH_TERM_GLOSSARY: readonly {
   french: string;
   pattern: RegExp;
 }[] = [
-  { anglicism: 'canonical(s)', french: 'adresse canonique', pattern: /\bcanonicals?\b/iu },
-  { anglicism: 'tap', french: 'appui', pattern: /\btaps?\b/iu },
+  {
+    anglicism: 'canonical(s)',
+    french: 'adresse canonique',
+    pattern: unicodeWords(/\bcanonicals?\b/iu),
+  },
+  { anglicism: 'tap', french: 'appui', pattern: unicodeWords(/\btaps?\b/iu) },
   {
     anglicism: 'crawl, crawler',
     french: "exploration, robot d'exploration",
-    pattern: /\bcrawl(?:er|ers|ing)?\b/iu,
+    pattern: unicodeWords(/\bcrawl(?:er|ers|ing)?\b/iu),
   },
   {
     anglicism: 'lazy loading',
     french: 'chargement différé',
-    pattern: /\blazy[- ]?load(?:ing)?\b/iu,
+    pattern: unicodeWords(/\blazy[- ]?load(?:ing)?\b/iu),
   },
-  { anglicism: 'responsive', french: 'adapté aux mobiles', pattern: /\bresponsive\b/iu },
+  {
+    anglicism: 'responsive',
+    french: 'adapté aux mobiles',
+    pattern: unicodeWords(/\bresponsive\b/iu),
+  },
 ];
 
 /**
@@ -50,74 +59,81 @@ export const FRENCH_CALQUE_GLOSSARY: readonly {
   {
     calque: 'complètent cette lecture',
     french: 'le rapport relève également',
-    pattern: /\bcomplètent cette lecture\b/iu,
+    pattern: unicodeWords(/\bcomplètent cette lecture\b/iu),
   },
   {
     calque: 'la découverte des contenus',
     french: 'la capacité des moteurs à trouver les contenus',
-    pattern: /\bdécouverte des contenus\b/iu,
+    pattern: unicodeWords(/\bdécouverte des contenus\b/iu),
   },
   {
     calque: 'Sur la performance, …',
     french: 'En matière de performance, …',
-    pattern: /(?:^|[.!?]\s+)Sur (?:la performance|l['’]accessibilité|le référencement)\b/u,
+    pattern: unicodeWords(
+      /(?:^|[.!?]\s+)Sur (?:la performance|l['’]accessibilité|le référencement)\b/u,
+    ),
   },
   {
     calque: 'structurent les priorités',
     french: 'les principales priorités concernent',
-    pattern: /\bstructurent les priorités\b/iu,
+    pattern: unicodeWords(/\bstructurent les priorités\b/iu),
   },
   {
     calque: 'le remplissage visuel',
     french: "l'affichage progressif de la page",
-    pattern: /\bremplissage visuel\b/iu,
+    pattern: unicodeWords(/\bremplissage visuel\b/iu),
   },
   {
     calque: 'servir du contenu, des images',
     french: 'fournir, transmettre',
-    pattern:
+    pattern: unicodeWords(
       /\b(?:servez|servir|servent|sert)\s+(?:le|les|ces|du|des|ce|cette)\s+(?:contenus?|images?|fichiers?|code|pages?)\b/iu,
+    ),
   },
-  { calque: 'gain rapide', french: 'action rapide', pattern: /\bgains? rapides?\b/iu },
-  { calque: 'remédiation', french: 'correction', pattern: /\bremédiations?\b/iu },
+  {
+    calque: 'gain rapide',
+    french: 'action rapide',
+    pattern: unicodeWords(/\bgains? rapides?\b/iu),
+  },
+  { calque: 'remédiation', french: 'correction', pattern: unicodeWords(/\bremédiations?\b/iu) },
   {
     calque: 'la portée fonctionnelle',
     french: 'la nature et la portée des problèmes',
-    pattern: /\bportée fonctionnelle\b/iu,
+    pattern: unicodeWords(/\bportée fonctionnelle\b/iu),
   },
   {
     calque: "l'identification structurée",
     french: 'la manière dont les données structurées identifient',
-    pattern: /\bidentification structurée\b/iu,
+    pattern: unicodeWords(/\bidentification structurée\b/iu),
   },
   {
     calque: 'libérer les interactions',
     french: "rendre l'interface interactive",
-    pattern: /\blibérer (?:plus vite |plus rapidement )?les interactions\b/iu,
+    pattern: unicodeWords(/\blibérer (?:plus vite |plus rapidement )?les interactions\b/iu),
   },
-  { calque: "l'accès visuel", french: "l'affichage", pattern: /\baccès visuel\b/iu },
+  { calque: "l'accès visuel", french: "l'affichage", pattern: unicodeWords(/\baccès visuel\b/iu) },
   {
     calque: 'dans la mesure en laboratoire',
     french: "d'après les mesures de laboratoire",
-    pattern: /\bdans la mesure (?:en|de) laboratoire\b/iu,
+    pattern: unicodeWords(/\bdans la mesure (?:en|de) laboratoire\b/iu),
   },
   {
     calque: 'les familles de constats',
     french: 'les types de constats',
-    pattern: /\bfamilles? de constats\b/iu,
+    pattern: unicodeWords(/\bfamilles? de constats\b/iu),
   },
   {
     calque: 'les axes mesurés',
     french: 'les points les mieux étayés par les mesures',
-    pattern: /\baxes (?:les plus )?(?:directement )?mesurés\b/iu,
+    pattern: unicodeWords(/\baxes (?:les plus )?(?:directement )?mesurés\b/iu),
   },
   {
     calque: "le statut d'obligation",
     french: "l'applicabilité de l'obligation",
-    pattern: /\bstatut d['’]obligation\b/iu,
+    pattern: unicodeWords(/\bstatut d['’]obligation\b/iu),
   },
-  { calque: 'basique', french: 'simple', pattern: /\bbasiques?\b/iu },
-  { calque: 'le scan', french: "l'analyse automatisée", pattern: /\bscans?\b/iu },
+  { calque: 'basique', french: 'simple', pattern: unicodeWords(/\bbasiques?\b/iu) },
+  { calque: 'le scan', french: "l'analyse automatisée", pattern: unicodeWords(/\bscans?\b/iu) },
 ];
 
 /**
@@ -129,8 +145,12 @@ export const FRENCH_CALQUE_GLOSSARY: readonly {
  * est vide") stays available.
  */
 const SUBJECTIVE_IMPRESSION_PATTERNS: Record<ReportLanguage, RegExp> = {
-  fr: /\b(?:donnent|donne|laissent|laisse|dégagent|dégage|renvoient|renvoie)\s+(?:une|l['’])\s*impression\s+(?:de|d['’])/iu,
-  en: /\b(?:gives?|leaves?|creates?|conveys?)\s+(?:an|the)\s+impression\s+(?:of|that)\b/iu,
+  fr: unicodeWords(
+    /\b(?:donnent|donne|laissent|laisse|dégagent|dégage|renvoient|renvoie)\s+(?:une|l['’])\s*impression\s+(?:de|d['’])/iu,
+  ),
+  en: unicodeWords(
+    /\b(?:gives?|leaves?|creates?|conveys?)\s+(?:an|the)\s+impression\s+(?:of|that)\b/iu,
+  ),
 };
 
 export interface ProseRegisterViolation {

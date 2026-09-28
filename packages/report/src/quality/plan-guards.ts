@@ -4,6 +4,7 @@ import type {
   ReviewIssue,
   SeniorReportPlan,
 } from '@odysseus/core';
+import { WORD_END } from '@odysseus/llm';
 import { assertCoverageLedgerComplete } from './dossier.js';
 
 export function assertSeniorReportPlan(
@@ -59,9 +60,8 @@ export function assertCoverageAndPlan(
 const windowedPair = (left: string, right: string): string =>
   `${left}[^.!?]{0,80}${right}|${right}[^.!?]{0,80}${left}`;
 // JS \b is ASCII-only, so a stem ending in an accented letter ('manqué',
-// 'corrigé') can never satisfy a trailing \b. Guard word endings with a
-// Unicode letter/number lookahead instead.
-const WORD_END = String.raw`(?![\p{L}\p{N}])`;
+// 'corrigé') can never satisfy a trailing \b. WORD_END is the llm guards'
+// Unicode letter/number lookahead (issue #534).
 const BUSINESS_OBJECT = String.raw`\b(?:bookings?|reservations?|revenues?|revenue|sales|ventes|conversions?|leads?|enquir(?:y|ies)|demandes?|customers?|clients?|chiffre d'affaires|r[ée]servations?|revenus?)${WORD_END}`;
 const REALIZED_LOSS = String.raw`\b(?:lost|loses?|losing|missed|missings?|forfeit\w*|sacrific\w*|costs?|costing|perdu(?:s|e(?:s)?)?|perdre|pertes?|manqu[ée]e?s?|rat[ée]e?s?|co[ûu]t(?:e|es|ant)?)${WORD_END}`;
 const NEWLY_OBSERVABLE_LABEL = String.raw`\b(?:newly[- ]observables?|nouvellement\s+(?:observables?|mesurables?))${WORD_END}`;

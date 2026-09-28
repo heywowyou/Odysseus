@@ -4,6 +4,7 @@ import type {
   WritingPassOutput,
   WritingPerformanceMetric,
 } from './writing-schema.js';
+import { unicodeWords } from './unicode-word-boundary.js';
 
 export interface PerformanceEvidenceViolation {
   field: string;
@@ -16,16 +17,22 @@ export const SUPPRESSED_METRIC_PATTERNS: Record<
   Record<WritingPerformanceMetric, RegExp>
 > = {
   fr: {
-    lcp: /\b(?:LCP|Largest Contentful Paint)\b|contenu\s+principal/iu,
-    cls: /\b(?:CLS|Cumulative Layout Shift)\b|stabilit[ée]\s+visuelle|d[ée]calages?\s+(?:visuels?|cumulatifs?)|instabilit[ée]\s+(?:\S+\s+){0,2}de\s+l['’]affichage/iu,
-    inp: /\b(?:INP|Interaction to Next Paint)\b|r[ée]activit[ée]\s+aux\s+interactions?/iu,
-    tbt: /\b(?:TBT|Total Blocking Time)\b|scripts?\s+bloquants?/iu,
+    lcp: unicodeWords(/\b(?:LCP|Largest Contentful Paint)\b|contenu\s+principal/iu),
+    cls: unicodeWords(
+      /\b(?:CLS|Cumulative Layout Shift)\b|stabilit[ée]\s+visuelle|d[ée]calages?\s+(?:visuels?|cumulatifs?)|instabilit[ée]\s+(?:\S+\s+){0,2}de\s+l['’]affichage/iu,
+    ),
+    inp: unicodeWords(
+      /\b(?:INP|Interaction to Next Paint)\b|r[ée]activit[ée]\s+aux\s+interactions?/iu,
+    ),
+    tbt: unicodeWords(/\b(?:TBT|Total Blocking Time)\b|scripts?\s+bloquants?/iu),
   },
   en: {
-    lcp: /\b(?:LCP|Largest Contentful Paint)\b|main\s+content\s+load/iu,
-    cls: /\b(?:CLS|Cumulative Layout Shift)\b|visual\s+stability|layout\s+(?:shift|instability)/iu,
-    inp: /\b(?:INP|Interaction to Next Paint)\b|interaction\s+responsiveness/iu,
-    tbt: /\b(?:TBT|Total Blocking Time)\b|blocking\s+scripts?/iu,
+    lcp: unicodeWords(/\b(?:LCP|Largest Contentful Paint)\b|main\s+content\s+load/iu),
+    cls: unicodeWords(
+      /\b(?:CLS|Cumulative Layout Shift)\b|visual\s+stability|layout\s+(?:shift|instability)/iu,
+    ),
+    inp: unicodeWords(/\b(?:INP|Interaction to Next Paint)\b|interaction\s+responsiveness/iu),
+    tbt: unicodeWords(/\b(?:TBT|Total Blocking Time)\b|blocking\s+scripts?/iu),
   },
 };
 
@@ -58,22 +65,34 @@ export const SUPPRESSED_ACTION_PATTERNS: Record<
  *  Europe, beside a critical CLS finding, plan 075 J2). */
 const GOOD_RATING_PATTERNS: Record<ReportLanguage, readonly RegExp[]> = {
   fr: [
-    /\b(?:est|sont|reste|restent|semble|semblent|para[iî]t|appara[iî]t|demeure)\s+(?:\S+\s+){0,2}(?:bonne?s?|satisfaisante?s?|correcte?s?|excellente?s?|dans\s+les\s+seuils)\b/iu,
-    /\bn['’](?:[ée]taye|indique|montre|r[ée]v[èe]le|signale|traduit)\s+(?:donc\s+)?(?:pas|aucune?)\b/iu,
-    /\b(?:aucune?|pas\s+d['’]|pas\s+de)\s+(?:\S+\s+){0,2}(?:instabilit[ée]|probl[èe]mes?|d[ée]gradation|lenteur)\s+(?:\S+\s+){0,1}notables?\b/iu,
+    unicodeWords(
+      /\b(?:est|sont|reste|restent|semble|semblent|para[iî]t|appara[iî]t|demeure)\s+(?:\S+\s+){0,2}(?:bonne?s?|satisfaisante?s?|correcte?s?|excellente?s?|dans\s+les\s+seuils)\b/iu,
+    ),
+    unicodeWords(
+      /\bn['’](?:[ée]taye|indique|montre|r[ée]v[èe]le|signale|traduit)\s+(?:donc\s+)?(?:pas|aucune?)\b/iu,
+    ),
+    unicodeWords(
+      /\b(?:aucune?|pas\s+d['’]|pas\s+de)\s+(?:\S+\s+){0,2}(?:instabilit[ée]|probl[èe]mes?|d[ée]gradation|lenteur)\s+(?:\S+\s+){0,1}notables?\b/iu,
+    ),
   ],
   en: [
-    /\b(?:is|are|remains?|looks?|seems?|stays?)\s+(?:\S+\s+){0,2}(?:good|fine|satisfactory|healthy|within\s+(?:the\s+)?thresholds?)\b/iu,
-    /\b(?:does|do)\s+not\s+(?:therefore\s+)?(?:show|indicate|support|reveal)\b/iu,
-    /\bno\s+(?:\S+\s+){0,2}(?:notable|significant|material)\s+(?:instability|problem|issue|degradation)\b/iu,
+    unicodeWords(
+      /\b(?:is|are|remains?|looks?|seems?|stays?)\s+(?:\S+\s+){0,2}(?:good|fine|satisfactory|healthy|within\s+(?:the\s+)?thresholds?)\b/iu,
+    ),
+    unicodeWords(/\b(?:does|do)\s+not\s+(?:therefore\s+)?(?:show|indicate|support|reveal)\b/iu),
+    unicodeWords(
+      /\bno\s+(?:\S+\s+){0,2}(?:notable|significant|material)\s+(?:instability|problem|issue|degradation)\b/iu,
+    ),
   ],
 };
 
 /** A sentence that qualifies a good median with what is wrong is allowed:
  *  « la valeur médiane reste bonne, mais cinq pages dépassent le seuil ». */
 const QUALIFYING_CONTRAST: Record<ReportLanguage, RegExp> = {
-  fr: /\b(?:mais|cependant|toutefois|en\s+revanche|sauf|alors\s+que|tandis\s+que|n[ée]anmoins)\b/iu,
-  en: /\b(?:but|however|although|though|except|whereas|while|yet)\b/iu,
+  fr: unicodeWords(
+    /\b(?:mais|cependant|toutefois|en\s+revanche|sauf|alors\s+que|tandis\s+que|n[ée]anmoins)\b/iu,
+  ),
+  en: unicodeWords(/\b(?:but|however|although|though|except|whereas|while|yet)\b/iu),
 };
 
 /** Plan 075 J2: the sentence rates one of `metrics` good without saying what

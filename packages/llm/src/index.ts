@@ -93,3 +93,4 @@ export type {
   QualityReviewOutput,
   EditorOutput,
 } from './report-quality-schema.js';
+export { WORD_END } from './unicode-word-boundary.js';

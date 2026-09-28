@@ -1,6 +1,7 @@
 import type { ReportLanguage } from '@odysseus/core';
 import type { ProseField } from './prose-fields.js';
 import type { WritingPassOutput } from './writing-schema.js';
+import { unicodeWords } from './unicode-word-boundary.js';
 
 /**
  * CLAUDE.md rule 6 and docs/rules/obligation-basis.md section 7 forbid stating
@@ -34,7 +35,7 @@ import type { WritingPassOutput } from './writing-schema.js';
  * entirely (docs/rules/outreach-rules.md section 5), so the model has no more
  * legitimate reason to reach for this vocabulary there than it does here.
  */
-const LEGAL_CONSEQUENCE_PATTERNS: Record<ReportLanguage, RegExp[]> = {
+const RAW_LEGAL_CONSEQUENCE_PATTERNS: Record<ReportLanguage, RegExp[]> = {
   fr: [
     /\bamendes?\b/i,
     /\bsanctions?\b/i,
@@ -94,6 +95,12 @@ const LEGAL_CONSEQUENCE_PATTERNS: Record<ReportLanguage, RegExp[]> = {
     /\b(?:falls?|is|are)\s+(?:(?:therefore|clearly)\s+)?(?:within|in)\s+(?:the\s+)?scope\s+of\s+(?:the\s+)?(?:obligation|law|regulation|directive)\b/i,
     /\b(?:by|before) (?:the end of (?:the )?year|this summer|the end of (?:the )?month|the end of (?:the )?week)\b/i,
   ],
+};
+
+/** Exported for the accented-word table test. */
+export const LEGAL_CONSEQUENCE_PATTERNS: Record<ReportLanguage, RegExp[]> = {
+  fr: RAW_LEGAL_CONSEQUENCE_PATTERNS.fr.map(unicodeWords),
+  en: RAW_LEGAL_CONSEQUENCE_PATTERNS.en.map(unicodeWords),
 };
 
 export interface LegalConsequenceViolation {

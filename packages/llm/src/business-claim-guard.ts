@@ -1,6 +1,7 @@
 import type { ReportLanguage } from '@odysseus/core';
 import type { ProseField } from './prose-fields.js';
 import type { WritingPassOutput } from './writing-schema.js';
+import { unicodeWords } from './unicode-word-boundary.js';
 
 /**
  * Plan 067: the writer has no measured evidence for commercial outcomes such
@@ -14,33 +15,53 @@ import type { WritingPassOutput } from './writing-schema.js';
  */
 const BANNED_CLAIM_PATTERNS: Record<ReportLanguage, RegExp[]> = {
   fr: [
-    /\bplus\s+rentables?\b/iu,
-    /\bplus\s+lucratifs?(?:e|es)?\b/iu,
-    /\bg[eéè]n[eéè]r\w*\s+le\s+plus\b/iu,
-    /\brapporte(?:nt)?\s+le\s+plus\b/iu,
-    /\bmeilleure\s+page\s+de\s+vente\b/iu,
-    /\babandonn\w*\b/iu,
-    /\b(?:commercialement\s+important(?:e|es|s)?|commerciale?s?\s+important(?:e|es|s)?|plus\s+important(?:e|es|s)?\s+commercialement)\b/iu,
-    /\b(?:confiance|r[ée]putation|demande)\b[^.!?]{0,80}\b(?:entam\w*|d[ée]grad\w*|renforc\w*|am[ée]lior\w*|affect\w*|impact\w*)\b/iu,
-    /\bperte\s+(?:de|des|du)\s+(?:r[ée]servations?|ventes?|clients?|conversion|revenus?|chiffre\s+d['’]affaires|demande|confiance|r[ée]putation)\b/iu,
-    /\b(?:r[ée]servations?|ventes?|clients?|conversion|revenus?|chiffre\s+d['’]affaires|demande|confiance|r[ée]putation)\s+(?:perdu(?:e|es|s)?|manqu[ée](?:e|es|s)?|en\s+baisse)\b/iu,
-    /\b(?:perd\w*|manqu\w*|r[ée]dui\w*|augment\w*|am[ée]lior\w*|d[ée]grad\w*|entam\w*|nui\w*|menac\w*|comprom\w*|affect\w*|impact\w*|d[ée]courag\w*|abandonn\w*)\b[^.!?]{0,100}\b(?:r[ée]servations?|ventes?|clients?|conversion|revenus?|chiffre\s+d['’]affaires|demande|confiance|r[ée]putation)\b/iu,
-    /\b(?:r[ée]servations?|ventes?|clients?|conversion|revenus?|chiffre\s+d['’]affaires|demande|confiance|r[ée]putation)\b[^.!?]{0,100}\b(?:baiss\w*|augment\w*|diminu\w*|souffr\w*|p[âa]ti\w*|d[ée]grad\w*|menac\w*|comprom\w*)\b/iu,
+    unicodeWords(/\bplus\s+rentables?\b/iu),
+    unicodeWords(/\bplus\s+lucratifs?(?:e|es)?\b/iu),
+    unicodeWords(/\bg[eéè]n[eéè]r\w*\s+le\s+plus\b/iu),
+    unicodeWords(/\brapporte(?:nt)?\s+le\s+plus\b/iu),
+    unicodeWords(/\bmeilleure\s+page\s+de\s+vente\b/iu),
+    unicodeWords(/\babandonn\w*\b/iu),
+    unicodeWords(
+      /\b(?:commercialement\s+important(?:e|es|s)?|commerciale?s?\s+important(?:e|es|s)?|plus\s+important(?:e|es|s)?\s+commercialement)\b/iu,
+    ),
+    unicodeWords(
+      /\b(?:confiance|r[ée]putation|demande)\b[^.!?]{0,80}\b(?:entam\w*|d[ée]grad\w*|renforc\w*|am[ée]lior\w*|affect\w*|impact\w*)\b/iu,
+    ),
+    unicodeWords(
+      /\bperte\s+(?:de|des|du)\s+(?:r[ée]servations?|ventes?|clients?|conversion|revenus?|chiffre\s+d['’]affaires|demande|confiance|r[ée]putation)\b/iu,
+    ),
+    unicodeWords(
+      /\b(?:r[ée]servations?|ventes?|clients?|conversion|revenus?|chiffre\s+d['’]affaires|demande|confiance|r[ée]putation)\s+(?:perdu(?:e|es|s)?|manqu[ée](?:e|es|s)?|en\s+baisse)\b/iu,
+    ),
+    unicodeWords(
+      /\b(?:perd\w*|manqu\w*|r[ée]dui\w*|augment\w*|am[ée]lior\w*|d[ée]grad\w*|entam\w*|nui\w*|menac\w*|comprom\w*|affect\w*|impact\w*|d[ée]courag\w*|abandonn\w*)\b[^.!?]{0,100}\b(?:r[ée]servations?|ventes?|clients?|conversion|revenus?|chiffre\s+d['’]affaires|demande|confiance|r[ée]putation)\b/iu,
+    ),
+    unicodeWords(
+      /\b(?:r[ée]servations?|ventes?|clients?|conversion|revenus?|chiffre\s+d['’]affaires|demande|confiance|r[ée]putation)\b[^.!?]{0,100}\b(?:baiss\w*|augment\w*|diminu\w*|souffr\w*|p[âa]ti\w*|d[ée]grad\w*|menac\w*|comprom\w*)\b/iu,
+    ),
   ],
   en: [
-    /\bmost\s+profitable\b/iu,
-    /\bmost\s+lucrative\b/iu,
-    /\btop[- ]earning\b/iu,
-    /\bbest[- ]selling\s+page\b/iu,
-    /\bgenerates?\s+the\s+most\b/iu,
-    /\bhighest[- ]revenue\b/iu,
-    /\b(?:abandon|abandons|abandoned|abandonment|drop\s*out|drops\s*out)\b/iu,
-    /\bcommercially\s+important\b/iu,
-    /\b(?:trust|reputation|demand)\b[^.!?]{0,80}\b(?:damage|damages|improve|improves|increase|increases|decline|declines|suffer|suffers|affect|affects|impact|impacts)\b/iu,
-    /\bloss\s+of\s+(?:bookings?|sales?|customers?|conversion|revenue|demand|trust|reputation)\b/iu,
-    /\b(?:lost|missed)\s+(?:bookings?|sales?|customers?|revenue|demand|trust)\b/iu,
-    /\b(?:lose|loses|lost|reduce|reduces|lower|lowers|increase|increases|improve|improves|harm|harms|hurt|hurts|erode|erodes|threaten|threatens|damage|damages|affect|affects|impact|impacts|discourage|discourages|abandon|abandons)\b[^.!?]{0,100}\b(?:bookings?|sales?|customers?|conversion|revenue|demand|trust|reputation)\b/iu,
-    /\b(?:bookings?|sales?|customers?|conversion|revenue|demand|trust|reputation)\b[^.!?]{0,100}\b(?:drop|drops|fall|falls|decline|declines|suffer|suffers|improve|improves|increase|increases)\b/iu,
+    unicodeWords(/\bmost\s+profitable\b/iu),
+    unicodeWords(/\bmost\s+lucrative\b/iu),
+    unicodeWords(/\btop[- ]earning\b/iu),
+    unicodeWords(/\bbest[- ]selling\s+page\b/iu),
+    unicodeWords(/\bgenerates?\s+the\s+most\b/iu),
+    unicodeWords(/\bhighest[- ]revenue\b/iu),
+    unicodeWords(/\b(?:abandon|abandons|abandoned|abandonment|drop\s*out|drops\s*out)\b/iu),
+    unicodeWords(/\bcommercially\s+important\b/iu),
+    unicodeWords(
+      /\b(?:trust|reputation|demand)\b[^.!?]{0,80}\b(?:damage|damages|improve|improves|increase|increases|decline|declines|suffer|suffers|affect|affects|impact|impacts)\b/iu,
+    ),
+    unicodeWords(
+      /\bloss\s+of\s+(?:bookings?|sales?|customers?|conversion|revenue|demand|trust|reputation)\b/iu,
+    ),
+    unicodeWords(/\b(?:lost|missed)\s+(?:bookings?|sales?|customers?|revenue|demand|trust)\b/iu),
+    unicodeWords(
+      /\b(?:lose|loses|lost|reduce|reduces|lower|lowers|increase|increases|improve|improves|harm|harms|hurt|hurts|erode|erodes|threaten|threatens|damage|damages|affect|affects|impact|impacts|discourage|discourages|abandon|abandons)\b[^.!?]{0,100}\b(?:bookings?|sales?|customers?|conversion|revenue|demand|trust|reputation)\b/iu,
+    ),
+    unicodeWords(
+      /\b(?:bookings?|sales?|customers?|conversion|revenue|demand|trust|reputation)\b[^.!?]{0,100}\b(?:drop|drops|fall|falls|decline|declines|suffer|suffers|improve|improves|increase|increases)\b/iu,
+    ),
   ],
 };
 

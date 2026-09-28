@@ -1,4 +1,5 @@
 import type { WritingPassOutput } from './writing-schema.js';
+import { unicodeWords } from './unicode-word-boundary.js';
 
 /**
  * report-feedback-la-corniche.md item 0.4: the writing pass used to be
@@ -26,8 +27,9 @@ import type { WritingPassOutput } from './writing-schema.js';
  * guard (severity-vocabulary-guard.ts) uses for banned synonyms.
  */
 const DIGIT_PATTERN = /\d/;
-const ARRONDISSEMENT_ORDINAL_PATTERN =
-  /\b\d{1,2}(?:er|e|ème|eme|st|nd|rd|th)\s+arrondissement\b/giu;
+const ARRONDISSEMENT_ORDINAL_PATTERN = unicodeWords(
+  /\b\d{1,2}(?:er|e|ème|eme|st|nd|rd|th)\s+arrondissement\b/giu,
+);
 
 export interface ExecutiveSummaryDigitViolation {
   field: 'executiveSummary';

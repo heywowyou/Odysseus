@@ -1,5 +1,6 @@
 import type { ReportLanguage } from '@odysseus/core';
 import type { WritingPassOutput } from './writing-schema.js';
+import { unicodeWords } from './unicode-word-boundary.js';
 
 /**
  * B2.6 (2026-08-24, Domaine Lagnonu). A real report's recommended actions
@@ -26,8 +27,8 @@ import type { WritingPassOutput } from './writing-schema.js';
 const PAGE_COUNT_PATTERNS: Record<ReportLanguage, RegExp> = {
   // Matches "18 pages", "les 18 pages", "sur 12 page" - a digit run
   // followed by the page noun, with only spacing between.
-  fr: /\b\d[\d\s.,]*\s*pages?\b/iu,
-  en: /\b\d[\d\s.,]*\s*pages?\b/iu,
+  fr: unicodeWords(/\b\d[\d\s.,]*\s*pages?\b/iu),
+  en: unicodeWords(/\b\d[\d\s.,]*\s*pages?\b/iu),
 };
 
 export interface PageCountViolation {
