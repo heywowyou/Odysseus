@@ -108,6 +108,10 @@ function prospect(fixture: WorkflowFixture): Record<string, unknown> {
           threadId: 'thread-1',
           state: 'draft',
           currentTouch: 1,
+          // The shape the prospect route serves since 397bdf7: the panel
+          // dates the state and each confirmed send from these.
+          stateEnteredAt: '2026-09-15T10:02:00.000Z',
+          touches: [],
           updatedAt: '2026-09-15T10:02:00.000Z',
         }
       : null,
