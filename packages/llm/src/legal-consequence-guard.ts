@@ -59,6 +59,17 @@ const LEGAL_CONSEQUENCE_PATTERNS: Record<ReportLanguage, RegExp[]> = {
     /\bassujetti(?:e|s|es)?\b/i,
     /\btenu(?:e|s|es)?\s+(?:de|d['’])/i,
     /\bvous devez\s+(?:vous\s+)?conformer\b/i,
+    // Plan 075 I3: the obligation status itself. Three stored French
+    // analyses concluded it in prose (« l'obligation s'applique au site »,
+    // « l'applicabilité de l'obligation est établie ») over a deterministic
+    // card that only reports the observed facts. Describing that a status
+    // exists (« est indiquée comme probable », « n'a pas pu être
+    // déterminée ») stays allowed; each pattern needs the obligation and a
+    // concluding verb in one clause, so « cette règle s'applique » passes.
+    /\bobligations?\b[^.;:!?]{0,80}?\b(?:ne\s+)?s['’]appliqu(?:e|ent)\b/i,
+    /\bapplicabilit[ée]\b[^.;:!?]{0,80}?\best\s+(?:[ée]tablie|confirm[ée]e|av[ée]r[ée]e|acquise|certaine)\b/i,
+    /\bobligations?\b[^.;:!?]{0,80}?\b(?:est|sont)\s+(?:(?:donc|bien|probablement|vraisemblablement|certainement)\s+)?(?:applicables?|[ée]tablies?)\b/i,
+    /\b(?:entre|entrent|rel[èe]ve|rel[èe]vent)\s+(?:bien\s+|donc\s+)?(?:dans\s+le\s+champ|du\s+champ)\s+(?:de\s+l['’]obligation|d['’]application)\b/i,
     // A deadline stated in words bypasses the numeric guard. These are not
     // allowed in model prose even when they do not name a legal sanction.
     /\b(?:avant|d['’]ici)\s+(?:la fin de l['’]ann[ée]e|cet [ée]t[ée]|la fin du mois|la fin de la semaine)\b/i,
@@ -77,6 +88,10 @@ const LEGAL_CONSEQUENCE_PATTERNS: Record<ReportLanguage, RegExp[]> = {
     /\bsubject to (?:the )?obligation\b/i,
     /\brequired to comply\b/i,
     /\byou must comply\b/i,
+    /\bobligations?\b[^.;:!?]{0,80}?\b(?:does\s+not\s+|doesn['’]t\s+|do\s+not\s+|don['’]t\s+)?appl(?:y|ies)\s+to\b/i,
+    /\bapplicability\b[^.;:!?]{0,80}?\bis\s+(?:established|confirmed|certain)\b/i,
+    /\bobligations?\b[^.;:!?]{0,80}?\b(?:is|are)\s+(?:(?:therefore|likely|probably|clearly)\s+)?applicable\b/i,
+    /\b(?:falls?|is|are)\s+(?:(?:therefore|clearly)\s+)?(?:within|in)\s+(?:the\s+)?scope\s+of\s+(?:the\s+)?(?:obligation|law|regulation|directive)\b/i,
     /\b(?:by|before) (?:the end of (?:the )?year|this summer|the end of (?:the )?month|the end of (?:the )?week)\b/i,
   ],
 };

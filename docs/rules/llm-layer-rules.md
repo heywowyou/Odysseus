@@ -256,6 +256,12 @@ above, and only for the guards named here. Each guard is classified:
   transactional flow, executive-summary digit, positional reference. These
   reject to exhaustion, unchanged. A rule 1 or rule 6 breach shipping is worse
   than no report, which is exactly what the paragraph above says.
+  The legal-consequence guard also covers the obligation status itself
+  (plan 075 I3, 2026-09-28): prose may say that the report states a status,
+  never that the obligation applies, is established, is applicable or does
+  not apply. The sanitizer drops such a sentence before the guards run and
+  records `legal-claim-removed`; the status is written only by the
+  deterministic legal section.
 - **style** - provider placement, provider phrase, prose register. On the
   **final** attempt only, if every remaining violation is style, the response
   is accepted, each escaped violation is logged, and the escape is recorded.

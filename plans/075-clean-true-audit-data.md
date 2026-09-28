@@ -514,7 +514,7 @@ Checked and clean or already known in this sweep: `mentions-legales` and `canoni
 
 #### Question
 
-- **Q6. What one `link-name` finding stands for.** Q5 made `image-alt` one site-wide finding. `link-name` has the same shape on lescriquets (one instruction, « give these links a name », carried out per template) and the same identity limits (bare anchors cannot be told apart by their own markup). Recommended: (a) one site-wide finding per rule and frame origin for `link-name` and `button-name`, the components listed as evidence in the annex, occurrences preserved, as Q5 did for images. Alternatives: (b) keep per-component findings and add the three identity fixes in I2 (ancestor component for bare anchors, truncation rule for every shape rule, presentational class variants), which leaves lescriquets at about 6 and still depends on class naming; (c) (b) now, (a) only past a threshold. (a) is the smallest change and the one the operator already chose for images.
+- **Q6. What one `link-name` finding stands for.** Q5 made `image-alt` one site-wide finding. `link-name` has the same shape on lescriquets (one instruction, « give these links a name », carried out per template) and the same identity limits (bare anchors cannot be told apart by their own markup). Recommended: (a) one site-wide finding per rule and frame origin for `link-name` and `button-name`, the components listed as evidence in the annex, occurrences preserved, as Q5 did for images. Alternatives: (b) keep per-component findings and add the three identity fixes in I2 (ancestor component for bare anchors, truncation rule for every shape rule, presentational class variants), which leaves lescriquets at about 6 and still depends on class naming; (c) (b) now, (a) only past a threshold. (a) is the smallest change and the one the operator already chose for images. **Answered 2026-09-28: (a).**
 
 #### Slices
 
@@ -529,9 +529,10 @@ Checked and clean or already known in this sweep: `mentions-legales` and `canoni
   - targets: lescriquets `link-name` 64 to 1 under (a) or about 6 under (b); heurope `aria-roles` 2 to 1 and its tablist `aria-required-children` 2 to 1; occurrences preserved.
   - Tests: normalize-axe unit tests with the stored bare-anchor carousel, the truncated Webflow names and the `tabPanel` pair.
 - **I3. A legal verdict in model prose is rejected.**
-  - Add an output guard in `llm`, beside the existing identifier guards, that rejects writer and critic output stating that the obligation applies, is established or does not apply (French and English patterns, owned in `docs/rules/llm-layer-rules.md`), and retries once with the reason; a second failure drops the sentence and records it in the critic sidecar. The obligation status is written only by the deterministic legal section.
-  - Stored reports: the three analyses above keep their text until regenerated; production holds no report approval, so none has gone to a client.
-  - Tests: a guard unit test with the three stored sentences and three neutral controls (« l'applicabilité … est présentée dans la section légale »).
+  - Extend the existing legal-consequence guard (`legal-consequence-guard.ts`) with obligation-status patterns, French and English, each needing the obligation and a concluding verb in one clause. Writer and critic output both pass through `sanitizeWritingOutput`, which drops a matching sentence and records `legal-claim-removed`; the blocking guard then rejects anything left. The obligation status is written only by the deterministic legal section (`docs/rules/llm-layer-rules.md`).
+  - Stored reports: the flagged analyses keep their text until regenerated; production holds no report approval, so none has gone to a client.
+  - Tests: guard unit tests with the stored verdict sentences and neutral controls from the same run.
+  - **Implemented 2026-09-28.** Over all 55 stored French analyses on the VPS (3,448 sentences), the patterns match 5 sentences, every one a verdict: grandhoteldesalpes, le37bishotel-paris, grandhotelbellevue, hoteldegarlande (`2026-09-24T11-51-45Z`) and lescriquets; no neutral description matches.
 
 Minor, not slices: two audits report one missing logo alt twice, as `image-alt` on the image and `link-name` on its anchor (lescriquets category tiles, villasfoch social icons); regina-hotel lost the first attempt of every content check on 204 of 412 pages to `check-timeout` before the retry succeeded, a cost and not a data defect.
 
@@ -635,7 +636,7 @@ The closure artifact is the requirement-to-proof ledger below. Every row names i
 | Structured-data check survives stray attributes | `structured-data-extract.ts` | Code | Stray-attribute unit test | none |
 | Language redirects are neither pages nor redirects | `normalize.ts` population, `renormalize-audit.ts`, sitemap normalizers, coverage | Code, trade-off 115 amendment | Stored WPML-shape normalize test; sitemap rule exclusion test | Harness: grandhoteldesalpes `sitemap-lists-redirects` without the 114 translations |
 | `link-name` per Q6; shape rules survive truncation; ARIA role rules by shape | `normalize-axe.ts`, `normalize.ts` merge | Code, operator decision, trade-off 30 amendment | Bare-anchor, truncated-name and `tabPanel` unit tests; harness shows no rule gaining findings on 22 audits | Harness per-rule table: lescriquets `link-name`, heurope `aria-roles` 1 |
-| No legal verdict in model prose | `llm` output guards, `docs/rules/llm-layer-rules.md` | Code, pattern list | Guard unit test with the three stored sentences and neutral controls | Operator reads one regenerated executive summary |
+| No legal verdict in model prose | `legal-consequence-guard.ts`, `sanitize-writing-output.ts`, `docs/rules/llm-layer-rules.md` | Code, pattern list | `legal-consequence-guard.test.ts` verdict and neutral cases; 5 of 3,448 stored sentences matched, all verdicts | Operator reads one regenerated executive summary |
 | Provenance consistent | `normalization-fingerprint.ts` | Fingerprint bump | `pnpm run check`, findings-provenance test | none |
 
 ## Verification

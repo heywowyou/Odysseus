@@ -215,6 +215,53 @@ describe('poursuite: prosecution versus continuation', () => {
   });
 });
 
+// Plan 075 I3. The deterministic legal section states the obligation status;
+// the model may describe that the status exists, never conclude it for the
+// client. The flagged sentences are verbatim from stored French analyses of
+// 2026-09-24 and 2026-09-25; the allowed ones are from the same run.
+describe('obligation applicability verdicts', () => {
+  const fires = (text: string, language: 'fr' | 'en' = 'fr') =>
+    findLegalConsequenceViolationsInFields([{ field: 'executiveSummary', text }], language).length >
+    0;
+
+  it.each([
+    'Les éléments de cadrage indiquent que l’obligation s’applique au site ; cette donnée demeure distincte des effets fonctionnels décrits.',
+    'Le contexte du rapport indique que l’obligation d’accessibilité s’applique à l’entreprise.',
+    'Le dossier indique que l’applicabilité de l’obligation est établie pour le site, à titre de donnée de contexte.',
+    'Les données de contexte indiquent que l’obligation d’accessibilité est probablement applicable au site.',
+    "L'obligation ne s'applique pas à votre établissement.",
+    'Votre établissement entre dans le champ de l’obligation.',
+  ])('flags the French verdict %#', (text) => {
+    expect(fires(text)).toBe(true);
+  });
+
+  it.each([
+    'L’applicabilité de l’obligation est indiquée comme probable dans les éléments de contexte.',
+    'Les résultats doivent être lus en tenant compte des pages en erreur ; l’applicabilité de l’obligation mentionnée n’a pas pu être déterminée à partir des éléments disponibles.',
+    'Le rapport présente l’applicabilité de l’obligation comme un élément de contexte distinct de l’analyse fonctionnelle.',
+    'Cette règle s’applique à tous les boutons du site.',
+    'Un champ obligatoire envoyé vide ne signale pas son erreur.',
+  ])('allows the French description %#', (text) => {
+    expect(fires(text)).toBe(false);
+  });
+
+  it.each([
+    'The context indicates that the accessibility obligation applies to your business.',
+    'The applicability of the obligation is established for this site.',
+    'The obligation is therefore applicable to the site.',
+    'Your business falls within the scope of the obligation.',
+  ])('flags the English verdict %#', (text) => {
+    expect(fires(text, 'en')).toBe(true);
+  });
+
+  it.each([
+    'The applicability of the obligation is presented as context in the legal section.',
+    'This rule applies to every button on the site.',
+  ])('allows the English description %#', (text) => {
+    expect(fires(text, 'en')).toBe(false);
+  });
+});
+
 // A rejection that prints one bare word is not diagnosable: it was exactly
 // this that hid the poursuite homonym until a run was traced by hand.
 describe('excerptAroundMatch', () => {
