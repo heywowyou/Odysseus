@@ -358,7 +358,7 @@ export async function recordFailedOutreachDraft(
 }
 
 /** The failure reason of a draft the provider may hold with no live row. */
-export const PROVIDER_DRAFT_UNRECORDED = 'provider-draft-unrecorded';
+const PROVIDER_DRAFT_UNRECORDED = 'provider-draft-unrecorded';
 
 /**
  * Issue #552: the provider created a draft the store could not record, and
