@@ -6343,3 +6343,10 @@ promise), anchoring on the last scan alone (a prospect in an active email
 exchange would lose its audit mid-conversation), and keeping the company
 record without the contact fields (the pages promise deletion of the
 prospecting data itself).
+
+Amended 2026-09-28 (issue #553): outreach threads use the same anchor. A
+thread's expiry is reset on every state change and confirmed send, so a
+sequence sent near day 90 keeps its thread, follow-ups and reply sync. Draft
+rows keep their 90 days from creation, and the daily sweep withdraws the
+mailbox copy a week earlier, so a row never expires over a draft still in
+the mailbox.

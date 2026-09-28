@@ -428,6 +428,39 @@ export async function acknowledgeUnverifiedProviderDrafts(
   return result.modifiedCount;
 }
 
+/**
+ * Issue #553: live drafts with a provider copy whose row expires before
+ * `before`. The TTL index would drop the row and leave the provider draft in
+ * the mailbox with nothing blocking a second one, so the retention sweep
+ * withdraws them first.
+ */
+export async function listOutreachDraftsExpiringBefore(
+  connection: Connection,
+  before: Date,
+): Promise<OutreachDraftDocument[]> {
+  return createOutreachDraftModel(connection)
+    .find({
+      status: { $in: ['created', 'mailbox-delete-pending'] },
+      providerDraftId: { $exists: true },
+      expiresAt: { $lt: before },
+    })
+    .lean();
+}
+
+/** Issue #553: marks an expiring draft for provider deletion and keeps its
+ *  row until `until`, so a failed deletion is retried instead of the row
+ *  expiring over a draft still in the mailbox. */
+export async function holdOutreachDraftForDeletion(
+  connection: Connection,
+  draftId: string,
+  until: Date,
+): Promise<void> {
+  await createOutreachDraftModel(connection).updateOne(
+    { draftId, status: { $in: ['created', 'mailbox-delete-pending'] } },
+    { $set: { status: 'mailbox-delete-pending', expiresAt: until } },
+  );
+}
+
 export async function findLiveOutreachDraft(
   connection: Connection,
   threadId: string,

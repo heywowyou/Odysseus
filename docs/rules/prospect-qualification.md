@@ -198,6 +198,15 @@ A prospect that became a client or is in a live commercial exchange (`won`,
 `call`, `quoted`, or any delivered audit) is not prospecting data and is
 exempt.
 
+**Outreach threads and drafts.** An outreach thread expires 90 days after its
+last activity (a state change or a confirmed send), not after it was opened,
+so a sequence still running is never cut off (issue #553). A draft row keeps
+its 90 days from creation, but its copy in the mailbox does not expire with
+it: the daily retention sweep withdraws a draft from the mailbox a week
+before its row would expire and keeps the row as a pending deletion until the
+mailbox confirms, so an unsent first email never leaves an untracked draft
+behind.
+
 **Plan 071 reference-link attribution.** The optional private mapping from a
 Touch-1 reference-link token hash to its prospect, thread and draft follows
 the same 90-day boundary from draft creation. It stores no raw public token;

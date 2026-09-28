@@ -205,6 +205,8 @@ export {
   confirmOutreachSentByOperator,
   findLiveOutreachDraft,
   findUnverifiedProviderDraft,
+  listOutreachDraftsExpiringBefore,
+  holdOutreachDraftForDeletion,
   acknowledgeUnverifiedProviderDrafts,
   recordUnrecordedProviderDraft,
   markOutreachDraftDeleted,

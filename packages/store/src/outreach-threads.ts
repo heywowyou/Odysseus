@@ -43,6 +43,13 @@ const REOPENABLE_STATES: readonly OutreachThreadState[] = ['open', 'e1-drafted']
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Issue #553 (trade-off 125): a thread expires 90 days after its last
+ *  activity, not after it was opened, so a sequence still running is never
+ *  deleted mid-way. Every write that records activity sets it again. */
+function threadExpiry(at: Date): Date {
+  return new Date(at.getTime() + OUTREACH_THREAD_RETENTION_DAYS * DAY_MS);
+}
+
 export interface OpenOutreachThreadInput {
   prospectId: string;
   previewId: string;
@@ -86,6 +93,7 @@ export async function openOutreachThread(
             roleAddress: input.roleAddress,
             previewId: input.previewId,
             updatedAt: input.openedAt,
+            expiresAt: threadExpiry(input.openedAt),
           },
         },
         { new: true },
@@ -114,7 +122,7 @@ export async function openOutreachThread(
     campaignVersion: input.campaignVersion,
     createdAt: input.openedAt,
     updatedAt: input.openedAt,
-    expiresAt: new Date(input.openedAt.getTime() + OUTREACH_THREAD_RETENTION_DAYS * DAY_MS),
+    expiresAt: threadExpiry(input.openedAt),
   };
 
   try {
@@ -205,6 +213,7 @@ export async function transitionOutreachThread(
         state: input.to,
         stateEnteredAt: input.at,
         updatedAt: input.at,
+        expiresAt: threadExpiry(input.at),
         ...(input.reason !== undefined ? { stateReason: input.reason } : {}),
       },
     },
@@ -246,6 +255,7 @@ export async function markOutreachThreadDrafted(
   const ThreadModel = createOutreachThreadModel(connection);
   const draftFields = {
     updatedAt: input.at,
+    expiresAt: threadExpiry(input.at),
     ...(input.providerThreadId !== undefined ? { providerThreadId: input.providerThreadId } : {}),
   };
   const moved =
@@ -295,7 +305,10 @@ export async function recordOutreachThreadTouchSent(
   const ThreadModel = createOutreachThreadModel(connection);
   const result = await ThreadModel.updateOne(
     { threadId, 'touches.touch': { $ne: touch.touch } },
-    { $push: { touches: touch }, $set: { updatedAt: new Date() } },
+    {
+      $push: { touches: touch },
+      $set: { updatedAt: new Date(), expiresAt: threadExpiry(new Date()) },
+    },
   );
   return result.modifiedCount === 1;
 }
@@ -353,6 +366,7 @@ export async function closeOutreachThreadsForDomain(
         stateEnteredAt: now,
         stateReason: reason,
         updatedAt: now,
+        expiresAt: threadExpiry(now),
       },
     },
   );

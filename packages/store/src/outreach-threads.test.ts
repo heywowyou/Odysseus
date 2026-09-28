@@ -6,6 +6,8 @@ import {
   findOutreachThreadById,
   listThreadsDueForFollowUp,
   openOutreachThread,
+  recordOutreachThreadTouchSent,
+  transitionOutreachThread,
 } from './outreach-threads.js';
 import {
   findOutreachPreviewByTokenHash,
@@ -197,6 +199,36 @@ describe.skipIf(!available)('outreach follow-up timing', () => {
       }
       expect((await findOutreachThreadById(connection!, threadId))?.state).toBe('e3-sent');
     });
+  });
+});
+
+describe.skipIf(!available)('outreach thread expiry (issue #553)', () => {
+  it('counts 90 days from the last state change or send, not from the opening', async () => {
+    const threadId = await threadIn('open', []);
+    const opened = (await findOutreachThreadById(connection!, threadId))!.expiresAt;
+
+    const sentAt = new Date(firstSent.getTime() + 80 * DAY_MS);
+    await transitionOutreachThread(connection!, {
+      threadId,
+      from: ['open'],
+      to: 'e1-drafted',
+      at: sentAt,
+    });
+    expect((await findOutreachThreadById(connection!, threadId))!.expiresAt).toEqual(
+      new Date(sentAt.getTime() + 90 * DAY_MS),
+    );
+    expect(sentAt.getTime() + 90 * DAY_MS).toBeGreaterThan(opened.getTime());
+
+    const before = Date.now();
+    await recordOutreachThreadTouchSent(connection!, threadId, {
+      touch: 1,
+      providerMessageId: 'msg-1',
+      sentAt,
+      detectedAt: sentAt,
+    });
+    expect(
+      (await findOutreachThreadById(connection!, threadId))!.expiresAt.getTime(),
+    ).toBeGreaterThanOrEqual(before + 90 * DAY_MS);
   });
 });
 

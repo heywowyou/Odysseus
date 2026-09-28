@@ -15,6 +15,7 @@ import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-
 import { logger } from '../logger.js';
 import { createConfiguredMailboxDraftAdapter } from '../outreach/configured-mailbox-draft-adapter.js';
 import { createConfiguredPreviewPublisher } from '../outreach/configured-preview-publisher.js';
+import { withdrawExpiringOutreachDrafts } from '../outreach/expiring-outreach-drafts.js';
 import { isReportProductionInFlight } from '../pipeline/report-production-lock.js';
 import { runRetention, type RetentionRunOptions } from './apply-retention.js';
 import { runProspectExpiry, type ProspectExpiryRunOptions } from './prospect-expiry.js';
@@ -113,6 +114,18 @@ export function startRetentionSweeper(
       }
     } catch (error) {
       logger.error({ err: error }, 'prospect expiry failed');
+    }
+    try {
+      const drafts = await withdrawExpiringOutreachDrafts({
+        connection,
+        mailbox: createConfiguredMailboxDraftAdapter(),
+        now: new Date(),
+      });
+      if (drafts.withdrawn > 0 || drafts.notRemoved > 0) {
+        logger.info(drafts, 'expiring outreach drafts withdrawn from the mailbox');
+      }
+    } catch (error) {
+      logger.error({ err: error }, 'expiring outreach draft sweep failed');
     } finally {
       running = false;
     }
