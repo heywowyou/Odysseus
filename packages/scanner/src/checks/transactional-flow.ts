@@ -39,6 +39,7 @@ import { getCrawlerUserAgent } from '../config.js';
 import { isSocialPlatformHost } from '../social-hosts.js';
 import type { PageWorkGuard } from '../page-work-guard.js';
 import { settleRoute } from '../browser-network-safety.js';
+import { openScannerContext } from '../scanner-context.js';
 
 const CHECKOUT_FORM_SELECTOR =
   'form[action*="checkout"], form[action*="panier"], form[action*="cart"], [class*="add-to-cart"], [id*="add-to-cart"]';
@@ -563,8 +564,11 @@ async function inspectDestinationPage(
   if (!(await hostIsAllowed(linkUrl))) {
     return { linkUrl, resolution: 'undetermined', detail: NON_PUBLIC_DESTINATION_DETAIL };
   }
-  const context = await browser.newContext({ userAgent, locale: AUDIT_BROWSER_LOCALE });
-  guard?.track(context);
+  const context = await openScannerContext(
+    browser,
+    { userAgent, locale: AUDIT_BROWSER_LOCALE },
+    { guard },
+  );
   try {
     context.setDefaultTimeout(timeoutMs);
     context.setDefaultNavigationTimeout(timeoutMs);

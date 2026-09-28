@@ -31,10 +31,8 @@ import {
   type RenderedReadinessObservation,
 } from './page-readiness.js';
 import { collectSurfaceLinks } from './surface-discovery.js';
-import {
-  installBrowserNetworkSafety,
-  type NetworkSafetyBlockHandler,
-} from './browser-network-safety.js';
+import type { NetworkSafetyBlockHandler } from './browser-network-safety.js';
+import { openScannerContext } from './scanner-context.js';
 import type { NetworkTargetPolicy } from './network-target-policy.js';
 
 /** Bounded, secret-minimizing summary of one axe run on the surface:
@@ -108,23 +106,23 @@ export async function runMobileSurfaceAnalysis(
     readinessOutcome: 'ready',
   });
 
-  const context = await browser.newContext({
-    userAgent,
-    viewport: { ...MOBILE_SURFACE_PROFILE.viewport },
-    deviceScaleFactor: MOBILE_SURFACE_PROFILE.deviceScaleFactor,
-    hasTouch: MOBILE_SURFACE_PROFILE.hasTouch,
-    colorScheme: MOBILE_SURFACE_PROFILE.media.colorScheme,
-    reducedMotion: MOBILE_SURFACE_PROFILE.media.reducedMotion,
-    locale: AUDIT_BROWSER_LOCALE,
-  });
-  if (options.networkPolicy !== undefined) {
-    await installBrowserNetworkSafety(
-      context,
-      options.networkPolicy,
-      options.onNetworkSafetyBlocked,
-    );
-  }
-  options.guard?.track(context);
+  const context = await openScannerContext(
+    browser,
+    {
+      userAgent,
+      viewport: { ...MOBILE_SURFACE_PROFILE.viewport },
+      deviceScaleFactor: MOBILE_SURFACE_PROFILE.deviceScaleFactor,
+      hasTouch: MOBILE_SURFACE_PROFILE.hasTouch,
+      colorScheme: MOBILE_SURFACE_PROFILE.media.colorScheme,
+      reducedMotion: MOBILE_SURFACE_PROFILE.media.reducedMotion,
+      locale: AUDIT_BROWSER_LOCALE,
+    },
+    {
+      guard: options.guard,
+      networkPolicy: options.networkPolicy,
+      onNetworkSafetyBlocked: options.onNetworkSafetyBlocked,
+    },
+  );
   try {
     context.setDefaultTimeout(timeoutMs);
     context.setDefaultNavigationTimeout(timeoutMs);

@@ -37,10 +37,8 @@ import type { Browser } from 'playwright';
 import { AUDIT_BROWSER_LOCALE } from '../audit-locale.js';
 import { getCrawlerUserAgent, getRenderSettleTimeoutMs } from '../config.js';
 import type { PageWorkGuard } from '../page-work-guard.js';
-import {
-  installBrowserNetworkSafety,
-  type NetworkSafetyBlockHandler,
-} from '../browser-network-safety.js';
+import type { NetworkSafetyBlockHandler } from '../browser-network-safety.js';
+import { openScannerContext } from '../scanner-context.js';
 import type { NetworkTargetPolicy } from '../network-target-policy.js';
 
 /** Hosts whose only purpose is measurement, advertising or social
@@ -218,18 +216,18 @@ export async function checkCookieConsent(
   // A brand-new context is the whole point: no storage state carries over
   // from the crawl's own passes, so nothing that happened earlier in this
   // audit can be mistaken for the visitor having consented.
-  const context = await browser.newContext({
-    userAgent: options.userAgent ?? getCrawlerUserAgent(),
-    locale: AUDIT_BROWSER_LOCALE,
-  });
-  if (options.networkPolicy !== undefined) {
-    await installBrowserNetworkSafety(
-      context,
-      options.networkPolicy,
-      options.onNetworkSafetyBlocked,
-    );
-  }
-  options.guard?.track(context);
+  const context = await openScannerContext(
+    browser,
+    {
+      userAgent: options.userAgent ?? getCrawlerUserAgent(),
+      locale: AUDIT_BROWSER_LOCALE,
+    },
+    {
+      guard: options.guard,
+      networkPolicy: options.networkPolicy,
+      onNetworkSafetyBlocked: options.onNetworkSafetyBlocked,
+    },
+  );
   try {
     const trackerRequests = new Map<string, ObservedTrackerRequest>();
     const thirdPartyOrigins = new Map<string, number>();

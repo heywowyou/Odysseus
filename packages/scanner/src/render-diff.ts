@@ -16,10 +16,8 @@ import { analyzeRawDocument } from './raw-document-signals.js';
 import { buildPageDir } from './artifacts/paths.js';
 import { couldEverBeKept } from './artifacts/prune-screenshots.js';
 import type { PageWorkGuard } from './page-work-guard.js';
-import {
-  installBrowserNetworkSafety,
-  type NetworkSafetyBlockHandler,
-} from './browser-network-safety.js';
+import type { NetworkSafetyBlockHandler } from './browser-network-safety.js';
+import { openScannerContext } from './scanner-context.js';
 import { withDefaultNetworkPolicy, type NetworkTargetPolicy } from './network-target-policy.js';
 import type { HostRequestScheduler } from './host-request-scheduler.js';
 import {
@@ -196,19 +194,16 @@ export async function renderDiff(
   // context holding one settled document, so the cost of keeping it is
   // small next to writing two full-page PNGs that get deleted at the end
   // of the scan. See couldEverBeKept in artifacts/prune-screenshots.ts.
-  const rawContext = await browser.newContext({
-    javaScriptEnabled: false,
-    userAgent,
-    locale: AUDIT_BROWSER_LOCALE,
-  });
-  if (options.networkPolicy !== undefined) {
-    await installBrowserNetworkSafety(
-      rawContext,
-      options.networkPolicy,
-      options.onNetworkSafetyBlocked,
-    );
-  }
-  options.guard?.track(rawContext);
+  const contextSafety = {
+    guard: options.guard,
+    networkPolicy: options.networkPolicy,
+    onNetworkSafetyBlocked: options.onNetworkSafetyBlocked,
+  };
+  const rawContext = await openScannerContext(
+    browser,
+    { javaScriptEnabled: false, userAgent, locale: AUDIT_BROWSER_LOCALE },
+    contextSafety,
+  );
   let rawTextLength: number;
   let rawDocument: RawDocumentSignals;
   let httpStatus: number;
@@ -250,15 +245,11 @@ export async function renderDiff(
       await new Promise((resolve) => setTimeout(resolve, options.preRenderedDelayMs));
     }
 
-    const renderedContext = await browser.newContext({ userAgent, locale: AUDIT_BROWSER_LOCALE });
-    if (options.networkPolicy !== undefined) {
-      await installBrowserNetworkSafety(
-        renderedContext,
-        options.networkPolicy,
-        options.onNetworkSafetyBlocked,
-      );
-    }
-    options.guard?.track(renderedContext);
+    const renderedContext = await openScannerContext(
+      browser,
+      { userAgent, locale: AUDIT_BROWSER_LOCALE },
+      contextSafety,
+    );
     try {
       renderedContext.setDefaultTimeout(timeoutMs);
       renderedContext.setDefaultNavigationTimeout(timeoutMs);

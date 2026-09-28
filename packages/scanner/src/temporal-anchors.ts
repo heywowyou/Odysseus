@@ -28,10 +28,8 @@
 import type { Browser } from 'playwright';
 import { AUDIT_BROWSER_LOCALE } from './audit-locale.js';
 import { canonicalDigest } from '@odysseus/core';
-import {
-  installBrowserNetworkSafety,
-  type NetworkSafetyBlockHandler,
-} from './browser-network-safety.js';
+import type { NetworkSafetyBlockHandler } from './browser-network-safety.js';
+import { openScannerContext } from './scanner-context.js';
 import type { TemporalCoherenceResult } from './evidence-snapshots.js';
 import type { NetworkTargetPolicy } from './network-target-policy.js';
 
@@ -184,19 +182,15 @@ export async function captureStructuralAnchor(
   url: string,
   options: AnchorProbeOptions,
 ): Promise<StructuralAnchor> {
-  const context = await browser.newContext({
-    javaScriptEnabled: false,
-    userAgent: options.userAgent,
-    locale: AUDIT_BROWSER_LOCALE,
-  });
+  const context = await openScannerContext(
+    browser,
+    { javaScriptEnabled: false, userAgent: options.userAgent, locale: AUDIT_BROWSER_LOCALE },
+    {
+      networkPolicy: options.networkPolicy,
+      onNetworkSafetyBlocked: options.onNetworkSafetyBlocked,
+    },
+  );
   try {
-    if (options.networkPolicy !== undefined) {
-      await installBrowserNetworkSafety(
-        context,
-        options.networkPolicy,
-        options.onNetworkSafetyBlocked,
-      );
-    }
     context.setDefaultTimeout(options.timeoutMs);
     context.setDefaultNavigationTimeout(options.timeoutMs);
     const page = await context.newPage();

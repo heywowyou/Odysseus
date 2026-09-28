@@ -23,10 +23,8 @@ import {
   getPageTimeoutMs,
 } from './config.js';
 import type { HostRequestScheduler } from './host-request-scheduler.js';
-import {
-  installBrowserNetworkSafety,
-  type NetworkSafetyBlockHandler,
-} from './browser-network-safety.js';
+import type { NetworkSafetyBlockHandler } from './browser-network-safety.js';
+import { openScannerContext } from './scanner-context.js';
 import {
   checkNetworkTarget,
   withDefaultNetworkPolicy,
@@ -858,16 +856,16 @@ export async function crawlSite(
     context: BrowserContext;
     crawlGuard: PageWorkGuard;
   }> => {
-    const opened = await options.browser.newContext({ userAgent, locale: AUDIT_BROWSER_LOCALE });
     const guard = createPageWorkGuard(options.guard);
-    guard.track(opened);
-    if (options.networkPolicy !== undefined) {
-      await installBrowserNetworkSafety(
-        opened,
-        options.networkPolicy,
-        options.onNetworkSafetyBlocked,
-      );
-    }
+    const opened = await openScannerContext(
+      options.browser,
+      { userAgent, locale: AUDIT_BROWSER_LOCALE },
+      {
+        guard,
+        networkPolicy: options.networkPolicy,
+        onNetworkSafetyBlocked: options.onNetworkSafetyBlocked,
+      },
+    );
     opened.setDefaultTimeout(timeoutMs);
     opened.setDefaultNavigationTimeout(timeoutMs);
     return { context: opened, crawlGuard: guard };

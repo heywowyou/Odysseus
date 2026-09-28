@@ -41,10 +41,8 @@ import {
   watchSignificantResourceFailures,
   type RenderedReadinessObservation,
 } from './page-readiness.js';
-import {
-  installBrowserNetworkSafety,
-  type NetworkSafetyBlockHandler,
-} from './browser-network-safety.js';
+import type { NetworkSafetyBlockHandler } from './browser-network-safety.js';
+import { openScannerContext } from './scanner-context.js';
 import type { NetworkTargetPolicy } from './network-target-policy.js';
 
 /** Per-page budget for safe local-state exploration (section 9). */
@@ -256,21 +254,21 @@ export async function runConsentSurfaceAnalysis(
   // as every other pass; it never negotiates a different user agent.
   const userAgent = options.userAgent ?? getCrawlerUserAgent();
 
-  const context = await browser.newContext({
-    userAgent,
-    viewport: { ...BASELINE_DESKTOP_VIEWPORT },
-    deviceScaleFactor: 1,
-    hasTouch: false,
-    locale: AUDIT_BROWSER_LOCALE,
-  });
-  if (options.networkPolicy !== undefined) {
-    await installBrowserNetworkSafety(
-      context,
-      options.networkPolicy,
-      options.onNetworkSafetyBlocked,
-    );
-  }
-  options.guard?.track(context);
+  const context = await openScannerContext(
+    browser,
+    {
+      userAgent,
+      viewport: { ...BASELINE_DESKTOP_VIEWPORT },
+      deviceScaleFactor: 1,
+      hasTouch: false,
+      locale: AUDIT_BROWSER_LOCALE,
+    },
+    {
+      guard: options.guard,
+      networkPolicy: options.networkPolicy,
+      onNetworkSafetyBlocked: options.onNetworkSafetyBlocked,
+    },
+  );
   try {
     context.setDefaultTimeout(timeoutMs);
     context.setDefaultNavigationTimeout(timeoutMs);
