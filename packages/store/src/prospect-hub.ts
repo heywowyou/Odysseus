@@ -788,13 +788,19 @@ export async function applyAutomaticProspectStatus(
 ): Promise<ProspectHubDocument | null> {
   const current = await getProspectHub(connection, prospectId);
   if (current === null) return null;
-  const decision = decideAutomaticStatus(current.status, status);
-  if (!decision.allowed) throw new AutomaticStatusTransitionError(current.status, status);
   if (status === 'opted-out' && options.suppression !== 'already-applied') {
     // Re-applying an existing opt-out repairs suppression if an earlier
-    // status write predated the durable suppression side effect.
+    // status write predated the durable suppression side effect. Written
+    // before the transition is decided: an objection is honoured whatever
+    // the prospect's status (issue #535).
     await suppressProspect(connection, current);
   }
+  const decision = decideAutomaticStatus(current.status, status);
+  // A won or lost prospect keeps its result when it objects; the
+  // suppression above already stops any further contact, as on the public
+  // opt-out path.
+  if (!decision.allowed && status === 'opted-out') return current;
+  if (!decision.allowed) throw new AutomaticStatusTransitionError(current.status, status);
   if (!decision.changed) return current;
   return writeProspectStatusIfCurrent(connection, current, status, actor);
 }

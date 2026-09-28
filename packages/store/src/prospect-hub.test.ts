@@ -456,6 +456,42 @@ describe.skipIf(!mongoAvailable)('prospect status opt-out suppression (issue #41
   });
 });
 
+describe.skipIf(!mongoAvailable)('opting out a won or lost prospect (issue #535)', () => {
+  for (const terminal of ['won', 'lost'] as const) {
+    it(`writes the suppression and keeps the ${terminal} status`, async () => {
+      const domain = `terminal-${terminal}-opt-out.example`;
+      const prospect = await createProspectHub(connection!, {
+        sector: 'hotel',
+        name: `Terminal ${terminal}`,
+        websites: [
+          { url: `https://${domain}/`, registrableDomain: domain, kind: 'own', primary: true },
+        ],
+        emails: [{ address: `owner@${domain}`, origin: 'operator' }],
+      });
+      await setProspectStatus(connection!, prospect.prospectId, terminal);
+
+      const outcome = await recordProspectOutcome(connection!, prospect.prospectId, 'opt-out');
+
+      expect(outcome?.status).toBe(terminal);
+      await expect(isSuppressed(connection!, domain, `owner@${domain}`)).resolves.toBe(true);
+      const direct = await applyAutomaticProspectStatus(
+        connection!,
+        prospect.prospectId,
+        'opted-out',
+      );
+      expect(direct?.status).toBe(terminal);
+    });
+  }
+
+  it('still refuses another automatic outcome over a terminal status', async () => {
+    const prospect = await createProspectHub(connection!, { sector: 'hotel', name: 'Won stays' });
+    await setProspectStatus(connection!, prospect.prospectId, 'won');
+    await expect(
+      applyAutomaticProspectStatus(connection!, prospect.prospectId, 'lost'),
+    ).rejects.toThrow(/not allowed/);
+  });
+});
+
 describe.skipIf(!mongoAvailable)('withdrawing a prospect outreach', () => {
   it('withdraws pending drafts, revokes live previews and closes the active thread', async () => {
     const prospect = await createProspectHub(connection!, { sector: 'hotel', name: 'Withdraw' });

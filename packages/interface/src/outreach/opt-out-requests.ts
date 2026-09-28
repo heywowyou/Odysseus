@@ -20,7 +20,6 @@
 
 import {
   addSuppressionEntry,
-  AutomaticStatusTransitionError,
   closeOutreachThreadsForDomain,
   findProspectsByEmail,
   listLivePreviewsForDomain,
@@ -100,15 +99,11 @@ async function applyOptOut(
 
   let mailboxDraftsNotRemoved = 0;
   for (const prospect of await findProspectsByEmail(connection, address)) {
-    try {
-      await recordProspectOutcome(connection, prospect.prospectId, 'opt-out', ACTOR, {
-        suppression: 'already-applied',
-      });
-    } catch (error) {
-      // A won or lost prospect keeps its result; the suppression above
-      // already stops any further contact.
-      if (!(error instanceof AutomaticStatusTransitionError)) throw error;
-    }
+    // A won or lost prospect keeps its result; the suppression above
+    // already stops any further contact.
+    await recordProspectOutcome(connection, prospect.prospectId, 'opt-out', ACTOR, {
+      suppression: 'already-applied',
+    });
     const withdrawn = await withdrawOutreachForProspect(
       connection,
       prospect.prospectId,
