@@ -13,11 +13,19 @@ import { fileURLToPath } from 'node:url';
  * servers, and forked Lighthouse runs, and `e2e-serial` holds the
  * CPU-bound pixel-constraint suite. Vitest schedules projects sharing a
  * `sequence.groupOrder` together and runs groups strictly one after
- * another, so group 1 gives image.e2e.test.ts the whole machine after
- * every group 0 file has finished. Under full parallelism that suite
- * repeatedly crossed its 15s per-test ceiling purely from CPU contention
- * (it runs in 4-6s per test in isolation), which is why `test:e2e`
- * selects both projects with the `e2e*` filter.
+ * another: `unit` first, then `e2e`, then `e2e-serial`, which gets the
+ * whole machine after every other file has finished. Under full
+ * parallelism that suite repeatedly crossed its 15s per-test ceiling purely
+ * from CPU contention (it runs in 4-6s per test in isolation), which is why
+ * `test:e2e` selects both e2e projects with the `e2e*` filter.
+ *
+ * `e2e` used to share group 0 with `unit`. On 2026-09-28 four gate runs in
+ * a row each failed on a different e2e test (crawl pacing, video audio,
+ * challenge-frame pacing, write-audit and scan-site timeouts), and every one
+ * passed alone: Chromium, Lighthouse and real-time pacing assertions starved
+ * behind six thousand unit tests. So `e2e` now runs after `unit`, on at most
+ * four workers, and retries a failed test once; a real defect fails both
+ * attempts, and the reporter still names the retry.
  * `pnpm run test:all` runs all of them, and the release gate
  * (`pnpm run gate`) runs exactly that, so the full suite is still mandatory.
  *
@@ -91,6 +99,11 @@ export default defineConfig({
         test: {
           name: 'e2e',
           include: ['packages/**/*.e2e.test.{ts,tsx}'],
+          sequence: {
+            groupOrder: 1,
+          },
+          maxWorkers: 4,
+          retry: 1,
           exclude: [
             ...configDefaults.exclude,
             'packages/scanner/src/prescan/evidence/image.e2e.test.ts',
@@ -107,7 +120,7 @@ export default defineConfig({
           name: 'e2e-serial',
           include: ['packages/scanner/src/prescan/evidence/image.e2e.test.ts'],
           sequence: {
-            groupOrder: 1,
+            groupOrder: 2,
           },
         },
       },
