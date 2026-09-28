@@ -59,7 +59,9 @@ export const MAX_PAGE_URLS_FOR_LLM = 3;
 /** URLs are site-controlled scanner evidence just like titles and descriptions. */
 export const MAX_PAGE_URL_CHARS_FOR_LLM = 200;
 
-function toLlmFindingShape(finding: Finding): StructureInput['findings'][number] {
+/** The bounded copy of a finding every model input carries: the analysis
+ *  passes here, and the report-quality roles' evidence (issue #548). */
+export function toLlmFindingShape(finding: Finding): StructureInput['findings'][number] {
   return {
     findingId: finding.findingId,
     source: finding.source,

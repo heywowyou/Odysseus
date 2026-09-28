@@ -53,8 +53,10 @@ import {
 } from './correction-review-prompt.js';
 import { appendProviderRetryAfterHint, extractProviderRetryAfterMs } from './rate-limit-pacing.js';
 
-const OPENAI_REQUEST_TIMEOUT_MS = 5 * 60_000;
-const OPENAI_CLIENT_MAX_RETRIES = 0;
+/** The application owns retries (its loops pace and count them), so the
+ *  SDK never retries on its own; the report-quality client shares both. */
+export const OPENAI_REQUEST_TIMEOUT_MS = 5 * 60_000;
+export const OPENAI_CLIENT_MAX_RETRIES = 0;
 
 function createClient(): OpenAI {
   return new OpenAI({

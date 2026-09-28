@@ -22,6 +22,7 @@ import {
   type Sha256Digest,
 } from '@odysseus/core';
 import {
+  boundPatternEvidenceForModel,
   ADJUDICATION_JSON_SCHEMA,
   EDITOR_JSON_SCHEMA,
   FINAL_ARBITER_JSON_SCHEMA,
@@ -39,6 +40,7 @@ import {
   qualityWriterOutputSchema,
   reportQualitySystemPromptDigest,
   seniorPlanOutputSchema,
+  toLlmFindingShape,
   type QualityReviewOutput,
   type QualityWriterOutput,
 } from '@odysseus/llm';
@@ -298,18 +300,14 @@ function compactEvidence(evidence: ApprovedAuditEvidencePayload): unknown {
   const { approvedAt: _at, approvedBySystemVersion: _by, ...approval } = evidence.approval;
   return {
     approval,
+    // Issue #548: the same bounds as the analysis passes' input, so a large
+    // site cannot overflow a role's context and page-controlled text stays
+    // short. pageCount keeps the full page total the URL sample drops.
     findings: evidence.findings.map((finding) => ({
-      findingId: finding.findingId,
-      ruleId: finding.ruleId,
-      category: finding.category,
-      severity: finding.severity,
-      wcagCriteria: finding.wcagCriteria,
-      title: finding.title,
-      description: finding.description,
-      pageUrls: finding.pageUrls,
-      occurrences: finding.occurrences,
+      ...toLlmFindingShape(finding),
+      pageCount: finding.pageUrls.length,
     })),
-    patternEvidence: evidence.patternEvidence ?? [],
+    patternEvidence: (evidence.patternEvidence ?? []).map(boundPatternEvidenceForModel),
     mandatoryDisclosures: evidence.mandatoryDisclosures,
   };
 }

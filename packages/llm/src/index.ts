@@ -4,7 +4,9 @@ export {
   buildWritingInput,
   buildFallbackSiteContext,
   computeSiteStats,
+  toLlmFindingShape,
 } from './build-input.js';
+export { boundPatternEvidenceForModel } from './untrusted-evidence.js';
 export type { SiteContextInput } from './build-input.js';
 
 export { buildLegalRelevance, getCriterionName } from './legal-relevance.js';
