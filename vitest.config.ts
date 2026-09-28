@@ -30,7 +30,13 @@ import { fileURLToPath } from 'node:url';
  * (`pnpm run gate`) runs exactly that, so the full suite is still mandatory.
  *
  * passWithNoTests: true because early phases had intentionally empty
- * suites; keeping it avoids breaking focused runs.
+ * suites; keeping it avoids breaking focused runs. The release gate turns it
+ * off for its full run (scripts/gate.sh).
+ *
+ * allowOnly: false everywhere (issue #545). Vitest's default allows a
+ * committed `it.only` whenever CI is unset, and since trade-off 120 nothing
+ * sets it, so one `.only` made the gate run a fraction of the suite and
+ * pass. A focused run uses a file or `-t` filter instead.
  *
  * Aliases resolve `@odysseus/*` to package sources instead of built dist,
  * so test runs never depend on `tsc -b` having been executed first and can
@@ -84,6 +90,7 @@ export default defineConfig({
   },
   test: {
     passWithNoTests: true,
+    allowOnly: false,
     environment: 'node',
     globalSetup: ['./scripts/vitest-global-setup.mjs'],
     /** The 5s vitest default is a browser-era default, not a measured

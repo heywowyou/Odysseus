@@ -125,7 +125,10 @@ to, on the operator's machine: `pnpm run check`, the CLI and site builds, the
 IBM Equal Access engine, `pnpm run test:deploy`, `pnpm run test:all` against
 the replica-set test MongoDB with `REQUIRE_MONGO_TESTS=1`, and the Trivy and
 Semgrep gates below, including a Trivy scan of a locally built production
-image. It refuses a dirty tree and records a pass for the exact commit;
+image. Its test run uses Vitest's CI mode and no empty-filter pass, and the config
+refuses `.only` everywhere, so a committed `.only`, a deleted snapshot or a
+filter matching nothing fails it (issue #545). It refuses a dirty tree and
+records a pass for the exact commit;
 `deploy/odysseus-deploy.sh` refuses a commit without one. The pre-push hook
 runs only the static `pnpm run check`.
 

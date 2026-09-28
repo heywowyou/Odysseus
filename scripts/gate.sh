@@ -46,6 +46,9 @@ export MONGODB_TEST_URI='mongodb://localhost:27018/odysseus_test'
 # tier, as it did in CI.
 export REQUIRE_MONGO_TESTS=1
 export IBM_TELEMETRY_DISABLED=true
+# Vitest's CI mode (issue #545): a missing snapshot fails instead of being
+# written and passing, as a deleted .snap file otherwise would.
+export CI=1
 
 step 'static check'
 pnpm run check
@@ -64,7 +67,8 @@ step 'deploy script tests'
 pnpm run test:deploy
 
 step 'full test suite'
-pnpm run test:all
+# A filter or glob that matches nothing fails the gate instead of passing it.
+pnpm run test:all --passWithNoTests=false
 
 step 'Trivy filesystem gate (HIGH/CRITICAL with a known fix)'
 docker run --rm -v "$PWD":/repo:ro -w /repo "$TRIVY_IMAGE" fs \
