@@ -14,7 +14,7 @@ Earlier indexes are kept as history, not as binding decisions:
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 | --- | --- | --- | --- | --- | --- |
-| [075](075-clean-true-audit-data.md) | Make the audit data clean and true before it reaches a report | P1 | XL | none | IMPLEMENTED: Part H deployed and the 13 VPS audits refreshed 2026-09-24; waits for hunt sweep 8. |
+| [075](075-clean-true-audit-data.md) | Make the audit data clean and true before it reaches a report | P1 | XL | none | IN PROGRESS: sweep 8 (2026-09-28) reopened it with Part I (I1 to I3) and question Q6. |
 
 Verified findings waiting to be planned are GitHub issues.
 

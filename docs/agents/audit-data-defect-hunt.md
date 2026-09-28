@@ -130,6 +130,10 @@ audit that has findings. Hold each finding to the evidence bar:
     the current core build and check each closed slice's named target on
     it. A closed slice whose target site still fails on replay was never
     shipped, or never proved.
+14. **Model prose against deterministic facts.** For every sentence of the
+    stored analyses that restates a deterministic fact (the obligation
+    status, a count, a page total, a coverage limit), compare it with the
+    fact. Prose may describe the fact, never harden it into a verdict.
 
 ## Recording
 

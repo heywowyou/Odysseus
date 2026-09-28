@@ -1,62 +1,47 @@
 # Defect hunt ledger
 
-Active plan: `plans/075-clean-true-audit-data.md` (reopened 2026-09-24 by
-sweep 7; Part H deployed in `ec24648c` the same day)
+Active plan: `plans/075-clean-true-audit-data.md` (reopened 2026-09-28 by
+sweep 8 with Part I)
 
 Brief: `docs/agents/audit-data-defect-hunt.md`
 
 ## Where the hunt stands
 
-- **Stop rule: 0 of 2.** The last complete sweep (7, 2026-09-24) found 7 new
+- **Stop rule: 0 of 2.** The last complete sweep (8, 2026-09-28) found 3 new
   material defects. Two consecutive complete sweeps with none are needed, the
   second with a fresh angle.
-- **Data state.** Part H is deployed and all 13 stored audits were refreshed
-  on 2026-09-24. Their stored findings equal the in-memory replay recorded in
-  plan 075, Part H implementation record. No audit was rescanned for Part H.
-- **Next: sweep 8**, on the 13 refreshed audits (listed in plan 075, Part H
-  intro) plus any full audit completed since. Start with whistlerparis,
-  villasfoch, bellevigne-hotels, grand-hotel-opera and hotelpointfrance, then
-  work through the start list below.
+- **Data state.** Production runs `35eb64d0` (deployed 2026-09-28). The 22 latest full
+  audits with findings equal an in-memory replay with that core, apart from
+  the two Lighthouse 13 insights `cf4092dc` removed, which leave each audit at
+  its next refresh. Part I is not implemented.
+- **Access.** Sweep 8 ran read-only scripts inside the app container and
+  printed counts, rule ids and selectors only. Copying audit directories to
+  the workstation was refused by the session's data-handling guard; keep the
+  in-place method.
+- **Next: sweep 9**, after Part I ships and the audits are refreshed. Start
+  with the start list below, then every angle on every latest full audit.
 
-## Sweep 8 start list
+## Sweep 9 start list
 
-Angle 13 (replay against closed slices) has these named targets. A miss is a
-completion defect of the slice, as in sweep 7.
+Angle 13 (replay against closed slices) targets:
 
 | Slice | Audit | Expected on the refreshed findings |
 |---|---|---|
-| H1, Q5 | whistlerparis | one site-wide `image-alt` finding; 1 critical in total (was 59) |
-| H1, Q5 | villasfoch | `image-alt` at the Q5 shape; 2 critical in total (was 15) |
-| H2 | whistlerparis | `aria-prohibited-attr` at most 3 (was 10); no rule gained findings on any audit |
-| H3 | bellevigne-hotels | `aria-required-children` 1 (was 6); header logo `link-name` 1 (was 3) |
-| H3 | grand-hotel-opera | `button-name` 3, one per real component (dots, arrows, back-to-top) |
-| H4 | bellevigne-hotels | `hreflang-no-return-link` 1 (was 22), occurrences preserved |
-| H4 | hotelpointfrance | `broken-internal-link` 1 (was 11), occurrences preserved |
-| H5 | grandhotelchicago, grandhoteldesalpes, hotelpointfrance, whistlerparis | 0 `structured-data-entity-missing` |
-| H5 | whistlerparis | 0 `faq-content-without-schema` |
-| G7 | grandhotelbellevue | the four `/book` doorways are `redirect-interstitial`, outside the analysed and measured pages |
-
-Checks that only a new scan can answer (any full audit completed after
-`ec24648c`):
-
-- H6: the audit environment records the French locale, not
-  `chromium-default`. grandhoteldesalpes's `/fr/` pages are analysed only
-  after a rescan, which runs only if that hotel is to be contacted.
-- H7: no `structured-data` check fails with the tokenizer's
-  `failed to tokenize` error.
+| I1 | grandhoteldesalpes | `sitemap-lists-redirects` no longer counts the 113 `/en/` and `/it/` translations or `/`; they are disclosed as other-language versions |
+| I2, Q6 | lescriquets | `link-name` at the Q6 shape (1 under (a), about 6 under (b)), occurrences preserved |
+| I2 | heurope | `aria-roles` 1; one `aria-required-children` for the tablist |
+| I2 | fermesdemarie | `.kids-stamp` and `.season-switcher_link` one `link-name` each |
+| I3 | any regenerated analysis | no sentence states that the obligation applies, is established or does not apply |
 
 Other carried checks:
 
-- Angle 11: hotelpointfrance's report step used to fail in the structure pass
-  (more than 20 themes, left outside plan 075). Read whether the 2026-09-24
-  refresh stored a report or the same failure.
-- Angle 9: the five previews sent on 2026-09-24 keep their pre-H totals by
-  decision (republishing would revoke the sent links). Check that every
-  preview built after the refresh carries the refreshed findings digest.
-  Trade-off 121 (2026-09-25) lets the operator send at their own pace, so more
-  previews may exist.
-- Angle 8: copy the refreshed FR PDFs this time. Sweep 7 read counts from the
-  findings only.
+- Angle 8: the French PDFs still have not been read rule by rule. The
+  container has no PDF text tool; read the analysis JSON and the
+  deterministic strings instead, or render a page locally from a
+  de-identified fixture.
+- heurope's rescan of 2026-09-28 (job started 09:54 UTC) completed before
+  the `35eb64d0` deploy: read it as a new audit, its blocked pages, and
+  whether the operator accepted them under trade-off 122.
 
 ## Sweeps
 
@@ -69,10 +54,11 @@ Other carried checks:
 | 5 | 2026-09-23 | same 8 | 1 to 11; fresh angle became 12 | yes | 4 | Part F (F8 to F11, Q4) |
 | 6 | 2026-09-23 | hotelchateauroyal and grandhotelchicago rescans, their FR reports, the reference audit, the lacoorniche failure | 1, 2, 4, 8 (legal wording), 9 | no | 7 | Part G (G1 to G7) |
 | 7 | 2026-09-24 | latest full audit of all 13 VPS sites, replayed with `5abe9b7a` | 1 to 11 (12 not applicable: no repeated run); fresh angle became 13 | yes | 7 | Part H (H1 to H7, Q5); plan reopened |
+| 8 | 2026-09-28 | 22 latest full audits (12 refreshed, grandhoteldesalpes rescan, 9 new sites), in place on the VPS | 1 to 13; fresh angle became 14 | yes | 3 | Part I (I1 to I3, Q6); plan reopened |
 
-Trend of new material defects per sweep: 25, 9, 8, 7, 4, 7, 7. It has not
-converged. Sweep 7 read seven audits no earlier sweep had seen, and its new
-replay angle found two closed slices that never shipped.
+Trend of new material defects per sweep: 25, 9, 8, 7, 4, 7, 7, 3. It has not
+converged. Sweep 8 read nine sites no earlier sweep had seen; its replay
+angle found H6 half-shipped and its new prose angle found the legal verdict.
 
 hotelchateauroyal, read in sweeps 4 to 6, was deleted from production on
 2026-09-23 under the territory rule (trade-off 112). Its findings stay here as
@@ -83,7 +69,7 @@ history. They cannot be checked again.
 | Doubt | Since | Angle | Smallest action that settles it |
 |---|---|---|---|
 | Cause of the Lighthouse IndexedDB storage warning (E5). Plan 075's closure ledger expects the probe result to be recorded, and it never was. | sweep 2 | 6 | One Lighthouse probe of an already-audited page, with and without storage reset |
-| French copy has never had a full per-rule review against the writing style and obligation basis. It was read only for the rules each sweep touched. | sweep 4 | 8 | Read the refreshed FR PDFs rule by rule in sweep 8 |
+| French copy has never had a full per-rule review against the writing style and obligation basis. Sweep 8 read every stored French analysis for legal and absolute wording only (I3). | sweep 4 | 8 | Read the deterministic FR strings rule by rule and one regenerated analysis end to end in sweep 9 |
 | `focus-order-mismatch` has never had a finding to sample | sweep 4 | 3 | None until an audit produces one; check again each sweep |
 | Why chicago's lab CLS runs are bimodal (whole-`body` shifts in some runs only). The finding side is covered by F9. | sweep 4 | 6 | One Lighthouse probe of the chicago homepage |
 
@@ -106,6 +92,8 @@ Settled or moot:
 | The Apidae agenda web component, outside a frame, is counted as the site's (`scrollable-region-focusable`) | sweep 4 | open |
 | Three « Report issue » job rows keep the failed status of the `occurrence(s)` render lint, which was fixed in `020286ad` | sweep 4 | not rechecked since the 2026-09-24 refresh |
 | whistlerparis writes partner links without a scheme, so they resolve under `/fr/page/` and land on the homepage. No rule reports it. | sweep 7 | open, no slice |
+| One missing logo alt reported twice, as `image-alt` on the image and `link-name` on its anchor (lescriquets category tiles, villasfoch social icons) | sweep 8 | open; folds into Q6 if (a) is chosen |
+| regina-hotel lost the first attempt of every content check on 204 of 412 pages to `check-timeout`; all retries succeeded | sweep 8 | open, cost only |
 | Titles of 61 to 65 characters flagged as « much longer than 60 » | sweep 4 | fixed by F13 |
 | villasfoch EN and ES pages carry French titles | sweep 5 | became F12, shipped |
 | chicago lab CLS doubt | sweep 4 | explained in sweep 5 as bimodal runs, covered by F9 |
@@ -257,3 +245,46 @@ ones on 12 of 13 (haaitza 55 → 56), so the defects are live in today's code.
 - Fresh angle, stored findings against a replay with today's code (now
   angle 13): it is how the unshipped F6 and C5 slices surfaced (a closed
   slice whose target site still fails on replay).
+
+## Sweep 8 notes
+
+Audits: the latest full audit of each of the 22 sites with findings under
+`/data/artifacts`, read in place with read-only scripts in the app
+container (counts, rule ids and selectors printed; nothing copied). The
+production database was read the same way (counts, states, ids). Replay with
+the deployed core equals the stored findings apart from the two Lighthouse 13
+insights removed by `cf4092dc`.
+
+- Population: grandhoteldesalpes now analyses its 38 French pages (H6) and
+  turns its 113 English and Italian pages into `redirect-interstitial`
+  (new, I1). fermesdemarie's 912 apex-to-`www` sitemap redirects and the
+  other sites' slug and room redirects are real. Clean elsewhere.
+- Acquisition: `mentions-legales` and `canonical-target` failures are
+  `not-applicable` records. regina-hotel retried 204 pages' checks
+  successfully (minor). fermesdemarie's 94 pages without content checks and
+  heurope's anti-bot 429s blocked their reports (A9 and trade-off 122
+  working).
+- Per-rule: every critical finding on the 10 new audits read. New: the
+  `link-name` and ARIA role splits (I2). True on inspection: hotelmareuil
+  `jsonld-invalid` (live probe), `structured-data-entity-missing` on the five
+  sites without JSON-LD, the Webflow `select-name` pair on fermesdemarie.
+- Counting: I2. Logo alt twins (minor).
+- Absence: JSON-LD absence confirmed by a per-page type count on five
+  audits.
+- Measurements: lab criticals on fermesdemarie, heurope and
+  labaignoirelacanau are E5 and Q2 (known). Not re-measured.
+- Attribution: regina-hotel's geo-like frame findings are in a frame (Q1).
+- Client surfaces: the model's legal verdict (new, I3). The deterministic
+  card wording is neutral.
+- Stored products: 0 report approvals; 19 preview rows, 6 live; the only
+  preview built since the refresh (grandhotelchicago) matches its audit's
+  digest; the five sent on 2026-09-24 keep pre-H digests by decision.
+- Terminal state: fermesdemarie, le37bishotel-paris and heurope failed at
+  `report-fr` on the blocked-content gates, as designed. hotelpointfrance's
+  refresh stored an analysis (angle 11 doubt settled).
+- Determinism: no audit has two runs of the same pages yet (heurope's rerun
+  was in progress).
+- Replay against closed slices: every Part H and G7 target holds; H6's
+  language-redirect record never shipped (I1).
+- Fresh angle, model prose against the deterministic facts it restates (now
+  angle 14): found I3.
