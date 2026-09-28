@@ -300,6 +300,9 @@ export interface ProspectHubStrings {
     revokePreview: string;
     confirmRevokePreview: string;
     previewRevoked: string;
+    mailboxCheckedAction: string;
+    confirmMailboxChecked: string;
+    mailboxChecked: string;
     draftRecipient: string;
     draftBody: string;
     openPreview: string;
@@ -736,6 +739,10 @@ export const prospectHub = {
       revokePreview: 'Retirer l’aperçu',
       confirmRevokePreview: 'Retirer cet aperçu ? Le lien public cessera de fonctionner.',
       previewRevoked: 'Aperçu retiré.',
+      mailboxCheckedAction: 'J’ai vérifié la boîte mail',
+      confirmMailboxChecked:
+        'Avez-vous vérifié les brouillons de la boîte mail et supprimé tout brouillon adressé à ce contact ? Un nouveau brouillon pourra alors être rédigé.',
+      mailboxChecked: 'Vérification enregistrée ; le brouillon peut être rédigé à nouveau.',
       draftRecipient: 'Destinataire',
       draftBody: 'Afficher le texte de l’email',
       openPreview: 'Ouvrir l’aperçu',
@@ -856,7 +863,10 @@ export const prospectHub = {
           'l’email n’a pas pu être composé à partir des preuves ; lancez un nouveau scan complet',
         'suppressed-before-provider':
           'le contact a été supprimé pendant la rédaction ; rien n’a été créé',
-        'provider-draft-unrecorded': 'la boîte mail n’a pas confirmé le brouillon ; réessayez',
+        'provider-draft-unrecorded':
+          'la boîte mail n’a pas confirmé le brouillon ; vérifiez ses brouillons avant de réessayer',
+        'provider-draft-unverified':
+          'une demande de brouillon précédente n’a pas eu de réponse de la boîte mail ; vérifiez ses brouillons, supprimez tout doublon, puis confirmez la vérification',
         'domain-mismatch':
           'l’aperçu ne correspond pas au site du prospect ; publiez un nouvel aperçu',
         'nothing-sent': 'aucun email n’a encore été envoyé à ce prospect',
@@ -1282,6 +1292,10 @@ export const prospectHub = {
       revokePreview: 'Revoke the preview',
       confirmRevokePreview: 'Revoke this preview? The public link will stop working.',
       previewRevoked: 'Preview revoked.',
+      mailboxCheckedAction: 'I checked the mailbox',
+      confirmMailboxChecked:
+        'Have you checked the mailbox drafts and deleted any draft addressed to this contact? A new draft can then be written.',
+      mailboxChecked: 'Check recorded; the draft can be written again.',
       draftRecipient: 'Recipient',
       draftBody: 'Show the email text',
       openPreview: 'Open the preview',
@@ -1397,7 +1411,10 @@ export const prospectHub = {
           'the email could not be composed from the evidence; run a new full scan',
         'suppressed-before-provider':
           'the contact was suppressed while drafting; nothing was created',
-        'provider-draft-unrecorded': 'the mailbox did not confirm the draft; try again',
+        'provider-draft-unrecorded':
+          'the mailbox did not confirm the draft; check its drafts before trying again',
+        'provider-draft-unverified':
+          'an earlier draft request got no answer from the mailbox; check its drafts, delete any duplicate, then confirm the check',
         'domain-mismatch':
           'the preview does not match the prospect’s website; publish a new preview',
         'nothing-sent': 'no email has been sent to this prospect yet',

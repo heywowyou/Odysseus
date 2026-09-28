@@ -11,6 +11,7 @@ import {
   createRandomIndependentProspectFromDirectory,
   findProspectsByDomain,
   findOutreachThreadByProspect,
+  acknowledgeUnverifiedProviderDrafts,
   getProspectHub,
   getLatestOutreachSyncAt,
   isSuppressed,
@@ -630,6 +631,22 @@ export function registerProspectHubRoutes(
       }
     }
     sendJson(res, 200, { discarded: true, previewRevoked, ...mailboxWarning });
+  });
+
+  // Issue #552: the operator checked the mailbox for a draft an unanswered
+  // request may have created, so the touch can be drafted again.
+  router.post('/api/prospects/:prospectId/outreach/mailbox-checked', async ({ res, params }) => {
+    const thread = await findOutreachThreadByProspect(connection, params['prospectId']!);
+    if (thread === null) {
+      sendError(res, 404, 'outreach thread not found');
+      return;
+    }
+    const acknowledged = await acknowledgeUnverifiedProviderDrafts(
+      connection,
+      thread.threadId,
+      new Date(),
+    );
+    sendJson(res, 200, { acknowledged });
   });
 
   router.post('/api/prospects/:prospectId/outreach/follow-up', async ({ res, params }) => {

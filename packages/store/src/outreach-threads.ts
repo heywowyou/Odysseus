@@ -167,41 +167,6 @@ export async function attachProviderThreadId(
   return result.modifiedCount === 1;
 }
 
-/**
- * Point the thread at the Gmail conversation of a new first-touch draft.
- * Unlike `attachProviderThreadId` this overwrites: a first email redrafted
- * after a discard starts a new conversation, because Gmail deleted the old
- * one together with its only draft, and follow-ups and mailbox sync must
- * follow the new one.
- */
-export async function replaceProviderThreadId(
-  connection: Connection,
-  threadId: string,
-  providerThreadId: string,
-): Promise<void> {
-  const ThreadModel = createOutreachThreadModel(connection);
-  await ThreadModel.updateOne({ threadId }, { $set: { providerThreadId, updatedAt: new Date() } });
-}
-
-/**
- * Move the thread to a touch, only ever forward.
- *
- * The guard is `$lt`, so a retry that already advanced the thread is a no-op
- * rather than a rewind. A caller cannot tell those apart from the return
- * value alone, which is intended: both mean "the thread is at least here".
- */
-export async function advanceThreadTouch(
-  connection: Connection,
-  threadId: string,
-  touch: number,
-): Promise<void> {
-  const ThreadModel = createOutreachThreadModel(connection);
-  await ThreadModel.updateOne(
-    { threadId, currentTouch: { $lt: touch } },
-    { $set: { currentTouch: touch, updatedAt: new Date() } },
-  );
-}
-
 export interface TransitionOutreachThreadInput {
   threadId: string;
   /** States the thread must currently be in for the move to apply. Rejecting
@@ -251,6 +216,71 @@ export async function transitionOutreachThread(
     return { changed: false, thread: current };
   }
   return { changed: true, thread: result };
+}
+
+export interface MarkOutreachThreadDraftedInput {
+  threadId: string;
+  touch: number;
+  from: readonly OutreachThreadState[];
+  to: OutreachThreadState;
+  at: Date;
+  reason: string;
+  /** Touch 1 only: the new draft's Gmail conversation (see
+   *  `replaceProviderThreadId`). */
+  providerThreadId?: string;
+}
+
+/**
+ * Issue #552: the thread side of a recorded draft in one conditional write,
+ * so a crash cannot leave the conversation id, the touch and the state half
+ * applied (an `open` thread is never synced, so its send would never be
+ * seen). When the thread is no longer in a `from` state the write does not
+ * apply, and the thread is flagged for review instead of silently keeping a
+ * live draft the state does not show.
+ */
+export async function markOutreachThreadDrafted(
+  connection: Connection,
+  input: MarkOutreachThreadDraftedInput,
+): Promise<{ changed: boolean }> {
+  const legalFrom = input.from.filter((state) => canTransitionOutreachThread(state, input.to));
+  const ThreadModel = createOutreachThreadModel(connection);
+  const draftFields = {
+    updatedAt: input.at,
+    ...(input.providerThreadId !== undefined ? { providerThreadId: input.providerThreadId } : {}),
+  };
+  const moved =
+    legalFrom.length === 0
+      ? null
+      : await ThreadModel.findOneAndUpdate(
+          { threadId: input.threadId, state: { $in: legalFrom } },
+          {
+            $set: {
+              ...draftFields,
+              state: input.to,
+              stateEnteredAt: input.at,
+              stateReason: input.reason,
+            },
+            $max: { currentTouch: input.touch },
+          },
+        ).lean();
+  if (moved !== null) return { changed: true };
+  // A touch redrafted after its draft was discarded: the thread already shows
+  // it drafted, and keeps the date it first got there.
+  const redrafted = await ThreadModel.findOneAndUpdate(
+    { threadId: input.threadId, state: input.to },
+    { $set: draftFields, $max: { currentTouch: input.touch } },
+  ).lean();
+  if (redrafted !== null) return { changed: true };
+  await ThreadModel.updateOne(
+    { threadId: input.threadId },
+    {
+      $set: {
+        needsReview: { reason: 'draft-not-applied', detectedAt: input.at },
+        updatedAt: input.at,
+      },
+    },
+  );
+  return { changed: false };
 }
 
 /**

@@ -1,14 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import {
+  acknowledgeUnverifiedProviderDrafts,
   confirmOutreachSentByOperator,
   findLiveOutreachDraft,
+  findUnverifiedProviderDraft,
+  recordFailedOutreachDraft,
+  recordUnrecordedProviderDraft,
   markOutreachDraftDeleted,
   markOutreachDraftDeletionPending,
   recordOutreachDraft,
 } from './outreach-drafts.js';
 import {
   findOutreachThreadById,
+  markOutreachThreadDrafted,
   openOutreachThread,
   transitionOutreachThread,
 } from './outreach-threads.js';
@@ -199,5 +204,133 @@ describe.skipIf(!available)('confirmOutreachSentByOperator', () => {
       confirmOutreachSentByOperator(connection!, prospect.prospectId, 'contacted'),
     ).resolves.toEqual({ threadClosed: false, providerDrafts: [] });
     expect((await findOutreachThreadById(connection!, thread.threadId))?.touches).toEqual([]);
+  });
+});
+
+describe.skipIf(!available)('provider drafts the store could not confirm (issue #552)', () => {
+  const failedRow = (threadId: string) => ({
+    prospectId: randomUUID(),
+    threadId,
+    touch: 1,
+    language: 'fr' as const,
+    roleAddress: 'contact@unconfirmed.fr',
+    evidenceVersion: 'v1',
+    outreachPromptVersion: 'v1',
+    createdAt: new Date(),
+  });
+
+  it('keeps an undeleted provider draft live, and so the touch blocked, until the sweep removes it', async () => {
+    const threadId = randomUUID();
+    const row = await recordUnrecordedProviderDraft(connection!, {
+      ...failedRow(threadId),
+      providerDraftId: 'g-unrecorded',
+    });
+
+    const live = await findLiveOutreachDraft(connection!, threadId, 1);
+    expect(live).toMatchObject({
+      status: 'mailbox-delete-pending',
+      providerDraftId: 'g-unrecorded',
+    });
+    await markOutreachDraftDeleted(connection!, row.draftId);
+    expect(await findLiveOutreachDraft(connection!, threadId, 1)).toBeNull();
+  });
+
+  it('blocks the touch after an unanswered provider request until the operator checks the mailbox', async () => {
+    const threadId = randomUUID();
+    await recordFailedOutreachDraft(connection!, {
+      ...failedRow(threadId),
+      failureReason: 'provider-draft-unrecorded',
+    });
+    await recordFailedOutreachDraft(connection!, {
+      ...failedRow(threadId),
+      failureReason: 'assembly-refused',
+    });
+
+    expect(await findUnverifiedProviderDraft(connection!, threadId, 1)).not.toBeNull();
+    expect(await findUnverifiedProviderDraft(connection!, threadId, 2)).toBeNull();
+    await expect(
+      acknowledgeUnverifiedProviderDrafts(connection!, threadId, new Date()),
+    ).resolves.toBe(1);
+    expect(await findUnverifiedProviderDraft(connection!, threadId, 1)).toBeNull();
+  });
+});
+
+describe.skipIf(!available)('markOutreachThreadDrafted (issue #552)', () => {
+  async function openThread(): Promise<string> {
+    const domain = `${randomUUID().slice(0, 8)}.example`;
+    const { thread } = await openOutreachThread(connection!, {
+      prospectId: randomUUID(),
+      previewId: randomUUID(),
+      domain,
+      roleAddress: `contact@${domain}`,
+      language: 'fr',
+      openedAt: new Date(),
+      spacing: { touch2AfterDays: 4, touch3AfterDays: 7, replyWindowDays: 14 },
+      campaignVersion: 'test-campaign',
+    });
+    return thread.threadId;
+  }
+  const drafted = (threadId: string, at = new Date()) => ({
+    threadId,
+    touch: 1,
+    from: ['open'] as const,
+    to: 'e1-drafted' as const,
+    at,
+    reason: 'draft-created',
+    providerThreadId: 'provider-thread-new',
+  });
+
+  it('moves the state, touch and conversation in one write', async () => {
+    const threadId = await openThread();
+
+    await expect(markOutreachThreadDrafted(connection!, drafted(threadId))).resolves.toEqual({
+      changed: true,
+    });
+
+    const thread = await findOutreachThreadById(connection!, threadId);
+    expect(thread).toMatchObject({
+      state: 'e1-drafted',
+      currentTouch: 1,
+      providerThreadId: 'provider-thread-new',
+    });
+    expect(thread?.needsReview).toBeUndefined();
+  });
+
+  it('keeps a redrafted touch in its state and its first date, with the new conversation', async () => {
+    const threadId = await openThread();
+    const first = new Date('2026-09-01T10:00:00.000Z');
+    await markOutreachThreadDrafted(connection!, drafted(threadId, first));
+
+    await expect(
+      markOutreachThreadDrafted(connection!, {
+        ...drafted(threadId),
+        providerThreadId: 'provider-thread-redraft',
+      }),
+    ).resolves.toEqual({ changed: true });
+
+    const thread = await findOutreachThreadById(connection!, threadId);
+    expect(thread).toMatchObject({
+      state: 'e1-drafted',
+      stateEnteredAt: first,
+      providerThreadId: 'provider-thread-redraft',
+    });
+  });
+
+  it('flags the thread when it left the expected state before the draft landed', async () => {
+    const threadId = await openThread();
+    await transitionOutreachThread(connection!, {
+      threadId,
+      from: ['open'],
+      to: 'opted-out',
+      at: new Date(),
+    });
+
+    await expect(markOutreachThreadDrafted(connection!, drafted(threadId))).resolves.toEqual({
+      changed: false,
+    });
+
+    const thread = await findOutreachThreadById(connection!, threadId);
+    expect(thread?.state).toBe('opted-out');
+    expect(thread?.needsReview?.reason).toBe('draft-not-applied');
   });
 });

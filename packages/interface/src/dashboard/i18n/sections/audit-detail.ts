@@ -579,6 +579,8 @@ export const auditDetail = {
         'assembly-refused': 'L’email n’a pas pu être composé à partir des preuves disponibles.',
         'provider-draft-unrecorded':
           'L’envoi au fournisseur n’a pas pu être confirmé ; vérifiez manuellement avant de réessayer.',
+        'provider-draft-unverified':
+          'Une demande de brouillon précédente est restée sans réponse de la boîte mail ; vérifiez ses brouillons, puis confirmez la vérification depuis la fiche prospect.',
         'no-mailbox-configured':
           'La boîte mail d’envoi n’est pas configurée sur ce serveur ; l’aperçu a tout de même été publié, copiez le lien ci-dessus.',
       },
@@ -936,6 +938,8 @@ export const auditDetail = {
         'assembly-refused': 'The email couldn’t be assembled from the available evidence.',
         'provider-draft-unrecorded':
           'Sending to the provider couldn’t be confirmed; check manually before retrying.',
+        'provider-draft-unverified':
+          'An earlier draft request got no answer from the mailbox; check its drafts, then confirm the check from the prospect page.',
         'no-mailbox-configured':
           'The sending mailbox isn’t configured on this server; the preview was still published, copy the link above.',
       },

@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
-  advanceThreadTouch: vi.fn(),
   attachProviderThreadId: vi.fn(),
-  replaceProviderThreadId: vi.fn(),
   attachReferenceAuditDraft: vi.fn(),
   checkOutreachAction: vi.fn(),
   createAuditModel: vi.fn(),
@@ -21,7 +19,8 @@ vi.mock('@odysseus/store', () => ({
   recordFailedOutreachDraft: vi.fn(),
   recordOutreachDraft: vi.fn(),
   selectNewestQualifyingAudit: vi.fn(),
-  transitionOutreachThread: vi.fn(),
+  markOutreachThreadDrafted: vi.fn(),
+  recordUnrecordedProviderDraft: vi.fn(),
 }));
 vi.mock('../config.js', () => ({
   getOutreachReplyWindowDays: () => 14,
@@ -53,7 +52,6 @@ vi.mock('../reference-audit/reference-audit-readiness.js', () => ({
 }));
 
 import {
-  advanceThreadTouch,
   attachReferenceAuditDraft,
   checkOutreachAction,
   createReferenceAuditLink,
@@ -65,8 +63,8 @@ import {
   openOutreachThread,
   recordFailedOutreachDraft,
   recordOutreachDraft,
-  replaceProviderThreadId,
-  transitionOutreachThread,
+  markOutreachThreadDrafted,
+  recordUnrecordedProviderDraft,
 } from '@odysseus/store';
 import { assembleOutreachDraft } from './assemble-outreach-draft.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
@@ -120,6 +118,7 @@ let steps: string[];
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(recordFailedOutreachDraft).mockResolvedValue({} as never);
+  vi.mocked(markOutreachThreadDrafted).mockResolvedValue({ changed: true });
   vi.mocked(isReferenceAuditLinkTrackingEnabled).mockReturnValue(false);
   vi.mocked(attachReferenceAuditDraft).mockResolvedValue(undefined);
   vi.mocked(deleteReferenceAuditLink).mockResolvedValue(undefined);
@@ -215,9 +214,9 @@ describe('createTouchOneDraft', () => {
     expect(bucket.keys()).toHaveLength(1);
     expect(mailbox.recorded()).toHaveLength(1);
     expect(mailbox.recorded()[0]?.to).toBe('contact@flots.example');
-    expect(transitionOutreachThread).toHaveBeenCalledWith(
+    expect(markOutreachThreadDrafted).toHaveBeenCalledWith(
       connection,
-      expect.objectContaining({ threadId: 'thread-1', from: ['open'], to: 'e1-drafted' }),
+      expect.objectContaining({ threadId: 'thread-1', touch: 1, from: ['open'], to: 'e1-drafted' }),
     );
   });
 
@@ -234,7 +233,10 @@ describe('createTouchOneDraft', () => {
     expect(createDraft.mock.calls[0]?.[0]).not.toHaveProperty('providerThreadId');
     const newThreadId = mailbox.recorded()[0]?.providerThreadId;
     expect(newThreadId).not.toBe('thread-of-discarded-draft');
-    expect(replaceProviderThreadId).toHaveBeenCalledWith(connection, 'thread-1', newThreadId);
+    expect(markOutreachThreadDrafted).toHaveBeenCalledWith(
+      connection,
+      expect.objectContaining({ threadId: 'thread-1', providerThreadId: newThreadId }),
+    );
   });
 
   it('keeps the canonical link when optional attribution configuration fails open', async () => {
@@ -333,7 +335,7 @@ describe('createTouchOneDraft', () => {
     expect(createConfiguredMailboxDraftAdapter).not.toHaveBeenCalled();
     expect(steps).toEqual(['gate']);
     expect(recordOutreachDraft).not.toHaveBeenCalled();
-    expect(transitionOutreachThread).not.toHaveBeenCalled();
+    expect(markOutreachThreadDrafted).not.toHaveBeenCalled();
   });
 
   it('reports an unconfigured mailbox before touching the preview', async () => {
@@ -362,7 +364,33 @@ describe('createTouchOneDraft', () => {
     });
     expect(steps).toEqual(['gate', 'gate', 'opt-out-link', 'provider-draft', 'record-draft']);
     expect(mailbox.recorded()).toHaveLength(0);
-    expect(transitionOutreachThread).not.toHaveBeenCalled();
+    expect(markOutreachThreadDrafted).not.toHaveBeenCalled();
+  });
+
+  it('queues the provider draft for deletion when recording and deleting both fail', async () => {
+    vi.mocked(recordOutreachDraft).mockRejectedValue(new Error('mongo down'));
+    mailbox.deleteDraft = vi.fn().mockRejectedValue(new Error('Gmail unavailable'));
+
+    expect(await touchOne()).toMatchObject({
+      created: false,
+      refusal: 'provider-draft-unrecorded',
+    });
+    const providerDraftId = mailbox.recorded()[0]?.providerDraftId;
+    expect(providerDraftId).toBeDefined();
+    expect(recordUnrecordedProviderDraft).toHaveBeenCalledWith(
+      connection,
+      expect.objectContaining({ threadId: 'thread-1', touch: 1, providerDraftId }),
+    );
+    expect(markOutreachThreadDrafted).not.toHaveBeenCalled();
+  });
+
+  it('writes no pending-deletion row when the unrecorded provider draft is deleted', async () => {
+    vi.mocked(recordOutreachDraft).mockRejectedValue(new Error('mongo down'));
+
+    await touchOne();
+
+    expect(mailbox.recorded()).toHaveLength(0);
+    expect(recordUnrecordedProviderDraft).not.toHaveBeenCalled();
   });
 
   it('records and cleans up when the provider rejects the first-touch draft', async () => {
@@ -380,7 +408,7 @@ describe('createTouchOneDraft', () => {
         previewId: 'preview-1',
       }),
     );
-    expect(transitionOutreachThread).not.toHaveBeenCalled();
+    expect(markOutreachThreadDrafted).not.toHaveBeenCalled();
   });
 });
 
@@ -400,10 +428,9 @@ describe('createFollowUpForProspect', () => {
     expect(result).toMatchObject({ configured: true, created: true, draftId: 'draft-1' });
     expect(steps).toEqual(['gate', 'gate', 'provider-draft', 'record-draft']);
     expect(mailbox.recorded()[0]?.providerThreadId).toBe('provider-thread-1');
-    expect(advanceThreadTouch).toHaveBeenCalledWith(connection, 'thread-1', 2);
-    expect(transitionOutreachThread).toHaveBeenCalledWith(
+    expect(markOutreachThreadDrafted).toHaveBeenCalledWith(
       connection,
-      expect.objectContaining({ from: ['e1-sent'], to: 'e2-drafted' }),
+      expect.objectContaining({ touch: 2, from: ['e1-sent'], to: 'e2-drafted' }),
     );
   });
 
@@ -418,7 +445,7 @@ describe('createFollowUpForProspect', () => {
       refusal: 'suppressed-before-provider',
     });
     expect(mailbox.recorded()).toHaveLength(0);
-    expect(transitionOutreachThread).not.toHaveBeenCalled();
+    expect(markOutreachThreadDrafted).not.toHaveBeenCalled();
   });
 
   it.each(['replied', 'opted-out', 'e1-drafted', 'sequence-complete'])(
@@ -438,7 +465,10 @@ describe('createFollowUpForProspect', () => {
     vi.mocked(findOutreachThreadByProspect).mockResolvedValue(thread('e2-drafted') as never);
     const result = await createFollowUpForProspect(connection, prospectId);
     expect(result).toMatchObject({ configured: true, created: true });
-    expect(advanceThreadTouch).toHaveBeenCalledWith(connection, 'thread-1', 2);
+    expect(markOutreachThreadDrafted).toHaveBeenCalledWith(
+      connection,
+      expect.objectContaining({ touch: 2, from: ['e2-drafted'], to: 'e2-drafted' }),
+    );
   });
 
   it('refuses when the follow-up draft is already live', async () => {
@@ -470,6 +500,6 @@ describe('createFollowUpForProspect', () => {
         failureReason: 'provider-draft-unrecorded',
       }),
     );
-    expect(transitionOutreachThread).not.toHaveBeenCalled();
+    expect(markOutreachThreadDrafted).not.toHaveBeenCalled();
   });
 });

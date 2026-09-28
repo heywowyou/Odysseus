@@ -80,6 +80,10 @@ export interface OutreachDraftDocumentFields {
   /** Set on `failed`: the orchestrator's typed refusal, never free prose, so
    *  the reasons stay countable. */
   failureReason?: string;
+  /** Issue #552: on a `provider-draft-unrecorded` failure, when the operator
+   *  confirmed they checked the mailbox for a draft the provider may have
+   *  created. Until then the touch cannot be drafted again. */
+  mailboxCheckedAt?: Date;
   /** Set when the operator reviewed the draft (issue #96): `approved` keeps
    *  the campaign's approved set distinct from `skipped`'s discarded set.
    *  Absent on rows reviewed before the field existed and on rows that left
@@ -134,6 +138,7 @@ export const outreachDraftSchema = new Schema<OutreachDraftDocument>(
       enum: ['created', 'mailbox-delete-pending', 'deleted', 'failed'],
     },
     failureReason: { type: String },
+    mailboxCheckedAt: { type: Date },
     reviewOutcome: { type: String, enum: ['approved', 'skipped'] },
     reviewedAt: { type: Date },
     createdAt: { type: Date, required: true },

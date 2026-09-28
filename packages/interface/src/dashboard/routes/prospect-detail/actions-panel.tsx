@@ -36,6 +36,7 @@ export function ActionsPanel(props: {
     requestOutcome,
     requestStatusChange,
     revokePreview,
+    confirmMailboxChecked,
   } = props.outreach;
   const { launchScan, renderScanNotice } = props.scan;
   const { lifecycleBusy, requestPermanentDelete } = props.lifecycle;
@@ -95,6 +96,18 @@ export function ActionsPanel(props: {
                     </div>
                     {!available ? (
                       <p className="mt-1 text-xs text-ink-muted">{gateReason(key)}</p>
+                    ) : null}
+                    {action?.reason === 'provider-draft-unverified' ? (
+                      <Button
+                        className="mt-2 mr-2"
+                        size="sm"
+                        variant="ghost"
+                        disabled={outreachBusy !== null}
+                        isLoading={outreachBusy === 'mailbox-checked'}
+                        onClick={() => void confirmMailboxChecked()}
+                      >
+                        {copy.mailboxCheckedAction}
+                      </Button>
                     ) : null}
                     {key === 'preview' && livePreview !== undefined ? (
                       <Button

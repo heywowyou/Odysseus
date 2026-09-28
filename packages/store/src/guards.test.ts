@@ -25,13 +25,14 @@ vi.mock('./schemas/outreach-preview.schema.js', () => ({
 }));
 vi.mock('./outreach-drafts.js', () => ({
   findLiveOutreachDraft: vi.fn(),
+  findUnverifiedProviderDraft: vi.fn(async () => null),
 }));
 vi.mock('./outreach-report-readiness.js', () => ({
   loadOutreachReportReadiness: vi.fn(),
 }));
 
 import { planProspectJobLaunch } from './active-jobs.js';
-import { findLiveOutreachDraft } from './outreach-drafts.js';
+import { findLiveOutreachDraft, findUnverifiedProviderDraft } from './outreach-drafts.js';
 import { findOutreachThreadByProspect } from './outreach-threads.js';
 import { checkOutreachAction, checkScanLaunch } from './guards.js';
 import { isSuppressed } from './suppression.js';
@@ -141,6 +142,13 @@ describe('central prospect guards', () => {
 
     vi.mocked(findLiveOutreachDraft).mockResolvedValueOnce({ draftId: 'd' } as never);
     await expect(check()).resolves.toEqual({ allowed: false, refusal: 'draft-already-live' });
+
+    // Issue #552: an unanswered provider request waits for the operator's check.
+    vi.mocked(findUnverifiedProviderDraft).mockResolvedValueOnce({ draftId: 'u' } as never);
+    await expect(check()).resolves.toEqual({
+      allowed: false,
+      refusal: 'provider-draft-unverified',
+    });
 
     // A discarded touch-two draft leaves the thread drafted; touch two is due again.
     vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce(threadIn('e2-drafted'));

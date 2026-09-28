@@ -304,22 +304,8 @@ export interface RecordFailedOutreachDraftInput {
   createdAt: Date;
 }
 
-/**
- * Record an attempt that never reached the provider.
- *
- * Subject and body are empty strings rather than the partial text: a refusal
- * means the message was never fit to be seen, and storing a half-validated
- * draft body would put text in the operator's review list that no guard
- * passed. The reason is a typed refusal code, so the reasons stay countable.
- */
-export async function recordFailedOutreachDraft(
-  connection: Connection,
-  input: RecordFailedOutreachDraftInput,
-): Promise<OutreachDraftDocument> {
-  const DraftModel = createOutreachDraftModel(connection);
-  await DraftModel.init();
-
-  const document: OutreachDraftDocument = {
+function failedDraftDocument(input: RecordFailedOutreachDraftInput): OutreachDraftDocument {
+  return {
     draftId: randomUUID(),
     prospectId: input.prospectId,
     threadId: input.threadId,
@@ -348,9 +334,98 @@ export async function recordFailedOutreachDraft(
     createdAt: input.createdAt,
     expiresAt: new Date(input.createdAt.getTime() + OUTREACH_DRAFT_RETENTION_DAYS * DAY_MS),
   };
+}
+
+/**
+ * Record an attempt that never reached the provider.
+ *
+ * Subject and body are empty strings rather than the partial text: a refusal
+ * means the message was never fit to be seen, and storing a half-validated
+ * draft body would put text in the operator's review list that no guard
+ * passed. The reason is a typed refusal code, so the reasons stay countable.
+ */
+export async function recordFailedOutreachDraft(
+  connection: Connection,
+  input: RecordFailedOutreachDraftInput,
+): Promise<OutreachDraftDocument> {
+  const DraftModel = createOutreachDraftModel(connection);
+  await DraftModel.init();
+
+  const document = failedDraftDocument(input);
 
   await DraftModel.create(document);
   return document;
+}
+
+/** The failure reason of a draft the provider may hold with no live row. */
+export const PROVIDER_DRAFT_UNRECORDED = 'provider-draft-unrecorded';
+
+/**
+ * Issue #552: the provider created a draft the store could not record, and
+ * deleting it failed too. The row carries the provider draft id as
+ * `mailbox-delete-pending`, so the deletion sweep removes it later, and the
+ * one-live-draft index holds the touch until it has.
+ */
+export async function recordUnrecordedProviderDraft(
+  connection: Connection,
+  input: Omit<RecordFailedOutreachDraftInput, 'failureReason'> & {
+    providerDraftId: string;
+    providerMessageId?: string;
+    providerThreadId?: string;
+  },
+): Promise<OutreachDraftDocument> {
+  const { providerDraftId, providerMessageId, providerThreadId, ...failed } = input;
+  const DraftModel = createOutreachDraftModel(connection);
+  await DraftModel.init();
+  const document: OutreachDraftDocument = {
+    ...failedDraftDocument({ ...failed, failureReason: PROVIDER_DRAFT_UNRECORDED }),
+    providerDraftId,
+    ...(providerMessageId !== undefined ? { providerMessageId } : {}),
+    ...(providerThreadId !== undefined ? { providerThreadId } : {}),
+    status: 'mailbox-delete-pending',
+  };
+  await DraftModel.create(document);
+  return document;
+}
+
+/**
+ * Issue #552: a draft request whose outcome at the provider is unknown (the
+ * call failed without an answer) and that the operator has not yet checked.
+ * Drafting the touch again could leave two drafts to the same address.
+ */
+export async function findUnverifiedProviderDraft(
+  connection: Connection,
+  threadId: string,
+  touch: number,
+): Promise<OutreachDraftDocument | null> {
+  return createOutreachDraftModel(connection)
+    .findOne({
+      threadId,
+      touch,
+      status: 'failed',
+      failureReason: PROVIDER_DRAFT_UNRECORDED,
+      mailboxCheckedAt: { $exists: false },
+    })
+    .lean();
+}
+
+/** Records that the operator checked the mailbox for every unverified draft
+ *  request of a thread. Returns how many rows it cleared. */
+export async function acknowledgeUnverifiedProviderDrafts(
+  connection: Connection,
+  threadId: string,
+  at: Date,
+): Promise<number> {
+  const result = await createOutreachDraftModel(connection).updateMany(
+    {
+      threadId,
+      status: 'failed',
+      failureReason: PROVIDER_DRAFT_UNRECORDED,
+      mailboxCheckedAt: { $exists: false },
+    },
+    { $set: { mailboxCheckedAt: at } },
+  );
+  return result.modifiedCount;
 }
 
 export async function findLiveOutreachDraft(

@@ -26,7 +26,7 @@ import {
   draftedOutreachTouch,
   effectiveOutreachThreadState,
 } from '@odysseus/core';
-import { findLiveOutreachDraft } from './outreach-drafts.js';
+import { findLiveOutreachDraft, findUnverifiedProviderDraft } from './outreach-drafts.js';
 import { findOutreachThreadByProspect, followUpDueAt } from './outreach-threads.js';
 import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js';
 import {
@@ -41,6 +41,7 @@ export type OutreachActionRefusal =
   | 'no-complete-audit'
   | 'report-not-ready'
   | 'draft-already-live'
+  | 'provider-draft-unverified'
   | 'thread-closed'
   | 'thread-unknown'
   | 'thread-not-eligible'
@@ -160,6 +161,11 @@ export async function checkOutreachAction(
     if ((await findLiveOutreachDraft(connection, thread.threadId, touch)) !== null) {
       return { allowed: false, refusal: 'draft-already-live' };
     }
+    // Issue #552: an earlier request for this touch may have left a draft in
+    // the mailbox; the operator checks before another one is made.
+    if ((await findUnverifiedProviderDraft(connection, thread.threadId, touch)) !== null) {
+      return { allowed: false, refusal: 'provider-draft-unverified' };
+    }
     // Issue #479: the same rules the due list and To-do apply. An automated
     // answer or an unexplained mailbox state waits for a person, and the
     // spacing (day +4, then +7) is part of the outreach rules.
@@ -235,6 +241,9 @@ export async function checkOutreachAction(
   if (input.action === 'first-email' && thread !== null) {
     if ((await findLiveOutreachDraft(connection, thread.threadId, 1)) !== null) {
       return { allowed: false, refusal: 'draft-already-live' };
+    }
+    if ((await findUnverifiedProviderDraft(connection, thread.threadId, 1)) !== null) {
+      return { allowed: false, refusal: 'provider-draft-unverified' };
     }
     if (thread.state !== 'open' && thread.state !== 'e1-drafted') {
       return { allowed: false, refusal: 'thread-already-started' };

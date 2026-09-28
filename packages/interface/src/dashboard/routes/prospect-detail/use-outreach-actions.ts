@@ -194,6 +194,23 @@ export function useOutreachActions(shared: ProspectDetailShared) {
     }
   };
 
+  // Issue #552: a draft request the mailbox never answered blocks the touch
+  // until the operator confirms they checked the mailbox for a duplicate.
+  const confirmMailboxChecked = async (): Promise<void> => {
+    if (!window.confirm(copy.confirmMailboxChecked)) return;
+    setOutreachBusy('mailbox-checked');
+    setOutreachNotice(null);
+    try {
+      await sendJson(`/api/prospects/${prospect.prospectId}/outreach/mailbox-checked`, 'POST', {});
+      setOutreachNotice(copy.mailboxChecked);
+    } catch {
+      setOutreachNotice(copy.actionFailed);
+    } finally {
+      setOutreachBusy(null);
+      refreshAll();
+    }
+  };
+
   const copyPreviewLink = async (url: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(url);
@@ -250,6 +267,7 @@ export function useOutreachActions(shared: ProspectDetailShared) {
     requestStatusChange,
     discardDraft,
     revokePreview,
+    confirmMailboxChecked,
     copyPreviewLink,
     changeOutreachLanguage,
     changeStatus,

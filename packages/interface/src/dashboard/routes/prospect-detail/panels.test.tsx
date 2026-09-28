@@ -78,6 +78,7 @@ function outreachActions(overrides: Partial<OutreachActions> = {}): OutreachActi
     pendingTerminalStatus: null,
     setPendingTerminalStatus: vi.fn(),
     publishPreview: vi.fn(async () => undefined),
+    confirmMailboxChecked: vi.fn(async () => undefined),
     runFirstEmail: vi.fn(async () => undefined),
     runFollowUp: vi.fn(async () => undefined),
     recordOutcome: vi.fn(async () => undefined),

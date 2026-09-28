@@ -9,8 +9,6 @@ import {
   primaryWebsite,
 } from '@odysseus/core';
 import {
-  advanceThreadTouch,
-  replaceProviderThreadId,
   checkOutreachAction,
   createAuditModel,
   createJobModel,
@@ -31,7 +29,8 @@ import {
   attachReferenceAuditDraft,
   createReferenceAuditLink,
   deleteReferenceAuditLink,
-  transitionOutreachThread,
+  markOutreachThreadDrafted,
+  recordUnrecordedProviderDraft,
 } from '@odysseus/store';
 import type { OutreachActionRefusal } from '@odysseus/store';
 import type { Connection } from 'mongoose';
@@ -213,6 +212,36 @@ async function resolvePreview(connection: Connection, prospectId: string, token:
 
 function configuredMailbox(dryRun: boolean): MailboxDraftAdapter | null {
   return dryRun ? createInMemoryMailboxDraftAdapter() : createConfiguredMailboxDraftAdapter();
+}
+
+/**
+ * Issue #552: the provider holds a draft the store could not record. It is
+ * deleted at once; when that fails too, a `mailbox-delete-pending` row keeps
+ * its id, so the deletion sweep removes it later and the touch stays blocked
+ * until then, instead of the draft being left in the mailbox with no trace.
+ */
+async function removeUnrecordedProviderDraft(
+  connection: Connection,
+  mailbox: MailboxDraftAdapter,
+  row: Parameters<typeof recordUnrecordedProviderDraft>[1],
+): Promise<void> {
+  try {
+    await mailbox.deleteDraft(row.providerDraftId);
+    return;
+  } catch (error) {
+    logger.error(
+      { err: error, prospectId: row.prospectId, touch: row.touch },
+      'unrecorded mailbox draft could not be deleted',
+    );
+  }
+  try {
+    await recordUnrecordedProviderDraft(connection, row);
+  } catch (error) {
+    logger.error(
+      { err: error, prospectId: row.prospectId, touch: row.touch },
+      'unrecorded mailbox draft could not be queued for deletion',
+    );
+  }
 }
 
 export async function createTouchOneDraft(
@@ -468,7 +497,21 @@ export async function createTouchOneDraft(
     });
   } catch (error) {
     logger.error({ err: error, prospectId, touch: 1 }, 'mailbox draft could not be recorded');
-    await mailbox.deleteDraft(providerDraft.providerDraftId).catch(() => undefined);
+    await removeUnrecordedProviderDraft(connection, mailbox, {
+      prospectId,
+      threadId: thread.thread.threadId,
+      touch: 1,
+      language: options.language,
+      roleAddress: contact.address,
+      previewId: preview.previewId,
+      previewUrl: preview.url,
+      referenceAuditUrl,
+      referenceAuditVersion: referenceAudit.referenceVersion,
+      evidenceVersion: EVIDENCE_VERSION,
+      outreachPromptVersion: CURRENT_OUTREACH_PROMPT_VERSION,
+      createdAt: now,
+      ...providerDraft,
+    });
     await discardReferenceAuditTracking();
     return { configured: true, created: false, refusal: 'provider-draft-unrecorded' };
   }
@@ -482,15 +525,18 @@ export async function createTouchOneDraft(
     );
   }
 
-  await replaceProviderThreadId(connection, thread.thread.threadId, providerDraft.providerThreadId);
-  await advanceThreadTouch(connection, thread.thread.threadId, 1);
-  await transitionOutreachThread(connection, {
+  const threadUpdate = await markOutreachThreadDrafted(connection, {
     threadId: thread.thread.threadId,
+    touch: 1,
     from: ['open'],
     to: 'e1-drafted',
     at: now,
     reason: 'draft-created',
+    providerThreadId: providerDraft.providerThreadId,
   });
+  if (!threadUpdate.changed) {
+    logger.warn({ prospectId, touch: 1 }, 'draft recorded but the thread state moved; flagged');
+  }
   return {
     configured: true,
     created: true,
@@ -788,17 +834,30 @@ export async function createFollowUpForProspect(
     });
   } catch (error) {
     logger.error({ err: error, prospectId, touch }, 'mailbox draft could not be recorded');
-    await mailbox.deleteDraft(providerDraft.providerDraftId).catch(() => undefined);
+    await removeUnrecordedProviderDraft(connection, mailbox, {
+      prospectId,
+      threadId: thread.threadId,
+      touch,
+      language: thread.language,
+      roleAddress: prospect.emails[0].address,
+      evidenceVersion: EVIDENCE_VERSION,
+      outreachPromptVersion: CURRENT_OUTREACH_PROMPT_VERSION,
+      createdAt: now,
+      ...providerDraft,
+    });
     return { configured: true, created: false, refusal: 'provider-draft-unrecorded' };
   }
-  await advanceThreadTouch(connection, thread.threadId, touch);
-  await transitionOutreachThread(connection, {
+  const threadUpdate = await markOutreachThreadDrafted(connection, {
     threadId: thread.threadId,
+    touch,
     from: [thread.state],
     to: touch === 2 ? 'e2-drafted' : 'e3-drafted',
     at: now,
     reason: 'follow-up-draft-created',
   });
+  if (!threadUpdate.changed) {
+    logger.warn({ prospectId, touch }, 'draft recorded but the thread state moved; flagged');
+  }
   return {
     configured: true,
     created: true,
