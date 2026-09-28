@@ -327,6 +327,33 @@ describe('crawlSite continuation-family guard wiring', () => {
     });
   });
 
+  it('counts a pagination link once, however many pages repeat it', async () => {
+    installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
+    // « 1 … 4 5 [6] 7 8 … »: every archive page repeats a window of numbered
+    // links around itself, so each target is discovered many times.
+    const anchorsFor: (url: string) => FakeAnchorSpec[] = (url) => {
+      const current = url === 'https://example.com/' ? 1 : Number(/\/page\/(\d+)/.exec(url)?.[1]);
+      const window = new Set([1, 2, 3, 4, 5, 6, 7, 8]);
+      for (let n = current - 3; n <= current + 3; n += 1) if (n >= 1 && n <= 20) window.add(n);
+      return [...window].map((n) => ({ href: `/page/${n}/`, paginationControl: true }));
+    };
+    const result = await crawlSite('https://example.com', {
+      browser: makeFakeBrowser(anchorsFor),
+      maxPages: 200,
+      maxDepth: 100,
+      delayMs: 0,
+    });
+
+    for (let n = 1; n <= 20; n += 1) {
+      expect(
+        result.pages.find((page) => page.url === `https://example.com/page/${n}`),
+      ).toBeDefined();
+    }
+    const family = result.continuationGuardSummary?.families[0];
+    expect(family?.enqueuedCount ?? 20).toBe(20);
+    expect(result.continuationGuardSummary?.totalOmittedUrlCount ?? 0).toBe(0);
+  });
+
   it('never governs ordinary content links, even in the hundreds', async () => {
     installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
     const anchorsFor: (url: string) => FakeAnchorSpec[] = (url) => {

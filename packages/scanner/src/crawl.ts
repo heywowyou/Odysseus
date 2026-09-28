@@ -1535,6 +1535,11 @@ export async function crawlSite(
                     });
                     continue;
                   }
+                  // Issue #540: a link already queued or visited is not a new
+                  // member of its family. Numbered pagination repeats the same
+                  // links on every page, and counting each repeat used the
+                  // family's bound up after a dozen archive pages.
+                  if (enqueued.has(link)) continue;
                   // Only a continuation-classified link is governed: the guard
                   // never sees an ordinary link, and returning false here omits
                   // exactly this enqueue while keeping the discovery bookkeeping
@@ -1554,7 +1559,7 @@ export async function crawlSite(
                       classification.isContinuation &&
                       !continuationGuard.admit(classification, link)
                     ) {
-                      if (existingPage === undefined && !enqueued.has(link)) {
+                      if (existingPage === undefined) {
                         disposeInventory(link, 'continuation-guard', {
                           detail: `continuation family ${classification.familyKey} reached its bound`,
                         });
