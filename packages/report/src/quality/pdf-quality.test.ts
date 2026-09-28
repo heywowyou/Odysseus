@@ -30,6 +30,11 @@ const firstMissing: string | undefined = REQUIRED_PDF_TOOLS.find((tool) => !avai
 const popplerReady =
   availability['pdfinfo'] && availability['pdftotext'] && availability['pdffonts'];
 
+/** Issue #547: the release gate sets REQUIRE_PDF_TOOLS, so a machine without
+ *  the toolchain fails this suite instead of skipping its real-tool proofs. */
+if (process.env['REQUIRE_PDF_TOOLS'] === '1' && firstMissing !== undefined)
+  throw new Error(`REQUIRE_PDF_TOOLS is set but ${firstMissing} is not installed`);
+
 /** Hand-written one-page PDF (A4, Helvetica, single text run) with a
  *  byte-exact xref table, so no generator dependency is needed. */
 function buildMinimalPdf(): Buffer {

@@ -101,6 +101,13 @@ ENV ODYSSEUS_BUILT_AT=${ODYSSEUS_BUILT_AT}
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
 RUN node packages/scanner/node_modules/playwright/cli.js install --with-deps chromium
 
+# Issue #547: the report-quality pipeline (plan 058) checks, extracts and
+# rasterizes the exact PDF with qpdf, poppler (pdfinfo, pdftotext, pdffonts,
+# pdftoppm) and mupdf (mutool), and fails closed without them.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends poppler-utils qpdf mupdf-tools \
+    && rm -rf /var/lib/apt/lists/*
+
 # The base image's npm, npx and corepack are never run here, and the npm CLI
 # bundles its own dependencies, which the release gate's image scan flagged
 # (brace-expansion, ip-address, tar; 2026-09-25). Removing them leaves nothing

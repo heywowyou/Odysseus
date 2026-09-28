@@ -24,6 +24,9 @@ writing consistent between agents. Read the charter and
   `corepack enable` to get it automatically)
 - Docker, for the local MongoDB used by `packages/store`'s integration
   tests
+- `poppler-utils`, `qpdf` and `mupdf-tools`, for the report-quality PDF
+  checks (the production image installs them; the release gate requires
+  them)
 
 ## Install
 

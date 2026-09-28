@@ -49,6 +49,9 @@ export IBM_TELEMETRY_DISABLED=true
 # Vitest's CI mode (issue #545): a missing snapshot fails instead of being
 # written and passing, as a deleted .snap file otherwise would.
 export CI=1
+# Issue #547: the PDF quality suites skip without poppler, qpdf and mupdf;
+# the gate fails instead.
+export REQUIRE_PDF_TOOLS=1
 
 step 'static check'
 pnpm run check
@@ -85,6 +88,9 @@ docker run --rm -v "$PWD":/src "$SEMGREP_IMAGE" \
 
 step 'Trivy production image gate (HIGH/CRITICAL with a known fix)'
 docker build -t "$SCAN_IMAGE" .
+# Issue #547: the report-quality route needs these in the runtime image.
+docker run --rm --entrypoint sh "$SCAN_IMAGE" -c \
+  'for tool in qpdf pdfinfo pdftotext pdffonts pdftoppm mutool; do command -v "$tool" >/dev/null || { echo "missing $tool" >&2; exit 1; }; done'
 docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD":/repo:ro -w /repo \
   "$TRIVY_IMAGE" image \
   --scanners vuln,secret,misconfig \

@@ -11,7 +11,7 @@ import type { ReportLanguage } from '@odysseus/core';
  *
  * Chromium's PDF writer emits uncompressed object dictionaries, so the
  * checks read the raw bytes without a PDF library or the external poppler
- * and qpdf tools the production image does not ship. A file that uses
+ * and qpdf tools, so every render is checked without a subprocess. A file that uses
  * object streams would hide dictionaries from this reader, so it fails
  * closed rather than passing unseen.
  */

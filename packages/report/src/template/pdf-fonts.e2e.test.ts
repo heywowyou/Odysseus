@@ -16,6 +16,8 @@ import {
 } from '../test-fixtures.js';
 
 const pdffontsAvailable = spawnSync('pdffonts', ['-v']).error === undefined;
+if (process.env['REQUIRE_PDF_TOOLS'] === '1' && !pdffontsAvailable)
+  throw new Error('REQUIRE_PDF_TOOLS is set but pdffonts is not installed');
 
 describe.skipIf(!pdffontsAvailable)('report fonts in a real generated PDF', () => {
   it('prints every glyph, URLs and selectors included, in a font the report embeds', async () => {
