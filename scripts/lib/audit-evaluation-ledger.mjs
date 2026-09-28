@@ -22,14 +22,14 @@
 
 /** A page-scope check that evaluated fewer than this share of the analysed
  *  pages it applied to is reported. */
-export const THIN_EVALUATION_SHARE = 0.5;
+const THIN_EVALUATION_SHARE = 0.5;
 
 /** An axe rule whose raw detections on analysed pages lost more than this
  *  share on the way to findings, over at least MIN_FILTERED_NODES nodes, is
  *  reported. Inactive calendar cells and captcha widgets are expected here;
  *  anything else is a filter to re-check. */
-export const HEAVY_FILTER_SHARE = 0.5;
-export const MIN_FILTERED_NODES = 20;
+const HEAVY_FILTER_SHARE = 0.5;
+const MIN_FILTERED_NODES = 20;
 
 function identity(raw) {
   try {

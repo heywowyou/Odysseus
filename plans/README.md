@@ -14,7 +14,7 @@ Earlier indexes are kept as history, not as binding decisions:
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 | --- | --- | --- | --- | --- | --- |
-| [075](075-clean-true-audit-data.md) | Make the audit data clean and true before it reaches a report | P1 | XL | none | IN PROGRESS: Part I deployed 2026-09-28; sweep 9 added Part J (J1 to J3), not started. |
+| [075](075-clean-true-audit-data.md) | Make the audit data clean and true before it reaches a report | P1 | XL | none | IN PROGRESS: Part J (J1 to J5), the canary audit and trade-off 124 committed 2026-09-28, not deployed; sweep 10 next. |
 
 Verified findings waiting to be planned are GitHub issues.
 

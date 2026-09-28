@@ -15,7 +15,9 @@ Brief: `docs/agents/audit-data-defect-hunt.md`
   still carry pre-I1/I2 findings, and their replay with the deployed core
   equals the Part I targets. Four new sites were being scanned on the new
   build during the sweep (clos-sainte-marie, domaine-d-auriac,
-  lodgekerisper, aflatta). Part J is not implemented.
+  lodgekerisper, aflatta). Part J (J1 to J5), the canary audit, the
+  evaluation ledger and the unconfirmed-rule tier (trade-off 124) are
+  committed on 2026-09-28 and not yet deployed.
 - **Access.** Read-only scripts in the app container, as in sweep 8. The
   replay now imports the container's own `/app/packages/core` and
   `/app/packages/interface` builds, so no local build is uploaded. Reading
@@ -36,11 +38,16 @@ Angle 13 (replay against closed slices) targets:
 | I2, Q6 | lescriquets | `link-name` 1 finding with 1,793 occurrences |
 | I2 | every audit | one `link-name` and one `button-name` per site, plus one per third-party frame origin |
 | I3 | any regenerated analysis | no sentence states that the obligation applies, is established or does not apply |
-| J1 | le37bishotel-paris | `svg-img-alt` at most 2 (was 33) |
-| J1 | heurope | `label` 1, `listitem` at most 2 |
+| J1 | every audit | one finding per axe rule and frame origin, apart from `color-contrast` and `link-in-text-block` (one per colour pair); 445 axe findings to about 243 over the 21 audits, occurrences unchanged |
+| J1 | le37bishotel-paris | `svg-img-alt` 1 (was 33), the logo and the icon as its first examples |
+| J1 | heurope | `label` 1, `listitem` 1 |
 | J1 | grand-hotel-opera | `nested-interactive` 1, `aria-tab-name` 1 |
 | J2 | heurope, regenerated | no sentence calls CLS good beside the critical CLS finding |
-| J3 | grandhoteldesalpes, hotelmacchi, regina-hotel | 0 `focus-order-mismatch`; heurope `keyboard-trap` kept |
+| J3 | grandhoteldesalpes, hotelmacchi, regina-hotel | 0 `focus-order-mismatch`; heurope `keyboard-trap` kept; on a rescan, the held pages disclosed as `keyboard-walk-held-by-dialog`, hotelmacchi's and villasfoch's popups walked after Escape |
+| J4 | domaine-d-auriac | a rescan passes the coverage gate; its 404 URLs are dead links (read them: real broken links or URLs the crawler built) |
+| J5 | every audit | no content page (over 500 visible characters, answered 200) classified as a challenge by its title |
+| 124 | every audit | `video-missing-captions`, `structured-data-invalid`, `focus-order-mismatch` and the 12 never-fired custom rules appear only in « Points à vérifier »; confirm a rule in `rule-confirmation.ts` when one of its real findings is read and true |
+| Ledger | every audit | start from `pnpm measure:audit-data-quality` alerts: each is explained in the notes or recorded |
 
 Other carried checks:
 
