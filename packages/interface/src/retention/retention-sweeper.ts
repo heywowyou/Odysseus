@@ -32,7 +32,7 @@ export function isRetentionSweepEnabled(env: NodeJS.ProcessEnv = process.env): b
 /** Issue #538: the 90-day prospect expiry runs in the same daily sweep once
  *  the operator has read a production dry run and set this to exactly `on`
  *  (deploy/runbook.md). */
-export function isProspectExpiryEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+function isProspectExpiryEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   return env[PROSPECT_EXPIRY_ENV_VAR] === 'on';
 }
 

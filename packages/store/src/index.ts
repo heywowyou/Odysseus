@@ -141,7 +141,6 @@ export {
   recordProspectOutcome,
   restoreProspect,
   setProspectStatus,
-  AutomaticStatusTransitionError,
   upsertDirectoryEntries,
   isEditableProspectField,
   updateProspect,

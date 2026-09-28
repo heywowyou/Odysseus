@@ -718,7 +718,7 @@ export async function advanceProspectStatus(
   return writeProspectStatusIfCurrent(connection, current, status, actor);
 }
 
-export class AutomaticStatusTransitionError extends Error {
+class AutomaticStatusTransitionError extends Error {
   readonly current: ProspectStatus;
   readonly requested: ProspectStatus;
 
