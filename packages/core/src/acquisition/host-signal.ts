@@ -104,9 +104,25 @@ export function extractHostSignalMarkers(markup: string): string[] {
   );
 }
 
+/** A challenge title makes a wall only on a challenge-shaped document. The
+ *  title patterns are ordinary words (« Security check-in and check-out »,
+ *  « Test de sécurité incendie »), so a substantial page that answered 200
+ *  is content whatever its title; a challenge page is short or refused. An
+ *  unknown text length (old stored data, a title-only fallback) keeps the
+ *  earlier reading. */
+function isChallengeShaped(input: ClassifyDocumentWallInput): boolean {
+  return (
+    input.visibleTextLength === undefined ||
+    input.visibleTextLength < MINIMUM_CHALLENGE_TEXT_LENGTH ||
+    input.status === 403 ||
+    input.status === 429 ||
+    input.status === 503
+  );
+}
+
 export function classifyDocumentWall(input: ClassifyDocumentWallInput): DocumentWallClassification {
   const markers = new Set(input.markers ?? []);
-  if (isChallengeTitle(input.title)) {
+  if (isChallengeTitle(input.title) && isChallengeShaped(input)) {
     return { classification: 'wall', reason: 'challenge-title' };
   }
 

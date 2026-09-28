@@ -17,6 +17,30 @@ describe('classifyDocumentWall', () => {
     expect(classifyDocumentWall({ status: 429 }).classification).toBe('wall');
   });
 
+  // The canary audit (normalize/canary-true-positives.test.ts): a hotel page
+  // whose title uses the challenge words is content when it has content.
+  it('reads a challenge title on a substantial page as content', () => {
+    for (const title of [
+      'Security check-in and check-out times | Hôtel',
+      'Test de sécurité incendie : nos engagements',
+    ]) {
+      expect(
+        classifyDocumentWall({ title, status: 200, visibleTextLength: 2400 }).classification,
+      ).toBe('content');
+    }
+  });
+
+  it('keeps a challenge title on a sparse or refused page a wall', () => {
+    expect(
+      classifyDocumentWall({ title: 'Test de sécurité', status: 200, visibleTextLength: 120 })
+        .classification,
+    ).toBe('wall');
+    expect(
+      classifyDocumentWall({ title: 'Security check', status: 403, visibleTextLength: 2400 })
+        .classification,
+    ).toBe('wall');
+  });
+
   it('requires a challenge marker plus a barrier-shaped document', () => {
     expect(
       classifyDocumentWall({

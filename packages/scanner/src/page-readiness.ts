@@ -11,7 +11,7 @@
  * of its evidence.
  */
 import type { Frame, Page, Response } from 'playwright';
-import { isChallengeTitle } from '@odysseus/core';
+import { isChallengeTitle, MINIMUM_CHALLENGE_TEXT_LENGTH } from '@odysseus/core';
 import type { HydrationProgress, SurfaceReadinessOutcome } from './evidence-surfaces.js';
 import { analyzeRawDocument } from './raw-document-signals.js';
 
@@ -224,10 +224,15 @@ export async function observeFrames(page: Page, pageUrl: string): Promise<FrameO
       .evaluate(() => ({
         title: document.title,
         html: document.documentElement?.outerHTML ?? '',
+        textLength: document.body?.innerText.trim().length ?? 0,
       }))
-      .then(({ title, html }) => {
+      .then(({ title, html, textLength }) => {
         const markers = [...analyzeRawDocument(html).interstitialMarkers];
-        if (isChallengeTitle(title)) markers.push('challenge-title');
+        // A title with the challenge words only marks a challenge-shaped
+        // frame, the same rule classifyDocumentWall applies to a page.
+        if (isChallengeTitle(title) && textLength < MINIMUM_CHALLENGE_TEXT_LENGTH) {
+          markers.push('challenge-title');
+        }
         return [...new Set(markers)].sort();
       })
       .catch(() => [] as string[]);
