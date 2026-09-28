@@ -147,6 +147,41 @@ describe('buildStructureInput', () => {
 });
 
 describe('buildWritingInput', () => {
+  it('describes only the site findings of a theme that also holds findings inside an embedded frame', () => {
+    const base = filterFindingsForLlm(loadSmallSiteFindings())[0];
+    if (!base) throw new Error('expected at least one finding in the fixture');
+    const inFrame = (findingId: string, selector: string): Finding => ({
+      ...base,
+      findingId,
+      elements: [{ ...base.elements[0]!, selector }],
+    });
+    const siteWide = inFrame('f003', 'footer .social > a');
+    const frameButton = inFrame('f001', 'iframe.booking >>> button.guests');
+    const frameLink = inFrame('f002', 'iframe.booking >>> a.logo');
+    const theme = (themeKey: string, findingIds: string[]): StructureThemeWithKey => ({
+      themeKey,
+      findingIds,
+      category: base.category as StructureThemeWithKey['category'],
+      effort: 'high',
+      impact: 'high',
+      priorityRank: 1,
+    });
+
+    const input = buildWritingInput(
+      [theme('mixed', ['f001', 'f002', 'f003']), theme('frame-only', ['f001', 'f002'])],
+      [siteWide, frameButton, frameLink],
+      buildFallbackSiteContext(),
+      'fr',
+      computeSiteStats(loadSmallSiteFindings(), loadSmallSiteManifest()),
+      emptyWritingPerformanceEvidence(),
+      {},
+      'unknown',
+    );
+
+    expect(input.themes[0]!.findings.map((f) => f.findingId)).toEqual(['f003']);
+    expect(input.themes[1]!.findings.map((f) => f.findingId)).toEqual(['f001', 'f002']);
+  });
+
   it('groups each structure theme with the finding records for its findingIds', () => {
     const filtered = filterFindingsForLlm(loadSmallSiteFindings());
     const siteContext = buildFallbackSiteContext();

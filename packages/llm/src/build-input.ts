@@ -1,4 +1,10 @@
-import type { AuditManifest, Finding, ObligationAssessment, ReportLanguage } from '@odysseus/core';
+import {
+  isConfinedToThirdPartyFrame,
+  type AuditManifest,
+  type Finding,
+  type ObligationAssessment,
+  type ReportLanguage,
+} from '@odysseus/core';
 import { LLM_SEVERITY_FLOOR } from './constants.js';
 import type { StructureInput, StructureThemeWithKey } from './structure-schema.js';
 import type {
@@ -105,10 +111,8 @@ export function buildWritingInput(
 ): WritingInput {
   const byId = new Map(filteredFindings.map((f) => [f.findingId, f]));
 
-  const themes: WritingThemeInput[] = structureThemes.map((theme) => ({
-    themeKey: theme.themeKey,
-    category: theme.category,
-    findings: theme.findingIds.map((id) => {
+  const themes: WritingThemeInput[] = structureThemes.map((theme) => {
+    const themeFindings = theme.findingIds.map((id) => {
       const finding = byId.get(id);
       if (!finding) {
         throw new Error(
@@ -116,10 +120,24 @@ export function buildWritingInput(
             'The structure document may be stale relative to the current findings.json - try --regenerate-structure.',
         );
       }
-      return toLlmFindingShape(finding);
-    }),
-    trustedRemediations: [...(trustedRemediationsByTheme[theme.themeKey] ?? [])],
-  }));
+      return finding;
+    });
+    // Q1 (plan 075): a finding wholly inside an embedded frame never reaches
+    // a priority card (the report's buildRenderedPriorities drops it), so a
+    // theme that mixes such findings with the site's own shows the client
+    // only the site's own, and the writer describes that same set. Given
+    // both, it located a site-wide link-name priority on the one page that
+    // embeds a booking frame, the only place the frame's findings were.
+    // A theme made only of frame findings keeps them: it has nothing else
+    // to describe and never becomes a card.
+    const siteFindings = themeFindings.filter((finding) => !isConfinedToThirdPartyFrame(finding));
+    return {
+      themeKey: theme.themeKey,
+      category: theme.category,
+      findings: (siteFindings.length > 0 ? siteFindings : themeFindings).map(toLlmFindingShape),
+      trustedRemediations: [...(trustedRemediationsByTheme[theme.themeKey] ?? [])],
+    };
+  });
 
   return {
     language,

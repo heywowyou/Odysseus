@@ -97,6 +97,17 @@ report can never describe a different diversion decision than the one the
 model actually experienced. Full defect record in
 `docs/archive/report-v2-refactor.md` part 4.1 (A1-A3).
 
+**The writer describes a theme's site findings, not its frame findings
+(plan 075 Q1, 2026-09-28).** A finding wholly inside an embedded frame stays
+in the structure input, so a theme may still hold it, but the report never
+prints it on a priority card (`buildRenderedPriorities` reads the primary
+population). `buildWritingInput` therefore gives the writer only a mixed
+theme's site findings. Given both, a real report's writer located a
+site-wide link-name priority on the one page embedding a booking frame, and
+recommended fixing buttons that only the frame contained. A theme made only
+of frame findings keeps them. Stored structures stay valid: theme membership
+is unchanged, only the writing evidence narrows.
+
 **Post-structure-pass ranking rules, also added 2026-08-07, correct for
 two things a model cannot be trusted to weigh consistently: coverage and
 volume.** `packages/llm/src/structure-ranking.ts` runs immediately after

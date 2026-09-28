@@ -277,7 +277,8 @@ function elementResourceUrls(finding: Finding): string[] {
  *  which file to fix. Dropping it also keeps credential-shaped parameters
  *  (a Google Maps tile's `key=`) out of this client-forwardable PDF, which
  *  used to need its own stripping step. */
-function resourceDisplayPath(url: string): string {
+function resourceDisplayPath(url: string, inlineLabel: string): string {
+  if (isInlineResourceName(url)) return inlineLabel;
   try {
     return capResourcePath(new URL(url).pathname);
   } catch {
@@ -285,11 +286,27 @@ function resourceDisplayPath(url: string): string {
   }
 }
 
+/** Lighthouse names a stylesheet written inside the page's HTML by its
+ *  first characters of CSS (`*, ::before, ::after{ --tw-…`), since it has
+ *  no URL. Printed among file paths, that fragment reads as garbage and
+ *  counts as a file of its own; every such block is listed once instead,
+ *  under a label saying what it is. Anything that is a URL or a path keeps
+ *  its own entry. */
+function isInlineResourceName(value: string): boolean {
+  if (value.startsWith('/')) return false;
+  try {
+    new URL(value);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 /** The distinct files a resource list names, once query strings are gone,
  *  in the list's own order. The row's file count reads this too, so the
  *  count and the printed list never disagree. */
-function distinctResourcePaths(urls: readonly string[]): string[] {
-  return [...new Set(urls.map(resourceDisplayPath))];
+function distinctResourcePaths(urls: readonly string[], inlineLabel: string): string[] {
+  return [...new Set(urls.map((url) => resourceDisplayPath(url, inlineLabel)))];
 }
 
 /** Issue #276: a very long entry stayed one unbreakable token inside the
@@ -314,11 +331,12 @@ function renderResourceUrlList(
 ): string {
   const collapsed = findingResourceUrls(finding);
   const fromElements = collapsed.length === 0;
+  const a = strings.findingsAppendix;
   const urls = distinctResourcePaths(
     collapsed.length > 0 ? collapsed : elementResourceUrls(finding),
+    a.inlineResourceLabel,
   );
   if (urls.length === 0) return '';
-  const a = strings.findingsAppendix;
 
   // mergeGroup stores at most MAX_ELEMENTS_PER_FINDING occurrences, so an
   // element-derived list on a finding with more occurrences than that is a
@@ -413,7 +431,10 @@ function renderSubTableRow(
   // B4: a site-wide resource finding has no meaningful single selector -
   // its detail is the file list rendered below, so the column states how
   // many files rather than naming an arbitrary one of their DOM nodes.
-  const resourceUrls = distinctResourcePaths(findingResourceUrls(finding));
+  const resourceUrls = distinctResourcePaths(
+    findingResourceUrls(finding),
+    strings.findingsAppendix.inlineResourceLabel,
+  );
   const selector =
     resourceUrls.length > 0
       ? fillTemplate(

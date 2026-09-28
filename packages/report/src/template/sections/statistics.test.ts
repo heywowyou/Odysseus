@@ -198,6 +198,21 @@ describe('renderStatistics against the real small-site.test scan', () => {
     expect(positions[0]).toBeLessThan(Math.min(...positions.slice(1)));
   });
 
+  it('sets every category count on the tile bottom, so labels of different lengths leave the counts aligned', () => {
+    const findings: Finding[] = [
+      buildCategoryFinding('rendering', 1),
+      buildCategoryFinding('geo', 1),
+    ];
+    const html = renderStatistics(getStrings('fr'), 3, 'fr', findings, buildMinimalManifest());
+    const tiles = html.split('report-category-tile"').slice(1);
+
+    expect(tiles).toHaveLength(2);
+    for (const tile of tiles) {
+      expect(tile).toMatch(/^[^>]*display:flex;flex-direction:column/);
+      expect(tile).toMatch(/class="report-category-count" style="[^"]*margin-top:auto/);
+    }
+  });
+
   it('B9: the WCAG fail-count line carries a heading, not sitting unlabelled', async () => {
     const findings = await loadSmallSiteFindings();
     const manifest = await loadSmallSiteManifest();

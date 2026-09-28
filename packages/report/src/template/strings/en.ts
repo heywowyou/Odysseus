@@ -503,7 +503,7 @@ export const en: ReportStrings = {
     worstPageColumnLabel: 'Worst page',
     worstPageSameAsMedian: 'Same as median',
     worstPageFootnote:
-      'A finding is graded from its worst page, not the median: a "Critical" status can coexist with a median "needs improvement" status when a single page is markedly slower than the rest.',
+      'A finding is graded from its worst page, not the median: a "Critical" status can coexist with a "good" or "needs improvement" median when a few pages are markedly worse than the rest.',
     thresholdColumnLabel: '"Good" threshold',
     statusColumnLabel: 'Status',
     lcpLabel: 'LCP, main content',
@@ -945,6 +945,7 @@ export const en: ReportStrings = {
     affectedFilesCountSingularTemplate: '{count} file affected',
     affectedFilesLabel: 'Files',
     affectedFilesSampleLabel: 'Files (examples)',
+    inlineResourceLabel: 'code embedded directly in the pages',
     samePagesAsTemplate: 'Same pages as {findingId}',
     pagesMaxColumnLabel: 'Max pages',
     occurrencesColumnLabel: 'Occurrences',

@@ -255,7 +255,7 @@ describe('quick-win glossary definition (issue #105)', () => {
         obligationAssessment: undefined,
         transactionalFlowEvaluated: false,
         hasMeasuredCoreWebVitals: true,
-        reportText: '',
+        reportText: language === 'fr' ? 'Action rapide' : 'Quick win',
       });
       if (language === 'fr') {
         expect(html).toContain('à impact moyen ou élevé');
@@ -278,6 +278,19 @@ describe('terms gated on the rendered report text (issue #330)', () => {
     transactionalFlowEvaluated: false,
     hasMeasuredCoreWebVitals: false,
   };
+
+  it('defines « Action rapide » only when a priority carries the badge or the count', () => {
+    const badged = renderGlossary(getStrings('fr'), 13, {
+      ...baseCtx,
+      reportText: '2 correspondent à des actions rapides, avec une complexité faible',
+    });
+    expect(badged).toContain('Action rapide');
+
+    const none = renderGlossary(getStrings('fr'), 13, { ...baseCtx, reportText: 'Priorité 1' });
+    expect(none).not.toContain('Action rapide');
+    const noneEn = renderGlossary(getStrings('en'), 13, { ...baseCtx, reportText: 'Priority 1' });
+    expect(noneEn).not.toContain('Quick win');
+  });
 
   it('defines a technical term only when the rest of the report uses it', () => {
     const used = renderGlossary(getStrings('fr'), 13, {

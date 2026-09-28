@@ -1252,6 +1252,28 @@ describe('issue #318: long evidence lists stay readable', () => {
     expect(html).toContain(`…/${fileName}`);
   });
 
+  it('lists the stylesheets written inside the pages once, by what they are, not by their CSS', () => {
+    const html = renderFindingsAppendix(
+      getStrings('fr'),
+      12,
+      'fr',
+      [
+        resourceFinding([
+          '*, ::before, ::after{\n  --tw-border-spacing-x: 0;\n  --tw-translate-x: 0…',
+          '.dropdown-link{cursor:pointer} …',
+          'https://example.com/css/site.css',
+        ]),
+      ],
+      buildManifest(),
+      'general',
+    );
+
+    expect(html).not.toContain('::before');
+    expect(html).not.toContain('cursor:pointer');
+    expect(html).toContain('code intégré directement dans les pages, /css/site.css');
+    expect(html).toContain('2 fichiers concernés');
+  });
+
   it('prints the analysed pages one per line, grouped by first path segment', () => {
     const manifest = buildManifestWithPages(1);
     const page = manifest.pages[0]!;

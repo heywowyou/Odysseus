@@ -603,7 +603,7 @@ export const fr: ReportStrings = {
     worstPageColumnLabel: 'Pire page',
     worstPageSameAsMedian: 'Comme la médiane',
     worstPageFootnote:
-      "Le niveau de gravité d'un constat est déterminé à partir de la page la plus défavorable, et non de la médiane : un statut « Critique » peut donc coexister avec une médiane « à améliorer » quand une page isolée est nettement plus lente que les autres.",
+      "Le niveau de gravité d'un constat est déterminé à partir de la page la plus défavorable, et non de la médiane : un statut « Critique » peut donc coexister avec une médiane « bon » ou « à améliorer » quand quelques pages s'écartent nettement des autres.",
     thresholdColumnLabel: 'Seuil « bon »',
     statusColumnLabel: 'Statut',
     lcpLabel: 'LCP, contenu principal',
@@ -1067,6 +1067,7 @@ export const fr: ReportStrings = {
     affectedFilesCountSingularTemplate: '{count} fichier concerné',
     affectedFilesLabel: 'Fichiers',
     affectedFilesSampleLabel: 'Fichiers (exemples)',
+    inlineResourceLabel: 'code intégré directement dans les pages',
     samePagesAsTemplate: 'Mêmes pages que {findingId}',
     pagesMaxColumnLabel: 'Pages max',
     occurrencesColumnLabel: 'Occurrences',

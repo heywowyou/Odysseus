@@ -49,6 +49,9 @@ const TEXT_GATED_TERMS: Readonly<Record<string, RegExp>> = {
   // The label prints only beside a statistic flagged as emerging, not with
   // every GEO finding: a hotel report defined it without ever using it.
   'recherche-emergente': /Recherche émergente|Emerging research/,
+  // The badge and the next-steps count print only when a priority is a
+  // quick win: a hotel report whose priorities held none defined it unused.
+  'quick-win': /\bactions? rapides?\b|\bquick wins?\b/i,
 };
 
 /** Visible text of rendered report HTML: tags dropped, the handful of

@@ -29,6 +29,7 @@ function headingFinding(description: string): Finding {
     description,
     pageUrls: ['https://example.com/'],
     occurrences: 1,
+    elements: [] as Finding['elements'],
   } as Finding;
 }
 

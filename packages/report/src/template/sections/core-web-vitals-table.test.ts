@@ -300,6 +300,30 @@ describe('renderCoreWebVitalsTable', () => {
     expect(html).toContain('Pire page');
   });
 
+  it('explains that a critical finding can sit beside a good median, not only a middling one', () => {
+    // A CLS median of 0.006 rates « bon » while a few pages shift badly
+    // enough for a critical finding; a note naming only « à améliorer » left
+    // that pair unexplained, and « plus lente » does not describe a shift.
+    const page = (cls: number) => ({
+      url: `https://example.com/${cls}`,
+      pageDir: `pages/p-${cls}`,
+      depth: 0,
+      status: 'visited',
+      errors: {},
+      coreWebVitals: { cls: buildMeasurement(cls, String(cls)) },
+    });
+    const manifest = {
+      siteUrl: 'https://example.com/',
+      pages: [page(0.004), page(0.006), page(0.645)],
+    } as unknown as AuditManifest;
+
+    const fr = renderCoreWebVitalsTable(getStrings('fr'), 9, 'fr', manifest);
+    expect(fr).toContain('médiane « bon » ou « à améliorer »');
+    expect(fr).not.toContain('plus lente');
+    const en = renderCoreWebVitalsTable(getStrings('en'), 9, 'en', manifest);
+    expect(en).toContain('&quot;good&quot; or &quot;needs improvement&quot; median');
+  });
+
   it('breaks equal worst-value ties by URL', () => {
     const pages = [
       { url: 'https://example.com/z', coreWebVitals: { lcp: buildMeasurement(3000, '3 s') } },

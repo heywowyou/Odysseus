@@ -1,4 +1,6 @@
-import type { Finding } from '@odysseus/core';
+import { crossesFrameBoundary, isConfinedToThirdPartyFrame, type Finding } from '@odysseus/core';
+
+export { isConfinedToThirdPartyFrame };
 
 /**
  * report-feedback-la-corniche.md item 1.4: a large share of a real
@@ -51,14 +53,6 @@ const VENDOR_SELECTOR_PATTERNS: ReadonlyArray<{ pattern: RegExp; vendor: string 
   { pattern: /player\.vimeo\.com|vp-(controls|player)/i, vendor: 'Vimeo' },
 ];
 
-/** A shadow-piercing selector (Playwright's `>>>` combinator) means the
- *  matched element sits inside a nested, usually cross-origin iframe -
- *  by definition not markup on the page the client's own agency can
- *  edit, whether or not the vendor is one of the named ones above. */
-function crossesFrameBoundary(selector: string): boolean {
-  return selector.includes('>>>');
-}
-
 /** Issue #299: a WordPress theme is the site's own code. Whoever authored
  *  it, it is what the client's agency is paid to maintain, so nothing
  *  under /wp-content/themes/ can be something they "cannot modify
@@ -101,18 +95,6 @@ export function isConfinedToThirdParty(finding: Pick<Finding, 'elements'>): bool
     finding.elements.every(
       (el) => detectVendor(el.selector) !== undefined || crossesFrameBoundary(el.selector),
     )
-  );
-}
-
-/** Q1 (plan 075): whether every captured element of the finding sits inside
- *  an embedded frame. Only this population leaves the grade, the totals,
- *  the priorities and the preview. A vendor widget rendered into the page's
- *  own DOM (a form plugin, a consent banner, a booking SDK) is still what
- *  the site serves and chose to configure, so it keeps counting; it is only
- *  labelled with its vendor in the annex. */
-export function isConfinedToThirdPartyFrame(finding: Pick<Finding, 'elements'>): boolean {
-  return (
-    finding.elements.length > 0 && finding.elements.every((el) => crossesFrameBoundary(el.selector))
   );
 }
 

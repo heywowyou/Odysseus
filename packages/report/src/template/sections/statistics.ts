@@ -86,6 +86,10 @@ function renderSeverityTile(
   `;
 }
 
+/** A long category label (the GEO one) wraps to four lines in a six-tile
+ *  row while the rendering one takes a single line, so a count set right
+ *  under its label sat at a different height in every tile. The grid row already gives the tiles one height; the count takes
+ *  the free space above it and every count shares the tile's bottom. */
 function renderCategoryTile(
   category: keyof typeof CATEGORY,
   label: string,
@@ -93,9 +97,9 @@ function renderCategoryTile(
   color: string,
 ): string {
   return `
-    <div class="stat-tile report-category-tile" data-report-category="${category}" style="padding:var(--space-3);border-radius:var(--radius-md);background:var(--color-surface)">
+    <div class="stat-tile report-category-tile" data-report-category="${category}" style="display:flex;flex-direction:column;padding:var(--space-3);border-radius:var(--radius-md);background:var(--color-surface)">
       <div data-report-category="${category}" style="font-size:11px;text-transform:uppercase;letter-spacing:0.02em;color:${color}">${escapeHtml(label)}</div>
-      <div style="font-size:22px;font-family:var(--font-heading);margin-top:6px">${count}</div>
+      <div class="report-category-count" style="font-size:22px;font-family:var(--font-heading);margin-top:auto;padding-top:6px">${count}</div>
     </div>
   `;
 }
