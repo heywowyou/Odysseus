@@ -61,7 +61,10 @@ signature of a genuine trap. Rule ID `keyboard-trap`.
 The same Tab-key walk flags a confusing reorder when the observed focus
 sequence moves backward past an earlier element two or more times
 (deliberately conservative: a single reorder is common and often
-intentional). Rule ID `focus-order-mismatch`. Visible focus indicators
+intentional). A jump back to an element the walk skipped while Tab could
+not reach it in order (hidden, or moved after the focused element, as an
+autoplaying loop carousel does with its slides) is not counted (issue
+#562). Rule ID `focus-order-mismatch`. Visible focus indicators
 (whether a focused element actually shows a visible outline or ring)
 is a different property entirely and is not checked by this or any
 other rule; still genuinely manual.

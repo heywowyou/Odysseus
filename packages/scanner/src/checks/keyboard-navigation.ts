@@ -48,6 +48,14 @@ export interface KeyboardNavigationExtraction {
    *  tabbable set, e.g. the browser chrome or an iframe boundary - not
    *  itself evidence of anything, just excluded from analysis). */
   focusSequence: Array<number | null>;
+  /** Parallel to focusSequence: the tabbables that press jumped over which
+   *  the walk could not reach in order at that moment, because they could
+   *  not take focus (hidden, disabled, inert or gone) or now sat after the
+   *  focused element in the document. An autoplaying carousel hides its
+   *  slides and, in loop mode, moves them to the end of the track during
+   *  the walk, so a slide link skipped then and reached later is timing,
+   *  not a backward jump (issue #562). */
+  skippedOutOfReach: number[][];
   /** The walk was held by a popup and repeated once after an Escape press;
    *  focusSequence is the second walk. */
   escapeRetried?: boolean;
@@ -67,12 +75,19 @@ const TAB_ATTR = 'data-odysseus-tab-id';
  *  Tab presses to reveal a trap or a bad reorder. */
 const MAX_TAB_PRESSES = 60;
 
+interface TabWalk {
+  focusSequence: Array<number | null>;
+  skippedOutOfReach: number[][];
+}
+
 async function pressTabs(
   page: Page,
   presses: number,
   signal: AbortSignal | undefined,
-): Promise<Array<number | null>> {
+): Promise<TabWalk> {
   const focusSequence: Array<number | null> = [];
+  const skippedOutOfReach: number[][] = [];
+  let previous = -1;
   for (let i = 0; i < presses; i++) {
     if (signal?.aborted) throw new Error('keyboard-navigation aborted');
     await page.keyboard.press('Tab');
@@ -82,9 +97,47 @@ async function pressTabs(
       const value = el?.getAttribute?.(attr);
       return value !== null && value !== undefined ? Number(value) : null;
     }, TAB_ATTR);
+    const skipped: number[] = [];
+    if (focusedId !== null) {
+      for (let id = previous + 1; id < focusedId; id++) skipped.push(id);
+    }
     focusSequence.push(focusedId);
+    skippedOutOfReach.push(
+      focusedId === null || skipped.length === 0
+        ? []
+        : await readOutOfReach(page, skipped, focusedId),
+    );
+    if (focusedId !== null) previous = focusedId;
   }
-  return focusSequence;
+  return { focusSequence, skippedOutOfReach };
+}
+
+/** The skipped tabbables that Tab could not have reached in order at this
+ *  press: they cannot take focus right now (the snapshot's filter read again,
+ *  plus what hides an element through its ancestors: checkVisibility,
+ *  inert), or they now follow the focused element in the document. */
+async function readOutOfReach(page: Page, ids: number[], focusedId: number): Promise<number[]> {
+  return page.evaluate(
+    ({ attr, candidateIds, focused }) => {
+      const focusedEl = document.querySelector(`[${attr}="${focused}"]`);
+      return candidateIds.filter((id) => {
+        const el = document.querySelector(`[${attr}="${id}"]`);
+        if (el === null) return true;
+        if (
+          focusedEl !== null &&
+          (focusedEl.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0
+        ) {
+          return true;
+        }
+        if (el.getAttribute('tabindex') === '-1' || el.hasAttribute('disabled')) return true;
+        if (el.closest('[inert]') !== null) return true;
+        const rect = el.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return true;
+        return !el.checkVisibility({ visibilityProperty: true });
+      });
+    },
+    { attr: TAB_ATTR, candidateIds: ids, focused: focusedId },
+  );
 }
 
 export async function walkKeyboardNavigation(
@@ -180,25 +233,25 @@ export async function walkKeyboardNavigation(
   const tabbableSelectors = tabbables.map((t) => t.selector);
   const tabbableKinds = tabbables.map((t) => t.kind);
   const tabbableContainers = tabbables.map((t) => t.container);
-  let focusSequence: Array<number | null> = [];
+  let tabWalk: TabWalk = { focusSequence: [], skippedOutOfReach: [] };
   let escapeRetried = false;
 
   if (tabbables.length > 0) {
     const maxPresses = Math.min(tabbables.length + 5, MAX_TAB_PRESSES);
     try {
-      focusSequence = await pressTabs(page, maxPresses, signal);
+      tabWalk = await pressTabs(page, maxPresses, signal);
       const walk = {
         pageUrl,
         tabbableCount: tabbables.length,
         tabbableSelectors,
         tabbableContainers,
-        focusSequence,
+        focusSequence: tabWalk.focusSequence,
       };
-      const heldIds = new Set(focusSequence.filter((id): id is number => id !== null));
+      const heldIds = new Set(tabWalk.focusSequence.filter((id): id is number => id !== null));
       const heldByConsent = [...heldIds].some((id) => tabbables[id]?.consent === true);
       if (isTabWalkHeldByDialog(walk) && !heldByConsent) {
         await page.keyboard.press('Escape');
-        focusSequence = await pressTabs(page, maxPresses, signal);
+        tabWalk = await pressTabs(page, maxPresses, signal);
         escapeRetried = true;
       }
     } finally {
@@ -214,7 +267,8 @@ export async function walkKeyboardNavigation(
     tabbableSelectors,
     tabbableKinds,
     tabbableContainers,
-    focusSequence,
+    focusSequence: tabWalk.focusSequence,
+    skippedOutOfReach: tabWalk.skippedOutOfReach,
     ...(escapeRetried ? { escapeRetried: true } : {}),
   };
 }

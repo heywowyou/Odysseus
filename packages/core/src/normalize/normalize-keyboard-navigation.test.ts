@@ -205,3 +205,34 @@ describe('a stored walk that returns to one control', () => {
     ).toBe(false);
   });
 });
+
+describe('a carousel that moves during the walk (issue #562)', () => {
+  // aflatta /chambres-et-suites: 31, 33, 34, then 32, and later 41, then 37;
+  // 32 and 37 are first-slide links of two looping carousels.
+  const focusSequence = [30, 31, 33, 34, 32, 35, 36, 38, 39, 40, 41, 37, 42];
+  const carouselWalk = (skippedOutOfReach?: number[][]) =>
+    baseInput({
+      tabbableCount: 50,
+      tabbableSelectors: Array.from({ length: 50 }, (_, i) => `a:nth-of-type(${i + 1})`),
+      focusSequence,
+      ...(skippedOutOfReach !== undefined ? { skippedOutOfReach } : {}),
+    });
+
+  it('does not count a jump back to a slide the walk skipped while it was out of reach', () => {
+    const skipped = focusSequence.map((id) => (id === 33 ? [32] : id === 38 ? [37] : []));
+    const candidates = extractKeyboardNavigationCandidates(carouselWalk(skipped));
+    expect(candidates.filter((c) => c.ruleId === FOCUS_ORDER_MISMATCH_RULE_ID)).toEqual([]);
+  });
+
+  it('still counts a jump back to an element that was reachable when the walk passed it', () => {
+    const candidates = extractKeyboardNavigationCandidates(
+      carouselWalk(focusSequence.map(() => [])),
+    );
+    expect(candidates.filter((c) => c.ruleId === FOCUS_ORDER_MISMATCH_RULE_ID)).toHaveLength(1);
+  });
+
+  it('judges a walk stored before the record as before', () => {
+    const candidates = extractKeyboardNavigationCandidates(carouselWalk());
+    expect(candidates.filter((c) => c.ruleId === FOCUS_ORDER_MISMATCH_RULE_ID)).toHaveLength(1);
+  });
+});

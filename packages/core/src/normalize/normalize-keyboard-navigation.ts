@@ -54,6 +54,11 @@ export interface KeyboardNavigationCheckInput {
    *  contains it, or null. Absent on walks recorded before plan 075 J3. */
   tabbableContainers?: Array<string | null>;
   focusSequence: Array<number | null>;
+  /** Parallel to focusSequence: the tabbables each press jumped over that
+   *  Tab could not reach in order at that moment (unfocusable, or moved
+   *  after the focused element). Absent on walks recorded before issue
+   *  #562, which are judged as before. */
+  skippedOutOfReach?: number[][];
   /** The walk was repeated once after Escape closed a popup that held it. */
   escapeRetried?: boolean;
 }
@@ -86,21 +91,30 @@ export function isTabWalkHeldByDialog(input: KeyboardNavigationCheckInput): bool
 }
 
 /** Backward jumps within each pass through the page. A pass ends when focus
- *  reaches an element it already visited in that pass. */
-function countInversions(focusSequence: ReadonlyArray<number | null>): number {
+ *  reaches an element it already visited in that pass. A jump back to an
+ *  element the walk skipped while Tab could not reach it in order is not
+ *  counted: an autoplaying carousel hid the slide or moved it to the end of
+ *  its track (issue #562), so the page's order was followed at every press. */
+function countInversions(
+  focusSequence: ReadonlyArray<number | null>,
+  skippedOutOfReach: ReadonlyArray<readonly number[]> = [],
+): number {
   let inversions = 0;
   let visited = new Set<number>();
+  let outOfReach = new Set<number>();
   let previous: number | undefined;
-  for (const id of focusSequence) {
-    if (id === null) continue;
+  focusSequence.forEach((id, step) => {
+    if (id === null) return;
     if (visited.has(id)) {
       visited = new Set<number>();
+      outOfReach = new Set<number>();
       previous = undefined;
     }
-    if (previous !== undefined && id < previous) inversions++;
+    if (previous !== undefined && id < previous && !outOfReach.has(id)) inversions++;
+    for (const skipped of skippedOutOfReach[step] ?? []) outOfReach.add(skipped);
     visited.add(id);
     previous = id;
-  }
+  });
   return inversions;
 }
 
@@ -135,7 +149,7 @@ export function extractKeyboardNavigationCandidates(
     }
   }
 
-  const inversions = countInversions(input.focusSequence);
+  const inversions = countInversions(input.focusSequence, input.skippedOutOfReach);
   if (inversions >= MIN_INVERSIONS_FOR_MISMATCH) {
     candidates.push({
       source: 'custom',

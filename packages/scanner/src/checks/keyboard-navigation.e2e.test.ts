@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser } from 'playwright';
 import { launchBrowser } from '../browser.js';
+import { extractKeyboardNavigationCandidates, FOCUS_ORDER_MISMATCH_RULE_ID } from '@odysseus/core';
 import { walkKeyboardNavigation } from './keyboard-navigation.js';
 
 function startStaticServer(html: string): Promise<{ server: Server; origin: string }> {
@@ -108,6 +109,72 @@ describe('walkKeyboardNavigation against real pages', () => {
     // should be focused before id 0 (tabindex=2).
     const firstTwo = result.focusSequence.slice(0, 2);
     expect(firstTwo).toEqual([1, 0]);
+  });
+
+  const focusOrderFindings = (result: Awaited<ReturnType<typeof walkHtml>>) =>
+    extractKeyboardNavigationCandidates(result).filter(
+      (candidate) => candidate.ruleId === FOCUS_ORDER_MISMATCH_RULE_ID,
+    );
+
+  it('keeps two backward jumps caused by positive tabindex values (issue #562)', async () => {
+    const html = `<body>
+      <a href="/a">First</a>
+      <a href="/b" tabindex="2">Second</a>
+      <a href="/c">Third</a>
+      <a href="/d" tabindex="1">Fourth</a>
+      <a href="/e">Fifth</a>
+    </body>`;
+
+    const result = await walkHtml(html);
+
+    expect(result.focusSequence.slice(0, 5)).toEqual([3, 1, 0, 2, 4]);
+    expect(focusOrderFindings(result)).toHaveLength(1);
+  });
+
+  it('reads no backward jump when an autoplaying loop carousel moves and hides its slides during the walk (issue #562)', async () => {
+    // Swiper's loop mode: each autoplay step hides the leading slide and
+    // moves it to the end of the track, then shows it again. Driven by the
+    // Tab presses so the timing is deterministic.
+    const html = `<body>
+      <a href="/before">Before</a>
+      <div id="track">
+        <div class="slide"><a href="/s1">Slide 1</a></div>
+        <div class="slide"><a href="/s2">Slide 2</a></div>
+        <div class="slide"><a href="/s3">Slide 3</a></div>
+      </div>
+      <div id="track2">
+        <div class="slide"><a href="/t1">Other 1</a></div>
+        <div class="slide"><a href="/t2">Other 2</a></div>
+      </div>
+      ${Array.from({ length: 6 }, (_, i) => `<a href="/p${i}">Page link ${i}</a>`).join('\n')}
+      <script>
+        let presses = 0;
+        const rotate = (id) => {
+          const track = document.getElementById(id);
+          const first = track.firstElementChild;
+          first.style.visibility = 'hidden';
+          track.appendChild(first);
+          setTimeout(() => { first.style.visibility = ''; }, 0);
+        };
+        document.addEventListener('keydown', (e) => {
+          if (e.key !== 'Tab') return;
+          presses++;
+          if (presses === 2) rotate('track');
+          if (presses === 6) rotate('track2');
+        }, true);
+      </script>
+    </body>`;
+
+    const result = await walkHtml(html);
+
+    // The walk really does jump back twice; only the record explains it.
+    const { skippedOutOfReach: _record, ...withoutRecord } = result;
+    expect(
+      extractKeyboardNavigationCandidates(withoutRecord).filter(
+        (candidate) => candidate.ruleId === FOCUS_ORDER_MISMATCH_RULE_ID,
+      ),
+    ).toHaveLength(1);
+    expect(focusOrderFindings(result)).toEqual([]);
   });
 
   // Plan 075 J3: a popup open on load that keeps focus inside itself.
