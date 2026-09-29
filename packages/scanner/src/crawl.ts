@@ -34,12 +34,18 @@ import {
   globToRegExp,
   isLanguageHomepagePath,
   isSameSiteHostname,
-  normalizeInternalLinks,
   normalizePageIdentityUrl,
   normalizePageUrl,
-  relativeLinkNestingEvidence,
   classifyNonPublicPluginObject,
 } from './links.js';
+import {
+  decideLinkAdmission,
+  OPERATOR_EXCLUSION_REFUSAL,
+  readDocumentBase,
+  readPageAnchors,
+  recordLinkRefusal,
+  resolvePageLinks,
+} from './link-admission.js';
 import {
   AI_CRAWLER_USER_AGENTS,
   checkAiCrawlerAccess,
@@ -68,7 +74,6 @@ import {
 } from './page-audit-profile.js';
 import {
   ContinuationGuard,
-  classifyContinuationLink,
   computeRepeatedQueryKeys,
   type ContinuationGuardSnapshot,
   type ContinuationGuardSummary,
@@ -1407,121 +1412,49 @@ export async function crawlSite(
                 discoveryMethod !== 'sitemap-only' &&
                 (item.depth < maxDepth || inventoryLedger !== undefined)
               ) {
-                // Per-anchor structural evidence (plan 021 Step 6), read at
-                // discovery time before URL normalization discards rel and
-                // context: the anchor's own rel token and whether it sits in
-                // a numbered pagination control. The pagination selector and
-                // numeric-text filter here must stay byte-identical to
-                // page-audit-profile.ts's page-level count, so the guard's
-                // evidence and the profile's fact can never diverge.
-                const readAnchors = () =>
-                  browserPage.$$eval('a[href]', (anchorEls) =>
-                    anchorEls.map((a) => ({
-                      href: a.getAttribute('href'),
-                      relNext: (a.getAttribute('rel') ?? '').split(/\s+/).includes('next'),
-                      isNumberedPaginationControl:
-                        a.matches('nav[class*="pag" i] a, [class*="pagination" i] a') &&
-                        /^\d+$/.test((a.textContent ?? '').trim()),
-                    })),
-                  );
                 // Issue #541: a JavaScript or meta redirect that fires just
                 // after load destroys the execution context under this read.
                 // The page is already recorded; read the document it landed
                 // on once it loads, and follow no links rather than fail it.
-                const anchors = await readAnchors().catch(async () => {
+                const anchors = await readPageAnchors(browserPage).catch(async () => {
                   await browserPage
                     .waitForLoadState('load', { timeout: DOM_READ_RETRY_TIMEOUT_MS })
                     .catch(() => undefined);
-                  return readAnchors().catch(() => []);
+                  return readPageAnchors(browserPage).catch(() => []);
                 });
-                // Issue #497: a relative href resolves against the document's
-                // base URL, which <base href> can move away from the page's
-                // own URL; the browser (and checks/link-facts.ts, which reads
-                // el.href) follows it, so discovery must too. Each href is made
-                // absolute against document.baseURI first, and the landed URL
-                // below still decides origin and redirect questions.
-                const documentBase = await browserPage
-                  .evaluate(() => document.baseURI)
-                  .catch(() => browserPage.url());
-                const againstBase = (href: string | null): string | null => {
-                  if (href === null) return null;
-                  try {
-                    return new URL(href, documentBase).href;
-                  } catch {
-                    return href;
-                  }
-                };
-                const hrefs = anchors.map((anchor) => againstBase(anchor.href));
-                // Resolved against browserPage.url() (where the navigation actually
-                // landed), not item.url (what was requested). A same-origin request
-                // can still land on a different origin after a server redirect - a
-                // www-to-apex 301 is the common case - and every link on the landed
-                // page is naturally absolute against that landed origin. Using
-                // item.url as the base made those links look cross-origin and got
-                // them all dropped, which silently reduced a real site's crawl to
-                // just the one redirect-landing page (confirmed against
-                // lacoorniche.com: www.lacoorniche.com 301s to lacoorniche.com,
-                // visitedCount was 1 before this fix).
+                const documentBase = await readDocumentBase(browserPage, browserPage.url());
+                // Issue #566: resolution, normalization, exclusions and
+                // nesting are link-admission.ts's, shared with the state
+                // surfaces and the discovery waves.
                 const landedUrl = browserPage.url();
-                // Same normalization normalizeInternalLinks applies below, keyed per
-                // canonical link so the guard can be consulted per candidate; two
-                // anchors normalizing to one URL OR-merge, since either alone is
-                // sufficient evidence.
-                const anchorEvidenceByUrl = new Map<
-                  string,
-                  { relNext: boolean; isNumberedPaginationControl: boolean }
-                >();
-                for (const anchor of anchors) {
-                  if (anchor.href === null) continue;
-                  const absoluteHref = againstBase(anchor.href)!;
-                  const normalizedWithoutExclusion = normalizePageUrl(absoluteHref, landedUrl);
-                  const normalized = normalizePageUrl(absoluteHref, landedUrl, {
-                    exclusionPatterns: options.exclusions ?? [],
-                  });
-                  if (normalized === undefined) {
-                    if (
-                      inventoryLedger !== undefined &&
-                      normalizedWithoutExclusion !== undefined &&
-                      exclusionRegexes.some((pattern) => pattern.test(normalizedWithoutExclusion))
-                    ) {
-                      inventoryLedger.recordDiscovery({
-                        url: normalizedWithoutExclusion,
-                        source: 'link',
-                        discoveredAt: new Date(),
-                        referrer: item.url,
-                        depth: item.depth + 1,
-                        observedUrl: anchor.href,
-                      });
-                      disposeInventory(normalizedWithoutExclusion, 'operator-excluded', {
-                        detail: 'matched an operator-supplied crawl exclusion',
-                      });
-                    }
-                    continue;
+                const resolved = resolvePageLinks(anchors, {
+                  documentBase,
+                  landedUrl,
+                  exclusions: options.exclusions ?? [],
+                });
+                if (inventoryLedger !== undefined) {
+                  for (const excluded of resolved.excluded) {
+                    inventoryLedger.recordDiscovery({
+                      url: excluded.url,
+                      source: 'link',
+                      discoveredAt: new Date(),
+                      referrer: item.url,
+                      depth: item.depth + 1,
+                      observedUrl: excluded.observedHref,
+                    });
+                    recordLinkRefusal(
+                      inventoryLedger,
+                      relativeLinkNesting,
+                      excluded,
+                      OPERATOR_EXCLUSION_REFUSAL,
+                    );
                   }
-                  const existing = anchorEvidenceByUrl.get(normalized);
-                  anchorEvidenceByUrl.set(normalized, {
-                    relNext: (existing?.relNext ?? false) || anchor.relNext,
-                    isNumberedPaginationControl:
-                      (existing?.isNumberedPaginationControl ?? false) ||
-                      anchor.isNumberedPaginationControl,
-                  });
                 }
-                const relativeNestingByUrl = new Map<
-                  string,
-                  ReturnType<typeof relativeLinkNestingEvidence>
-                >();
-                for (const anchor of anchors) {
-                  if (anchor.href === null) continue;
-                  const evidence = relativeLinkNestingEvidence(anchor.href, documentBase);
-                  if (evidence === undefined) continue;
-                  const normalized = normalizePageUrl(againstBase(anchor.href)!, landedUrl, {
-                    exclusionPatterns: options.exclusions ?? [],
-                  });
-                  if (normalized !== undefined) relativeNestingByUrl.set(normalized, evidence);
-                }
-                const links = normalizeInternalLinks(hrefs, landedUrl, options.exclusions ?? []);
-                const repeatedQueryKeysOnSourcePage = computeRepeatedQueryKeys(links);
-                for (const link of links) {
+                const repeatedQueryKeysOnSourcePage = computeRepeatedQueryKeys(
+                  resolved.links.map((link) => link.url),
+                );
+                for (const pageLink of resolved.links) {
+                  const link = pageLink.url;
                   linkDiscoveredUrls.add(link);
                   if (!linkDiscoveredFrom.has(link)) linkDiscoveredFrom.set(link, item.url);
                   ensureInventoryDiscovery(link, 'link', item.depth + 1, item.url);
@@ -1530,67 +1463,27 @@ export async function crawlSite(
                     existingPage.discoveryMethod = 'link';
                     existingPage.discoveredFrom ??= item.url;
                   }
-                  if (item.depth >= maxDepth && existingPage === undefined && !enqueued.has(link)) {
-                    disposeInventory(link, 'depth-bound', {
-                      detail: `discovered from depth ${item.depth}; maxDepth is ${maxDepth}`,
-                    });
-                    continue;
-                  }
-                  const nestingEvidence = relativeNestingByUrl.get(link);
-                  if (
-                    nestingEvidence !== undefined &&
-                    existingPage === undefined &&
-                    !enqueued.has(link)
-                  ) {
-                    relativeLinkNesting.omittedUrlCount += 1;
-                    if (relativeLinkNesting.omittedExampleUrls.length < 20) {
-                      relativeLinkNesting.omittedExampleUrls.push(nestingEvidence.resolvedUrl);
-                    }
-                    if (
-                      !relativeLinkNesting.repeatedSegments.includes(
-                        nestingEvidence.repeatedSegment,
-                      )
-                    ) {
-                      relativeLinkNesting.repeatedSegments.push(nestingEvidence.repeatedSegment);
-                    }
-                    disposeInventory(link, 'relative-link-nesting', {
-                      detail: `relative href ${nestingEvidence.href} repeated directory segment ${nestingEvidence.repeatedSegment}`,
-                    });
-                    continue;
-                  }
                   // Issue #540: a link already queued or visited is not a new
                   // member of its family. Numbered pagination repeats the same
                   // links on every page, and counting each repeat used the
                   // family's bound up after a dozen archive pages.
-                  if (enqueued.has(link)) continue;
-                  // Only a continuation-classified link is governed: the guard
-                  // never sees an ordinary link, and returning false here omits
-                  // exactly this enqueue while keeping the discovery bookkeeping
-                  // above - the same posture as a frontier truncated by maxPages.
-                  const anchorEvidence = anchorEvidenceByUrl.get(link);
-                  if (anchorEvidence !== undefined) {
-                    const classification = classifyContinuationLink({
-                      targetUrl: link,
+                  const admission = decideLinkAdmission(pageLink, {
+                    isKnown: existingPage !== undefined || enqueued.has(link),
+                    referrerDepth: item.depth,
+                    maxDepth,
+                    continuation: {
+                      guard: continuationGuard,
                       sourcePageUrl: item.url,
-                      relNext: anchorEvidence.relNext,
-                      isNumberedPaginationControl: anchorEvidence.isNumberedPaginationControl,
                       sourceIsConfirmedListing:
                         auditProfile !== undefined && isConfirmedListing(auditProfile),
                       repeatedQueryKeysOnSourcePage,
-                    });
-                    if (
-                      classification.isContinuation &&
-                      !continuationGuard.admit(classification, link)
-                    ) {
-                      if (existingPage === undefined) {
-                        disposeInventory(link, 'continuation-guard', {
-                          detail: `continuation family ${classification.familyKey} reached its bound`,
-                        });
-                      }
-                      continue;
-                    }
+                    },
+                  });
+                  if (admission.kind === 'refused') {
+                    recordLinkRefusal(inventoryLedger, relativeLinkNesting, pageLink, admission);
+                    continue;
                   }
-                  if (enqueued.has(link)) continue;
+                  if (admission.kind === 'known') continue;
                   enqueued.add(link);
                   enqueueFromIteration({
                     url: link,
@@ -1614,12 +1507,16 @@ export async function crawlSite(
                     links.map((link) => link.getAttribute('href')),
                   )
                   .catch(() => [] as (string | null)[]);
-                const hreflangLinks = normalizeInternalLinks(
-                  hreflangTargets.map(againstBase),
-                  landedUrl,
-                  options.exclusions ?? [],
-                );
-                for (const link of hreflangLinks) {
+                const hreflangLinks = resolvePageLinks(
+                  hreflangTargets.map((href) => ({
+                    href,
+                    relNext: false,
+                    isNumberedPaginationControl: false,
+                  })),
+                  { documentBase, landedUrl, exclusions: options.exclusions ?? [] },
+                ).links.map(({ nesting: _nesting, ...link }) => link);
+                for (const hreflangLink of hreflangLinks) {
+                  const link = hreflangLink.url;
                   if (inventoryLedger !== undefined) {
                     inventoryLedger.recordDiscovery({
                       url: link,
@@ -1629,21 +1526,21 @@ export async function crawlSite(
                       depth: item.depth + 1,
                     });
                   }
-                  if (enqueued.has(link) || pagesByUrl.has(link)) continue;
-                  if (item.depth >= maxDepth) {
-                    if (inventoryLedger !== undefined) {
-                      const candidate = inventoryLedger.candidate(link);
-                      if (candidate !== undefined && candidate.disposition === undefined) {
-                        inventoryLedger.recordDisposition({
-                          url: link,
-                          disposition: 'depth-bound',
-                          decidedAt: new Date(),
-                          detail: `hreflang discovery from depth ${item.depth}; maxDepth is ${maxDepth}`,
-                        });
-                      }
-                    }
+                  const admission = decideLinkAdmission(hreflangLink, {
+                    isKnown: enqueued.has(link) || pagesByUrl.has(link),
+                    referrerDepth: item.depth,
+                    maxDepth,
+                  });
+                  if (admission.kind === 'refused') {
+                    recordLinkRefusal(
+                      inventoryLedger,
+                      relativeLinkNesting,
+                      hreflangLink,
+                      admission,
+                    );
                     continue;
                   }
+                  if (admission.kind === 'known') continue;
                   enqueued.add(link);
                   enqueueFromIteration({
                     url: link,

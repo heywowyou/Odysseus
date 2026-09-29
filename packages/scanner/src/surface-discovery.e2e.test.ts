@@ -25,12 +25,15 @@ function listen(target: Server): Promise<number> {
   });
 }
 
-async function linksOf(path: string): Promise<string[]> {
+async function linksOf(path: string): Promise<{ path: string; nested: boolean }[]> {
   const page = await browser.newPage();
   try {
     await page.goto(`${origin}${path}`);
     const links = await collectSurfaceLinks(page, { baseUrl: page.url() });
-    return links.map((link) => new URL(link).pathname);
+    return links.map((link) => ({
+      path: new URL(link.url).pathname,
+      nested: link.nesting !== undefined,
+    }));
   } finally {
     await page.close();
   }
@@ -60,10 +63,15 @@ describe('surface link resolution', () => {
   });
 
   it('resolves a relative link against <base href>', async () => {
-    expect(await linksOf('/en/webcam.html')).toEqual(['/en/rooms.html']);
+    expect(await linksOf('/en/webcam.html')).toEqual([{ path: '/en/rooms.html', nested: false }]);
   }, 60_000);
 
-  it('drops a relative link that nests its own directory and keeps the others', async () => {
-    expect(await linksOf('/en/video.html')).toEqual(['/en/spa.html']);
+  // Issue #566: kept with its evidence, so the discovery wave refuses it
+  // and records the refusal as the crawl does, instead of dropping it.
+  it('marks a relative link that nests its own directory and keeps the others', async () => {
+    expect(await linksOf('/en/video.html')).toEqual([
+      { path: '/en/en/rooms.html', nested: true },
+      { path: '/en/spa.html', nested: false },
+    ]);
   }, 60_000);
 });

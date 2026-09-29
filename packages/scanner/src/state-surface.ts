@@ -34,7 +34,7 @@ import {
   consentSurface as buildConsentSurface,
   type ScanSurface,
 } from './evidence-surfaces.js';
-import { collectSurfaceLinks } from './surface-discovery.js';
+import { collectSurfaceLinks, type SurfaceLink } from './surface-discovery.js';
 import { summarizeAxeViolations, type SurfaceAxeViolationSummary } from './mobile-surface.js';
 import {
   observeRenderedReadiness,
@@ -212,7 +212,7 @@ export interface ConsentSurfaceOutcome {
   /** The banner was provably gone after the click. */
   dismissed: boolean;
   /** Same-origin anchors read after dismissal. */
-  links: string[];
+  links: SurfaceLink[];
   transition?: {
     controlKey: string;
     matchedPattern: string;
@@ -343,7 +343,7 @@ export async function runConsentSurfaceAnalysis(
 
     let axeViolations: SurfaceAxeViolationSummary[] = [];
     let axeError: string | undefined;
-    let links: string[] = [];
+    let links: SurfaceLink[] = [];
     if (dismissed) {
       try {
         axeViolations = summarizeAxeViolations(await (options.axeAnalyze ?? runAxe)(page));
@@ -393,7 +393,7 @@ export async function runConsentSurfaceAnalysis(
  */
 export interface LocalStateExplorationRecord {
   transitions: LocalStateTransitionRecord[];
-  links: string[];
+  links: SurfaceLink[];
   /** True when exploration stopped early because the guard fired. */
   guardAborted?: boolean;
   guardReason?: string;

@@ -72,6 +72,13 @@ import { CONSENT_SURFACE_INEFFECTIVE, CONSENT_SURFACE_UNAVAILABLE } from './cons
 import { localStateSurface } from './evidence-surfaces.js';
 import type { SurfaceLinkDiscovery } from './surface-discovery.js';
 import {
+  decideLinkAdmission,
+  OPERATOR_EXCLUSION_REFUSAL,
+  recordLinkRefusal,
+  type LinkAdmission,
+  type RelativeLinkNestingSummary,
+} from './link-admission.js';
+import {
   appendSiteAcquisitionAttempts,
   writeTemporalAnchors,
 } from './artifacts/acquisition-attempts-io.js';
@@ -147,11 +154,7 @@ import {
 } from './page-work-guard.js';
 import { RobotsPolicyRuntime } from './robots-policy-runtime.js';
 import { writeRobotsPolicyChain } from './artifacts/robots-policy-io.js';
-import {
-  InventoryLedger,
-  type InventoryDisposition,
-  type InventoryLedgerSnapshot,
-} from './inventory-ledger.js';
+import { InventoryLedger, type InventoryLedgerSnapshot } from './inventory-ledger.js';
 import { writeInventoryLedger } from './artifacts/inventory-ledger-io.js';
 
 export interface CrawlExclusionCounts {
@@ -654,6 +657,9 @@ interface StagedScanContext {
    *  one. Surface-discovered URLs are recorded into it at admission so the
    *  fixed point reconciles every candidate it has ever heard of. */
   inventory: InventoryLedger | undefined;
+  /** Issue #566: the crawl's relative-nesting summary, which the waves add
+   *  their own nesting refusals to. */
+  relativeLinkNesting: RelativeLinkNestingSummary;
   /** The crawl's effective page and depth bounds, applied to wave
    *  admission exactly as the crawl applied them to its own frontier. */
   maxPages: number;
@@ -871,7 +877,7 @@ async function attachMobileSurface(
         surfaceLinks: [
           ...(result.surfaceLinks ?? []),
           ...record.links.map((link): SurfaceLinkDiscovery => ({
-            url: link,
+            ...link,
             source: 'rendered-link',
             surfaceId: record.surface.surfaceId,
           })),
@@ -974,7 +980,7 @@ async function attachConsentSurface(
       ? [
           ...(result.surfaceLinks ?? []),
           ...outcome.links.map((link): SurfaceLinkDiscovery => ({
-            url: link,
+            ...link,
             source: 'rendered-link',
             surfaceId: outcome.surface!.surfaceId,
           })),
@@ -1391,14 +1397,9 @@ async function acquirePerformanceMeasurement(
 
 /** Section 6 bounds the fixed point: a documented wave budget stops the
  *  loop, and anything still unadmitted then carries a terminal
- *  continuation-bound disposition rather than sitting undispositioned. */
+ *  `discovery-wave-bound` disposition rather than sitting undispositioned.
+ *  The per-referrer cap is link-admission.ts's MAX_SURFACE_LINKS_PER_REFERRER. */
 const MAX_SURFACE_DISCOVERY_WAVES = 3;
-
-/** A page whose hydrated/state content exposes more than this many new
- *  links is an effectively infinite family (calendar, faceted listing);
- *  the surplus is bounded the way the crawl bounds its own repetitive
- *  families and disclosed through the same disposition. */
-const MAX_SURFACE_LINKS_PER_REFERRER = 50;
 
 /**
  * Plan 059 step 11/14: the bounded discovery fixed point over the links
@@ -1434,12 +1435,11 @@ async function runDiscoveryWaves(args: {
 }): Promise<readonly string[]> {
   const { context } = args;
   const inventory = context.inventory;
-  const dispose = (
-    link: SurfaceLinkDiscovery & { referrer: string; depth?: number },
-    disposition: InventoryDisposition,
-    detail: string,
+  const refuse = (
+    link: SurfaceLinkDiscovery,
+    refusal: Extract<LinkAdmission, { kind: 'refused' }>,
   ): void => {
-    inventory?.recordDisposition({ url: link.url, disposition, decidedAt: new Date(), detail });
+    recordLinkRefusal(inventory, context.relativeLinkNesting, link, refusal);
   };
   const processed = new Set<string>();
   const admitted: string[] = [];
@@ -1447,6 +1447,8 @@ async function runDiscoveryWaves(args: {
 
   // Records every unprocessed surface link into the inventory (additive,
   // idempotent per route) and returns those that may still be admitted.
+  // A link the surface already refused on sight (an operator exclusion)
+  // is disposed here, where the ledger is, as the crawl disposes it.
   const collectPending = (): (SurfaceLinkDiscovery & {
     referrer: string;
     depth?: number;
@@ -1465,6 +1467,10 @@ async function runDiscoveryWaves(args: {
       });
       if (args.initialUrls.has(link.url)) continue;
       if (inventory?.candidate(link.url)?.disposition !== undefined) continue;
+      if (link.operatorExcluded === true) {
+        refuse(link, OPERATOR_EXCLUSION_REFUSAL);
+        continue;
+      }
       pending.push(link);
     }
     return pending;
@@ -1476,48 +1482,49 @@ async function runDiscoveryWaves(args: {
     const wavePages: CrawledPage[] = [];
     for (const link of pending) {
       const depth = link.depth ?? 0;
-      if (depth > context.maxDepth) {
-        dispose(
-          link,
-          'depth-bound',
-          `discovered at depth ${depth}; maxDepth is ${context.maxDepth}`,
-        );
-        continue;
-      }
-      if (args.initialUrls.size + admitted.length >= context.maxPages) {
-        dispose(link, 'page-cap', `crawl stopped after reaching maxPages=${context.maxPages}`);
-        continue;
-      }
-      const referrerCount = admittedPerReferrer.get(link.referrer) ?? 0;
-      if (referrerCount >= MAX_SURFACE_LINKS_PER_REFERRER) {
-        dispose(
-          link,
-          'continuation-guard',
-          `surface discovery from ${link.referrer} reached its ${MAX_SURFACE_LINKS_PER_REFERRER}-link bound`,
-        );
+      // Issue #566: the crawl's own admission rules: depth, relative
+      // nesting, then the waves' page budget and per-referrer cap.
+      const admission = decideLinkAdmission(
+        { url: link.url, ...(link.nesting !== undefined ? { nesting: link.nesting } : {}) },
+        {
+          isKnown: false,
+          referrerDepth: depth - 1,
+          maxDepth: context.maxDepth,
+          ...(args.initialUrls.size + admitted.length >= context.maxPages
+            ? { pageBudgetSpent: { maxPages: context.maxPages } }
+            : {}),
+          referrerAdmittedCount: {
+            referrer: link.referrer,
+            count: admittedPerReferrer.get(link.referrer) ?? 0,
+          },
+        },
+      );
+      if (admission.kind === 'refused') {
+        refuse(link, admission);
         continue;
       }
       try {
         context.robotsPolicyRuntime?.assertAllowed(link.url);
       } catch (error) {
-        dispose(
-          link,
-          'robots',
-          error instanceof Error ? error.message : 'disallowed by the current robots policy',
-        );
+        refuse(link, {
+          kind: 'refused',
+          disposition: 'robots',
+          detail:
+            error instanceof Error ? error.message : 'disallowed by the current robots policy',
+        });
         continue;
       }
       try {
         await context.assertSafeUrl(link.url);
       } catch (error) {
-        dispose(
-          link,
-          'network-safety',
-          error instanceof Error ? error.message : 'blocked by the network target policy',
-        );
+        refuse(link, {
+          kind: 'refused',
+          disposition: 'network-safety',
+          detail: error instanceof Error ? error.message : 'blocked by the network target policy',
+        });
         continue;
       }
-      admittedPerReferrer.set(link.referrer, referrerCount + 1);
+      admittedPerReferrer.set(link.referrer, (admittedPerReferrer.get(link.referrer) ?? 0) + 1);
       admitted.push(link.url);
       args.depthByUrl.set(link.url, depth);
       wavePages.push({
@@ -1555,11 +1562,11 @@ async function runDiscoveryWaves(args: {
   // unprocessed is a known candidate and must not sit undispositioned.
   const bounded = collectPending();
   for (const link of bounded) {
-    dispose(
-      link,
-      'continuation-guard',
-      `surface discovery reached its ${MAX_SURFACE_DISCOVERY_WAVES}-wave bound`,
-    );
+    refuse(link, {
+      kind: 'refused',
+      disposition: 'discovery-wave-bound',
+      detail: `surface discovery reached its ${MAX_SURFACE_DISCOVERY_WAVES}-wave bound`,
+    });
   }
   return admitted;
 }
@@ -1770,7 +1777,7 @@ async function runStagedFullAuditScan(
         surfaceLinks: [
           ...(result.surfaceLinks ?? []),
           ...hydratedLinks.map((link): SurfaceLinkDiscovery => ({
-            url: link,
+            ...link,
             source: 'hydrated-link',
             surfaceId: baselineSurfaceId,
           })),
@@ -1832,7 +1839,7 @@ async function runStagedFullAuditScan(
           ? [
               ...(result.surfaceLinks ?? []),
               ...localStates.links.map((link): SurfaceLinkDiscovery => ({
-                url: link,
+                ...link,
                 source: 'rendered-link',
                 surfaceId: stateSurface.surfaceId,
               })),
@@ -2939,6 +2946,11 @@ export async function scanSite(
       exclusionPatterns: options.exclusions ?? [],
       surfaceLinks: [],
       inventory: inventoryLedger ?? undefined,
+      relativeLinkNesting: {
+        omittedUrlCount: crawl.relativeLinkNestingSummary?.omittedUrlCount ?? 0,
+        omittedExampleUrls: [...(crawl.relativeLinkNestingSummary?.omittedExampleUrls ?? [])],
+        repeatedSegments: [...(crawl.relativeLinkNestingSummary?.repeatedSegments ?? [])],
+      },
       maxPages: crawl.maxPages,
       maxDepth: crawl.maxDepth,
       assertSafeUrl: assertSafeDirectTarget,
@@ -2975,8 +2987,13 @@ export async function scanSite(
     // off it would be scanned, stored, and then never analysed.
     const crawledUrls = new Set(crawl.pages.map((page) => page.url));
     const waveOnly = discoveryAdmittedPages.filter((page) => !crawledUrls.has(page.url));
+    const nesting = context.relativeLinkNesting;
     return {
-      crawl: waveOnly.length === 0 ? crawl : { ...crawl, pages: [...crawl.pages, ...waveOnly] },
+      crawl: {
+        ...crawl,
+        ...(waveOnly.length === 0 ? {} : { pages: [...crawl.pages, ...waveOnly] }),
+        ...(nesting.omittedUrlCount > 0 ? { relativeLinkNestingSummary: nesting } : {}),
+      },
       pages,
       fullAuditPlan,
       analysisCoverageByUrl,

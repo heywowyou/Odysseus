@@ -10,7 +10,8 @@
  */
 import type { Page } from 'playwright';
 import type { InventoryDiscoverySource } from './inventory-ledger.js';
-import { normalizeInternalLinks, relativeLinkNestingEvidence } from './links.js';
+import { readDocumentBase, readPageAnchors, resolvePageLinks } from './link-admission.js';
+import type { RelativeLinkNestingEvidence } from './links.js';
 
 /**
  * One link a state surface exposed, with the provenance the inventory
@@ -25,39 +26,44 @@ export type SurfaceLinkSource = Extract<
   'rendered-link' | 'hydrated-link'
 >;
 
-export interface SurfaceLinkDiscovery {
+/** One link read on a surface. A link the crawl would refuse on sight, an
+ *  operator exclusion or a relative href that nests its own directory, is
+ *  kept with its reason so the discovery waves record it as the crawl does
+ *  (issue #566), instead of dropping it without a trace. */
+export interface SurfaceLink {
   url: string;
+  nesting?: RelativeLinkNestingEvidence;
+  operatorExcluded?: true;
+}
+
+export interface SurfaceLinkDiscovery extends SurfaceLink {
   source: SurfaceLinkSource;
   surfaceId: string;
 }
 
 /**
- * Reads every internal anchor on an already-loaded page and returns the
- * normalized same-origin identities, ready for `recordDiscovery`. No
- * navigation of its own: the caller passes a page that is already settled,
- * so this never counts as an additional page load.
+ * Reads every internal anchor on an already-loaded page through the crawl's
+ * own link admission (issue #566): the same document-base resolution,
+ * normalization, exclusions and nesting evidence. No navigation of its own:
+ * the caller passes a page that is already settled, so this never counts as
+ * an additional page load.
  */
 export async function collectSurfaceLinks(
   page: Page,
   options: { baseUrl: string; exclusionPatterns?: readonly string[] },
-): Promise<string[]> {
-  const hrefs = await page.$$eval('a[href]', (anchors) =>
-    anchors.map((anchor) => anchor.getAttribute('href')),
-  );
-  // Issue #497, as crawl.ts reads it: a relative href resolves against the
-  // document's base URL, which <base href> can move away from the page URL.
-  // A site with <base href="/"> and `en/rooms.html` links on /en/ pages
-  // otherwise yields /en/en/rooms.html, which its server answers, and every
-  // wave nests one level deeper. A relative href that repeats its own
-  // directory is dropped for the same reason the crawl disposes it.
-  const documentBase = await page.evaluate(() => document.baseURI).catch(() => options.baseUrl);
-  const resolved = hrefs.map((href) => {
-    if (href === null || relativeLinkNestingEvidence(href, documentBase) !== undefined) return null;
-    try {
-      return new URL(href, documentBase).href;
-    } catch {
-      return href;
-    }
+): Promise<SurfaceLink[]> {
+  const anchors = await readPageAnchors(page);
+  const documentBase = await readDocumentBase(page, options.baseUrl);
+  const resolved = resolvePageLinks(anchors, {
+    documentBase,
+    landedUrl: options.baseUrl,
+    exclusions: options.exclusionPatterns ?? [],
   });
-  return normalizeInternalLinks(resolved, options.baseUrl, options.exclusionPatterns ?? []);
+  return [
+    ...resolved.links.map((link): SurfaceLink => ({
+      url: link.url,
+      ...(link.nesting !== undefined ? { nesting: link.nesting } : {}),
+    })),
+    ...resolved.excluded.map((link): SurfaceLink => ({ url: link.url, operatorExcluded: true })),
+  ];
 }

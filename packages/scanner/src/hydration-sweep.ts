@@ -18,6 +18,7 @@
  */
 import type { Page } from 'playwright';
 import type { HydrationProgress, SurfaceCapabilityStatement } from './evidence-surfaces.js';
+import type { SurfaceLink } from './surface-discovery.js';
 
 /** Statement for a page whose sweep could not run at all. */
 export const HYDRATION_SWEEP_UNAVAILABLE: SurfaceCapabilityStatement = {
@@ -68,7 +69,7 @@ export interface HydrationSweepRecord {
   /** Same-origin anchors present only after the sweep, ready for
    *  inventory discovery under `hydrated-link` provenance. Filled by the
    *  caller, which owns link normalization against the landed URL. */
-  discoveredLinks?: string[];
+  discoveredLinks?: SurfaceLink[];
 }
 
 /** One measured point of the sweep. */

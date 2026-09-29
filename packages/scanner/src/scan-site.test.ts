@@ -59,6 +59,7 @@ import { buildRobotsPolicySnapshot, type RobotsPolicySnapshot } from './robots-p
 import { PUBLIC_SITE_NETWORK_POLICY } from './network-target-policy.js';
 import { HostRequestScheduler } from './host-request-scheduler.js';
 import type { HydrationSweepRecord } from './hydration-sweep.js';
+import type { SurfaceLink } from './surface-discovery.js';
 
 let writtenTempDirs: string[] = [];
 
@@ -1095,7 +1096,7 @@ describe('scanSite mobile surfaces (plan 059 step 10)', () => {
     'html-validity': 'completed',
     'structured-data': 'completed',
   });
-  const mobileRecordFor = (url: string, links: string[]) => ({
+  const mobileRecordFor = (url: string, links: SurfaceLink[]) => ({
     surface: mobileSurface({
       evidenceEpoch: 1,
       pageIdentity: url,
@@ -1224,7 +1225,7 @@ describe('scanSite mobile surfaces (plan 059 step 10)', () => {
         // discovery fixed point converges after one bounded wave.
         mobileRecordFor(
           url,
-          url === startUrl || url === pageA ? [`${url}mobile-only`] : [],
+          url === startUrl || url === pageA ? [{ url: `${url}mobile-only` }] : [],
         ) as never,
     );
 
@@ -1310,7 +1311,7 @@ describe('scanSite hydration sweep and discovery waves (plan 059 step 11)', () =
   const scopeDigest = `sha256:${'c'.repeat(64)}`;
   const crawlerUa = 'OdysseusBot/1.0 (+https://odysseusaudit.com/bot)';
 
-  const hydrationSweep = (links: string[]): HydrationSweepRecord => ({
+  const hydrationSweep = (links: (string | SurfaceLink)[]): HydrationSweepRecord => ({
     startScrollHeight: 800,
     endScrollHeight: 1600,
     startDomNodeCount: 200,
@@ -1321,7 +1322,7 @@ describe('scanSite hydration sweep and discovery waves (plan 059 step 11)', () =
     quiescent: true,
     continuedExpansionAtBound: false,
     progress: 'bounded-expansion',
-    discoveredLinks: links,
+    discoveredLinks: links.map((link) => (typeof link === 'string' ? { url: link } : link)),
   });
 
   const everyPageCheck = () => ({
@@ -1640,6 +1641,51 @@ describe('scanSite hydration sweep and discovery waves (plan 059 step 11)', () =
     expect(result.inventoryLedger?.candidates.every((entry) => entry.disposition)).toBe(true);
   });
 
+  // Issue #566: a surface link the crawl would refuse on sight is recorded
+  // as the crawl records it, instead of vanishing.
+  it('records a surface link that nests its own directory, or an excluded one, as the crawl does', async () => {
+    vi.mocked(crawlSite).mockResolvedValue(initialCrawl());
+    const nested = 'https://example.com/en/en/rooms.html';
+    const excluded = 'https://example.com/wp-admin';
+    vi.mocked(runRenderedAnalysis).mockImplementation(
+      async (_browser, url) =>
+        ({
+          url,
+          checkOutcomes: everyPageCheck(),
+          hydrationSweep: hydrationSweep(
+            url === startUrl
+              ? [
+                  {
+                    url: nested,
+                    nesting: {
+                      sourceUrl: startUrl,
+                      href: 'en/rooms.html',
+                      resolvedUrl: nested,
+                      repeatedSegment: 'en',
+                    },
+                  },
+                  { url: excluded, operatorExcluded: true },
+                ]
+              : [],
+          ),
+        }) as never,
+    );
+
+    const result = await scan();
+
+    expect(vi.mocked(runRenderedAnalysis).mock.calls.map((call) => call[1])).toEqual([startUrl]);
+    const dispositionOf = (url: string) =>
+      result.inventoryLedger?.candidates.find((entry) => entry.url === url)?.disposition
+        ?.disposition;
+    expect(dispositionOf(nested)).toBe('relative-link-nesting');
+    expect(dispositionOf(excluded)).toBe('operator-excluded');
+    expect(result.crawl.relativeLinkNestingSummary).toEqual({
+      omittedUrlCount: 1,
+      omittedExampleUrls: [nested],
+      repeatedSegments: ['en'],
+    });
+  });
+
   it('bounds cascading discovery at the wave budget and discloses the bound', async () => {
     vi.mocked(crawlSite).mockResolvedValue(initialCrawl());
     vi.mocked(runRenderedAnalysis).mockImplementation(async (_browser, url) => {
@@ -1664,7 +1710,7 @@ describe('scanSite hydration sweep and discovery waves (plan 059 step 11)', () =
     expect(dispositionOf('https://example.com/cascade-1')).toBe('scanned');
     expect(dispositionOf('https://example.com/cascade-2')).toBe('scanned');
     expect(dispositionOf('https://example.com/cascade-3')).toBe('scanned');
-    expect(dispositionOf('https://example.com/cascade-4')).toBe('continuation-guard');
+    expect(dispositionOf('https://example.com/cascade-4')).toBe('discovery-wave-bound');
     // Every scanned wave page is listed with the crawl's pages, which is
     // what the manifest is written from; the bounded one is not.
     const listed = result.crawl.pages.filter((page) => page.url.includes('cascade-'));
@@ -1830,7 +1876,7 @@ describe('scanSite consent and local-state surfaces (plan 059 step 13)', () => {
       baseline: { state: 'consent-controls-detected', controlCount: 2, containerRef: '#cmp' },
       dismissed: true,
       axeViolations: [{ ruleId: 'target-size', impact: 'serious', nodeCount: 1 }],
-      links: ['https://example.com/post-consent'],
+      links: [{ url: 'https://example.com/post-consent' }],
       transition: { controlKey: 'control:abcd', matchedPattern: 'cmp-reject-all' },
     } as never);
     vi.mocked(runLocalStateExploration).mockResolvedValue({ transitions: [], links: [] });
@@ -1960,7 +2006,7 @@ describe('scanSite consent and local-state surfaces (plan 059 step 13)', () => {
                   after: 'open',
                 },
               ],
-              links: ['https://example.com/accordion-panel-link'],
+              links: [{ url: 'https://example.com/accordion-panel-link' }],
             },
           }
         : {}),

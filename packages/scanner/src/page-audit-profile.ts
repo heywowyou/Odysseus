@@ -19,6 +19,7 @@
 
 import { createHash } from 'node:crypto';
 import type { Page as BrowserPage } from 'playwright';
+import { NUMBERED_PAGINATION_SELECTOR } from './link-admission.js';
 
 /** v2: the template-family hash is taken over the page skeleton
  *  (`templateSkeleton`), not the raw token stream. v1 and v2 hashes are not
@@ -322,7 +323,7 @@ export function buildPageAuditProfile(
 export async function extractRawPageAuditFacts(
   browserPage: BrowserPage,
 ): Promise<RawPageAuditFacts> {
-  return browserPage.evaluate(() => {
+  return browserPage.evaluate((paginationSelector) => {
     const doc = document;
 
     const htmlLang = doc.documentElement.getAttribute('lang')?.trim() || undefined;
@@ -353,7 +354,7 @@ export async function extractRawPageAuditFacts(
     const paginationRelNext = doc.querySelector('link[rel="next"], a[rel~="next"]') !== null;
     const paginationRelPrev = doc.querySelector('link[rel="prev"], a[rel~="prev"]') !== null;
     const numberedPaginationControlCount = Array.from(
-      doc.querySelectorAll('nav[class*="pag" i] a, [class*="pagination" i] a'),
+      doc.querySelectorAll(paginationSelector),
     ).filter((el) => /^\d+$/.test((el.textContent ?? '').trim())).length;
 
     const bodyClassTokens = [
@@ -456,5 +457,5 @@ export async function extractRawPageAuditFacts(
       repeatedTeaserLinkGroupSize,
       structuralTokens,
     };
-  });
+  }, NUMBERED_PAGINATION_SELECTOR);
 }

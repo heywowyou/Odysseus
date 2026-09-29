@@ -105,6 +105,12 @@ export type InventoryDisposition =
   | 'page-cap'
   | 'depth-bound'
   | 'continuation-guard'
+  /** Issue #566: the discovery waves' per-referring-page cap on links first
+   *  seen on its state surfaces. */
+  | 'surface-link-bound'
+  /** Issue #566: the discovery waves' own budget ended before the link's
+   *  turn. */
+  | 'discovery-wave-bound'
   | 'network-safety'
   | 'operator-excluded';
 
@@ -128,6 +134,8 @@ const DISPOSITION_OUTCOMES: Readonly<Record<InventoryDisposition, InventoryOutco
   'page-cap': 'omitted',
   'depth-bound': 'omitted',
   'continuation-guard': 'omitted',
+  'surface-link-bound': 'omitted',
+  'discovery-wave-bound': 'omitted',
   'network-safety': 'omitted',
   'operator-excluded': 'omitted',
 };

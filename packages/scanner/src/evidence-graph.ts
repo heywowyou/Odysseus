@@ -288,6 +288,38 @@ const INVENTORY_DISCLOSURES: Partial<
         `${n} pages belonging to repetitive page series (pagination, variants of one listing) were not analysed individually; only part of each series was.`,
     ),
   }),
+  // Issue #566: the discovery waves' own bounds, which used to be filed
+  // under the continuation guard's sentence about repetitive page series.
+  'surface-link-bound': (count) => ({
+    code: 'surface-link-bound',
+    fr: byCount(
+      count,
+      "Une page repérée uniquement dans l'affichage interactif d'une autre page n'a pas été analysée : l'exploration de ces liens est limitée à 50 par page.",
+      (n) =>
+        `${n} pages repérées uniquement dans l'affichage interactif d'autres pages n'ont pas été analysées : l'exploration de ces liens est limitée à 50 par page.`,
+    ),
+    en: byCount(
+      count,
+      "One page found only in another page's interactive display was not analysed: following such links is limited to 50 per page.",
+      (n) =>
+        `${n} pages found only in other pages' interactive display were not analysed: following such links is limited to 50 per page.`,
+    ),
+  }),
+  'discovery-wave-bound': (count) => ({
+    code: 'discovery-wave-bound',
+    fr: byCount(
+      count,
+      "Une page repérée uniquement dans l'affichage interactif du site n'a pas été analysée : l'exploration de ces liens s'arrête après trois étapes successives.",
+      (n) =>
+        `${n} pages repérées uniquement dans l'affichage interactif du site n'ont pas été analysées : l'exploration de ces liens s'arrête après trois étapes successives.`,
+    ),
+    en: byCount(
+      count,
+      "One page found only in the site's interactive display was not analysed: following such links stops after three successive rounds.",
+      (n) =>
+        `${n} pages found only in the site's interactive display were not analysed: following such links stops after three successive rounds.`,
+    ),
+  }),
   'http-error-status': (count) => ({
     code: 'site-http-error-pages',
     fr: byCount(

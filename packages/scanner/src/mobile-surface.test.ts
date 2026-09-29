@@ -142,11 +142,18 @@ function makeFakeBrowser(spec: FakePageSpec = {}): {
           fn.length === 1
             ? { domReady: spec.ready ?? true, fontsReady: true, mutationQuiescent: true }
             : (spec.userAgentSeen ?? CRAWLER_UA),
-        $$eval: async (_selector: string, fn: (anchors: unknown[]) => unknown) =>
+        $$eval: async (
+          _selector: string,
+          fn: (anchors: unknown[], arg?: unknown) => unknown,
+          arg?: unknown,
+        ) =>
           fn(
             (spec.hrefs ?? []).map((href) => ({
               getAttribute: (name: string) => (name === 'href' ? href : null),
+              matches: () => false,
+              textContent: null,
             })),
+            arg,
           ),
         close: async () => {},
       };
@@ -236,7 +243,10 @@ describe('runMobileSurfaceAnalysis', () => {
       ...baseOptions,
     });
 
-    expect(record.links).toEqual(['https://example.com/chambres', 'https://example.com/spa']);
+    expect(record.links).toEqual([
+      { url: 'https://example.com/chambres' },
+      { url: 'https://example.com/spa' },
+    ]);
   });
 
   it('survives an axe failure as a recorded gap on an otherwise complete record', async () => {

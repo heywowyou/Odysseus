@@ -30,7 +30,7 @@ import {
   watchSignificantResourceFailures,
   type RenderedReadinessObservation,
 } from './page-readiness.js';
-import { collectSurfaceLinks } from './surface-discovery.js';
+import { collectSurfaceLinks, type SurfaceLink } from './surface-discovery.js';
 import type { NetworkSafetyBlockHandler } from './browser-network-safety.js';
 import { openScannerContext } from './scanner-context.js';
 import type { NetworkTargetPolicy } from './network-target-policy.js';
@@ -66,7 +66,7 @@ export interface MobileSurfaceRecord {
   uaVerified: boolean;
   /** Same-origin anchors read off the settled mobile page, normalized and
    *  ready for inventory discovery under this surface's provenance. */
-  links: string[];
+  links: SurfaceLink[];
 }
 
 export interface MobileSurfaceOptions {

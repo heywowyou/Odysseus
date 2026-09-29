@@ -109,11 +109,15 @@ function makeFakeBrowser(
           };
         },
         url: () => currentUrl,
-        $$eval: async (selector: string, fn: (elements: unknown[]) => unknown) => {
+        $$eval: async (
+          selector: string,
+          fn: (elements: unknown[], arg?: unknown) => unknown,
+          arg?: unknown,
+        ) => {
           // The hreflang head read (plan 059 section 6) sees no declared
           // alternates unless a test says otherwise.
-          if (selector.includes('rel="alternate"')) return fn([]);
-          return fn(anchorsFor(currentUrl).map(fakeAnchorElement));
+          if (selector.includes('rel="alternate"')) return fn([], arg);
+          return fn(anchorsFor(currentUrl).map(fakeAnchorElement), arg);
         },
         evaluate: async () => {
           throw new Error('no DOM in unit mock');
@@ -165,11 +169,15 @@ function makeStatusFakeBrowser(
           };
         },
         url: () => currentUrl,
-        $$eval: async (selector: string, fn: (elements: unknown[]) => unknown) => {
+        $$eval: async (
+          selector: string,
+          fn: (elements: unknown[], arg?: unknown) => unknown,
+          arg?: unknown,
+        ) => {
           // The hreflang head read (plan 059 section 6) sees no declared
           // alternates unless a test says otherwise.
-          if (selector.includes('rel="alternate"')) return fn([]);
-          return fn(anchorsFor(currentUrl).map(fakeAnchorElement));
+          if (selector.includes('rel="alternate"')) return fn([], arg);
+          return fn(anchorsFor(currentUrl).map(fakeAnchorElement), arg);
         },
         evaluate: async () => {
           throw new Error('no DOM in unit mock');

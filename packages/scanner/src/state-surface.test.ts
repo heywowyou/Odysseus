@@ -106,11 +106,18 @@ function makeFakeBrowser(spec: FakePageSpec = {}): {
           // observeRenderedReadiness passes the quiet window.
           return { domReady: true, fontsReady: true, mutationQuiescent: true };
         },
-        $$eval: async (_selector: string, fn: (anchors: unknown[]) => unknown) =>
+        $$eval: async (
+          _selector: string,
+          fn: (anchors: unknown[], arg?: unknown) => unknown,
+          arg?: unknown,
+        ) =>
           fn(
             (spec.hrefs ?? []).map((href) => ({
               getAttribute: (name: string) => (name === 'href' ? href : null),
+              matches: () => false,
+              textContent: null,
             })),
+            arg,
           ),
         locator: makeLocator,
         close: async () => {},
@@ -159,7 +166,10 @@ describe('runConsentSurfaceAnalysis', () => {
     expect(outcome.axeViolations).toEqual([
       { ruleId: 'button-name', impact: 'critical', nodeCount: 1 },
     ]);
-    expect(outcome.links).toEqual(['https://example.com/chambres', 'https://example.com/spa']);
+    expect(outcome.links).toEqual([
+      { url: 'https://example.com/chambres' },
+      { url: 'https://example.com/spa' },
+    ]);
     expect(outcome.transition).toMatchObject({
       controlKey: expect.any(String),
       matchedPattern: 'cmp-reject-all',
@@ -248,7 +258,7 @@ describe('runLocalStateExploration', () => {
       before: 'closed',
       after: 'open',
     });
-    expect(record.links).toEqual(['https://example.com/after-toggle']);
+    expect(record.links).toEqual([{ url: 'https://example.com/after-toggle' }]);
     expect(record.guardAborted).toBeUndefined();
   });
 

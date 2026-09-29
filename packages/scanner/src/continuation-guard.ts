@@ -14,12 +14,10 @@
  *    toward pages the crawl has already reached or is already reaching,
  *    so it carries none of the forward-runaway risk this guard exists
  *    for.
- *  - `numbered-pagination-control`: the anchor matches the same
- *    pagination-control selector `page-audit-profile.ts` already uses for
- *    its page-level `numberedPaginationControlCount` fact
- *    (`nav[class*="pag" i] a, [class*="pagination" i] a`, filtered to
- *    numeric link text), now evaluated per anchor instead of only
- *    counted for the whole page.
+ *  - `numbered-pagination-control`: the anchor matches
+ *    link-admission.ts's NUMBERED_PAGINATION_SELECTOR, filtered to numeric
+ *    link text, the one definition `page-audit-profile.ts` also counts for
+ *    its page-level `numberedPaginationControlCount` fact.
  *  - `query-key-family`: the anchor's target URL repeats a query key that
  *    also appears on another outgoing link on the *same* source page, and
  *    that source page independently qualifies as a confirmed listing
