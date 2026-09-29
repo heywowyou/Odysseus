@@ -47,7 +47,13 @@ import { consentSurface } from './evidence-surfaces.js';
 import { checkLlmsTxt } from './checks/llms-txt.js';
 import { checkSecurityHeaders } from './checks/security-headers.js';
 import { checkCookieConsent } from './checks/cookie-consent.js';
-import { scanSite, withPageWatchdog, type ScanProgressEvent } from './scan-site.js';
+import {
+  scanSite,
+  sitePageOptions,
+  withPageWatchdog,
+  type ScanProgressEvent,
+  type SiteScanContext,
+} from './scan-site.js';
 import { readPageScanJson } from './artifacts/page-scan-io.js';
 import { buildPageDir } from './artifacts/paths.js';
 import { createPageWorkGuard } from './page-work-guard.js';
@@ -2131,5 +2137,48 @@ describe('withPageWatchdog', () => {
     // Let the swallowed .catch() run; a failure here would show up as an
     // unhandled rejection in the test run rather than a normal assertion.
     await new Promise((resolve) => setTimeout(resolve, 10));
+  });
+});
+
+describe('sitePageOptions (issue #571)', () => {
+  const site: SiteScanContext = {
+    screenshotDir: '/audit/pages',
+    timeoutMs: 12_000,
+    userAgent: 'test-agent',
+    servedUrlByIdentity: new Map([['https://hotel.example/', 'https://www.hotel.example/']]),
+    mentionsLegalesUrl: 'https://hotel.example/mentions',
+    mentionsLegalesCandidateUrls: ['https://hotel.example/mentions'],
+    mentionsLegalesSearchedUrls: undefined,
+    mentionsLegalesHomepageFallback: false,
+    redirectHostCache: new Map(),
+    canonicalTargetCache: new Map(),
+    homepageUrl: 'https://hotel.example/',
+    sitemapCheck: undefined,
+    llmsTxtCheck: undefined,
+    securityHeadersCheck: undefined,
+    cookieConsentCheck: undefined,
+    accessibilityStatementCheck: undefined,
+    bookingEngineUrl: 'https://booking.example/',
+    runGuard: undefined,
+    networkPolicy: undefined,
+    onNetworkSafetyBlocked: undefined,
+  };
+
+  it('gives every page the site-wide results, and its own served address', () => {
+    expect(sitePageOptions(site, 'https://hotel.example/', 9_000)).toEqual({
+      screenshotDir: '/audit/pages',
+      redirectHostCache: site.redirectHostCache,
+      canonicalTargetCache: site.canonicalTargetCache,
+      timeoutMs: 9_000,
+      userAgent: 'test-agent',
+      navigationUrl: 'https://www.hotel.example/',
+      mentionsLegalesUrl: 'https://hotel.example/mentions',
+      mentionsLegalesCandidateUrls: ['https://hotel.example/mentions'],
+      homepageUrl: 'https://hotel.example/',
+      bookingEngineUrl: 'https://booking.example/',
+    });
+    expect(sitePageOptions(site, 'https://hotel.example/chambres', undefined)).not.toHaveProperty(
+      'navigationUrl',
+    );
   });
 });

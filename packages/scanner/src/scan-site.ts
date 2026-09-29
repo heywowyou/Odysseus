@@ -90,6 +90,7 @@ import type { CanonicalTargetCheckResult } from './checks/canonical-target.js';
 import {
   type LighthouseAnalysisResult,
   type PageScanResult,
+  type RenderedAnalysisOptions,
   type RenderedAnalysisResult,
   runLighthouseAnalysis,
   runRenderedAnalysis,
@@ -501,111 +502,12 @@ export async function withPageWatchdog<T extends RenderedAnalysisResult | PageSc
 }
 
 /**
- * Runs one lane of the scan phase: a sequential slice of pagesToScan, each
- * page taking its turn from the run's shared `scheduler` rather than from a
- * sleep of its own (plan 059 decision 18). The lane no longer knows anything
- * about pacing: the scheduler decides when this page may start, and holding
- * its slot for the whole page means the scheduler's concurrency bound is the
- * real bound on overlapping work, so a rate-limited site shedding a lane
- * actually sheds one.
- *
- * `delayMs` survives only because `scanPage` still spaces the two navigations
- * render-diff makes inside a single page with it. That is a different request
- * from the one scheduled here, so the two are not stacked on the same
- * navigation.
+ * Issue #571: the site-wide results and caches every page of one scanSite
+ * run shares, built once. Both per-page paths read it through
+ * sitePageOptions, so a new site-wide check is threaded in one place.
  */
-async function runScanLane(
-  laneUrls: string[],
-  browser: Browser,
-  debugPort: number,
-  delayMs: number,
-  scheduler: HostRequestScheduler,
-  screenshotDir: string,
-  timeoutMs: number | undefined,
-  userAgent: string | undefined,
-  servedUrlByIdentity: ReadonlyMap<string, string>,
-  mentionsLegalesUrl: string | undefined,
-  mentionsLegalesCandidateUrls: string[] | undefined,
-  mentionsLegalesSearchedUrls: string[] | undefined,
-  mentionsLegalesHomepageFallback: boolean,
-  redirectHostCache: RedirectHostCache,
-  canonicalTargetCache: Map<string, Promise<CanonicalTargetCheckResult | null>>,
-  homepageUrl: string | undefined,
-  sitemapCheck:
-    (SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[] }) | undefined,
-  llmsTxtCheck: LlmsTxtCheckResult | undefined,
-  securityHeadersCheck: SecurityHeadersCheckResult | undefined,
-  cookieConsentCheck: CookieConsentCheckResult | undefined,
-  accessibilityStatementCheck: AccessibilityStatementCheckResult | undefined,
-  bookingEngineUrl: string | undefined,
-  skipLighthouse: boolean,
-  runGuard: PageWorkGuard | undefined,
-  networkPolicy: NetworkTargetPolicy | undefined,
-  onNetworkSafetyBlocked: ((disposition: NetworkSafetyDisposition) => void) | undefined,
-  onPageDone: (pageResult: PageScanResult, durationMs: number) => void,
-): Promise<void> {
-  for (const url of laneUrls) {
-    // Issue #200: a fresh guard per page, mirrored into the run-wide
-    // guard, so the watchdog below can force-close only this page's
-    // contexts on timeout without touching other lanes' still-legitimate
-    // work.
-    const pageGuard = createPageWorkGuard(runGuard);
-    const navigationUrl = servedUrlByIdentity.get(url);
-
-    const { pageResult, durationMs } = await scheduler.schedule(async () => {
-      // Issue #223: timed inside the scheduled turn, so the wait for that turn
-      // is excluded exactly the way the lane's own pre-page sleep used to be,
-      // and the ETA's per-page estimator still sees the real cost of a page.
-      const workStartedAtMs = Date.now();
-      const pageAbortController = new AbortController();
-      const result = await withPageWatchdog(
-        url,
-        scanPage(browser, debugPort, url, {
-          delayMs,
-          scheduler,
-          screenshotDir,
-          redirectHostCache,
-          canonicalTargetCache,
-          guard: pageGuard,
-          signal: pageAbortController.signal,
-          ...(timeoutMs !== undefined ? { timeoutMs } : {}),
-          ...(userAgent !== undefined ? { userAgent } : {}),
-          ...(navigationUrl !== undefined ? { navigationUrl } : {}),
-          ...(mentionsLegalesUrl !== undefined ? { mentionsLegalesUrl } : {}),
-          ...(mentionsLegalesCandidateUrls !== undefined ? { mentionsLegalesCandidateUrls } : {}),
-          ...(mentionsLegalesSearchedUrls !== undefined ? { mentionsLegalesSearchedUrls } : {}),
-          ...(mentionsLegalesHomepageFallback ? { mentionsLegalesHomepageFallback } : {}),
-          ...(homepageUrl !== undefined ? { homepageUrl } : {}),
-          ...(sitemapCheck !== undefined ? { sitemapCheck } : {}),
-          ...(llmsTxtCheck !== undefined ? { llmsTxtCheck } : {}),
-          ...(securityHeadersCheck !== undefined ? { securityHeadersCheck } : {}),
-          ...(cookieConsentCheck !== undefined ? { cookieConsentCheck } : {}),
-          ...(accessibilityStatementCheck !== undefined ? { accessibilityStatementCheck } : {}),
-          ...(bookingEngineUrl !== undefined ? { bookingEngineUrl } : {}),
-          ...(skipLighthouse ? { skipLighthouse } : {}),
-          ...(networkPolicy !== undefined ? { networkPolicy } : {}),
-          ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
-        }),
-        FULL_SCAN_PAGE_WATCHDOG_MS,
-        pageGuard,
-        () => pageAbortController.abort(new Error('page analysis watchdog elapsed')),
-      );
-      return { pageResult: result, durationMs: Date.now() - workStartedAtMs };
-    });
-    onPageDone(pageResult as PageScanResult, durationMs);
-  }
-}
-
-/** Every field `runRenderedAnalysisLane` needs to forward into each page's
- *  `runRenderedAnalysis` call, bundled once per `scanSite` run rather than
- *  threaded as a long positional parameter list a second time. */
-interface StagedScanContext {
+export interface SiteScanContext {
   screenshotDir: string;
-  auditDir: string | undefined;
-  writePagesAsScanned: boolean | undefined;
-  /** Plan 035: true only after a validated checkpoint resume, the one
-   *  condition under which existing scan.json files may be skipped. */
-  resumeActive: boolean;
   timeoutMs: number | undefined;
   userAgent: string | undefined;
   servedUrlByIdentity: ReadonlyMap<string, string>;
@@ -614,8 +516,8 @@ interface StagedScanContext {
   mentionsLegalesSearchedUrls: string[] | undefined;
   mentionsLegalesHomepageFallback: boolean;
   redirectHostCache: RedirectHostCache;
-  /** Issue #501: the same run-wide canonical-target cache the legacy lane
-   *  uses, so a canonical shared by many pages is fetched once per audit. */
+  /** Issue #501: one canonical-target cache per run, so a canonical shared
+   *  by many pages is fetched once per audit. */
   canonicalTargetCache: Map<string, Promise<CanonicalTargetCheckResult | null>>;
   homepageUrl: string | undefined;
   sitemapCheck:
@@ -629,6 +531,157 @@ interface StagedScanContext {
   runGuard: PageWorkGuard | undefined;
   networkPolicy: NetworkTargetPolicy | undefined;
   onNetworkSafetyBlocked: ((disposition: NetworkSafetyDisposition) => void) | undefined;
+}
+
+/** The per-page options one site context gives every page, whichever path
+ *  analyses it. */
+export function sitePageOptions(
+  site: SiteScanContext,
+  url: string,
+  timeoutMs: number | undefined,
+): Omit<RenderedAnalysisOptions, 'delayMs' | 'scheduler' | 'guard' | 'signal'> {
+  const navigationUrl = site.servedUrlByIdentity.get(url);
+  return {
+    screenshotDir: site.screenshotDir,
+    redirectHostCache: site.redirectHostCache,
+    canonicalTargetCache: site.canonicalTargetCache,
+    ...(timeoutMs !== undefined ? { timeoutMs } : {}),
+    ...(site.userAgent !== undefined ? { userAgent: site.userAgent } : {}),
+    ...(navigationUrl !== undefined ? { navigationUrl } : {}),
+    ...(site.mentionsLegalesUrl !== undefined
+      ? { mentionsLegalesUrl: site.mentionsLegalesUrl }
+      : {}),
+    ...(site.mentionsLegalesCandidateUrls !== undefined
+      ? { mentionsLegalesCandidateUrls: site.mentionsLegalesCandidateUrls }
+      : {}),
+    ...(site.mentionsLegalesSearchedUrls !== undefined
+      ? { mentionsLegalesSearchedUrls: site.mentionsLegalesSearchedUrls }
+      : {}),
+    ...(site.mentionsLegalesHomepageFallback ? { mentionsLegalesHomepageFallback: true } : {}),
+    ...(site.homepageUrl !== undefined ? { homepageUrl: site.homepageUrl } : {}),
+    ...(site.sitemapCheck !== undefined ? { sitemapCheck: site.sitemapCheck } : {}),
+    ...(site.llmsTxtCheck !== undefined ? { llmsTxtCheck: site.llmsTxtCheck } : {}),
+    ...(site.securityHeadersCheck !== undefined
+      ? { securityHeadersCheck: site.securityHeadersCheck }
+      : {}),
+    ...(site.cookieConsentCheck !== undefined
+      ? { cookieConsentCheck: site.cookieConsentCheck }
+      : {}),
+    ...(site.accessibilityStatementCheck !== undefined
+      ? { accessibilityStatementCheck: site.accessibilityStatementCheck }
+      : {}),
+    ...(site.bookingEngineUrl !== undefined ? { bookingEngineUrl: site.bookingEngineUrl } : {}),
+    ...(site.networkPolicy !== undefined ? { networkPolicy: site.networkPolicy } : {}),
+    ...(site.onNetworkSafetyBlocked !== undefined
+      ? { onNetworkSafetyBlocked: site.onNetworkSafetyBlocked }
+      : {}),
+  };
+}
+
+/** What one page's turn runs: the legacy all-in-one scan with Lighthouse, or
+ *  the staged rendered analysis whose Lighthouse selection comes later. */
+type PageExecution =
+  | { kind: 'full-scan'; debugPort: number; skipLighthouse: boolean }
+  | {
+      kind: 'rendered-analysis';
+      timeoutMs: number | undefined;
+      /** Plan 059 passes the staged scoped full audit adds. */
+      extras: Pick<
+        RenderedAnalysisOptions,
+        'hydrationSweep' | 'stateSurfaces' | 'exclusionPatterns'
+      >;
+    };
+
+/**
+ * One page, in its turn from the run's shared `scheduler` (plan 059 decision
+ * 18), bounded by the page watchdog. Holding the slot for the whole page
+ * means the scheduler's concurrency bound is the real bound on overlapping
+ * work, so a rate-limited site shedding a lane actually sheds one.
+ *
+ * Issue #200: a fresh guard per page, mirrored into the run-wide guard, so
+ * the watchdog can force-close only this page's contexts on timeout without
+ * touching other lanes' still-legitimate work.
+ *
+ * `delayMs` survives only because the page still spaces the two navigations
+ * render-diff makes inside a single page with it. That is a different request
+ * from the one scheduled here, so the two are not stacked on the same
+ * navigation.
+ */
+async function runPageInTurn(
+  url: string,
+  browser: Browser,
+  delayMs: number,
+  scheduler: HostRequestScheduler,
+  site: SiteScanContext,
+  execution: PageExecution,
+): Promise<{ result: RenderedAnalysisResult | PageScanResult; durationMs: number }> {
+  const pageGuard = createPageWorkGuard(site.runGuard);
+  return scheduler.schedule(async () => {
+    // Issue #223: timed inside the scheduled turn, so the wait for that turn
+    // is excluded and the ETA's per-page estimator sees the real cost.
+    const workStartedAtMs = Date.now();
+    const pageAbortController = new AbortController();
+    const timeoutMs = execution.kind === 'full-scan' ? site.timeoutMs : execution.timeoutMs;
+    const options = {
+      delayMs,
+      scheduler,
+      guard: pageGuard,
+      signal: pageAbortController.signal,
+      ...sitePageOptions(site, url, timeoutMs),
+    };
+    const result =
+      execution.kind === 'full-scan'
+        ? await withPageWatchdog(
+            url,
+            scanPage(browser, execution.debugPort, url, {
+              ...options,
+              ...(execution.skipLighthouse ? { skipLighthouse: true } : {}),
+            }),
+            FULL_SCAN_PAGE_WATCHDOG_MS,
+            pageGuard,
+            () => pageAbortController.abort(new Error('page analysis watchdog elapsed')),
+          )
+        : await withPageWatchdog(
+            url,
+            runRenderedAnalysis(browser, url, { ...options, ...execution.extras }),
+            RENDERED_ANALYSIS_WATCHDOG_MS,
+            pageGuard,
+            () => pageAbortController.abort(new Error('rendered analysis watchdog elapsed')),
+          );
+    return { result, durationMs: Date.now() - workStartedAtMs };
+  });
+}
+
+/** One lane of the legacy scan phase: a sequential slice of pagesToScan. */
+async function runScanLane(
+  laneUrls: string[],
+  browser: Browser,
+  debugPort: number,
+  delayMs: number,
+  scheduler: HostRequestScheduler,
+  site: SiteScanContext,
+  skipLighthouse: boolean,
+  onPageDone: (pageResult: PageScanResult, durationMs: number) => void,
+): Promise<void> {
+  for (const url of laneUrls) {
+    const { result, durationMs } = await runPageInTurn(url, browser, delayMs, scheduler, site, {
+      kind: 'full-scan',
+      debugPort,
+      skipLighthouse,
+    });
+    onPageDone(result as PageScanResult, durationMs);
+  }
+}
+
+/** The staged full-audit run's context: the site context every page
+ *  shares, plus what the staged path adds (resume, attempt recording, the
+ *  Plan 059 surfaces and discovery waves). */
+interface StagedScanContext extends SiteScanContext {
+  auditDir: string | undefined;
+  writePagesAsScanned: boolean | undefined;
+  /** Plan 035: true only after a validated checkpoint resume, the one
+   *  condition under which existing scan.json files may be skipped. */
+  resumeActive: boolean;
   robotsPolicyRuntime: RobotsPolicyRuntime | undefined;
   /** Plan 059 attempt recording is on exactly when a frozen scope exists. */
   scopeDigest: string | undefined;
@@ -717,70 +770,16 @@ async function analyzePageInTurn(
     await context.robotsPolicyRuntime.refresh([...refreshUrls]);
     context.robotsPolicyRuntime.assertAllowed(url);
   }
-  // Issue #200: same per-page-guard-mirrored-into-run-wide-guard shape
-  // as runScanLane above.
-  const pageGuard = createPageWorkGuard(context.runGuard);
-  const navigationUrl = context.servedUrlByIdentity.get(url);
-
-  return scheduler.schedule(async () => {
-    // Issue #223: same "actual page work only" timing window as
-    // runScanLane above, measured once the turn has been granted.
-    const workStartedAtMs = Date.now();
-    const pageAbortController = new AbortController();
-    const analysis = await withPageWatchdog(
-      url,
-      runRenderedAnalysis(browser, url, {
-        delayMs,
-        scheduler,
-        screenshotDir: context.screenshotDir,
-        hydrationSweep: context.hydrationSweep,
-        stateSurfaces: context.stateSurfaces,
-        exclusionPatterns: context.exclusionPatterns,
-        redirectHostCache: context.redirectHostCache,
-        canonicalTargetCache: context.canonicalTargetCache,
-        guard: pageGuard,
-        signal: pageAbortController.signal,
-        ...(timeoutMs !== undefined ? { timeoutMs } : {}),
-        ...(context.userAgent !== undefined ? { userAgent: context.userAgent } : {}),
-        ...(navigationUrl !== undefined ? { navigationUrl } : {}),
-        ...(context.mentionsLegalesUrl !== undefined
-          ? { mentionsLegalesUrl: context.mentionsLegalesUrl }
-          : {}),
-        ...(context.mentionsLegalesCandidateUrls !== undefined
-          ? { mentionsLegalesCandidateUrls: context.mentionsLegalesCandidateUrls }
-          : {}),
-        ...(context.mentionsLegalesSearchedUrls !== undefined
-          ? { mentionsLegalesSearchedUrls: context.mentionsLegalesSearchedUrls }
-          : {}),
-        ...(context.mentionsLegalesHomepageFallback
-          ? { mentionsLegalesHomepageFallback: true }
-          : {}),
-        ...(context.homepageUrl !== undefined ? { homepageUrl: context.homepageUrl } : {}),
-        ...(context.sitemapCheck !== undefined ? { sitemapCheck: context.sitemapCheck } : {}),
-        ...(context.llmsTxtCheck !== undefined ? { llmsTxtCheck: context.llmsTxtCheck } : {}),
-        ...(context.securityHeadersCheck !== undefined
-          ? { securityHeadersCheck: context.securityHeadersCheck }
-          : {}),
-        ...(context.cookieConsentCheck !== undefined
-          ? { cookieConsentCheck: context.cookieConsentCheck }
-          : {}),
-        ...(context.accessibilityStatementCheck !== undefined
-          ? { accessibilityStatementCheck: context.accessibilityStatementCheck }
-          : {}),
-        ...(context.bookingEngineUrl !== undefined
-          ? { bookingEngineUrl: context.bookingEngineUrl }
-          : {}),
-        ...(context.networkPolicy !== undefined ? { networkPolicy: context.networkPolicy } : {}),
-        ...(context.onNetworkSafetyBlocked !== undefined
-          ? { onNetworkSafetyBlocked: context.onNetworkSafetyBlocked }
-          : {}),
-      }),
-      RENDERED_ANALYSIS_WATCHDOG_MS,
-      pageGuard,
-      () => pageAbortController.abort(new Error('rendered analysis watchdog elapsed')),
-    );
-    return { result: analysis as RenderedAnalysisResult, durationMs: Date.now() - workStartedAtMs };
+  const { result, durationMs } = await runPageInTurn(url, browser, delayMs, scheduler, context, {
+    kind: 'rendered-analysis',
+    timeoutMs,
+    extras: {
+      hydrationSweep: context.hydrationSweep,
+      stateSurfaces: context.stateSurfaces,
+      exclusionPatterns: context.exclusionPatterns,
+    },
   });
+  return { result: result as RenderedAnalysisResult, durationMs };
 }
 
 /**
@@ -2905,34 +2904,38 @@ export async function scanSite(
   const redirectHostCache: RedirectHostCache = new Map();
   const canonicalTargetCache: Map<string, Promise<CanonicalTargetCheckResult | null>> = new Map();
 
+  const site: SiteScanContext = {
+    screenshotDir: options.screenshotDir,
+    timeoutMs: options.timeoutMs,
+    userAgent: options.userAgent,
+    servedUrlByIdentity,
+    mentionsLegalesUrl: mentionsLegalesUrlForScan,
+    mentionsLegalesCandidateUrls:
+      crawl.mentionsLegalesCandidateUrls ??
+      (crawl.mentionsLegalesPageUrl !== undefined ? [crawl.mentionsLegalesPageUrl] : undefined),
+    mentionsLegalesSearchedUrls:
+      crawl.mentionsLegalesCandidateUrls ?? crawl.mentionsLegalesSearchedUrls,
+    mentionsLegalesHomepageFallback,
+    redirectHostCache,
+    canonicalTargetCache,
+    homepageUrl: homepageUrlForScan,
+    sitemapCheck,
+    llmsTxtCheck: llmsTxtCheckForScan,
+    securityHeadersCheck: securityHeadersCheckForScan,
+    cookieConsentCheck,
+    accessibilityStatementCheck,
+    bookingEngineUrl: options.bookingEngineUrl,
+    runGuard,
+    networkPolicy: options.networkPolicy,
+    onNetworkSafetyBlocked,
+  };
+
   if (options.fullAuditPlanning) {
     const context: StagedScanContext = {
-      screenshotDir: options.screenshotDir,
+      ...site,
       auditDir: options.auditDir,
       writePagesAsScanned: options.writePagesAsScanned,
       resumeActive: resumedFromCheckpoint,
-      timeoutMs: options.timeoutMs,
-      userAgent: options.userAgent,
-      servedUrlByIdentity,
-      mentionsLegalesUrl: mentionsLegalesUrlForScan,
-      mentionsLegalesCandidateUrls:
-        crawl.mentionsLegalesCandidateUrls ??
-        (crawl.mentionsLegalesPageUrl !== undefined ? [crawl.mentionsLegalesPageUrl] : undefined),
-      mentionsLegalesSearchedUrls:
-        crawl.mentionsLegalesCandidateUrls ?? crawl.mentionsLegalesSearchedUrls,
-      mentionsLegalesHomepageFallback,
-      redirectHostCache,
-      canonicalTargetCache,
-      homepageUrl: homepageUrlForScan,
-      sitemapCheck,
-      llmsTxtCheck: llmsTxtCheckForScan,
-      securityHeadersCheck: securityHeadersCheckForScan,
-      cookieConsentCheck,
-      accessibilityStatementCheck,
-      bookingEngineUrl: options.bookingEngineUrl,
-      runGuard,
-      networkPolicy: options.networkPolicy,
-      onNetworkSafetyBlocked,
       robotsPolicyRuntime,
       scopeDigest: options.scopeDigest,
       evidenceEpoch: 1,
@@ -3045,30 +3048,8 @@ export async function scanSite(
           options.debugPort,
           crawl.effectiveDelayMs,
           scheduler,
-          options.screenshotDir,
-          options.timeoutMs,
-          options.userAgent,
-          servedUrlByIdentity,
-          mentionsLegalesUrlForScan,
-          crawl.mentionsLegalesCandidateUrls ??
-            (crawl.mentionsLegalesPageUrl !== undefined
-              ? [crawl.mentionsLegalesPageUrl]
-              : undefined),
-          crawl.mentionsLegalesCandidateUrls ?? crawl.mentionsLegalesSearchedUrls,
-          mentionsLegalesHomepageFallback,
-          redirectHostCache,
-          canonicalTargetCache,
-          homepageUrlForScan,
-          sitemapCheck,
-          llmsTxtCheckForScan,
-          securityHeadersCheckForScan,
-          cookieConsentCheck,
-          accessibilityStatementCheck,
-          options.bookingEngineUrl,
+          site,
           options.skipLighthouse ?? false,
-          runGuard,
-          options.networkPolicy,
-          onNetworkSafetyBlocked,
           onPageDone,
         ),
       ),
