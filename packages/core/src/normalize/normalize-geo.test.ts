@@ -216,6 +216,59 @@ describe('entity-data-incomplete', () => {
     expect(candidates.filter((c) => c.ruleId === ENTITY_DATA_INCOMPLETE_RULE_ID)).toEqual([]);
   });
 
+  it('does not fire when a complete establishment sits next to a thinner company node', () => {
+    const hotel = {
+      '@type': 'Hotel',
+      name: 'Hôtel du Clos',
+      telephone: '+33 2 00 00 00 00',
+      address: { '@type': 'PostalAddress', streetAddress: '1 rue du Clos', postalCode: '35000' },
+    };
+    const company = {
+      '@type': 'Organization',
+      name: 'Clos SAS',
+      contactPoint: { '@type': 'ContactPoint', telephone: '+33 2 00 00 00 01' },
+    };
+    const candidates = extractGeoCandidates(
+      [
+        page({
+          jsonLdTypes: ['Hotel', 'Organization'],
+          jsonLdEntities: [{ parsed: hotel }, { parsed: company }],
+        }),
+      ],
+      HOMEPAGE_URL,
+    );
+    expect(candidates.filter((c) => c.ruleId === ENTITY_DATA_INCOMPLETE_RULE_ID)).toEqual([]);
+  });
+
+  it('reads a telephone given only under contactPoint', () => {
+    expect(
+      findMissingEntityFields({
+        '@type': 'Organization',
+        name: 'Example SAS',
+        address: 'Rue A',
+        contactPoint: [{ '@type': 'ContactPoint', telephone: '+33 1 00 00 00 00' }],
+      }),
+    ).toEqual([]);
+  });
+
+  it('names the fields missing from the most complete entity when none is complete', () => {
+    const candidates = extractGeoCandidates(
+      [
+        page({
+          jsonLdTypes: ['Organization', 'Hotel'],
+          jsonLdEntities: [
+            { parsed: { '@type': 'Organization', name: 'Example SAS' } },
+            { parsed: { '@type': 'Hotel', name: 'Example', address: 'Rue A' } },
+          ],
+        }),
+      ],
+      HOMEPAGE_URL,
+    );
+    const incomplete = candidates.filter((c) => c.ruleId === ENTITY_DATA_INCOMPLETE_RULE_ID);
+    expect(incomplete).toHaveLength(1);
+    expect(incomplete[0]?.rawEvidenceForPage).toEqual({ missingFields: ['telephone'] });
+  });
+
   it('does not fire for a non-entity JSON-LD block (e.g. a Product)', () => {
     const candidates = extractGeoCandidates(
       [

@@ -603,6 +603,11 @@ it counts for `structured-data-entity-missing`, `entity-data-incomplete` and
 check uses. `entity-data-incomplete` judges business entities only
 (Organization, LocalBusiness and its subtypes): a `WebSite` node proves an
 entity exists but is never expected to carry an address or telephone.
+The rule judges the page, not each node: it reports only when no business
+entity on the page carries every field, and names the fields missing from the
+most complete one, since a page often declares its establishment in full next
+to a thinner node for the operating company. A telephone given under
+`contactPoint.telephone` counts (issue #564).
 
 Every axe rule is one site-wide finding, plus one per third-party frame origin
 (trade-off 30; Q5 for `image-alt`, Q6 for `link-name` and `button-name`, J1 for

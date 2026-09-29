@@ -120,7 +120,24 @@ export function findMissingEntityFields(parsed: unknown): string[] | null {
   if (!types.some((type) => BUSINESS_ENTITY_TYPE_PATTERN.test(type))) return null;
   if (parsed === null || typeof parsed !== 'object') return REQUIRED_ENTITY_FIELDS;
   const record = parsed as Record<string, unknown>;
-  return REQUIRED_ENTITY_FIELDS.filter((field) => !hasFieldValue(record[field]));
+  return REQUIRED_ENTITY_FIELDS.filter((field) => !hasEntityField(record, field));
+}
+
+/** schema.org lets a business give its number on a ContactPoint rather
+ *  than on the entity itself; a telephone only under
+ *  `contactPoint.telephone` was reported missing on every page of a site
+ *  that declared it there. */
+function hasEntityField(record: Record<string, unknown>, field: string): boolean {
+  if (hasFieldValue(record[field])) return true;
+  if (field !== 'telephone') return false;
+  const contactPoints = record['contactPoint'];
+  const list = Array.isArray(contactPoints) ? contactPoints : [contactPoints];
+  return list.some(
+    (point) =>
+      point !== null &&
+      typeof point === 'object' &&
+      hasFieldValue((point as Record<string, unknown>)['telephone']),
+  );
 }
 
 /** A field is present when it holds text, or a nested node or list that
@@ -173,9 +190,8 @@ export function extractGeoCandidates(
   }
 
   for (const page of pages) {
-    for (const entity of page.jsonLdEntities) {
-      const missingFields = findMissingEntityFields(entity.parsed);
-      if (missingFields === null || missingFields.length === 0) continue;
+    const missingFields = pageEntityMissingFields(page.jsonLdEntities);
+    if (missingFields !== null) {
       candidates.push({
         source: 'custom',
         ruleId: ENTITY_DATA_INCOMPLETE_RULE_ID,
@@ -208,4 +224,22 @@ export function extractGeoCandidates(
   }
 
   return candidates;
+}
+
+/** Pure: the fields missing from the page's most complete business entity,
+ *  or null when the page declares no business entity or one of them is
+ *  complete. A page often declares its establishment in full next to a
+ *  thinner node for the operating company; judging each node alone reported
+ *  the page incomplete although an engine reading it finds every field. */
+function pageEntityMissingFields(entities: JsonLdEntityInput[]): string[] | null {
+  let mostComplete: string[] | null = null;
+  for (const entity of entities) {
+    const missingFields = findMissingEntityFields(entity.parsed);
+    if (missingFields === null) continue;
+    if (missingFields.length === 0) return null;
+    if (mostComplete === null || missingFields.length < mostComplete.length) {
+      mostComplete = missingFields;
+    }
+  }
+  return mostComplete;
 }
