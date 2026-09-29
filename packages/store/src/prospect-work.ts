@@ -7,6 +7,7 @@ import {
   type Prospect,
   emailDomain,
   primaryWebsite,
+  type DeliverabilitySelection,
 } from '@odysseus/core';
 import { createAuditModel, type AuditDocumentFields } from './schemas/audit.schema.js';
 import { createJobModel, type JobDocumentFields } from './schemas/job.schema.js';
@@ -34,7 +35,7 @@ import {
   READINESS_ANALYSIS_PROJECTION,
   READINESS_REPORT_PROJECTION,
   resolveOutreachReportReadiness,
-  selectedFrenchAnalysisIds,
+  selectedAnalysisPairs,
   type OutreachReportReadiness,
   type ReadinessAnalysis,
   type ReadinessAuditRow,
@@ -169,10 +170,10 @@ export interface ProspectWorkSources {
   failedJobs: readonly ProspectWorkJob[];
   /** Report rows of the prospect's audits (readiness projection only). */
   reports: readonly ProspectWorkReport[];
-  /** Issue #509: the selected French analysis of each audit, by auditId
-   *  (null: no usable selection). Readiness requires the newest French
-   *  report to come from it; absent entries skip that check. */
-  selectedFrAnalyses?: ReadonlyMap<string, string | null>;
+  /** Issues #509 and #567: the selected analysis pair of each audit, by
+   *  auditId. Readiness requires the newest French report to come from it;
+   *  an audit without an entry has no usable selection and is not ready. */
+  selectedPairs?: ReadonlyMap<string, DeliverabilitySelection>;
   /** Plan 060 §7.1: the newest Plan-058 quality run of each of the
    *  prospect's audits, whatever its state, so the derivation can prove
    *  which run — if any — genuinely needs an operator review. */
@@ -471,7 +472,7 @@ export function deriveProspectWork(
             ...needsInputJobs.map((job) => ({ ...job, status: 'needs-input' as const })),
             ...failedJobs.map((job) => ({ ...job, status: 'failed' as const })),
           ],
-          sources.selectedFrAnalyses?.get(qualification.audit.auditId),
+          sources.selectedPairs?.get(qualification.audit.auditId) ?? { kind: 'none' },
         );
   if (
     qualification.audit !== undefined &&
@@ -761,7 +762,7 @@ export async function loadProspectWork(
     needsInputJobs,
     failedJobs,
     reports,
-    selectedFrAnalyses: selectedFrenchAnalysisIds(audits as readonly ReadinessAuditRow[], analyses),
+    selectedPairs: selectedAnalysisPairs(audits as readonly ReadinessAuditRow[], analyses),
     qualityRuns: [...qualityRunMap.values()],
     activeJobs,
     suppressedDomains: suppression.domains,

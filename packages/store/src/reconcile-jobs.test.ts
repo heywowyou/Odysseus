@@ -88,7 +88,7 @@ async function storeReport(
   auditId: string,
   language: 'fr' | 'en',
   reportProvenance: FindingsProvenance,
-  analysisId: string = randomUUID(),
+  analysisId = `${auditId}-${language}`,
 ): Promise<void> {
   const ReportModel = createReportModel(connection!);
   await ReportModel.create({
@@ -104,6 +104,22 @@ async function storeReport(
     analysisGeneratedAt: new Date('2026-09-01T00:04:00.000Z'),
     fileRef: `reports/test-${language}.pdf`,
     generatedAt: new Date('2026-09-01T00:06:00.000Z'),
+  });
+}
+
+/** The analysis a report is rendered from; with no explicit writing
+ *  selection, the newest analyses are the selected pair (issue #567). */
+async function storeAnalysis(
+  auditId: string,
+  language: 'fr' | 'en',
+  analysisProvenance: FindingsProvenance,
+): Promise<void> {
+  await connection!.collection('analyses').insertOne({
+    analysisId: `${auditId}-${language}`,
+    auditId,
+    language,
+    generatedAt: new Date('2026-09-01T00:04:00.000Z'),
+    findingsProvenance: analysisProvenance,
   });
 }
 
@@ -145,6 +161,8 @@ describe.skipIf(!mongoAvailable)('reconcileFailedAuditJobs', () => {
     const auditId = randomUUID();
     const pair = provenance(`digest-${auditId}`);
     await storeAudit(auditId, pair);
+    await storeAnalysis(auditId, 'fr', pair);
+    await storeAnalysis(auditId, 'en', pair);
     await storeReport(auditId, 'fr', pair);
     await storeReport(auditId, 'en', pair);
     const jobId = await storeFailedFullAuditJob(auditId);
@@ -166,6 +184,8 @@ describe.skipIf(!mongoAvailable)('reconcileFailedAuditJobs', () => {
     const auditId = randomUUID();
     const pair = provenance(`digest-${auditId}`);
     await storeAudit(auditId, pair);
+    await storeAnalysis(auditId, 'fr', pair);
+    await storeAnalysis(auditId, 'en', pair);
     await storeReport(auditId, 'fr', pair);
     await storeReport(auditId, 'en', pair);
     const jobId = await storeNeedsInputFullAuditJob(auditId);
@@ -187,6 +207,7 @@ describe.skipIf(!mongoAvailable)('reconcileFailedAuditJobs', () => {
     const auditId = randomUUID();
     const pair = provenance(`digest-${auditId}`);
     await storeAudit(auditId, pair);
+    await storeAnalysis(auditId, 'fr', pair);
     await storeReport(auditId, 'fr', pair);
     const jobId = await storeFailedFullAuditJob(auditId);
 
@@ -201,6 +222,19 @@ describe.skipIf(!mongoAvailable)('reconcileFailedAuditJobs', () => {
     const pair = provenance(`digest-${auditId}`);
     await storeAudit(auditId, pair, 'selected-en-analysis');
     await storeReport(auditId, 'fr', pair);
+    const jobId = await storeFailedFullAuditJob(auditId);
+
+    await reconcileFailedAuditJobs(connection!);
+
+    expect((await getJob(connection!, jobId))?.status).toBe('failed');
+  });
+
+  it('keeps the job failed when the French report was not rendered from the selected analysis', async () => {
+    const auditId = randomUUID();
+    const pair = provenance(`digest-${auditId}`);
+    await storeAudit(auditId, pair);
+    await storeAnalysis(auditId, 'fr', pair);
+    await storeReport(auditId, 'fr', pair, 'an-older-analysis');
     const jobId = await storeFailedFullAuditJob(auditId);
 
     await reconcileFailedAuditJobs(connection!);

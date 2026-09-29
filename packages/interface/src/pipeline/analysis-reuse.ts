@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import {
+  findingsProvenanceMatches,
   llmOutputSchema,
   themeSchema,
   type FindingsProvenance,
@@ -52,13 +53,8 @@ const reusableAnalysisSchema = llmOutputSchema
  * throwing, and a test below holds the two against each other so they cannot
  * drift.
  *
- * It lives here rather than beside the assertion because everything in
- * `packages/core/src/normalize` feeds the normalization fingerprint that
- * tells a stored findings.json apart from one today's code would produce.
- * Adding a function there - even one normalization never calls - invalidates
- * every stored fixture and demands a refresh from real scan data. This
- * predicate is pipeline policy about reuse, not normalization, so it belongs
- * on this side of that line.
+ * The comparison itself is core's findingsProvenanceMatches, the one every
+ * currency check shares (issue #567).
  *
  * A missing provenance is never the same as any provenance, so a legacy
  * artifact fails closed here too.
@@ -67,12 +63,7 @@ export function isSameFindingsProvenance(
   actual: FindingsProvenance | undefined,
   expected: FindingsProvenance,
 ): boolean {
-  if (actual === undefined) return false;
-  return (
-    actual.findingsSchemaVersion === expected.findingsSchemaVersion &&
-    actual.normalizationFingerprint === expected.normalizationFingerprint &&
-    actual.findingsDigest === expected.findingsDigest
-  );
+  return findingsProvenanceMatches(actual, expected);
 }
 
 /** What a stored analysis has to match to be reused instead of regenerated. */

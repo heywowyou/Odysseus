@@ -1,12 +1,11 @@
 /** Mongo adapter for the current v3 prospect-native preview contract. */
 
 import type { Connection } from 'mongoose';
-import { primaryWebsite, type Finding } from '@odysseus/core';
+import { assessCurrentPair, primaryWebsite, type Finding } from '@odysseus/core';
 import {
   createAuditModel,
   createJobModel,
   effectiveAuditScanIntent,
-  findingsProvenanceMatches,
   getAudit,
   getFindingsForAudit,
   getLatestReport,
@@ -95,13 +94,17 @@ export function createMongoOutreachPreviewStoreV3(
         resolveSelectedAnalysisPairForAudit(connection, auditId),
         getLatestReport(connection, auditId, 'fr'),
       ]);
+      // Re-checked over the rows read here, so a report rendered from an
+      // analysis no longer selected is refused too (issue #567).
       if (
         audit === null ||
         selected.kind === 'none' ||
-        frReport === null ||
-        !findingsProvenanceMatches(selected.fr.findingsProvenance, audit.findingsProvenance) ||
-        !findingsProvenanceMatches(frReport.findingsProvenance, audit.findingsProvenance) ||
-        audit.findingsProvenance?.findingsDigest === undefined
+        !assessCurrentPair({
+          auditFindings: audit.findingsProvenance,
+          selection: selected,
+          fr: frReport,
+          en: null,
+        }).current
       ) {
         return { refused: 'report-not-ready' };
       }

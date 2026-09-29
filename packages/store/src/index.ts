@@ -14,12 +14,7 @@ export { createReportModel } from './schemas/report.schema.js';
 export type { ReportDocument, ReportDocumentFields } from './schemas/report.schema.js';
 export { persistReport } from './persist-report.js';
 export { resolveReportVariant } from './report-variants.js';
-export {
-  approvalCoversReport,
-  approvalMatchesReportPair,
-  getLatestReportApproval,
-  persistReportApproval,
-} from './report-approvals.js';
+export { getLatestReportApproval, persistReportApproval } from './report-approvals.js';
 export { findDeltaBaseline, findAuditEvidenceCoverage } from './findings-delta-baseline.js';
 export { createJobModel } from './schemas/job.schema.js';
 export type {
@@ -226,7 +221,6 @@ export { loadProspectWork, selectNewestQualifyingAudit } from './prospect-work.j
 export { PROSPECT_TODO_KINDS } from './prospect-work.js';
 export {
   findAuditsWithUnreadyReports,
-  findingsProvenanceMatches,
   loadOutreachReportReadiness,
 } from './outreach-report-readiness.js';
 export type { ProspectTodoRow, ProspectWorkAudit } from './prospect-work.js';

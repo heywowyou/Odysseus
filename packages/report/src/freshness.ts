@@ -1,4 +1,4 @@
-import type { FindingsProvenance } from '@odysseus/core';
+import { findingsProvenanceMatches, type FindingsProvenance } from '@odysseus/core';
 import { REPORT_TEMPLATE_VERSION } from './constants.js';
 
 export type ReportFreshness = 'fresh' | 'stale' | 'unverified';
@@ -33,12 +33,7 @@ export function classifyReportFreshness(
     return 'unverified';
   }
 
-  const provenance = report.findingsProvenance;
-  return provenance.findingsSchemaVersion === currentFindings.findingsSchemaVersion &&
-    provenance.normalizationFingerprint === currentFindings.normalizationFingerprint &&
-    provenance.findingsDigest === currentFindings.findingsDigest
-    ? 'fresh'
-    : 'stale';
+  return findingsProvenanceMatches(report.findingsProvenance, currentFindings) ? 'fresh' : 'stale';
 }
 
 /** Advisory: false when the report was rendered by an older template than

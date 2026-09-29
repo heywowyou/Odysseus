@@ -6,15 +6,20 @@ import path from 'node:path';
 import { logger } from '../logger.js';
 import type { Connection } from 'mongoose';
 import {
+  approvalRecordFor,
+  assessCurrentPair,
+  auditLifecycle,
   buildFindingsProvenance,
   canonicalDigest,
+  deliverablePair,
+  isSamePairVersion,
+  mayDeliver,
   isGrade,
   isValidSiren,
   summarizeAuditCoverage,
   type AuditManifest,
   type AuditManualFields,
   type Finding,
-  type FindingsProvenance,
   type ReportLanguage,
   type ReportTheme,
   type StatSector,
@@ -38,8 +43,6 @@ import {
   getLatestReport,
   getLatestReportApproval,
   getProspectHub,
-  approvalCoversReport,
-  approvalMatchesReportPair,
   listOutreachPreviews,
   listReportLanguages,
   persistReport,
@@ -173,34 +176,6 @@ export function parseReportThemeQuery(query: URLSearchParams): ReportTheme | und
 
 type CurrentReportPair = { fr: ReportDocument; en?: ReportDocument };
 
-function approvalRefForReport(report: ReportDocument): {
-  reportId: string;
-  pdfDigest: string;
-  variantDigests?: { light: string };
-} {
-  if (!report.reportId || !report.pdfDigest) {
-    throw new Error('cannot approve a report without a report ID and digest');
-  }
-  return {
-    reportId: report.reportId,
-    pdfDigest: report.pdfDigest,
-    ...(report.variants?.light === undefined
-      ? {}
-      : { variantDigests: { light: report.variants.light.pdfDigest } }),
-  };
-}
-
-function provenanceMatches(
-  actual: FindingsProvenance | undefined,
-  expected: FindingsProvenance | undefined,
-): boolean {
-  return (
-    actual?.findingsSchemaVersion === expected?.findingsSchemaVersion &&
-    actual?.normalizationFingerprint === expected?.normalizationFingerprint &&
-    actual?.findingsDigest === expected?.findingsDigest
-  );
-}
-
 type OptionalFindingsProvenance = AuditManifest['findingsProvenance'];
 
 async function readVerifiedReport(
@@ -249,14 +224,17 @@ async function isReportPdfVerified(
   );
 }
 
-/** Pure over already-fetched reports and resolution, so a caller that has
- *  already paid for those reads (the dashboard's GET handler, which needs
- *  them for other fields anyway) does not pay for them twice. preVerified
- *  carries those already-made checks, produced by isReportPdfVerified: true
- *  exactly when the PDF is present with its stored digest, so supplying
- *  them cannot change the verdict. When it is absent (the approve-reports
- *  path via getFreshVerifiedPair, whose transaction must re-verify live)
- *  the pair is read and hashed fresh here, as before. */
+/** The selected pair, current and deliverable in the report deliverability
+ *  module's sense (issue #567). Pure over already-fetched reports and
+ *  resolution, so a caller that has already paid for those reads (the
+ *  dashboard's GET handler, which needs them for other fields anyway) does
+ *  not pay for them twice. preVerified carries those already-made checks,
+ *  produced by isReportPdfVerified: true exactly when the PDF is present with
+ *  its stored digest, so supplying them cannot change the verdict. When it is
+ *  absent (the approve-reports path via getFreshVerifiedPair, whose
+ *  transaction must re-verify live) the pair is read and hashed fresh here.
+ *  English participates only when the selected writing version carries an
+ *  English analysis (Plan 067). */
 async function verifyFreshPair(
   fr: ReportDocument | null,
   en: ReportDocument | null,
@@ -268,47 +246,19 @@ async function verifyFreshPair(
   store: ArtifactStore | undefined,
   preVerified?: { fr: boolean; en: boolean },
 ): Promise<{ reports: CurrentReportPair } | undefined> {
-  // Plan 067: French is the canonical required report. English participates
-  // only when the selected writing version explicitly carries an English
-  // analysis; an older unrelated English report must never make French
-  // readiness fail or be silently attached to it.
-  if (resolution.kind === 'none') return undefined;
-  const frAnalysis = resolution.fr;
-  const enAnalysis = resolution.en;
-  if (
-    !fr ||
-    !fr.reportId ||
-    fr.analysisId !== frAnalysis.analysisId ||
-    !provenanceMatches(frAnalysis.findingsProvenance, currentFindings) ||
-    classifyReportFreshness(fr, currentFindings) !== 'fresh'
-  ) {
-    return undefined;
-  }
-
-  if (
-    enAnalysis !== undefined &&
-    (!en ||
-      !en.reportId ||
-      en.analysisId !== enAnalysis.analysisId ||
-      !provenanceMatches(enAnalysis.findingsProvenance, currentFindings) ||
-      classifyReportFreshness(en, currentFindings) !== 'fresh')
-  ) {
-    return undefined;
-  }
-
-  const frVerified =
-    preVerified?.fr ??
-    (await readVerifiedReport(auditDir, fr, hostname, startedAt, store)) !== undefined;
-  if (!frVerified) return undefined;
-
-  if (enAnalysis === undefined) return { reports: { fr } };
-
-  const enVerified =
-    preVerified?.en ??
-    (en !== null &&
-      (await readVerifiedReport(auditDir, en, hostname, startedAt, store)) !== undefined);
-  if (!en || !enVerified) return undefined;
-  return { reports: { fr, en } };
+  const verdict = assessCurrentPair({
+    auditFindings: currentFindings,
+    selection: resolution,
+    fr,
+    en,
+  });
+  const reports = await deliverablePair(
+    verdict,
+    async (report, language) =>
+      preVerified?.[language] ??
+      (await readVerifiedReport(auditDir, report, hostname, startedAt, store)) !== undefined,
+  );
+  return reports === undefined ? undefined : { reports };
 }
 
 /** Live-fetching wrapper for callers that need a fresh read on every call
@@ -564,14 +514,13 @@ async function buildAuditOutreachPreviewHtml(
     resolveSelectedAnalysisPairForAudit(connection, audit.auditId),
     getLatestReport(connection, audit.auditId, 'fr'),
   ]);
-  if (
-    selected.kind === 'none' ||
-    frReport === null ||
-    frReport.analysisId !== selected.fr.analysisId ||
-    !provenanceMatches(selected.fr.findingsProvenance, audit.findingsProvenance) ||
-    !provenanceMatches(frReport.findingsProvenance, audit.findingsProvenance) ||
-    audit.findingsProvenance?.findingsDigest === undefined
-  ) {
+  const current = assessCurrentPair({
+    auditFindings: audit.findingsProvenance,
+    selection: selected,
+    fr: frReport,
+    en: null,
+  });
+  if (!current.current || selected.kind === 'none') {
     return { state: 'refused', refusal: 'report-not-ready' };
   }
   const hostname = new URL(audit.siteUrl).hostname;
@@ -756,12 +705,13 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       artifactStore,
       { fr: frPdfAvailable, en: enPdfAvailable },
     );
-    const analysed = Boolean(
-      selectedPair.kind !== 'none' &&
-      provenanceMatches(selectedPair.fr.findingsProvenance, audit.findingsProvenance) &&
-      (selectedPair.en === undefined ||
-        provenanceMatches(selectedPair.en.findingsProvenance, audit.findingsProvenance)),
-    ); // Plan 032 (issue #162): the selected pair was produced by the audit
+    const lifecycle = auditLifecycle({
+      auditFindings: audit.findingsProvenance,
+      selection: selectedPair,
+      deliverable: verifiedPair?.reports,
+      approval,
+    });
+    // Plan 032 (issue #162): the selected pair was produced by the audit
     // fallback gate, so its reports carry no model-written analysis. The
     // operator sees why the report has no themes instead of reading the
     // absence as a failure. Absent pair reads as false: no analysis exists
@@ -770,16 +720,6 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       selectedPair.kind !== 'none' &&
       (selectedPair.fr.generationMode === 'static-fallback' ||
         selectedPair.en?.generationMode === 'static-fallback');
-    const approved = Boolean(
-      verifiedPair && approvalMatchesReportPair(approval, verifiedPair.reports),
-    );
-    const lifecycle = approved
-      ? 'approved'
-      : verifiedPair
-        ? 'rendered'
-        : analysed
-          ? 'analysed'
-          : 'scanned';
     // Plan 068: full audits expose scoped diagnostics even when the detailed
     // diagnostic artifact is unavailable. Quick/prospecting scans do not
     // promise this layer and therefore keep the field absent.
@@ -883,7 +823,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
         selectedPair.kind === 'none' ? [] : selectedPair.en === undefined ? ['fr'] : ['fr', 'en'],
       findingsStale: findingsAreStale(audit.findingsProvenance),
       analysisIsStaticFallback,
-      approval: approved ? approval : null,
+      approval: lifecycle === 'approved' ? approval : null,
       manualFields: audit.manualFields,
       automaticGrade,
       effectiveGrade,
@@ -1423,8 +1363,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
     const approval = {
       approvalId: randomUUID(),
       auditId,
-      fr: approvalRefForReport(pair.reports.fr),
-      ...(pair.reports.en !== undefined ? { en: approvalRefForReport(pair.reports.en) } : {}),
+      ...approvalRecordFor(pair.reports),
       approvedAt: new Date(),
     };
     try {
@@ -1438,17 +1377,7 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
           audit.startedAt,
           artifactStore,
         );
-        if (
-          !current ||
-          current.reports.fr.reportId !== pair.reports.fr.reportId ||
-          current.reports.fr.pdfDigest !== pair.reports.fr.pdfDigest ||
-          current.reports.fr.variants?.light?.pdfDigest !==
-            pair.reports.fr.variants?.light?.pdfDigest ||
-          current.reports.en?.reportId !== pair.reports.en?.reportId ||
-          current.reports.en?.pdfDigest !== pair.reports.en?.pdfDigest ||
-          current.reports.en?.variants?.light?.pdfDigest !==
-            pair.reports.en?.variants?.light?.pdfDigest
-        ) {
+        if (!current || !isSamePairVersion(current.reports, pair.reports)) {
           throw new Error('selected report version changed during approval');
         }
         await persistReportApproval(connection, approval, session);
@@ -1896,32 +1825,33 @@ export function registerAuditRoutes(router: Router, connection: Connection): voi
       return;
     }
 
-    const [fr, en, approval] = await Promise.all([
+    const [fr, en, approval, selection] = await Promise.all([
       getLatestReport(connection, auditId, 'fr'),
       getLatestReport(connection, auditId, 'en'),
       getLatestReportApproval(connection, auditId),
+      resolveSelectedAnalysisPairForAudit(connection, auditId),
     ]);
-    // The French report is the canonical deliverable, so it is deliverable
-    // whenever approval covers this exact French report - a regenerated
-    // English attachment does not un-approve it. English is an attachment to
-    // an approved French deliverable, so it additionally requires the French
+    // The report must belong to the selected pair (issue #567). The French
+    // report is the canonical deliverable, so it is deliverable whenever
+    // approval covers this exact French report - a regenerated English
+    // attachment does not un-approve it. English is an attachment to an
+    // approved French deliverable, so it additionally requires the French
     // report still to be the approved one.
-    const deliveryApproved =
-      language === 'fr'
-        ? Boolean(fr && approvalCoversReport(approval, 'fr', fr, theme))
-        : Boolean(
-            en &&
-            approvalCoversReport(approval, 'en', en, theme) &&
-            fr &&
-            approvalCoversReport(approval, 'fr', fr, 'dark'),
-          );
-    if (!deliveryApproved) {
+    const delivery = mayDeliver(
+      assessCurrentPair({ auditFindings: audit.findingsProvenance, selection, fr, en }),
+      approval,
+      language,
+      theme,
+    );
+    if (!delivery.deliver) {
       sendError(
         res,
         409,
-        language === 'fr'
-          ? 'the current French report has not been approved for delivery'
-          : 'the current English report has not been approved for delivery',
+        delivery.refusal === 'not-current'
+          ? `the latest ${language} report is not built from the selected analysis; regenerate it from current analyses`
+          : language === 'fr'
+            ? 'the current French report has not been approved for delivery'
+            : 'the current English report has not been approved for delivery',
       );
       return;
     }

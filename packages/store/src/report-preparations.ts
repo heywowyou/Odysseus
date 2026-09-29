@@ -6,6 +6,7 @@
 import type { Connection } from 'mongoose';
 import {
   applyPreparationPatch,
+  findingsProvenanceMatches,
   isCompatibleAnalysisSelection,
   isEnglishAttachableToFrench,
   resolveSelectedAnalysisPair,
@@ -158,13 +159,10 @@ export async function approveWritingCandidate(
     candidate.pair.enAnalysisId === undefined
       ? undefined
       : await getAnalysisById(connection, auditId, candidate.pair.enAnalysisId);
-  const candidateProvenance = candidate.pair.findingsProvenance;
-  const frProvenance = fr?.findingsProvenance;
-  const candidateMatchesFrench =
-    frProvenance !== undefined &&
-    frProvenance.findingsSchemaVersion === candidateProvenance.findingsSchemaVersion &&
-    frProvenance.normalizationFingerprint === candidateProvenance.normalizationFingerprint &&
-    frProvenance.findingsDigest === candidateProvenance.findingsDigest;
+  const candidateMatchesFrench = findingsProvenanceMatches(
+    fr?.findingsProvenance,
+    candidate.pair.findingsProvenance,
+  );
   if (
     !isCompatibleAnalysisSelection(fr ?? undefined, en ?? undefined) ||
     !candidateMatchesFrench ||

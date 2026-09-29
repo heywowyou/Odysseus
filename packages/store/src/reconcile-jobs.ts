@@ -28,7 +28,8 @@ import type { Connection } from 'mongoose';
 import { createAuditModel } from './schemas/audit.schema.js';
 import { createJobModel } from './schemas/job.schema.js';
 import { createReportModel } from './schemas/report.schema.js';
-import { findingsProvenanceMatches } from './outreach-report-readiness.js';
+import { assessCurrentPair, wholeCurrentPair } from '@odysseus/core';
+import { resolveSelectedAnalysisPairForAudit } from './report-preparations.js';
 
 /** Upper bound on failed jobs examined per pass, so a pathological jobs
  *  collection cannot turn startup into an unbounded scan. */
@@ -68,26 +69,26 @@ export async function reconcileFailedAuditJobs(connection: Connection): Promise<
     const audit = await AuditModel.findOne({ auditId }).lean();
     if (!audit) continue;
 
-    const fr = await ReportModel.findOne({ auditId, language: 'fr' })
-      .sort({ generatedAt: -1 })
-      .lean();
-    if (!fr || !findingsProvenanceMatches(fr.findingsProvenance, audit.findingsProvenance)) {
-      continue;
-    }
-    const selectedEnglishAnalysisId =
-      audit.reportPreparation?.writingSelection?.selected?.enAnalysisId;
-    if (selectedEnglishAnalysisId !== undefined) {
-      const en = await ReportModel.findOne({
-        auditId,
-        language: 'en',
-        analysisId: selectedEnglishAnalysisId,
-      })
-        .sort({ generatedAt: -1 })
-        .lean();
-      if (!en || !findingsProvenanceMatches(en.findingsProvenance, audit.findingsProvenance)) {
-        continue;
-      }
-    }
+    // Issue #567: done means the whole selected pair is current in the
+    // report deliverability module's sense: each selected language's newest
+    // report was rendered from its selected analysis over the audit's
+    // findings. The PDF is not read here; approval and delivery read it.
+    const selection = await resolveSelectedAnalysisPairForAudit(connection, auditId);
+    const [fr, en] = await Promise.all([
+      ReportModel.findOne({ auditId, language: 'fr' }).sort({ generatedAt: -1 }).lean(),
+      selection.kind === 'none' || selection.en === undefined
+        ? null
+        : ReportModel.findOne({ auditId, language: 'en', analysisId: selection.en.analysisId })
+            .sort({ generatedAt: -1 })
+            .lean(),
+    ]);
+    const verdict = assessCurrentPair({
+      auditFindings: audit.findingsProvenance,
+      selection: selection.kind === 'none' ? { kind: 'none' } : selection,
+      fr,
+      en,
+    });
+    if (wholeCurrentPair(verdict) === undefined) continue;
 
     // The status guard in the filter makes the write idempotent and keeps
     // a job that turned terminal in another way between the read and this

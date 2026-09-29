@@ -43,20 +43,30 @@ function analysis(auditId: string, language: 'fr' | 'en', analysisId = `${auditI
   };
 }
 
+/** The selected pair whose French analysis the default French report names. */
+function selected(frAnalysisId = `${audit.auditId}-fr`) {
+  return { kind: 'selected' as const, fr: analysis(audit.auditId, 'fr', frAnalysisId) };
+}
+
 describe('resolveOutreachReportReadiness (issue #388)', () => {
   it('is ready with a current FR and EN report for the audit', () => {
-    expect(resolveOutreachReportReadiness(audit, [report('fr'), report('en')], [])).toEqual({
+    expect(
+      resolveOutreachReportReadiness(audit, [report('fr'), report('en')], [], selected()),
+    ).toEqual({
       state: 'ready',
     });
   });
 
   it('is ready with a current French report alone, English being an optional attachment', () => {
-    expect(resolveOutreachReportReadiness(audit, [report('fr')], [])).toEqual({ state: 'ready' });
+    expect(resolveOutreachReportReadiness(audit, [report('fr')], [], selected())).toEqual({
+      state: 'ready',
+    });
     expect(
       resolveOutreachReportReadiness(
         audit,
         [report('fr'), report('en', { findingsProvenance: staleProvenance })],
         [],
+        selected(),
       ),
     ).toEqual({ state: 'ready' });
   });
@@ -68,7 +78,7 @@ describe('resolveOutreachReportReadiness (issue #388)', () => {
       status: 'failed' as const,
       createdAt: audit.startedAt,
     };
-    expect(resolveOutreachReportReadiness(audit, [], [failed])).toEqual({
+    expect(resolveOutreachReportReadiness(audit, [], [failed], selected())).toEqual({
       state: 'not-ready',
       reason: 'failed',
     });
@@ -78,16 +88,21 @@ describe('resolveOutreachReportReadiness (issue #388)', () => {
     const olderCurrent = report('fr', { generatedAt: new Date('2026-09-16T09:00:00.000Z') });
     const newerStale = report('fr', { findingsProvenance: staleProvenance });
     expect(
-      resolveOutreachReportReadiness(audit, [olderCurrent, newerStale, report('en')], []),
+      resolveOutreachReportReadiness(
+        audit,
+        [olderCurrent, newerStale, report('en')],
+        [],
+        selected(),
+      ),
     ).toEqual({ state: 'not-ready', reason: 'stale' });
   });
 
   it('is missing without a French report, including historical audits', () => {
-    expect(resolveOutreachReportReadiness(audit, [report('en')], [])).toEqual({
+    expect(resolveOutreachReportReadiness(audit, [report('en')], [], selected())).toEqual({
       state: 'not-ready',
       reason: 'missing',
     });
-    expect(resolveOutreachReportReadiness(audit, [], [])).toEqual({
+    expect(resolveOutreachReportReadiness(audit, [], [], selected())).toEqual({
       state: 'not-ready',
       reason: 'missing',
     });
@@ -99,6 +114,7 @@ describe('resolveOutreachReportReadiness (issue #388)', () => {
         audit,
         [report('fr', { auditId: 'audit-other' }), report('en', { auditId: 'audit-other' })],
         [],
+        selected(),
       ),
     ).toEqual({ state: 'not-ready', reason: 'missing' });
   });
@@ -121,29 +137,50 @@ describe('resolveOutreachReportReadiness (issue #388)', () => {
       createdAt: new Date('2026-08-01T10:00:00.000Z'),
     };
     for (const job of [onAudit, newerRun]) {
-      expect(resolveOutreachReportReadiness(audit, reports, [job])).toEqual({
+      expect(resolveOutreachReportReadiness(audit, reports, [job], selected())).toEqual({
         state: 'not-ready',
         reason: 'needs-input',
       });
     }
-    expect(resolveOutreachReportReadiness(audit, reports, [superseded])).toEqual({
+    expect(resolveOutreachReportReadiness(audit, reports, [superseded], selected())).toEqual({
       state: 'ready',
     });
   });
 
   it('requires the newest French report to come from the selected French analysis (issue #509)', () => {
-    expect(
-      resolveOutreachReportReadiness(audit, [report('fr')], [], `${audit.auditId}-fr`),
-    ).toEqual({ state: 'ready' });
+    expect(resolveOutreachReportReadiness(audit, [report('fr')], [], selected())).toEqual({
+      state: 'ready',
+    });
     // A failed regeneration moved the selected pair past the newest report.
-    expect(resolveOutreachReportReadiness(audit, [report('fr')], [], 'analysis-newer')).toEqual({
+    expect(
+      resolveOutreachReportReadiness(audit, [report('fr')], [], selected('analysis-newer')),
+    ).toEqual({
       state: 'not-ready',
       reason: 'stale',
     });
-    expect(resolveOutreachReportReadiness(audit, [report('fr')], [], null)).toEqual({
+    expect(resolveOutreachReportReadiness(audit, [report('fr')], [], { kind: 'none' })).toEqual({
       state: 'not-ready',
       reason: 'stale',
     });
+  });
+
+  it('fails closed when neither the audit nor the report carries provenance (issue #567)', () => {
+    const unstamped = { auditId: audit.auditId, startedAt: audit.startedAt };
+    expect(
+      resolveOutreachReportReadiness(
+        unstamped,
+        [
+          {
+            auditId: audit.auditId,
+            language: 'fr',
+            generatedAt: audit.startedAt,
+            analysisId: `${audit.auditId}-fr`,
+          },
+        ],
+        [],
+        selected(),
+      ),
+    ).toEqual({ state: 'not-ready', reason: 'stale' });
   });
 
   it('is ready again once regeneration produced a current pair after a failure', () => {
@@ -152,7 +189,9 @@ describe('resolveOutreachReportReadiness (issue #388)', () => {
       status: 'failed' as const,
       createdAt: audit.startedAt,
     };
-    expect(resolveOutreachReportReadiness(audit, [report('fr'), report('en')], [failed])).toEqual({
+    expect(
+      resolveOutreachReportReadiness(audit, [report('fr'), report('en')], [failed], selected()),
+    ).toEqual({
       state: 'ready',
     });
   });

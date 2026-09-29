@@ -23,11 +23,12 @@ import { findSuppressionMatches } from './suppression.js';
 import { createReportModel } from './schemas/report.schema.js';
 import { listNewestReportQualityRuns, type NewestReportQualityRun } from './report-quality.js';
 import {
-  deriveProspectWork,
+  deriveProspectWork as deriveFromSources,
   loadProspectWork,
   selectNewestQualifyingAudit,
   type ProspectWorkAudit,
   type ProspectWorkReport,
+  type ProspectWorkSources,
 } from './prospect-work.js';
 
 const prospect = {
@@ -83,7 +84,36 @@ function readyReports(
     language,
     generatedAt: new Date('2026-09-01T11:00:00.000Z'),
     findingsProvenance,
+    analysisId: `${auditId}-${language}`,
   }));
+}
+
+/** Issue #567: readiness needs the selected pair. Unless a test names one,
+ *  each audit's selection is the French analysis its French report was
+ *  rendered from, over the findings that report carries, as loadProspectWork
+ *  would resolve it from stored rows. */
+function deriveProspectWork(
+  target: Parameters<typeof deriveFromSources>[0],
+  sources: ProspectWorkSources,
+  now?: Date,
+): ReturnType<typeof deriveFromSources> {
+  const selectedPairs = new Map(
+    sources.reports
+      .filter((report) => report.language === 'fr' && report.analysisId !== undefined)
+      .map((report) => [
+        report.auditId,
+        {
+          kind: 'selected' as const,
+          fr: {
+            analysisId: report.analysisId!,
+            ...(report.findingsProvenance !== undefined
+              ? { findingsProvenance: report.findingsProvenance }
+              : {}),
+          },
+        },
+      ]),
+  );
+  return deriveFromSources(target, { selectedPairs, ...sources }, now);
 }
 
 /** Plan 058: the newest quality run of the prospect's qualifying audit, as

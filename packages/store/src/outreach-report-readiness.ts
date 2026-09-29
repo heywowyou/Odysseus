@@ -24,8 +24,10 @@
 
 import type { Connection } from 'mongoose';
 import {
+  assessCurrentPair,
   resolveSelectedAnalysisPair,
   type AnalysisRecordLike,
+  type DeliverabilitySelection,
   type FindingsProvenance,
   type WritingSelection,
 } from '@odysseus/core';
@@ -57,15 +59,15 @@ export interface ReadinessReport {
 /** The analysis fields the selected-pair resolution reads. */
 export type ReadinessAnalysis = AnalysisRecordLike;
 
-/** The French analysis the report workflow currently selects for an audit,
- *  or null when no usable selection exists. The same resolution the preview
+/** The analysis pair the report workflow currently selects for an audit, as
+ *  the report deliverability module reads it. The same resolution the preview
  *  and the report pipeline use. */
-function selectedFrenchAnalysisId(
+function selectedPairOf(
   selection: WritingSelection | undefined,
   analyses: readonly ReadinessAnalysis[],
-): string | null {
+): DeliverabilitySelection {
   const resolution = resolveSelectedAnalysisPair(selection, analyses);
-  return resolution.kind === 'none' ? null : resolution.fr.analysisId;
+  return resolution.kind === 'none' ? { kind: 'none' } : resolution;
 }
 
 export interface ReadinessJob {
@@ -74,32 +76,18 @@ export interface ReadinessJob {
   createdAt: Date | string;
 }
 
-/** Same freshness test the audit page applies before serving a PDF and that
- *  reconcileFailedAuditJobs uses to call a failed job done. */
-export function findingsProvenanceMatches(
-  a: Partial<FindingsProvenance> | undefined,
-  b: Partial<FindingsProvenance> | undefined,
-): boolean {
-  return (
-    a?.findingsDigest !== undefined &&
-    b?.findingsDigest !== undefined &&
-    a.findingsSchemaVersion === b.findingsSchemaVersion &&
-    a.normalizationFingerprint === b.normalizationFingerprint &&
-    a.findingsDigest === b.findingsDigest
-  );
-}
-
 function asTime(value: Date | string): number {
   return new Date(value).getTime();
 }
 
-function newestFrenchReport(
+function newestReport(
   reports: readonly ReadinessReport[],
   auditId: string,
+  language: 'fr' | 'en',
 ): ReadinessReport | undefined {
   let newest: ReadinessReport | undefined;
   for (const report of reports) {
-    if (report.auditId !== auditId || report.language !== 'fr') continue;
+    if (report.auditId !== auditId || report.language !== language) continue;
     if (newest === undefined || asTime(report.generatedAt) > asTime(newest.generatedAt)) {
       newest = report;
     }
@@ -111,16 +99,17 @@ function newestFrenchReport(
  * `jobs` are the prospect's job rows (any status). A needs-input job still
  * blocks when it stopped on this audit or is a newer run the operator has not
  * resolved (issue #378); one older than the audit belongs to a superseded run.
- * Otherwise the newest French report must exist and carry the audit's current
- * findings provenance, and, when `selectedFrAnalysisId` is given, have been
- * rendered from that analysis (null: no usable selection, so not ready).
- * English, present or not, current or not, never blocks.
+ * Otherwise the French report must be current in the report deliverability
+ * module's sense (issue #567): the newest French report was rendered from the
+ * selected French analysis, and both carry the audit's findings provenance,
+ * which fails closed when missing. English, present or not, current or not,
+ * never blocks.
  */
 export function resolveOutreachReportReadiness(
   audit: ReadinessAudit,
   reports: readonly ReadinessReport[],
   jobs: readonly ReadinessJob[],
-  selectedFrAnalysisId?: string | null,
+  selection: DeliverabilitySelection,
 ): OutreachReportReadiness {
   const blockedOnInput = jobs.some(
     (job) =>
@@ -129,19 +118,20 @@ export function resolveOutreachReportReadiness(
   );
   if (blockedOnInput) return { state: 'not-ready', reason: 'needs-input' };
 
-  const fr = newestFrenchReport(reports, audit.auditId);
-  if (
-    fr !== undefined &&
-    findingsProvenanceMatches(fr.findingsProvenance, audit.findingsProvenance) &&
-    (selectedFrAnalysisId === undefined || fr.analysisId === selectedFrAnalysisId)
-  ) {
-    return { state: 'ready' };
-  }
+  const fr = newestReport(reports, audit.auditId, 'fr');
+  const verdict = assessCurrentPair({
+    auditFindings: audit.findingsProvenance,
+    selection,
+    fr: fr ?? null,
+    en: null,
+  });
+  if (verdict.current) return { state: 'ready' };
   if (jobs.some((job) => job.status === 'failed' && job.auditId === audit.auditId)) {
     return { state: 'not-ready', reason: 'failed' };
   }
   // Stale: a French report exists but was built from findings the audit no
-  // longer carries. Missing: no French report at all.
+  // longer carries, or from an analysis no longer selected. Missing: no
+  // French report at all.
   return { state: 'not-ready', reason: fr === undefined ? 'missing' : 'stale' };
 }
 
@@ -179,15 +169,15 @@ export type ReadinessAuditRow = ReadinessAudit & {
   reportPreparation?: { writingSelection?: WritingSelection };
 };
 
-/** The selected French analysis of each audit, from bulk-loaded rows. */
-export function selectedFrenchAnalysisIds(
+/** The selected analysis pair of each audit, from bulk-loaded rows. */
+export function selectedAnalysisPairs(
   audits: readonly ReadinessAuditRow[],
   analyses: readonly ReadinessAnalysis[],
-): Map<string, string | null> {
+): Map<string, DeliverabilitySelection> {
   return new Map(
     audits.map((audit) => [
       audit.auditId,
-      selectedFrenchAnalysisId(
+      selectedPairOf(
         audit.reportPreparation?.writingSelection,
         analyses.filter((analysis) => analysis.auditId === audit.auditId),
       ),
@@ -219,13 +209,17 @@ export async function findAuditsWithUnreadyReports(
       .select(READINESS_ANALYSIS_PROJECTION)
       .lean<ReadinessAnalysis[]>(),
   ]);
-  const selected = selectedFrenchAnalysisIds(audits, analyses);
+  const selected = selectedAnalysisPairs(audits, analyses);
   return new Set(
     audits
       .filter(
         (audit) =>
-          resolveOutreachReportReadiness(audit, reports, [], selected.get(audit.auditId)).state !==
-          'ready',
+          resolveOutreachReportReadiness(
+            audit,
+            reports,
+            [],
+            selected.get(audit.auditId) ?? { kind: 'none' },
+          ).state !== 'ready',
       )
       .map((audit) => audit.auditId),
   );
@@ -263,6 +257,6 @@ export async function loadOutreachReportReadiness(
     audit,
     reports,
     jobs,
-    selectedFrenchAnalysisId(audit.reportPreparation?.writingSelection, analyses),
+    selectedPairOf(audit.reportPreparation?.writingSelection, analyses),
   );
 }

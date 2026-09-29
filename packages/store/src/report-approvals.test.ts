@@ -1,10 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import {
-  approvalCoversReport,
-  approvalMatchesReportPair,
-  getLatestReportApproval,
-  persistReportApproval,
-} from './report-approvals.js';
+import { approvalCoversReport, approvalMatchesReportPair } from '@odysseus/core';
+import { getLatestReportApproval, persistReportApproval } from './report-approvals.js';
 import { createReportApprovalModel } from './schemas/report-approval.schema.js';
 import { probeMongoAvailability } from './test-support.js';
 

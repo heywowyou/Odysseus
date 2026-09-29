@@ -2096,6 +2096,15 @@ default cap instead; that decision is the operator's.
     trusted because it is old. Refusing a legacy artifact is cheap; shipping a
     stale one to a paying client is not.
 
+    Whether a stored report is current or deliverable is itself decided once
+    (issue #567), in `packages/core/src/report-preparation/deliverability.ts`:
+    one `findingsProvenanceMatches`, which fails closed when either side lacks
+    a digest, and one current-pair verdict that also requires each report to
+    come from the selected analysis. The dashboard lifecycle, approval,
+    download, outreach readiness, To do, the outreach preview and job
+    reconciliation all read it; download refuses a report outside the
+    selected pair even when an approval covers it.
+
     **Five copy rules.** Each was observed in a rendered document, not inferred.
     None of them is a wording preference: all five are non-negotiable rule 6, "we
     report, we do not conclude", failing in a specific place.

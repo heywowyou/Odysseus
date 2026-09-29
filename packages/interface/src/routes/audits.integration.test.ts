@@ -54,7 +54,7 @@ const { available: mongoAvailable, connection } = await probeMongoAvailability(
 
 /** Same provenance stamp on the audit manifest, both analyses, and both
  *  reports: equal provenance keys are what makes the pair complete and
- *  compatible, and what makes verifyFreshPair accept the reports as fresh. */
+ *  compatible, and what makes the report deliverability check accept the reports as current. */
 const sharedProvenance: FindingsProvenance = {
   findingsSchemaVersion: FINDINGS_SCHEMA_VERSION,
   normalizationFingerprint: NORMALIZATION_FINGERPRINT,
