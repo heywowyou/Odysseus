@@ -10,7 +10,7 @@
  */
 import type { Page } from 'playwright';
 import type { InventoryDiscoverySource } from './inventory-ledger.js';
-import { normalizeInternalLinks } from './links.js';
+import { normalizeInternalLinks, relativeLinkNestingEvidence } from './links.js';
 
 /**
  * One link a state surface exposed, with the provenance the inventory
@@ -44,5 +44,20 @@ export async function collectSurfaceLinks(
   const hrefs = await page.$$eval('a[href]', (anchors) =>
     anchors.map((anchor) => anchor.getAttribute('href')),
   );
-  return normalizeInternalLinks(hrefs, options.baseUrl, options.exclusionPatterns ?? []);
+  // Issue #497, as crawl.ts reads it: a relative href resolves against the
+  // document's base URL, which <base href> can move away from the page URL.
+  // A site with <base href="/"> and `en/rooms.html` links on /en/ pages
+  // otherwise yields /en/en/rooms.html, which its server answers, and every
+  // wave nests one level deeper. A relative href that repeats its own
+  // directory is dropped for the same reason the crawl disposes it.
+  const documentBase = await page.evaluate(() => document.baseURI).catch(() => options.baseUrl);
+  const resolved = hrefs.map((href) => {
+    if (href === null || relativeLinkNestingEvidence(href, documentBase) !== undefined) return null;
+    try {
+      return new URL(href, documentBase).href;
+    } catch {
+      return href;
+    }
+  });
+  return normalizeInternalLinks(resolved, options.baseUrl, options.exclusionPatterns ?? []);
 }
