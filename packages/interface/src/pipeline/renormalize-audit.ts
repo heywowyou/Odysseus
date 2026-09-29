@@ -15,14 +15,14 @@ import path from 'node:path';
 import {
   buildTranslationClusters,
   buildFindingsProvenance,
+  applyScannedPageVerdict,
   attributableCoreWebVitals,
+  decideScannedPageStatus,
   unstableLabMetricsOf,
-  isBlockedRender,
-  lighthouseFinalUrl,
-  lighthouseLandedOffSite,
   markInconclusiveChecks,
-  reclassifyDeadLinkPages,
+  nameDeadLinkReferrers,
   markLanguageRedirects,
+  scannedPageFactsOf,
   normalizeAudit,
   type AuditManifest,
   type NormalizePageInput,
@@ -149,49 +149,35 @@ export async function renormalizeAudit(
     listedUrls.has(page.url),
   );
 
-  // B2 (2026-08-24): collapses language-variant duplicates. Manifests
-  // written before the field existed carry no clusters, so they are
-  // rebuilt here from the same stored head metadata writeAuditArtifacts
-  // itself reads - the whole point of this command is that a stored
-  // audit gets today's normalization rules without being re-scanned, and
-  // a clustering rule that only ever applied to fresh scans would have
-  // broken that promise. Recomputed clusters are written back to the
-  // manifest below, because the report layer reads them from there
-  // rather than from findings.json.
-  // A stored page whose Lighthouse run ended on another site was a doorway
-  // to a booking engine that our render did not follow; newer scans record
-  // it as a redirect, and a refresh applies the same reading to older ones.
+  // Issue #565: every stored scanned page gets today's verdict, decided from
+  // scratch by the same module the scan uses, so a stricter rule can
+  // downgrade a status as well as upgrade it. An entry without a stored
+  // scan.json keeps its crawl-time status. The cross-page passes follow:
+  // naming the referrer of a dead link, and plan 075 I1's language
+  // redirects, which read the stored landing pages' alternates.
   const scanForUrl = new Map(pages.map((page) => [page.url, page]));
-  const offSiteClassifiedPages = manifest.pages.map((entry) => {
-    const lighthouse = scanForUrl.get(entry.url)?.lighthouse;
-    if (entry.status !== 'visited' || lighthouse === undefined) return entry;
-    if (!lighthouseLandedOffSite(lighthouse, entry.url)) return entry;
-    const { analysisCoverage: _coverage, ...rest } = entry;
-    const target = lighthouseFinalUrl(lighthouse);
-    return {
-      ...rest,
-      status: 'redirect-interstitial' as const,
-      ...(target !== undefined ? { redirectTargetUrl: target } : {}),
-    };
+  const deadLinkUrls = new Set<string>();
+  const verdictPages = manifest.pages.map((entry) => {
+    const scan = scanForUrl.get(entry.url);
+    if (scan === undefined) return entry;
+    const verdict = decideScannedPageStatus(scannedPageFactsOf(scan));
+    if (verdict.status === 'http-error-status') deadLinkUrls.add(entry.url);
+    return applyScannedPageVerdict(entry, verdict);
   });
-
-  // Plan 075 I1: a redirect onto the page's own translation only chose a
-  // language, which the stored landing pages' alternates show.
   const classifiedPages = markLanguageRedirects(
-    // Plan 075 K3: a stored `blocked` page that is the site's own 404.
-    reclassifyDeadLinkPages(
-      offSiteClassifiedPages,
+    nameDeadLinkReferrers(
+      verdictPages,
+      // The stored scan.json carries the page's post-render links beside the
+      // normalize fields; they name the referrer of a dead link.
       pages.map((page) => ({
         url: page.url,
-        ...(page.renderDiff !== undefined ? { renderDiff: page.renderDiff } : {}),
-        // The stored scan.json carries the page's post-render links beside
-        // the normalize fields; they name the referrer of a dead link.
         ...(Array.isArray((page as { surfaceLinks?: unknown }).surfaceLinks)
           ? {
               surfaceLinks: (page as unknown as { surfaceLinks: { url: string }[] }).surfaceLinks,
             }
           : {}),
       })),
+      deadLinkUrls,
     ),
     pages.map((page) => ({
       pageUrl: page.url,
@@ -202,6 +188,15 @@ export async function renormalizeAudit(
     })),
   );
 
+  // B2 (2026-08-24): collapses language-variant duplicates. Manifests
+  // written before the field existed carry no clusters, so they are
+  // rebuilt here from the same stored head metadata writeAuditArtifacts
+  // itself reads - the whole point of this command is that a stored
+  // audit gets today's normalization rules without being re-scanned, and
+  // a clustering rule that only ever applied to fresh scans would have
+  // broken that promise. Recomputed clusters are written back to the
+  // manifest below, because the report layer reads them from there
+  // rather than from findings.json.
   const manifestPageByUrl = new Map(classifiedPages.map((entry) => [entry.url, entry]));
   const translationClusters: TranslationCluster[] = buildTranslationClusters(
     pages.map((page) => {
@@ -236,12 +231,10 @@ export async function renormalizeAudit(
     const scanPage = scanPageByUrl.get(entry.url);
     if (scanPage === undefined) return entry;
     const { coreWebVitals: _stored, unstableLabMetrics: _storedUnstable, ...rest } = entry;
-    const isContent =
-      entry.status === 'visited' &&
-      !isBlockedRender(scanPage.renderDiff, scanPage.headMetadata?.title);
-    const coreWebVitals = isContent
-      ? attributableCoreWebVitals(scanPage.lighthouse, entry.url)
-      : undefined;
+    const coreWebVitals =
+      entry.status === 'visited'
+        ? attributableCoreWebVitals(scanPage.lighthouse, entry.url)
+        : undefined;
     if (coreWebVitals === undefined) return rest;
     const unstableLabMetrics = unstableLabMetricsOf(scanPage.performanceMeasurement);
     return {

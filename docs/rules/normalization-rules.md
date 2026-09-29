@@ -72,12 +72,29 @@ cannot silently start emitting findings after an upgrade.
 **Pages whose content is not their own** produce no findings at all
 (issue #302). Two statuses mean the page was scanned but what was scanned
 does not belong to that URL: `soft-error-page`, a 200 serving an error
-template (detected in scanner's `soft-error-page.ts` from the URL's last
-path segment, the title, or the first h1), and `redirect-interstitial`
+template (detected from the URL's last path segment, the first h1, or the
+title together with the first heading), and `redirect-interstitial`
 (issue #85). Both were already kept out of the analysed-page list by never
 receiving `analysisCoverage`; normalization now also skips their
 candidates, so an error template's defects are not counted against the
 site once per language.
+
+**One page verdict** (issue #565). Whether a scanned page is a redirect,
+blocked, a dead link, a soft 404 or content is decided by one pure module,
+`packages/core/src/normalize/page-verdict.ts`, in that precedence order,
+from facts its stored `scan.json` holds (the requested and settled URLs, the
+render diff, the title and headings, Lighthouse's final URL). The scan calls
+it when it writes the audit, and a refresh calls it again on every manifest
+entry with a stored `scan.json`, from scratch, so a stricter rule can
+downgrade a status as well as upgrade it. Entries without a `scan.json` keep
+their crawl-time status. The cross-page passes run after it: the referrer of
+a dead link, then plan 075 I1's language redirects. The planner's coverage of
+a page the verdict keeps out of the content population is stored as
+`setAsideAnalysisCoverage`, never read as coverage, and moved back to
+`analysisCoverage` when a refresh decides the page is content. Because the
+module lives under `core/src/normalize`, changing a status rule moves the
+normalization fingerprint and marks every stored audit stale until it is
+refreshed.
 
 **Render diff:** emits nothing at all for a page whose no-JavaScript
 fetch did not receive the page (issue #301). `unusableRawFetches` in

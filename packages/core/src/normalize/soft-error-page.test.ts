@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isSoftErrorPage } from './soft-error-page.js';
+import { isSoftErrorPage } from './page-verdict.js';
 
 describe('isSoftErrorPage (issue #302)', () => {
   function page(

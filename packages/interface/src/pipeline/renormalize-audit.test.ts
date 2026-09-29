@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { AuditManifest, CoreWebVitals } from '@odysseus/core';
+import type { AuditManifest, CoreWebVitals, PageAnalysisCoverage } from '@odysseus/core';
 import { renormalizeAudit } from './renormalize-audit.js';
 
 const FIXTURE_MANIFEST = path.resolve(
@@ -159,8 +159,21 @@ describe('renormalizeAudit language redirects', () => {
         discoveredUrls: [home.url, english, renamed],
       },
     });
-    await writePage('en', { url: english });
-    await writePage('renamed', { url: renamed });
+    const landedOnHome = (url: string) => ({
+      url,
+      renderDiff: {
+        pageUrl: url,
+        rawTextLength: 2000,
+        renderedTextLength: 2000,
+        missingPercent: 0,
+        consoleErrors: [],
+        httpStatus: 200,
+        renderedHttpStatus: 200,
+        renderedLandedUrl: home.url,
+      },
+    });
+    await writePage('en', landedOnHome(english));
+    await writePage('renamed', landedOnHome(renamed));
 
     await renormalizeAudit(auditDir, undefined);
 
@@ -175,5 +188,104 @@ describe('renormalizeAudit language redirects', () => {
     ) as { ruleId: string; description: string }[];
     const redirects = findings.find((finding) => finding.ruleId === 'sitemap-lists-redirects');
     expect(redirects?.description).toContain('1 redirected URL(s)');
+  });
+});
+
+// Issue #565: a refresh re-decides every stored scanned page with the scan's
+// own verdict, so a stricter soft-404 rule reaches stored audits.
+describe('renormalizeAudit page verdict', () => {
+  const renderedAt = (url: string, title: string) => ({
+    pageUrl: url,
+    rawTextLength: 800,
+    renderedTextLength: 760,
+    missingPercent: 0,
+    consoleErrors: [],
+    httpStatus: 200,
+    renderedHttpStatus: 200,
+    renderedLandedUrl: url,
+    renderedTitle: title,
+    renderedInterstitialMarkers: [],
+  });
+
+  it('brings back a stored soft 404 whose title-only evidence no longer qualifies', async () => {
+    const fixture = JSON.parse(await fs.readFile(FIXTURE_MANIFEST, 'utf8')) as AuditManifest;
+    const home = fixture.pages[0]!;
+    // aflatta's gift voucher: titled « Page introuvable », no heading at all.
+    const voucher = new URL('/detail-produit/14', home.url).toString();
+    const coverage: PageAnalysisCoverage = {
+      plannerVersion: 'v3',
+      role: 'transactional',
+      confidence: 'high',
+      reasonCodes: [],
+      passes: {
+        rendered: { outcome: 'completed' },
+        axe: { outcome: 'completed' },
+        extended: { outcome: 'completed' },
+        lighthouse: { outcome: 'not-planned' },
+      },
+    };
+    const manifest: AuditManifest = {
+      ...fixture,
+      pages: [
+        home,
+        {
+          ...home,
+          url: voucher,
+          pageDir: 'pages/voucher',
+          depth: 1,
+          status: 'soft-error-page',
+          setAsideAnalysisCoverage: coverage,
+        },
+      ],
+    };
+    await fs.writeFile(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest));
+    await writePage('home', { url: home.url, renderDiff: renderedAt(home.url, 'Accueil') });
+    await writePage('voucher', {
+      url: voucher,
+      renderDiff: renderedAt(voucher, 'Page introuvable'),
+      headMetadata: {
+        pageUrl: voucher,
+        title: 'Page introuvable',
+        metaDescription: null,
+        canonicalUrls: [],
+        openGraphTags: {},
+        jsonLdBlocks: [],
+        headings: [],
+        hreflangLinks: [],
+        languageSwitcherLinks: [],
+        robotsMeta: null,
+        googlebotMeta: null,
+        htmlLang: 'fr',
+        xRobotsTag: null,
+        anchors: [],
+      },
+    });
+
+    const result = await renormalizeAudit(auditDir, undefined);
+    const stored = result.manifest.pages.find((page) => page.url === voucher);
+
+    expect(stored?.status).toBe('visited');
+    expect(stored?.analysisCoverage).toEqual(coverage);
+    expect(stored?.setAsideAnalysisCoverage).toBeUndefined();
+  });
+
+  it('keeps the stored crawl-time status of a page without a scan.json', async () => {
+    const fixture = JSON.parse(await fs.readFile(FIXTURE_MANIFEST, 'utf8')) as AuditManifest;
+    const home = fixture.pages[0]!;
+    const gone = new URL('/ancienne-page', home.url).toString();
+    const manifest: AuditManifest = {
+      ...fixture,
+      pages: [
+        home,
+        { url: gone, depth: 1, status: 'http-error-status', httpStatus: 404, errors: {} },
+      ],
+    };
+    await fs.writeFile(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest));
+    await writePage('home', { url: home.url, renderDiff: renderedAt(home.url, 'Accueil') });
+
+    const result = await renormalizeAudit(auditDir, undefined);
+    const stored = result.manifest.pages.find((page) => page.url === gone);
+
+    expect(stored).toMatchObject({ status: 'http-error-status', httpStatus: 404 });
   });
 });

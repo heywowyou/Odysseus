@@ -35,6 +35,7 @@ export * from './normalize/translation-clusters.js';
 export * from './normalize/language-redirects.js';
 export * from './normalize/inconclusive-checks.js';
 export * from './normalize/dead-link-pages.js';
+export * from './normalize/page-verdict.js';
 export * from './normalize/error-title.js';
 export * from './normalize/findings-provenance.js';
 export * from './normalize/normalize-cookie-consent.js';

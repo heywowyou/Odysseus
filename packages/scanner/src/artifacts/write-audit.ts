@@ -28,12 +28,10 @@ import type { Browser } from 'playwright';
 import {
   attributableCoreWebVitals,
   unstableLabMetricsOf,
+  decideScannedPageStatus,
   extractLighthouseExcludedCategoryScores,
-  isBlockedRender,
-  lighthouseFinalUrl,
-  lighthouseLandedOffSite,
-  isDeadLinkRender,
   markInconclusiveChecks,
+  scannedPageFactsOf,
   markLanguageRedirects,
   type AuditConfigSnapshot,
   type AuditManifest,
@@ -48,19 +46,8 @@ import {
 } from '@odysseus/core';
 import { getArtifactsRoot } from '../config.js';
 import type { CrawlResult } from '../crawl.js';
-import { isRedirectInterstitial } from '../redirect-interstitial.js';
 import { writeJsonAtomicSync } from './write-json-atomic-sync.js';
 
-/** A booking stub can hand the visitor to its engine only after our render
- *  settled (a late script redirect or an auto-submitted form). Lighthouse's
- *  own navigation does follow it, so a run that ended on another site shows
- *  the URL is a doorway to that site rather than a page of this one. */
-function offSiteLighthouseLanding(scanJson: PageScanResult): string | undefined {
-  if (scanJson.lighthouse === undefined) return undefined;
-  if (!lighthouseLandedOffSite(scanJson.lighthouse, scanJson.url)) return undefined;
-  return lighthouseFinalUrl(scanJson.lighthouse);
-}
-import { isSoftErrorPage } from '../soft-error-page.js';
 import type { PageScanResult } from '../scan-page.js';
 import type { NormalizePageInput } from '@odysseus/core';
 import { buildAuditDir, buildPageDir } from './paths.js';
@@ -658,46 +645,16 @@ export async function writeAuditArtifacts(
       ...(scanJson.cookieConsent !== undefined ? { cookieConsent: scanJson.cookieConsent } : {}),
     } as PageScanResult);
 
-    // Issue #85: detected only now, after this page has already been
-    // scanned - render-diff's settled rendered URL is the earliest point
-    // this signal exists. A redirect-interstitial page never gets
-    // analysisCoverage, the same as every other non-'visited' status
-    // here, which is what excludes it from the content-checked
-    // population and the report's analysed-page list with no further
-    // logic needed in either place.
+    // Issue #565: the page's status is decided after it has been scanned,
+    // from facts only the scan records (the settled rendered URL, the
+    // Lighthouse landing, the title and headings), by the same core module a
+    // refresh uses. Any status but `visited` keeps the page out of the
+    // content-checked population: it never gets analysisCoverage.
+    const verdict = decideScannedPageStatus(scannedPageFactsOf(scanJson));
+    const pageStatus = verdict.status;
     const redirectTargetUrl =
-      scanJson.renderDiff !== undefined &&
-      isRedirectInterstitial(scanJson.url, scanJson.renderDiff.renderedLandedUrl)
-        ? scanJson.renderDiff.renderedLandedUrl
-        : offSiteLighthouseLanding(scanJson);
-
-    // Issue #302: same after-the-scan timing as the redirect check above,
-    // for the same reason - the page's own title and h1 are the evidence,
-    // and they do not exist until it has been scanned. Only asked when
-    // the page is not already a redirect interstitial, since one status
-    // has to win and the redirect is the more specific fact.
-    const softErrorPage =
-      redirectTargetUrl === undefined &&
-      isSoftErrorPage({
-        url: scanJson.url,
-        title: scanJson.headMetadata?.title,
-        headings: scanJson.headMetadata?.headings,
-      });
-    const blockedPage =
-      redirectTargetUrl === undefined &&
-      isBlockedRender(scanJson.renderDiff, scanJson.headMetadata?.title);
-
-    const pageStatus =
-      redirectTargetUrl !== undefined
-        ? 'redirect-interstitial'
-        : blockedPage
-          ? // Plan 075 K3: the site's own 404 is a dead link, not a refusal.
-            isDeadLinkRender(scanJson.renderDiff)
-            ? 'http-error-status'
-            : 'blocked'
-          : softErrorPage
-            ? 'soft-error-page'
-            : 'visited';
+      verdict.status === 'redirect-interstitial' ? verdict.redirectTargetUrl : undefined;
+    const analysisCoverage = input.siteResult.analysisCoverageByUrl?.get(scanJson.url);
     // Lab metrics describe this page only when it is content and the run
     // settled on it; anything else would feed the report's medians with a
     // challenge page, an error template or a booking engine.
@@ -723,21 +680,22 @@ export async function writeAuditArtifacts(
         ? { language: scanJson.headMetadata.htmlLang }
         : {}),
       ...(hasNoindexDirective(scanJson) ? { noindex: true } : {}),
-      ...(scanJson.renderDiff?.httpStatus !== undefined
-        ? { httpStatus: scanJson.renderDiff.httpStatus }
-        : crawledPage.httpStatus !== undefined
-          ? { httpStatus: crawledPage.httpStatus }
-          : {}),
+      ...(verdict.status === 'http-error-status'
+        ? { httpStatus: verdict.httpStatus }
+        : scanJson.renderDiff?.httpStatus !== undefined
+          ? { httpStatus: scanJson.renderDiff.httpStatus }
+          : crawledPage.httpStatus !== undefined
+            ? { httpStatus: crawledPage.httpStatus }
+            : {}),
       ...(crawledPage.discoveredFrom !== undefined
         ? { discoveredFrom: crawledPage.discoveredFrom }
         : {}),
       ...(redirectTargetUrl !== undefined ? { redirectTargetUrl } : {}),
-      ...(redirectTargetUrl === undefined &&
-      !softErrorPage &&
-      !blockedPage &&
-      input.siteResult.analysisCoverageByUrl?.get(scanJson.url) !== undefined
-        ? { analysisCoverage: input.siteResult.analysisCoverageByUrl.get(scanJson.url)! }
-        : {}),
+      ...(analysisCoverage === undefined
+        ? {}
+        : pageStatus === 'visited'
+          ? { analysisCoverage }
+          : { setAsideAnalysisCoverage: analysisCoverage }),
       ...(scanJson.renderDiff !== undefined
         ? { renderDiffMissingPercent: scanJson.renderDiff.missingPercent }
         : {}),

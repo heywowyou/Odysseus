@@ -466,7 +466,11 @@ function hostWithoutWww(url: string): string | undefined {
  * not follow. Such a URL is a doorway to a third party, not content of the
  * audited site, so no check may report on it. */
 export function lighthouseLandedOffSite(lhr: LighthouseResultInput, pageUrl: string): boolean {
-  const finalUrl = lighthouseFinalUrl(lhr);
+  return finalUrlLandedOffSite(lighthouseFinalUrl(lhr), pageUrl);
+}
+
+/** lighthouseLandedOffSite's host comparison, from the settled URL alone. */
+export function finalUrlLandedOffSite(finalUrl: string | undefined, pageUrl: string): boolean {
   if (finalUrl === undefined) return false;
   const finalHost = hostWithoutWww(finalUrl);
   const pageHost = hostWithoutWww(pageUrl);

@@ -333,6 +333,7 @@ const manifestPageEntrySchema = new Schema(
     crawlError: { type: String },
     discoveredFrom: { type: String },
     analysisCoverage: { type: pageAnalysisCoverageSchema },
+    setAsideAnalysisCoverage: { type: pageAnalysisCoverageSchema },
     errors: {
       _id: false,
       type: {

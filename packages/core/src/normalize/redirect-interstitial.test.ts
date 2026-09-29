@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isRedirectInterstitial } from './redirect-interstitial.js';
+import { isRedirectInterstitial } from './page-verdict.js';
 
 describe('isRedirectInterstitial', () => {
   it('is false when the rendered page settled on the requested URL', () => {

@@ -482,6 +482,12 @@ export interface ManifestPageEntry {
    *  inventory-only page means no content analysis was planned because the
    *  page was not successfully crawled HTML. */
   analysisCoverage?: PageAnalysisCoverage;
+  /** Issue #565: the planner's coverage of a scanned page whose verdict keeps
+   *  it out of the content population (a redirect, a refusal, a dead link, a
+   *  soft 404). Never read as coverage; a refresh that re-decides the page as
+   *  `visited` moves it back to `analysisCoverage`. Absent on audits written
+   *  before it. */
+  setAsideAnalysisCoverage?: PageAnalysisCoverage;
   errors: {
     renderDiff?: string;
     axe?: string;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ManifestPageEntry } from '../types/manifest.js';
-import { isDeadLinkRender, reclassifyDeadLinkPages } from './dead-link-pages.js';
+import { isDeadLinkRender, nameDeadLinkReferrers } from './dead-link-pages.js';
 import { isBlockedRender } from './normalize-renderdiff.js';
 import { buildRenderDiffResult } from './fixtures.js';
 
@@ -65,62 +65,41 @@ describe('isDeadLinkRender', () => {
   });
 });
 
-describe('reclassifyDeadLinkPages', () => {
-  const blocked = (url: string, extra: Partial<ManifestPageEntry> = {}): ManifestPageEntry =>
+describe('nameDeadLinkReferrers', () => {
+  const dead = (url: string, extra: Partial<ManifestPageEntry> = {}): ManifestPageEntry =>
     ({
       url,
-      status: 'blocked',
+      status: 'http-error-status',
       depth: 2,
       discoveryMethod: 'link',
       httpStatus: 404,
       ...extra,
     }) as ManifestPageEntry;
 
-  it('makes a stored dead link an HTTP error named after the page that links to it', () => {
+  it('names the page whose post-render links reach a dead link', () => {
     const target = 'https://www.yonahotel.com/en/%22/fr/formulaire-GDPR%22';
-    const [entry] = reclassifyDeadLinkPages(
-      [blocked(target)],
-      [
-        { url: target, renderDiff: yona404 },
-        {
-          url: 'https://www.yonahotel.com/en/privacy-policy',
-          surfaceLinks: [{ url: target }],
-        },
-      ],
+    const [entry] = nameDeadLinkReferrers(
+      [dead(target)],
+      [{ url: 'https://www.yonahotel.com/en/privacy-policy', surfaceLinks: [{ url: target }] }],
+      new Set([target]),
     );
-    expect(entry).toMatchObject({
-      status: 'http-error-status',
-      httpStatus: 404,
-      discoveredFrom: 'https://www.yonahotel.com/en/privacy-policy',
-    });
+    expect(entry?.discoveredFrom).toBe('https://www.yonahotel.com/en/privacy-policy');
   });
 
-  it('keeps a recorded referrer and leaves real walls and other statuses alone', () => {
-    const [dead, wall, visited] = reclassifyDeadLinkPages(
+  it('keeps a recorded referrer and leaves entries the verdict did not decide alone', () => {
+    const recorded = dead(auriac404.pageUrl, { discoveredFrom: 'https://domaine-d-auriac.fr/' });
+    const crawlTime = dead('https://domaine-d-auriac.fr/old');
+    const [first, second] = nameDeadLinkReferrers(
+      [recorded, crawlTime],
       [
-        blocked(auriac404.pageUrl, { discoveredFrom: 'https://domaine-d-auriac.fr/' }),
-        blocked('https://le37bishotel-paris.com/fr/page/reservation.49345.html'),
         {
-          url: 'https://domaine-d-auriac.fr/',
-          status: 'visited',
-          depth: 0,
-          discoveryMethod: 'link',
-        } as ManifestPageEntry,
-      ],
-      [
-        { url: auriac404.pageUrl, renderDiff: auriac404 },
-        {
-          url: 'https://le37bishotel-paris.com/fr/page/reservation.49345.html',
-          renderDiff: dataDome,
+          url: 'https://domaine-d-auriac.fr/contact',
+          surfaceLinks: [{ url: auriac404.pageUrl }, { url: 'https://domaine-d-auriac.fr/old' }],
         },
-        { url: 'https://domaine-d-auriac.fr/', renderDiff: auriac404 },
       ],
+      new Set([auriac404.pageUrl]),
     );
-    expect(dead).toMatchObject({
-      status: 'http-error-status',
-      discoveredFrom: 'https://domaine-d-auriac.fr/',
-    });
-    expect(wall?.status).toBe('blocked');
-    expect(visited?.status).toBe('visited');
+    expect(first?.discoveredFrom).toBe('https://domaine-d-auriac.fr/');
+    expect(second?.discoveredFrom).toBeUndefined();
   });
 });
