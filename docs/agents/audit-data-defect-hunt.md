@@ -154,6 +154,11 @@ a finding.
     consent banner, a slider, a booking widget), compare the rule, severity
     and wording each audit gives it. Two verdicts for one component means at
     least one is wrong.
+17. **Scan-time results older than their checker.** List the scanner and
+    check changes made after each audit's scan date that a refresh cannot
+    replay. For each one, find the audits whose stored result the change
+    would alter. A stored scan-time result that a later fix contradicts
+    needs a rescan before its report goes out.
 
 ## Recording
 
