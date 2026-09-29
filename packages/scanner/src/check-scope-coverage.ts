@@ -22,7 +22,7 @@
  * exactly the entries that gap applies to.
  */
 
-import type { PageScanResult } from './scan-page.js';
+import type { CheckExecutionOutcome, CheckId, PageScanResult } from './page-scan-types.js';
 import type { AuditPass } from '@odysseus/core';
 
 export type CheckScope = 'site' | 'page' | 'family' | 'flow' | 'resource';
@@ -32,11 +32,9 @@ export type CheckCompletionSignal =
   'explicit-error-field' | 'best-effort-no-error-field' | 'conditional-attachment';
 
 /** The explicit per-check outcome Step 5 populates at each of the
- *  boundaries below, keyed by a registry `id`. This is the coverage
- *  source of truth (plan 021 Target Interfaces): never derived by testing
- *  whether an optional result field exists afterwards, and never carries
- *  raw exception text. */
-export type CheckExecutionOutcome = 'completed' | 'failed' | 'not-applicable';
+ *  boundaries below, keyed by a registry `id`; defined with the page result
+ *  it is stored on. */
+export type { CheckExecutionOutcome, CheckId };
 
 export interface CheckScopeEntry {
   id: string;
@@ -258,11 +256,6 @@ export const CHECK_SCOPE_REGISTRY: readonly CheckScopeEntry[] = [
     completionSignal: 'explicit-error-field',
   },
 ] as const;
-
-/** Union of every registered check id, for a typo-safe `checkOutcomes` map
- *  (`Partial<Record<CheckId, CheckExecutionOutcome>>`) instead of a loose
- *  `string` key. */
-export type CheckId = (typeof CHECK_SCOPE_REGISTRY)[number]['id'];
 
 type RegisteredResultKey = (typeof CHECK_SCOPE_REGISTRY)[number]['resultField'];
 type RegisteredErrorKey = Exclude<(typeof CHECK_SCOPE_REGISTRY)[number]['errorField'], undefined>;

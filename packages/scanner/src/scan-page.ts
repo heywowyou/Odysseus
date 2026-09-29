@@ -1,366 +1,36 @@
-import type { Browser, Page } from 'playwright';
+import type { Browser } from 'playwright';
 import type { Result as LighthouseResult } from 'lighthouse';
-import type {
-  TransactionalFlowAmbiguity,
-  TransactionalFlowEvidence,
-  TransactionalFlowRedirectCheck,
-} from '@odysseus/core';
 import {
   auditedHostAliases,
   classifyDocumentWall,
   classifyHostResponse,
   isBlockedRender,
 } from '@odysseus/core';
-import { type AxeResults, runAxe } from './axe.js';
 import { runLighthouseIsolated } from './lighthouse-isolated.js';
-import { renderDiff, type RenderDiffOptions, type RenderDiffOutcome } from './render-diff.js';
-import {
-  extractMentionsLegales,
-  type MentionsLegalesExtraction,
-} from './checks/mentions-legales.js';
-import {
-  detectTransactionalFlow,
-  detectUnresolvedBookingControls,
-  findDelegatedBookingRedirectChecks,
-  type RedirectHostCache,
-} from './checks/transactional-flow.js';
-import { extractHeadMetadata, type HeadMetadataExtraction } from './checks/head-metadata.js';
-import type { SitemapCheckResult } from './checks/sitemap.js';
-import type { LlmsTxtCheckResult } from './checks/llms-txt.js';
-import {
-  checkCanonicalTarget,
-  type CanonicalTargetCheckResult,
-} from './checks/canonical-target.js';
+import { renderDiff, type RenderDiffOptions } from './render-diff.js';
 import { getPageTimeoutMs } from './config.js';
-import { normalizePageIdentityUrl } from './links.js';
-import {
-  extractMixedContentResources,
-  type MixedContentExtraction,
-} from './checks/mixed-content.js';
-import {
-  walkKeyboardNavigation,
-  type KeyboardNavigationExtraction,
-} from './checks/keyboard-navigation.js';
-import {
-  checkFormErrorHandling,
-  type FormErrorHandlingExtraction,
-} from './checks/form-error-handling.js';
-import { checkVideoCaptions, type VideoCaptionsExtraction } from './checks/video-captions.js';
-import {
-  checkPlaceholderLabels,
-  type PlaceholderLabelsExtraction,
-} from './checks/placeholder-labels.js';
-import { extractAltTextFacts, type AltTextExtraction } from './checks/alt-text.js';
-import type { CookieConsentCheckResult } from './checks/cookie-consent.js';
-import type { AccessibilityStatementCheckResult } from './checks/accessibility-statement.js';
-import { checkNapConsistency, type NapConsistencyCheckResult } from './checks/nap-consistency.js';
-import { checkReflow, type ReflowCheckResult } from './checks/reflow.js';
-import { checkHtmlValidity, type HtmlValidityCheckResult } from './checks/html-validity.js';
-import type { SecurityHeadersCheckResult } from './checks/security-headers.js';
-import { checkStructuredData, type StructuredDataCheckResult } from './checks/structured-data.js';
-import {
-  extractRenderedDomCostFacts,
-  recordRenderedResourceTotals,
-} from './checks/rendered-cost-profile.js';
-import type { RenderedCostProfile } from './full-audit-plan.js';
-import { findPublishedRoleContact, type PublishedRoleContact } from './role-contact.js';
-import type { CheckExecutionOutcome, CheckId } from './check-scope-coverage.js';
-import type { PageWorkGuard } from './page-work-guard.js';
-import type { AcquisitionAttemptRecord } from './check-attempt-ledger.js';
-import type { HostRequestScheduler } from './host-request-scheduler.js';
-import type { NetworkSafetyDisposition, NetworkTargetPolicy } from './network-target-policy.js';
-import {
-  observeFrames,
-  type FrameObservation,
-  type RenderedReadinessObservation,
-} from './page-readiness.js';
-import { extractStructuralAnchor, type StructuralAnchor } from './temporal-anchors.js';
-import type { PerformanceMeasurementSet } from './performance-measurement-set.js';
-import type { MobileSurfaceRecord } from './mobile-surface.js';
-import type { SurfaceLinkDiscovery } from './surface-discovery.js';
-import { collectSurfaceLinks } from './surface-discovery.js';
-import {
-  runHydrationSweep,
-  HYDRATION_SWEEP_UNAVAILABLE,
-  type HydrationSweepRecord,
-} from './hydration-sweep.js';
-import {
-  observeBaselineConsentState,
-  runLocalStateExploration,
-  type ConsentSurfaceOutcome,
-  type LocalStateExplorationRecord,
-} from './state-surface.js';
-import type { ConsentBaselineObservation } from './consent-state.js';
-import type {
-  ScanSurface,
-  SurfaceLimitationRecord,
-  SurfaceSkipReason,
-} from './evidence-surfaces.js';
-import type { PageAuditProfile } from './page-audit-profile.js';
+import { recordRenderedResourceTotals } from './checks/rendered-cost-profile.js';
+import { PageCheckRunner, toErrorMessage } from './page-check-runner.js';
+import { RENDERED_PAGE_CHECKS, type RenderedCheckContext } from './rendered-page-checks.js';
+import { extractStructuralAnchor } from './temporal-anchors.js';
 
-export interface ScanPageOptions {
-  /** Served spelling learned during crawl, when it is identity-equivalent to
-   *  `url` but the server insists on a slash or other presentation detail. */
-  navigationUrl?: string;
-  /** Politeness delay applied between the raw/rendered/Lighthouse passes. */
-  delayMs?: number;
-  /** Plan 059: run-wide host scheduler. The outer lane owns the first
-   *  navigation; inner rendered/Lighthouse navigations use scheduler.pace(). */
-  scheduler?: HostRequestScheduler;
-  timeoutMs?: number;
-  /** Aborted by scan-site when the containing page exceeds its deadline. */
-  signal?: AbortSignal;
-  /** Independent budget for each rendered-page check. It is deliberately
-   * below the page watchdog; when a check times out, its signal is aborted
-   * and later checks refuse to touch the same page. Tests may set this to a
-   * small value; production derives a conservative fraction from timeoutMs. */
-  checkTimeoutMs?: number;
-  userAgent?: string;
-  /** Milestone 9b: skips the Lighthouse pass (and the pre-Lighthouse
-   *  politeness delay, since there is then nothing to space out from
-   *  what follows). Lighthouse is the prospecting pipeline's
-   *  serialisation bottleneck (the perf_hooks queue, trade-off 10) and
-   *  Core Web Vitals are the weakest cold-outreach signal - a prospect
-   *  is judged on accessibility/SEO defects, not lab performance
-   *  numbers. Full audits never set this; the paid report needs the real
-   *  Core Web Vitals table. */
-  skipLighthouse?: boolean;
-  /** Forwarded to renderDiff's own screenshotDir option (the `pages/`
-   *  parent directory for this run). */
-  screenshotDir: string;
-  /** The one crawled URL scanSite identified as the mentions-legales
-   *  page (from crawl.mentionsLegalesPageUrl). Only that page runs the
-   *  SIREN/RCS/TVA text extraction; every page runs transactional-flow
-   *  detection, since checkout/cart UI can appear anywhere. */
-  mentionsLegalesUrl?: string;
-  /** Every ranked legal page candidate; each is checked before absence is reported. */
-  mentionsLegalesCandidateUrls?: string[];
-  /** Plan 036: the full evidence trail for how mentionsLegalesUrl above was
-   *  resolved (crawl.ts's own mentionsLegalesSearchedUrls), attached to the
-   *  extraction result only for the one page that matches
-   *  mentionsLegalesUrl. Omitted (rather than an empty array) when the
-   *  caller has nothing to report, so the evidence payload can tell "not
-   *  supplied" apart from "searched, found nothing" if that distinction
-   *  ever matters. */
-  mentionsLegalesSearchedUrls?: string[];
-  /** Plan 036: true only when scan-site.ts's own homepage fallback picked
-   *  this URL because no page matched the mentions-legales heuristic, so
-   *  the evidence never implies a real URL match where there was none. */
-  mentionsLegalesHomepageFallback?: boolean;
-  /** Shared across every page of one scanSite() run - see
-   *  transactional-flow.ts's RedirectHostCache doc comment for why a
-   *  per-page cache alone isn't enough. */
-  redirectHostCache?: RedirectHostCache;
-  /** Manual-input-layer milestone: forwarded to
-   *  findDelegatedBookingRedirectChecks, see its own doc comment. */
-  bookingEngineUrl?: string;
-  /** The crawl's own start URL. Only used to gate sitemapCheck below to
-   *  the one page it should attach to. */
-  homepageUrl?: string;
-  /** Pre-fetched once per site in scanSite(), not per page - sitemap.xml
-   *  is a site-level concept. Attached to this page's result only when
-   *  url === homepageUrl, the same "attribute a site-level fact to the
-   *  one page every site has" pattern mentionsLegalesUrl's own fallback
-   *  already uses. crawledUrls (every page the crawl actually visited)
-   *  is bundled alongside the fetch result here, not inside
-   *  checkSitemap()'s own return type, since deciding staleness by
-   *  comparing the two is core's job, not scanner's - scanner only
-   *  reports facts. */
-  sitemapCheck?: SitemapCheckResult & { crawledUrls: string[]; discoveredUrls: string[] };
-  /** Milestone 8.5a: fetched once per site in scanSite(), same site-level
-   *  attachment pattern as sitemapCheck above. */
-  llmsTxtCheck?: LlmsTxtCheckResult;
-  /** Milestone 8.6: fetched once per site in scanSite(), same site-level
-   *  attachment pattern as sitemapCheck/llmsTxtCheck above. */
-  securityHeadersCheck?: SecurityHeadersCheckResult;
-  cookieConsentCheck?: CookieConsentCheckResult;
-  accessibilityStatementCheck?: AccessibilityStatementCheckResult;
-  /** Issue #200: tracks every context this page's work opens (render-diff's
-   *  raw/rendered contexts, plus any delegated-booking-redirect probe), so
-   *  scan-site.ts's per-page watchdog can force-close them if this call
-   *  never returns on its own. */
-  guard?: PageWorkGuard;
-  networkPolicy?: NetworkTargetPolicy;
-  onNetworkSafetyBlocked?: (disposition: NetworkSafetyDisposition) => void;
-  /** Shared within one scanSite run to avoid re-fetching the same canonical. */
-  canonicalTargetCache?: Map<string, Promise<CanonicalTargetCheckResult | null>>;
-  /** Plan 059 step 11: run the bounded hydration sweep as the very last
-   *  step on the rendered page, after every check (including the mutating
-   *  ones) has finished, so lazy content is seen and its links discovered
-   *  without ever contaminating the baseline evidence. Off by default; the
-   *  Plan 059 full-audit path turns it on. */
-  hydrationSweep?: boolean;
-  /** Operator crawl exclusions, applied to links the hydration sweep
-   *  discovers. */
-  exclusionPatterns?: readonly string[];
-  /** Plan 059 step 13: record the delivered consent state and explore the
-   *  page's safe local-state toggles (bounded, provably same-document).
-   *  Read-only except for the disclosure toggles, which run after every
-   *  check like the hydration sweep. Off by default. */
-  stateSurfaces?: boolean;
-}
-
-/**
- * Raw output of all three scanner passes for one page. Each field is
- * independently fallible: a Lighthouse timeout on one page must not lose
- * the render-diff or axe results already gathered for that same page.
- */
-export interface PageScanResult {
-  /** Disk schema marker. Missing means a legacy scan.json written before v2. */
-  scanJsonVersion?: 2;
-  url: string;
-  renderDiff?: RenderDiffOutcome;
-  renderDiffError?: string;
-  axe?: AxeResults;
-  axeError?: string;
-  lighthouse?: LighthouseResult;
-  lighthouseError?: string;
-  mentionsLegales?: MentionsLegalesExtraction;
-  mentionsLegalesError?: string;
-  transactionalFlowEvidence?: TransactionalFlowEvidence[];
-  transactionalFlowRedirectChecks?: TransactionalFlowRedirectCheck[];
-  transactionalFlowAmbiguities?: TransactionalFlowAmbiguity[];
-  headMetadata?: HeadMetadataExtraction;
-  headMetadataError?: string;
-  /** The best role address this page publishes on the site's own domain. */
-  roleContact?: PublishedRoleContact;
-  sitemapCheck?: SitemapCheckResult & {
-    crawledUrls: string[];
-    discoveredUrls: string[];
-    pageUrl: string;
-  };
-  llmsTxtCheck?: LlmsTxtCheckResult;
-  canonicalTarget?: CanonicalTargetCheckResult;
-  canonicalTargetError?: string;
-  mixedContent?: MixedContentExtraction;
-  mixedContentError?: string;
-  keyboardNavigation?: KeyboardNavigationExtraction;
-  keyboardNavigationError?: string;
-  formErrorHandling?: FormErrorHandlingExtraction;
-  formErrorHandlingError?: string;
-  videoCaptions?: VideoCaptionsExtraction;
-  videoCaptionsError?: string;
-  altText?: AltTextExtraction;
-  altTextError?: string;
-  placeholderLabels?: PlaceholderLabelsExtraction;
-  placeholderLabelsError?: string;
-  securityHeaders?: SecurityHeadersCheckResult;
-  cookieConsent?: CookieConsentCheckResult;
-  accessibilityStatement?: AccessibilityStatementCheckResult;
-  napConsistency?: NapConsistencyCheckResult;
-  reflow?: ReflowCheckResult;
-  htmlValidity?: HtmlValidityCheckResult;
-  structuredData?: StructuredDataCheckResult;
-  structuredDataError?: string;
-  /** Plan 035 (issue #124): persisted into scan.json by buildScanJson so a
-   *  resumed run can rebuild every finalizeLighthousePlan input from disk.
-   *  Always present on a RenderedAnalysisResult (which redeclares it
-   *  required); optional here only because a PageScanResult can also be
-   *  assembled without a rendered pass. */
-  checkOutcomes?: Partial<Record<CheckId, CheckExecutionOutcome>>;
-  /** Plan 035: persisted alongside checkOutcomes for the same reason; the
-   *  planner replay needs every page's rendered-cost profile, so a
-   *  completed page without one is never trusted on resume. */
-  renderedCostProfile?: RenderedCostProfile;
-  /** Plan 059: every check attempt made against this page, including
-   *  failed and retried ones. Persisted with the page so a resumed run keeps
-   *  the full lineage; the site ledger is assembled from these records. */
-  acquisitionAttempts?: AcquisitionAttemptRecord[];
-  /** Plan 059: how settled the rendered page was when checks read it. */
-  readiness?: RenderedReadinessObservation;
-  /** Plan 059: every child frame on the rendered page and whether axe
-   *  reached it. */
-  frames?: FrameObservation[];
-  /** Plan 059: the served document's structure at the raw pass, for the
-   *  audit's temporal-coherence verdict. */
-  structuralAnchor?: StructuralAnchor;
-  /** Plan 059 steps 8 and 26: the scheduling-side audit profile the crawl
-   *  extracted from this same navigation, persisted so the evidence graph's
-   *  report-facing semantic classifier reads persisted signals instead of
-   *  re-deriving them. Absent for pages whose facts were never extracted
-   *  (discovery-wave pages), which the semantic profile discloses as an
-   *  explicit unknown role rather than guessing. */
-  auditProfile?: PageAuditProfile;
-  /** Plan 059 section 12: every Lighthouse run taken on this page and the
-   *  representative drawn from them. `lighthouse` is that representative
-   *  run's full report. */
-  performanceMeasurement?: PerformanceMeasurementSet;
-  /** Plan 059 step 10: the page's mobile surface — a second rendered pass
-   *  in the stable mobile profile under the unchanged crawler identity —
-   *  with its own readiness observation and bounded axe summary. Absent
-   *  when the caller did not ask for mobile surfaces. */
-  mobileSurface?: MobileSurfaceRecord;
-  /** Plan 059: every non-baseline ScanSurface built for this page (mobile
-   *  now; the consent/local-state surfaces join in step 13). Persisted so
-   *  the evidence graph digests the exact surface set that ran. */
-  surfaces?: ScanSurface[];
-  /** A deterministic plan reason for omitted optional mobile/consent passes. */
-  surfaceSkipped?: SurfaceSkipReason;
-  /** Expected surface IDs omitted by plan, retained for delta comparability. */
-  plannedOutOfScopeSurfaceIds?: string[];
-  /** Plan 059 steps 10-13: anchors exposed only on a state surface, with
-   *  the discovery source and surface the fixed-point rule needs. */
-  surfaceLinks?: SurfaceLinkDiscovery[];
-  /** Plan 059: state surfaces that could not run or could not prove what
-   *  their profile claims, disclosed on this page's evidence instead of
-   *  being silently omitted. */
-  surfaceLimitations?: SurfaceLimitationRecord[];
-  /** Plan 059 step 11: the bounded hydration sweep taken after every
-   *  check finished with the rendered page, with the links the hydrated
-   *  document exposed. Absent when the caller did not ask for a sweep. */
-  hydrationSweep?: HydrationSweepRecord;
-  /** Plan 059 step 13: the consent/overlay state as delivered on the
-   *  baseline rendering, before any interaction. */
-  consentBaseline?: ConsentBaselineObservation;
-  /** Plan 059 step 13: the consent-rejected surface outcome for this page,
-   *  present only when a safe deterministic rejection existed. */
-  consentSurface?: ConsentSurfaceOutcome;
-  /** Plan 059 step 13: transitions of the page's bounded safe local-state
-   *  exploration, with the links the opened states exposed. */
-  localStates?: LocalStateExplorationRecord;
-}
-
-/**
- * Options for the rendered-analysis-only function: every ScanPageOptions
- * field except `skipLighthouse`, which has no meaning here since this
- * function never runs Lighthouse at all.
- */
-export type RenderedAnalysisOptions = Omit<ScanPageOptions, 'skipLighthouse'>;
-
-/**
- * Rendered-pass output: render diff, axe, and every check that runs off
- * the same rendered navigation, plus the rendered-cost profile the
- * full-audit planner's Lighthouse tie-break needs (plan 021) and the
- * explicit per-check outcome for every registered check this function is
- * responsible for (every `check-scope-coverage.ts` entry except
- * `lighthouse`, which `runLighthouseAnalysis` owns). Never contains raw
- * exception text in `checkOutcomes` - that stays in the existing `*Error`
- * fields where one exists.
- */
-export interface RenderedAnalysisResult extends Omit<
+export type {
+  LighthouseAnalysisOptions,
+  LighthouseAnalysisResult,
   PageScanResult,
-  'lighthouse' | 'lighthouseError'
-> {
-  renderedCostProfile?: RenderedCostProfile;
-  checkOutcomes: Partial<Record<CheckId, CheckExecutionOutcome>>;
-}
-
-export interface LighthouseAnalysisOptions {
-  /** Fallback politeness delay for standalone callers without a run scheduler. */
-  delayMs?: number;
-  /** Plan 059: waits for a request slot without acquiring another lane. */
-  scheduler?: HostRequestScheduler;
-  navigationUrl?: string;
-}
-
-export interface LighthouseAnalysisResult {
-  lighthouse?: LighthouseResult;
-  lighthouseError?: string;
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
+  RenderedAnalysisOptions,
+  RenderedAnalysisResult,
+  ScanPageOptions,
+} from './page-scan-types.js';
+import type {
+  CheckId,
+  LighthouseAnalysisOptions,
+  LighthouseAnalysisResult,
+  PageScanResult,
+  RenderedAnalysisOptions,
+  RenderedAnalysisResult,
+  ScanPageOptions,
+} from './page-scan-types.js';
 
 function lighthouseRuntimeError(result: LighthouseResult): string | undefined {
   const value = (result as LighthouseResult & { runtimeError?: unknown }).runtimeError;
@@ -402,79 +72,6 @@ function checkBudgetMs(options: Pick<ScanPageOptions, 'checkTimeoutMs' | 'timeou
   // navigation timeout. Keep each check materially below both values while
   // allowing ordinary DOM checks enough room on a slow but valid page.
   return Math.max(1_000, Math.min(Math.floor(pageTimeoutMs / 4), 60_000));
-}
-
-function abortReason(signal: AbortSignal): Error {
-  return signal.reason instanceof Error ? signal.reason : new Error('page analysis aborted');
-}
-
-/** How long a page gets to answer a trivial evaluate after one of its checks
- *  timed out. A page that cannot is unusable (a busy main thread, a crashed
- *  renderer), so the rest of its analysis is abandoned. */
-const PAGE_PROBE_TIMEOUT_MS = 2_000;
-const POST_PASS_BUDGET_FACTOR = 4;
-const REDIRECT_CHECK_BUDGET_FACTOR = 4;
-
-/** Whether the page still answers a trivial evaluate. Bounded, never throws. */
-async function isPageResponsive(page: Page | undefined): Promise<boolean> {
-  if (page === undefined) return false;
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const probe = Promise.resolve()
-    .then(async () => {
-      if (page.isClosed()) return false;
-      await page.evaluate(() => true);
-      return true;
-    })
-    .catch(() => false);
-  const expired = new Promise<boolean>((resolve) => {
-    timer = setTimeout(() => resolve(false), PAGE_PROBE_TIMEOUT_MS);
-  });
-  try {
-    return await Promise.race([probe, expired]);
-  } finally {
-    if (timer !== undefined) clearTimeout(timer);
-  }
-}
-
-/** Runs one check without letting a stalled promise hold the whole rendered
- * page hostage. Each check gets its own abort signal, aborted when its budget
- * expires, so a check that honours it stops. The late promise is observed
- * after a timeout so a rejected browser operation cannot become an unhandled
- * rejection while the next check is already running. `onTimeout` runs before
- * the check is reported failed, so the caller can decide, before the next
- * check starts, whether the page itself is still usable. */
-async function runWithCheckBudget<T>(
-  checkId: string,
-  action: (signal: AbortSignal) => Promise<T>,
-  budgetMs: number,
-  signal: AbortSignal,
-  onTimeout: (error: Error, abandoned: Promise<unknown>) => Promise<void>,
-): Promise<T> {
-  if (signal.aborted) throw abortReason(signal);
-  const checkController = new AbortController();
-  const relayPageAbort = (): void => checkController.abort(abortReason(signal));
-  signal.addEventListener('abort', relayPageAbort, { once: true });
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const work = Promise.resolve().then(() => {
-    if (checkController.signal.aborted) throw abortReason(checkController.signal);
-    return action(checkController.signal);
-  });
-  work.catch(() => undefined);
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => {
-      const error = new Error(`check-timeout: ${checkId} exceeded ${budgetMs}ms`);
-      checkController.abort(error);
-      void onTimeout(error, work)
-        .catch(() => undefined)
-        .finally(() => reject(error));
-    }, budgetMs);
-  });
-  try {
-    return await Promise.race([work, timeout]);
-  } finally {
-    if (timer !== undefined) clearTimeout(timer);
-    signal.removeEventListener('abort', relayPageAbort);
-  }
 }
 
 /**
@@ -534,161 +131,53 @@ export async function runRenderedAnalysis(
   url: string,
   options: RenderedAnalysisOptions,
 ): Promise<RenderedAnalysisResult> {
-  const checkOutcomes: Partial<Record<CheckId, CheckExecutionOutcome>> = {};
   const result: Omit<RenderedAnalysisResult, 'checkOutcomes'> = { url };
   const perCheckBudgetMs = checkBudgetMs(options);
-  // The post-check passes scroll and explore the page in bounded steps
-  // (HYDRATION_MAX_STEPS alone settles for 7.5 s), so they get several
-  // check budgets rather than none: before, only the 420 s page watchdog
-  // bounded them, and hitting it discarded every completed check.
-  const postPassBudgetMs = perCheckBudgetMs * POST_PASS_BUDGET_FACTOR;
-  // Up to MAX_REDIRECT_FOLLOWS third-party navigations, each bounded by one
-  // check budget, fit inside this one.
-  const redirectCheckBudgetMs = perCheckBudgetMs * REDIRECT_CHECK_BUDGET_FACTOR;
-  const analysisAbortController = new AbortController();
-  const relayExternalAbort = (): void => {
-    analysisAbortController.abort(options.signal?.reason ?? new Error('page analysis aborted'));
-  };
-  if (options.signal?.aborted) relayExternalAbort();
-  else options.signal?.addEventListener('abort', relayExternalAbort, { once: true });
-  // Issue #537 (plan 075 A5): a check that exceeds its budget fails alone.
-  // The page's analysis is abandoned only when the page itself stops
-  // answering. A timed-out check that changes the page (input events,
-  // viewport, scrolling) may still be running, so the next such check waits
-  // for it to settle, briefly, and is skipped if it does not.
-  let renderedPage: Page | undefined;
-  const abandonedWork = new Set<Promise<unknown>>();
-  const runBudgeted = <T>(
-    checkId: string,
-    action: (signal: AbortSignal) => Promise<T>,
-    budgetMs: number,
-    changesPage: boolean,
-  ): Promise<T> =>
-    runWithCheckBudget(
-      checkId,
-      action,
-      budgetMs,
-      analysisAbortController.signal,
-      async (error, abandoned) => {
-        if (await isPageResponsive(renderedPage)) {
-          if (!changesPage) return;
-          abandonedWork.add(abandoned);
-          void abandoned.catch(() => undefined).finally(() => abandonedWork.delete(abandoned));
-          return;
-        }
-        analysisAbortController.abort(error);
-        void options.guard?.closeAll().catch(() => undefined);
-      },
-    );
-  const withCheckBudget = <T>(
-    checkId: string,
-    action: (signal: AbortSignal) => Promise<T>,
-    budgetMs = perCheckBudgetMs,
-  ): Promise<T> => runBudgeted(checkId, action, budgetMs, false);
-  const abandonedWorkSettled = async (): Promise<boolean> => {
-    if (abandonedWork.size === 0) return true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const settled = Promise.allSettled([...abandonedWork]).then(() => true);
-    const expired = new Promise<boolean>((resolve) => {
-      timer = setTimeout(() => resolve(false), perCheckBudgetMs);
-    });
-    try {
-      return await Promise.race([settled, expired]);
-    } finally {
-      if (timer !== undefined) clearTimeout(timer);
+  const runner = new PageCheckRunner({
+    perCheckBudgetMs,
+    ...(options.signal !== undefined ? { signal: options.signal } : {}),
+    ...(options.guard !== undefined ? { closeAll: () => options.guard!.closeAll() } : {}),
+  });
+
+  // Site-wide results, fetched once per site, attach to the homepage only.
+  const isHomepage = url === options.homepageUrl;
+  const attachSiteResult = <T>(id: CheckId, value: T | undefined, attach: (value: T) => void) => {
+    if (value !== undefined && isHomepage) {
+      attach(value);
+      runner.record(id, 'completed');
+    } else {
+      runner.record(id, 'not-applicable');
     }
   };
-  const withMutatingCheckBudget = async <T>(
-    checkId: string,
-    action: (signal: AbortSignal) => Promise<T>,
-    budgetMs = perCheckBudgetMs,
-  ): Promise<T> => {
-    if (!(await abandonedWorkSettled())) {
-      throw new Error(
-        `check-skipped: ${checkId} not started while a timed-out page-changing check still runs`,
-      );
-    }
-    return runBudgeted(checkId, action, budgetMs, true);
+  attachSiteResult('sitemap-check', options.sitemapCheck, (value) => {
+    result.sitemapCheck = { ...value, pageUrl: url };
+  });
+  attachSiteResult('llms-txt-check', options.llmsTxtCheck, (value) => {
+    result.llmsTxtCheck = value;
+  });
+  attachSiteResult('cookie-consent', options.cookieConsentCheck, (value) => {
+    result.cookieConsent = value;
+  });
+  attachSiteResult('accessibility-statement', options.accessibilityStatementCheck, (value) => {
+    result.accessibilityStatement = value;
+  });
+  attachSiteResult('security-headers', options.securityHeadersCheck, (value) => {
+    result.securityHeaders = value;
+  });
+
+  const context: RenderedCheckContext = {
+    browser,
+    options,
+    perCheckBudgetMs,
+    rawXRobotsTag: undefined,
+    readResourceTotals: undefined,
   };
-
-  if (options.sitemapCheck !== undefined && url === options.homepageUrl) {
-    result.sitemapCheck = { ...options.sitemapCheck, pageUrl: url };
-    checkOutcomes['sitemap-check'] = 'completed';
-  } else {
-    checkOutcomes['sitemap-check'] = 'not-applicable';
-  }
-  if (options.llmsTxtCheck !== undefined && url === options.homepageUrl) {
-    result.llmsTxtCheck = options.llmsTxtCheck;
-    checkOutcomes['llms-txt-check'] = 'completed';
-  } else {
-    checkOutcomes['llms-txt-check'] = 'not-applicable';
-  }
-  if (options.cookieConsentCheck !== undefined && url === options.homepageUrl) {
-    result.cookieConsent = options.cookieConsentCheck;
-    checkOutcomes['cookie-consent'] = 'completed';
-  } else {
-    checkOutcomes['cookie-consent'] = 'not-applicable';
-  }
-
-  if (options.accessibilityStatementCheck !== undefined && url === options.homepageUrl) {
-    result.accessibilityStatement = options.accessibilityStatementCheck;
-    checkOutcomes['accessibility-statement'] = 'completed';
-  } else {
-    checkOutcomes['accessibility-statement'] = 'not-applicable';
-  }
-
-  if (options.securityHeadersCheck !== undefined && url === options.homepageUrl) {
-    result.securityHeaders = options.securityHeadersCheck;
-    checkOutcomes['security-headers'] = 'completed';
-  } else {
-    checkOutcomes['security-headers'] = 'not-applicable';
-  }
-
-  let axeResult: AxeResults | undefined;
-  let axeError: string | undefined;
-  let mentionsLegalesResult: MentionsLegalesExtraction | undefined;
-  let mentionsLegalesError: string | undefined;
-  let transactionalFlowEvidence: TransactionalFlowEvidence[] | undefined;
-  let transactionalFlowRedirectChecks: TransactionalFlowRedirectCheck[] | undefined;
-  let transactionalFlowAmbiguities: TransactionalFlowAmbiguity[] | undefined;
-  let headMetadataResult: HeadMetadataExtraction | undefined;
-  let headMetadataError: string | undefined;
-  let rawXRobotsTag: string | null | undefined;
-  let roleContactResult: PublishedRoleContact | undefined;
-  let canonicalTargetResult: CanonicalTargetCheckResult | undefined;
-  let canonicalTargetError: string | undefined;
-  let mixedContentResult: MixedContentExtraction | undefined;
-  let mixedContentError: string | undefined;
-  let keyboardNavigationResult: KeyboardNavigationExtraction | undefined;
-  let keyboardNavigationError: string | undefined;
-  let formErrorHandlingResult: FormErrorHandlingExtraction | undefined;
-  let formErrorHandlingError: string | undefined;
-  let videoCaptionsResult: VideoCaptionsExtraction | undefined;
-  let videoCaptionsError: string | undefined;
-  let altTextResult: AltTextExtraction | undefined;
-  let altTextError: string | undefined;
-  let placeholderLabelsResult: PlaceholderLabelsExtraction | undefined;
-  let placeholderLabelsError: string | undefined;
-  let structuredDataResult: StructuredDataCheckResult | undefined;
-  let napConsistencyResult: NapConsistencyCheckResult | undefined;
-  let reflowResult: ReflowCheckResult | undefined;
-  let htmlValidityResult: HtmlValidityCheckResult | undefined;
-  let structuredDataError: string | undefined;
-  let renderedCostProfile: RenderedCostProfile | undefined;
 
   try {
-    let readResourceTotals:
-      | (() => Promise<{
-          resourceCount: number;
-          knownTransferBytes: number;
-          unknownTransferSizeCount: number;
-        }>)
-      | undefined;
-
     const renderOptions: RenderDiffOptions = {
       ...(options.navigationUrl !== undefined ? { navigationUrl: options.navigationUrl } : {}),
       screenshotDir: options.screenshotDir,
-      isHomepage: url === options.homepageUrl,
+      isHomepage,
       ...(options.timeoutMs !== undefined ? { timeoutMs: options.timeoutMs } : {}),
       ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
       ...(options.scheduler !== undefined
@@ -709,489 +198,14 @@ export async function runRenderedAnalysis(
         result.structuralAnchor = extractStructuralAnchor(html, url, new Date());
       },
       onRawRobotsHeader: (value) => {
-        rawXRobotsTag = value;
+        context.rawXRobotsTag = value;
       },
       onRenderedPageCreated: async (page) => {
         // Must be attached before navigation - see
         // rendered-cost-profile.ts's own doc comment.
-        readResourceTotals = recordRenderedResourceTotals(page);
+        context.readResourceTotals = recordRenderedResourceTotals(page);
       },
-      onRenderedPage: async (page) => {
-        renderedPage = page;
-        try {
-          axeResult = await withCheckBudget('axe', () => runAxe(page), perCheckBudgetMs);
-          checkOutcomes.axe = 'completed';
-        } catch (error) {
-          axeError = toErrorMessage(error);
-          checkOutcomes.axe = 'failed';
-        }
-        try {
-          result.frames = await withCheckBudget(
-            'frames',
-            () => observeFrames(page, url),
-            perCheckBudgetMs,
-          );
-        } catch {
-          // No frame record is itself recorded: the evidence graph treats a
-          // page without one as frame coverage unknown, never as frame-free.
-          delete result.frames;
-        }
-
-        if (
-          (options.mentionsLegalesCandidateUrls?.includes(url) ?? false) ||
-          (options.mentionsLegalesCandidateUrls === undefined &&
-            options.mentionsLegalesUrl !== undefined &&
-            url === options.mentionsLegalesUrl)
-        ) {
-          try {
-            const bodyText = await withCheckBudget(
-              'mentions-legales',
-              () => page.evaluate(() => document.body.innerText),
-              perCheckBudgetMs,
-            );
-            mentionsLegalesResult = extractMentionsLegales(url, bodyText);
-            mentionsLegalesResult.checkedPages = {
-              resolvedUrl: options.mentionsLegalesUrl ?? url,
-              homepageFallback: options.mentionsLegalesHomepageFallback ?? false,
-              searchedUrls: options.mentionsLegalesSearchedUrls ?? [],
-            };
-            checkOutcomes['mentions-legales'] = 'completed';
-          } catch (error) {
-            mentionsLegalesError = toErrorMessage(error);
-            checkOutcomes['mentions-legales'] = 'failed';
-          }
-        } else {
-          checkOutcomes['mentions-legales'] = 'not-applicable';
-        }
-
-        try {
-          transactionalFlowEvidence = await withCheckBudget(
-            'transactional-flow-evidence',
-            () => detectTransactionalFlow(page, url),
-            perCheckBudgetMs,
-          );
-          checkOutcomes['transactional-flow-evidence'] = 'completed';
-        } catch {
-          // Transactional-flow detection is best-effort evidence, not a
-          // finding: a failure here must not surface as a page error the
-          // way axe/render-diff failures do, and an empty result is
-          // already the correct fallback for "nothing detected".
-          transactionalFlowEvidence = [];
-          checkOutcomes['transactional-flow-evidence'] = 'failed';
-        }
-
-        try {
-          transactionalFlowRedirectChecks = await withCheckBudget(
-            'transactional-flow-redirect-checks',
-            () =>
-              findDelegatedBookingRedirectChecks(page, url, {
-                browser,
-                // Each destination navigation must fit this check's budget.
-                timeoutMs: Math.min(options.timeoutMs ?? getPageTimeoutMs(), perCheckBudgetMs),
-                ...(options.userAgent !== undefined ? { userAgent: options.userAgent } : {}),
-                ...(options.redirectHostCache !== undefined
-                  ? { hostCache: options.redirectHostCache }
-                  : {}),
-                ...(options.bookingEngineUrl !== undefined
-                  ? { bookingEngineUrl: options.bookingEngineUrl }
-                  : {}),
-                ...(options.guard !== undefined ? { guard: options.guard } : {}),
-              }),
-            redirectCheckBudgetMs,
-          );
-          checkOutcomes['transactional-flow-redirect-checks'] = 'completed';
-          // Only a confirmed single-property redirect promotes to
-          // transactional-flow evidence (drives hasTransactionalFlow);
-          // 'marketplace' and 'undetermined' checks stay recorded on
-          // transactionalFlowRedirectChecks only, per the "attach
-          // evidence for whatever was concluded, not just the boolean"
-          // rule.
-          for (const check of transactionalFlowRedirectChecks) {
-            if (check.resolution === 'single-property') {
-              transactionalFlowEvidence.push({
-                kind: 'delegated-booking-redirect',
-                selector: 'a[href]',
-                pageUrl: url,
-                detail: check.detail,
-                providerUrl: check.destinationUrl ?? check.linkUrl,
-              });
-            }
-          }
-        } catch {
-          // Same best-effort posture as detectTransactionalFlow above: a
-          // failure to follow a redirect must not surface as a page
-          // error, and an empty result is the correct fallback.
-          transactionalFlowRedirectChecks = [];
-          checkOutcomes['transactional-flow-redirect-checks'] = 'failed';
-        }
-
-        try {
-          transactionalFlowAmbiguities = await withCheckBudget(
-            'transactional-flow-ambiguities',
-            () => detectUnresolvedBookingControls(page, url),
-            perCheckBudgetMs,
-          );
-          checkOutcomes['transactional-flow-ambiguities'] = 'completed';
-        } catch {
-          // Same best-effort posture as the two transactional-flow passes
-          // above: a failure here must not surface as a page error, an
-          // empty result is the fallback, and the failed outcome is still
-          // recorded in checkOutcomes rather than silently dropped.
-          transactionalFlowAmbiguities = [];
-          checkOutcomes['transactional-flow-ambiguities'] = 'failed';
-        }
-
-        try {
-          headMetadataResult = await withCheckBudget(
-            'head-metadata',
-            () =>
-              extractHeadMetadata(page, url, {
-                ...(rawXRobotsTag !== undefined ? { xRobotsTag: rawXRobotsTag } : {}),
-              }),
-            perCheckBudgetMs,
-          );
-          checkOutcomes['head-metadata'] = 'completed';
-        } catch (error) {
-          headMetadataError = toErrorMessage(error);
-          checkOutcomes['head-metadata'] = 'failed';
-        }
-
-        // Best effort: a missed address only leaves the operator to find it
-        // by hand, so a failure here is not a check outcome.
-        roleContactResult = await withCheckBudget(
-          'role-contact',
-          () => findPublishedRoleContact(page, url),
-          perCheckBudgetMs,
-        ).catch(() => undefined);
-
-        // Only meaningful once headMetadataResult exists and names
-        // exactly one canonical URL - zero means nothing to check, more
-        // than one is already normalize-head-metadata.ts's
-        // canonical-conflicting check's job, not this one's. A failure
-        // here is folded into "no result" rather than a separate error
-        // field: checkCanonicalTarget already returns fetchError inside
-        // its own result for a failed fetch, and null for "nothing to
-        // check", so there is nothing left for a thrown error to mean
-        // here in practice - kept in a try purely as defensive coding
-        // for an unexpected throw (e.g. a malformed pageUrl).
-        if (headMetadataResult?.canonicalUrls.length === 1) {
-          const canonicalUrl = headMetadataResult.canonicalUrls[0]!;
-          try {
-            const cacheKey = normalizePageIdentityUrl(canonicalUrl) ?? canonicalUrl;
-            let request = options.canonicalTargetCache?.get(cacheKey);
-            if (request === undefined) {
-              const scheduler = options.scheduler;
-              const cache = options.canonicalTargetCache;
-              // Issue #537: waiting for a polite slot is not the check's
-              // work, so the first request is paced before its budget
-              // starts; a Crawl-delay alone used to exceed it.
-              const pending = (async () => {
-                await scheduler?.pace();
-                return withCheckBudget(
-                  'canonical-target',
-                  () =>
-                    checkCanonicalTarget(
-                      url,
-                      canonicalUrl,
-                      options.timeoutMs ?? getPageTimeoutMs(),
-                      {
-                        ...(scheduler !== undefined ? { scheduler, firstHopPaced: true } : {}),
-                        ...(options.networkPolicy !== undefined
-                          ? { networkPolicy: options.networkPolicy }
-                          : {}),
-                        ...(options.onNetworkSafetyBlocked !== undefined
-                          ? { onNetworkSafetyBlocked: options.onNetworkSafetyBlocked }
-                          : {}),
-                      },
-                    ),
-                  perCheckBudgetMs,
-                );
-              })();
-              request = pending;
-              cache?.set(cacheKey, pending);
-              // A timeout or refusal is not a fact about the target: evict
-              // it so a later page, or the recovery retry, asks again.
-              pending.catch(() => {
-                if (cache?.get(cacheKey) === pending) cache.delete(cacheKey);
-              });
-            }
-            const cachedResult = await request;
-            canonicalTargetResult =
-              cachedResult === null ? undefined : { ...cachedResult, pageUrl: url };
-            checkOutcomes['canonical-target'] = 'completed';
-          } catch (error) {
-            canonicalTargetResult = undefined;
-            // The check itself turns a fetch failure into undetermined
-            // evidence, so reaching here means the budget expired or the
-            // address guard refused. Recording nothing left the attempt
-            // classified as a bare tool-error, which is both undiagnosable
-            // and the most expensive rung of the recovery ladder.
-            canonicalTargetError = toErrorMessage(error);
-            checkOutcomes['canonical-target'] = 'failed';
-          }
-        } else {
-          checkOutcomes['canonical-target'] = 'not-applicable';
-        }
-
-        try {
-          mixedContentResult = await withCheckBudget(
-            'mixed-content',
-            () => extractMixedContentResources(page, url),
-            perCheckBudgetMs,
-          );
-          checkOutcomes['mixed-content'] = 'completed';
-        } catch (error) {
-          mixedContentError = toErrorMessage(error);
-          checkOutcomes['mixed-content'] = 'failed';
-        }
-
-        try {
-          videoCaptionsResult = await withCheckBudget(
-            'video-captions',
-            () => checkVideoCaptions(page, url),
-            perCheckBudgetMs,
-          );
-          checkOutcomes['video-captions'] = 'completed';
-        } catch (error) {
-          videoCaptionsError = toErrorMessage(error);
-          checkOutcomes['video-captions'] = 'failed';
-        }
-
-        try {
-          placeholderLabelsResult = await withCheckBudget(
-            'placeholder-labels',
-            () => checkPlaceholderLabels(page, url),
-            perCheckBudgetMs,
-          );
-          checkOutcomes['placeholder-labels'] = 'completed';
-        } catch (error) {
-          placeholderLabelsError = toErrorMessage(error);
-          checkOutcomes['placeholder-labels'] = 'failed';
-        }
-
-        try {
-          altTextResult = await withCheckBudget(
-            'alt-text',
-            () => extractAltTextFacts(page, url),
-            perCheckBudgetMs,
-          );
-          checkOutcomes['alt-text'] = 'completed';
-        } catch (error) {
-          altTextError = toErrorMessage(error);
-          checkOutcomes['alt-text'] = 'failed';
-        }
-
-        try {
-          structuredDataResult = await withCheckBudget(
-            'structured-data',
-            () => checkStructuredData(page, url),
-            perCheckBudgetMs,
-          );
-          checkOutcomes['structured-data'] = 'completed';
-        } catch (error) {
-          structuredDataError = toErrorMessage(error);
-          checkOutcomes['structured-data'] = 'failed';
-        }
-
-        // C7: reads page.content() only, no DOM mutation, so it sits with
-        // the other read-only checks rather than late with the ones that
-        // send input events.
-        try {
-          htmlValidityResult = await withCheckBudget(
-            'html-validity',
-            () => checkHtmlValidity(page, url),
-            perCheckBudgetMs,
-          );
-          checkOutcomes['html-validity'] = htmlValidityResult.checked ? 'completed' : 'failed';
-        } catch {
-          htmlValidityResult = undefined;
-          checkOutcomes['html-validity'] = 'failed';
-        }
-
-        // The rendered-cost profile is read-only, same posture as
-        // html-validity above: no dedicated registry entry of its own
-        // (it feeds the Lighthouse tie-break, not a client-facing
-        // finding), so no checkOutcomes entry either.
-        try {
-          const domCostFacts = await withCheckBudget(
-            'rendered-cost-profile',
-            () => extractRenderedDomCostFacts(page),
-            perCheckBudgetMs,
-          );
-          const resourceTotals = (await withCheckBudget(
-            'rendered-resource-profile',
-            () => readResourceTotals?.() ?? Promise.resolve(undefined),
-            perCheckBudgetMs,
-          )) ?? {
-            resourceCount: 0,
-            knownTransferBytes: 0,
-            unknownTransferSizeCount: 0,
-          };
-          renderedCostProfile = { url, ...domCostFacts, ...resourceTotals };
-        } catch {
-          renderedCostProfile = undefined;
-        }
-
-        // C6: needs headMetadataResult's parsed JSON-LD, so it runs after
-        // the extraction above rather than alongside it. Best-effort, like
-        // transactional-flow detection: a failure here is the absence of a
-        // comparison, not a page error worth surfacing to the client.
-        if (headMetadataResult !== undefined) {
-          const jsonLdBlocks = headMetadataResult.jsonLdBlocks;
-          try {
-            napConsistencyResult = await withCheckBudget(
-              'nap-consistency',
-              () => checkNapConsistency(page, url, jsonLdBlocks),
-              perCheckBudgetMs,
-            );
-            checkOutcomes['nap-consistency'] = 'completed';
-          } catch {
-            napConsistencyResult = undefined;
-            checkOutcomes['nap-consistency'] = 'failed';
-          }
-        } else {
-          checkOutcomes['nap-consistency'] = 'not-applicable';
-        }
-
-        // Runs after every read-only DOM check above: this is the only
-        // other check on the page that sends real input events, so it
-        // goes late purely so a future check added here never has to
-        // reason about DOM state a Tab walk might have changed (focus
-        // styles, a dropdown opened on :focus, etc.).
-        try {
-          keyboardNavigationResult = await withMutatingCheckBudget(
-            'keyboard-navigation',
-            (signal) => walkKeyboardNavigation(page, url, signal),
-            perCheckBudgetMs,
-          );
-          checkOutcomes['keyboard-navigation'] = 'completed';
-        } catch (error) {
-          keyboardNavigationError = toErrorMessage(error);
-          checkOutcomes['keyboard-navigation'] = 'failed';
-        }
-
-        // Runs last of all: the only check that triggers form
-        // validation on the page (see form-error-handling.ts's own file
-        // header for the safety reasoning - request-blocking route,
-        // never a real click or submit()). Kept last so nothing else
-        // this hook does can be affected by it.
-        try {
-          formErrorHandlingResult = await withMutatingCheckBudget(
-            'form-error-handling',
-            (signal) => checkFormErrorHandling(page, url, signal),
-            perCheckBudgetMs,
-          );
-          checkOutcomes['form-error-handling'] = 'completed';
-        } catch (error) {
-          formErrorHandlingError = toErrorMessage(error);
-          checkOutcomes['form-error-handling'] = 'failed';
-        }
-
-        // C3: genuinely last of the checks. This is the only check that
-        // changes the viewport, which re-runs every media query and any resize
-        // listener on the page - far more disruptive to a later check
-        // than the Tab walk or the form-validation trigger above. It
-        // restores the original viewport in its own finally block, but
-        // ordering it last means nothing depends on that having worked.
-        try {
-          reflowResult = await withMutatingCheckBudget(
-            'reflow',
-            (signal) => checkReflow(page, url, signal),
-            perCheckBudgetMs,
-          );
-          checkOutcomes.reflow = reflowResult.checked ? 'completed' : 'failed';
-        } catch {
-          reflowResult = undefined;
-          checkOutcomes.reflow = 'failed';
-        }
-
-        if (analysisAbortController.signal.aborted || !(await abandonedWorkSettled())) return;
-
-        // Plan 059 step 13: the delivered consent/overlay state is read
-        // off the page exactly as delivered, before anything (the sweep,
-        // a toggle) changes it.
-        if (options.stateSurfaces === true) {
-          try {
-            result.consentBaseline = await withCheckBudget(
-              'consent-baseline',
-              () => observeBaselineConsentState(page),
-              perCheckBudgetMs,
-            );
-          } catch {
-            result.consentBaseline = { state: 'undetermined', controlCount: 0 };
-          }
-        }
-
-        // Plan 059 step 11: the hydration sweep runs after every check,
-        // read-only or mutating, has finished with this page. Scrolling
-        // pulls in lazy content, so it would contaminate any evidence
-        // taken before it (section 9, "Baseline first"); placed here it
-        // can only extend what the page's own artifacts record afterwards.
-        if (options.hydrationSweep === true) {
-          try {
-            const sweep = await withMutatingCheckBudget(
-              'hydration-sweep',
-              () => runHydrationSweep(page),
-              postPassBudgetMs,
-            );
-            sweep.discoveredLinks = await withCheckBudget(
-              'surface-links',
-              () =>
-                collectSurfaceLinks(page, {
-                  baseUrl: page.url(),
-                  ...(options.exclusionPatterns !== undefined
-                    ? { exclusionPatterns: options.exclusionPatterns }
-                    : {}),
-                }),
-              perCheckBudgetMs,
-            ).catch(() => []);
-            result.hydrationSweep = sweep;
-            if (result.readiness !== undefined) {
-              result.readiness = { ...result.readiness, hydrationProgress: sweep.progress };
-            }
-          } catch (error) {
-            // A sweep that cannot even run leaves the page's readiness
-            // honestly saying the hydration dimension was not measured.
-            if (result.readiness !== undefined) {
-              result.readiness = { ...result.readiness, hydrationProgress: 'failed' };
-            }
-            result.surfaceLimitations = [
-              ...(result.surfaceLimitations ?? []),
-              {
-                ...HYDRATION_SWEEP_UNAVAILABLE,
-                detail: error instanceof Error ? error.message : String(error),
-              },
-            ];
-          }
-        }
-
-        // Plan 059 step 13: bounded safe local-state exploration, after
-        // the sweep so both mutating passes are strictly post-baseline.
-        if (options.stateSurfaces === true) {
-          try {
-            result.localStates = await withMutatingCheckBudget(
-              'local-state-exploration',
-              () =>
-                runLocalStateExploration(page, {
-                  ...(options.exclusionPatterns !== undefined
-                    ? { exclusionPatterns: options.exclusionPatterns }
-                    : {}),
-                }),
-              postPassBudgetMs,
-            );
-          } catch (error) {
-            result.surfaceLimitations = [
-              ...(result.surfaceLimitations ?? []),
-              {
-                code: 'local-state-exploration-unavailable',
-                fr: "L'exploration sûre des états locaux d'une page n'a pas pu être effectuée.",
-                en: "One page's safe local-state exploration could not be performed.",
-                detail: error instanceof Error ? error.message : String(error),
-              },
-            ];
-          }
-        }
-      },
+      onRenderedPage: (page) => runner.runChecks(RENDERED_PAGE_CHECKS, page, url, result, context),
     };
     result.renderDiff = await renderDiff(browser, url, renderOptions);
     // A challenge or transient response is acquisition failure, but a single
@@ -1212,56 +226,21 @@ export async function runRenderedAnalysis(
         status !== undefined
           ? `HTTP ${status}: acquisition response was blocked or transient`
           : 'bot challenge: acquisition document was not site content';
-      checkOutcomes['render-diff'] = 'failed';
-      checkOutcomes.axe = 'not-applicable';
-      checkOutcomes['head-metadata'] = 'not-applicable';
+      runner.record('render-diff', 'failed');
+      runner.record('axe', 'not-applicable');
+      runner.record('head-metadata', 'not-applicable');
     } else {
-      checkOutcomes['render-diff'] = 'completed';
+      runner.record('render-diff', 'completed');
     }
   } catch (error) {
     result.renderDiffError = toErrorMessage(error);
-    checkOutcomes['render-diff'] = 'failed';
+    runner.record('render-diff', 'failed');
     // Every downstream check that reuses this same rendered navigation
     // never ran at all when the navigation itself failed.
-    checkOutcomes.axe = 'not-applicable';
+    runner.record('axe', 'not-applicable');
   }
 
-  if (axeResult !== undefined) result.axe = axeResult;
-  if (axeError !== undefined) result.axeError = axeError;
-  if (mentionsLegalesResult !== undefined) result.mentionsLegales = mentionsLegalesResult;
-  if (mentionsLegalesError !== undefined) result.mentionsLegalesError = mentionsLegalesError;
-  if (transactionalFlowEvidence !== undefined)
-    result.transactionalFlowEvidence = transactionalFlowEvidence;
-  if (transactionalFlowRedirectChecks !== undefined)
-    result.transactionalFlowRedirectChecks = transactionalFlowRedirectChecks;
-  if (transactionalFlowAmbiguities !== undefined)
-    result.transactionalFlowAmbiguities = transactionalFlowAmbiguities;
-  if (headMetadataResult !== undefined) result.headMetadata = headMetadataResult;
-  if (roleContactResult !== undefined) result.roleContact = roleContactResult;
-  if (headMetadataError !== undefined) result.headMetadataError = headMetadataError;
-  if (canonicalTargetResult !== undefined) result.canonicalTarget = canonicalTargetResult;
-  if (canonicalTargetError !== undefined) result.canonicalTargetError = canonicalTargetError;
-  if (mixedContentResult !== undefined) result.mixedContent = mixedContentResult;
-  if (mixedContentError !== undefined) result.mixedContentError = mixedContentError;
-  if (keyboardNavigationResult !== undefined) result.keyboardNavigation = keyboardNavigationResult;
-  if (keyboardNavigationError !== undefined)
-    result.keyboardNavigationError = keyboardNavigationError;
-  if (formErrorHandlingResult !== undefined) result.formErrorHandling = formErrorHandlingResult;
-  if (formErrorHandlingError !== undefined) result.formErrorHandlingError = formErrorHandlingError;
-  if (videoCaptionsResult !== undefined) result.videoCaptions = videoCaptionsResult;
-  if (videoCaptionsError !== undefined) result.videoCaptionsError = videoCaptionsError;
-  if (altTextResult !== undefined) result.altText = altTextResult;
-  if (altTextError !== undefined) result.altTextError = altTextError;
-  if (placeholderLabelsResult !== undefined) result.placeholderLabels = placeholderLabelsResult;
-  if (placeholderLabelsError !== undefined) result.placeholderLabelsError = placeholderLabelsError;
-  if (structuredDataResult !== undefined) result.structuredData = structuredDataResult;
-  if (napConsistencyResult !== undefined) result.napConsistency = napConsistencyResult;
-  if (reflowResult !== undefined) result.reflow = reflowResult;
-  if (htmlValidityResult !== undefined) result.htmlValidity = htmlValidityResult;
-  if (structuredDataError !== undefined) result.structuredDataError = structuredDataError;
-  if (renderedCostProfile !== undefined) result.renderedCostProfile = renderedCostProfile;
-
-  return { ...result, checkOutcomes };
+  return { ...result, checkOutcomes: runner.outcomes };
 }
 
 /**
