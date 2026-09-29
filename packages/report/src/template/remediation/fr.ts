@@ -618,6 +618,20 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     text: "Ajustez la longueur du titre de la page pour qu'il ne soit pas tronqué dans les résultats de recherche, entre 30 et 65 caractères.",
     snippet: { kind: 'fill-in-blank', template: '<title><titre de 30 à 65 caractères></title>' },
   },
+  'hreflang-target-language-mismatch': {
+    text: "Faites pointer chaque lien hreflang vers la page réellement traduite dans la langue annoncée, ou retirez le lien tant que cette traduction n'existe pas.",
+    snippet: {
+      kind: 'fill-in-blank',
+      template: '<link rel="alternate" hreflang="en" href="<adresse de la page en anglais>">',
+    },
+  },
+  'html-lang-content-mismatch': {
+    text: "Indiquez dans l'attribut lang le code de la langue réellement utilisée sur ces pages (par exemple pt ou pt-BR pour le portugais), et le même code dans leurs liens hreflang.",
+    snippet: {
+      kind: 'fill-in-blank',
+      template: '<html lang="<code de la langue du texte>">',
+    },
+  },
   'title-announces-error': {
     text: 'Donnez à ces pages un titre qui décrit leur contenu : un moteur de recherche peut écarter une page dont le titre annonce une erreur.',
     snippet: {

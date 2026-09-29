@@ -72,6 +72,7 @@ import {
   type NormalizeCrawlInput,
 } from './normalize-crawl.js';
 import { extractHreflangCandidates } from './normalize-hreflang.js';
+import { extractContentLanguageCandidates } from './normalize-content-language.js';
 import { extractUntranslatedTitleCandidates } from './normalize-untranslated-title.js';
 import {
   extractMixedContentCandidates,
@@ -508,7 +509,11 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
   // see; it previously treated both as "outside crawl scope".
   const hreflangPages = input.pages
     .filter((page) => page.headMetadata && !isExcludedUrl(contentExcludedUrls, page.url))
-    .map((page) => ({ url: page.url, hreflangLinks: page.headMetadata!.hreflangLinks }));
+    .map((page) => ({
+      url: page.url,
+      hreflangLinks: page.headMetadata!.hreflangLinks,
+      htmlLang: page.headMetadata!.htmlLang,
+    }));
   if (hreflangPages.length > 0) {
     candidates.push(
       ...extractHreflangCandidates(
@@ -523,6 +528,20 @@ function collectCandidates(input: NormalizeAuditInput): FindingCandidate[] {
       ),
     );
   }
+
+  // Plan 075 L5: a declared language that is not the language of the text.
+  candidates.push(
+    ...extractContentLanguageCandidates(
+      input.pages
+        .filter((page) => page.headMetadata && !isExcludedUrl(contentExcludedUrls, page.url))
+        .map((page) => ({
+          url: page.url,
+          htmlLang: page.headMetadata!.htmlLang,
+          title: page.headMetadata!.title,
+          headings: page.headMetadata!.headings,
+        })),
+    ),
+  );
 
   // A noindex page never appears in search results, so its title is not a
   // search headline in any language.

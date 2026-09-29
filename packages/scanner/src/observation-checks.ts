@@ -41,6 +41,8 @@ const CUSTOM_RULE_CHECKS: Readonly<Record<string, string>> = {
   'hreflang-missing': 'head-metadata',
   'hreflang-invalid': 'head-metadata',
   'hreflang-no-return-link': 'head-metadata',
+  'hreflang-target-language-mismatch': 'head-metadata',
+  'html-lang-content-mismatch': 'head-metadata',
   'hreflang-target-invalid': 'head-metadata',
   'heading-hierarchy-skip': 'head-metadata',
   'multiple-h1': 'head-metadata',

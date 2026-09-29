@@ -80,6 +80,8 @@ export const RULE_LABELS_EN: Readonly<Record<string, string>> = {
   'meta-description-length': 'The meta description length is outside the recommended range',
   'meta-title-length': 'The page title length is outside the recommended range',
   'title-announces-error': 'The page title announces a missing page',
+  'hreflang-target-language-mismatch': 'An hreflang link points to a page in another language',
+  'html-lang-content-mismatch': "The page's declared language is not the language of its text",
   'title-not-translated': 'Page title not translated',
   'meta-viewport': 'Zooming and resizing are disabled',
   'modern-http-insight': 'Resources are served over an old HTTP protocol',

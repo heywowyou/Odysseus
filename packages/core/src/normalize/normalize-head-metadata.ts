@@ -63,6 +63,9 @@ export interface HeadMetadataCheckInput {
   hreflangLinks: HreflangLinkInput[];
   languageSwitcherLinks?: LanguageSwitcherLinkInput[];
   robotsMeta: string | null;
+  /** The document's `<html lang>`, or null when it declares none. Absent on
+   *  scans whose head-metadata result predates the field. */
+  htmlLang?: string | null;
   /** Lowercased content of <meta name="googlebot">, or null. Absent on
    *  scans made before trade-off 110, like the two fields below. */
   googlebotMeta?: string | null;

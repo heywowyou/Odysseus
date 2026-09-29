@@ -59,6 +59,10 @@ export const CUSTOM_RULE_CONFIRMATION: Readonly<Record<string, RuleConfirmation>
   'title-not-translated': confirmed(),
   // Read true on aflatta's offer pages (live probe, 2026-09-29).
   'title-announces-error': confirmed(),
+  // Read true on clos-sainte-marie's `/?lang=en` (live probe, 2026-09-29).
+  'hreflang-target-language-mismatch': confirmed(),
+  // Read true on regina-hotel's Portuguese pages declared Breton (2026-09-29).
+  'html-lang-content-mismatch': confirmed(),
   'heading-hierarchy-skip': confirmed(),
   'multiple-h1': confirmed(),
   'no-h1': confirmed(),

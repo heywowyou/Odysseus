@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   extractHreflangCandidates,
   HREFLANG_NO_RETURN_LINK_RULE_ID,
+  HREFLANG_TARGET_LANGUAGE_MISMATCH_RULE_ID,
   type HreflangPageInput,
 } from './normalize-hreflang.js';
 
@@ -173,5 +174,57 @@ describe('hreflang-missing', () => {
     expect(
       extractHreflangCandidates(pages).filter((c) => c.ruleId === 'hreflang-missing'),
     ).toHaveLength(1);
+  });
+});
+
+describe('hreflang-target-language-mismatch (plan 075 L5)', () => {
+  // clos-sainte-marie, 2026-09-29: every page declares `/?lang=en` as its
+  // English version, and that URL serves the French document.
+  const HOME = 'https://clos-sainte-marie.fr/';
+  const HOME_EN = 'https://clos-sainte-marie.fr/?lang=en';
+  const TARIFS = 'https://clos-sainte-marie.fr/tarifs';
+  const links = [
+    { lang: 'fr', href: 'https://clos-sainte-marie.fr' },
+    { lang: 'en', href: 'https://clos-sainte-marie.fr?lang=en' },
+    { lang: 'x-default', href: 'https://clos-sainte-marie.fr' },
+  ];
+
+  it('reports the target once, however many pages declare it', () => {
+    const pages: HreflangPageInput[] = [
+      { url: HOME, hreflangLinks: links, htmlLang: 'fr' },
+      { url: HOME_EN, hreflangLinks: links, htmlLang: 'fr' },
+      { url: TARIFS, hreflangLinks: links, htmlLang: 'fr' },
+    ];
+    const mismatches = extractHreflangCandidates(pages).filter(
+      (candidate) => candidate.ruleId === HREFLANG_TARGET_LANGUAGE_MISMATCH_RULE_ID,
+    );
+    expect(mismatches).toHaveLength(1);
+    expect(mismatches[0]?.severity).toBe('serious');
+    expect(mismatches[0]?.dedupeIdentity).toBe(`language-mismatch:${HOME_EN}`);
+    expect(mismatches[0]?.rawEvidenceForPage).toMatchObject({
+      targetUrl: HOME_EN,
+      targetLang: 'fr',
+    });
+  });
+
+  it('compares primary subtags only, and skips x-default and undeclared targets', () => {
+    const pages: HreflangPageInput[] = [
+      {
+        url: FR_URL,
+        hreflangLinks: [
+          { lang: 'en-GB', href: EN_URL },
+          { lang: 'x-default', href: EN_URL },
+          { lang: 'es', href: 'https://example.com/es/' },
+        ],
+        htmlLang: 'fr-FR',
+      },
+      { url: EN_URL, hreflangLinks: [{ lang: 'fr', href: FR_URL }], htmlLang: 'en' },
+      { url: 'https://example.com/es/', hreflangLinks: [{ lang: 'fr', href: FR_URL }] },
+    ];
+    expect(
+      extractHreflangCandidates(pages).filter(
+        (candidate) => candidate.ruleId === HREFLANG_TARGET_LANGUAGE_MISMATCH_RULE_ID,
+      ),
+    ).toEqual([]);
   });
 });

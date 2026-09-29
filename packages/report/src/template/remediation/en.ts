@@ -573,6 +573,20 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     text: 'Adjust the page title length so it is not cut off in search results, around 30 to 65 characters.',
     snippet: { kind: 'fill-in-blank', template: '<title><title of 30 to 65 characters></title>' },
   },
+  'hreflang-target-language-mismatch': {
+    text: 'Point each hreflang link at the page actually translated into the language it announces, or remove the link until that translation exists.',
+    snippet: {
+      kind: 'fill-in-blank',
+      template: '<link rel="alternate" hreflang="en" href="<address of the English page>">',
+    },
+  },
+  'html-lang-content-mismatch': {
+    text: 'Set the lang attribute to the code of the language these pages are actually written in (for example pt or pt-BR for Portuguese), and use the same code in their hreflang links.',
+    snippet: {
+      kind: 'fill-in-blank',
+      template: '<html lang="<code of the language of the text>">',
+    },
+  },
   'title-announces-error': {
     text: 'Give these pages a title that describes their content: a search engine can drop a page whose title announces an error.',
     snippet: {

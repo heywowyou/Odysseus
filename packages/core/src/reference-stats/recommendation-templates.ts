@@ -242,6 +242,24 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
       },
     },
   ],
+  'hreflang-target-language-mismatch': [
+    {
+      id: 'hreflang-target-language-mismatch-point-to-translation',
+      text: {
+        fr: "Faites pointer chaque lien hreflang vers la page réellement traduite dans la langue annoncée, ou retirez le lien tant que cette traduction n'existe pas.",
+        en: 'Point each hreflang link at the page actually translated into the language it announces, or remove the link until that translation exists.',
+      },
+    },
+  ],
+  'html-lang-content-mismatch': [
+    {
+      id: 'html-lang-content-mismatch-declare-written-language',
+      text: {
+        fr: "Indiquez dans l'attribut lang le code de la langue réellement utilisée sur ces pages (par exemple pt ou pt-BR pour le portugais), et le même code dans leurs liens hreflang.",
+        en: 'Set the lang attribute to the code of the language these pages are actually written in (for example pt or pt-BR for Portuguese), and use the same code in their hreflang links.',
+      },
+    },
+  ],
   'hreflang-no-return-link': [
     {
       id: 'hreflang-no-return-link-add-reciprocal-tag',

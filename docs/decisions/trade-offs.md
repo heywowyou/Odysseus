@@ -5872,6 +5872,25 @@ agreeing ones is noise, not contradiction. The constants and this source live
 in `performance-measurement-set.ts`; re-measure when the host, the Lighthouse
 version or the runs per page change.
 
+Severities of the rules added by plan 075 Parts K and L (2026-09-29), each
+measured on the 28 latest production audits:
+
+- `title-announces-error` is serious: a search engine can drop a page whose
+  title announces an error as a soft 404. It fires on one audit (aflatta's
+  offer, voucher and cart pages).
+- `hreflang-target-language-mismatch` is serious, like
+  `hreflang-no-return-link`: visitors searching in one language are sent to
+  a page in another. It fires on two targets (clos-sainte-marie `/?lang=en`,
+  lescriquets `/boutique`).
+- `html-lang-content-mismatch` is serious: WCAG 3.1.1 is level A, and a wrong
+  language makes a screen reader pronounce the whole page with the wrong
+  rules, as axe's `html-lang-valid` (serious) does for an invalid code. The
+  content language is read from the titles and headings of all pages
+  sharing a declared language, and reported only with three pages, a score
+  floor and a twofold margin, and never when the text reads as the site's
+  main language (untranslated copy). It fires on one audit (regina-hotel,
+  67 Portuguese pages declared Breton).
+
 ### 112. Odysseus audits businesses in France and the EU only (operator decision, 2026-09-23)
 
 The Hôtel Château Royal audit (Nouméa, `hotelchateauroyal.nc`) showed every

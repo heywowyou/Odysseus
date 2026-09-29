@@ -26,6 +26,7 @@ import { normalizeUrlIdentity } from './url-identity.js';
 export const HREFLANG_NO_RETURN_LINK_RULE_ID = 'hreflang-no-return-link';
 const HREFLANG_TARGET_INVALID_RULE_ID = 'hreflang-target-invalid';
 const HREFLANG_MISSING_RULE_ID = 'hreflang-missing';
+export const HREFLANG_TARGET_LANGUAGE_MISMATCH_RULE_ID = 'hreflang-target-language-mismatch';
 
 /** A first path segment that is a language code, optionally with a region
  *  suffix ("/fr/...", "/pt-pt/..."). Mirrors scanner's
@@ -45,6 +46,14 @@ export function languagePrefixOf(url: string): string | undefined {
 export interface HreflangPageInput {
   url: string;
   hreflangLinks: Array<{ lang: string; href: string }>;
+  /** The page's own `<html lang>`, when the scan recorded one. */
+  htmlLang?: string | null | undefined;
+}
+
+/** The primary language subtag ("pt" for "pt-BR"), lowercased. */
+export function primaryLanguageSubtag(code: string | null | undefined): string | undefined {
+  const primary = code?.trim().toLowerCase().split(/[-_]/)[0];
+  return primary === undefined || primary === '' ? undefined : primary;
 }
 
 function normalizeUrl(href: string, base: string): string {
@@ -75,6 +84,10 @@ export function extractHreflangCandidates(
     string,
     { page: HreflangPageInput; links: Array<{ lang: string; href: string; targetUrl: string }> }
   >();
+  const languageMismatchByTarget = new Map<
+    string,
+    { page: HreflangPageInput; targetLang: string; links: Array<{ lang: string; href: string }> }
+  >();
 
   for (const page of pages) {
     if (isExcluded(excludedUrls, page.url)) continue;
@@ -82,9 +95,34 @@ export function extractHreflangCandidates(
 
     for (const link of page.hreflangLinks) {
       const targetUrl = normalizeUrl(link.href, page.url);
+      const targetPage = pagesByUrl.get(targetUrl);
+
+      // Plan 075 L5: the target serves another language than the one the
+      // annotation promises. clos-sainte-marie declares `hreflang="en"` for
+      // `/?lang=en`, which serves the French document (`lang="fr"`). Checked
+      // on self-references too: a page can mislabel itself.
+      const declared = primaryLanguageSubtag(link.lang);
+      const served = primaryLanguageSubtag(targetPage?.htmlLang);
+      if (
+        targetPage !== undefined &&
+        declared !== undefined &&
+        declared !== 'x' &&
+        served !== undefined &&
+        declared !== served
+      ) {
+        const existing = languageMismatchByTarget.get(targetUrl) ?? {
+          page,
+          targetLang: targetPage.htmlLang!,
+          links: [],
+        };
+        if (!existing.links.some((known) => known.lang === link.lang)) {
+          existing.links.push({ lang: link.lang, href: link.href });
+        }
+        languageMismatchByTarget.set(targetUrl, existing);
+      }
+
       if (targetUrl === sourceUrl) continue; // a self-referencing hreflang tag needs no return link
 
-      const targetPage = pagesByUrl.get(targetUrl);
       if (!targetPage) {
         if (invalidTargetUrls.has(targetUrl)) {
           const existing = invalidByTarget.get(targetUrl) ?? { page, links: [] };
@@ -150,6 +188,27 @@ export function extractHreflangCandidates(
         snippet: links.map((link) => `hreflang="${link.lang}" href="${link.href}"`).join('; '),
       },
       rawEvidenceForPage: { targetUrl, declarations: links },
+    });
+  }
+
+  for (const [targetUrl, { page, targetLang, links }] of languageMismatchByTarget) {
+    const declaredLanguages = links.map((link) => link.lang).join(', ');
+    candidates.push({
+      source: 'custom',
+      ruleId: HREFLANG_TARGET_LANGUAGE_MISMATCH_RULE_ID,
+      category: 'seo',
+      severity: severityFromCustom(HREFLANG_TARGET_LANGUAGE_MISMATCH_RULE_ID),
+      wcagCriteria: [],
+      title: 'hreflang points to a page in another language',
+      description: `This site declares ${targetUrl} as its "${declaredLanguages}" version, but that page declares itself as "${targetLang}". Search engines can send visitors looking for that language to a page they cannot read.`,
+      pageUrl: page.url,
+      dedupeIdentity: `language-mismatch:${targetUrl}`,
+      element: {
+        pageUrl: page.url,
+        selector: 'head link[rel="alternate"][hreflang]',
+        snippet: links.map((link) => `hreflang="${link.lang}" href="${link.href}"`).join('; '),
+      },
+      rawEvidenceForPage: { targetUrl, targetLang, declarations: links },
     });
   }
 

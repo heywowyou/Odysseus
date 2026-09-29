@@ -114,6 +114,13 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   'title-not-translated': 'minor',
   // Plan 075 K4: a search engine can drop the page as a soft 404.
   'title-announces-error': 'serious',
+  // Plan 075 L5: visitors searching in one language are sent to a page in
+  // another, like a missing return link.
+  'hreflang-target-language-mismatch': 'serious',
+  // Plan 075 L5: WCAG 3.1.1 is level A; a wrong language makes a screen
+  // reader pronounce the whole page with the wrong rules, as a missing or
+  // invalid lang attribute does (axe rates `html-lang-valid` serious).
+  'html-lang-content-mismatch': 'serious',
 
   // Document structure. Overlaps accessibility, deduped downstream.
   'heading-hierarchy-skip': 'moderate',

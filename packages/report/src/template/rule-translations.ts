@@ -285,6 +285,11 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss:
         'Ex. un titre de niveau 2 (H2) est suivi directement par un titre de niveau 4 (H4), sans H3.',
     },
+    'hreflang-target-language-mismatch': {
+      label: 'Un lien hreflang renvoie vers une page dans une autre langue',
+      gloss:
+        'Le site annonce une version dans une langue, mais la page désignée est rédigée dans une autre ; un moteur de recherche peut y envoyer des visiteurs qui ne la comprennent pas.',
+    },
     'hreflang-no-return-link': {
       label: "Un lien hreflang n'a pas de lien retour",
       gloss:
@@ -1081,6 +1086,11 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       label: "Un message d'erreur de formulaire n'est signalé que visuellement",
       gloss:
         "L'erreur est affichée sans être rattachée au champ concerné, donc un lecteur d'écran ne l'annonce pas et la personne ne sait pas quoi corriger.",
+    },
+    'html-lang-content-mismatch': {
+      label: 'La langue déclarée de la page ne correspond pas à celle de son contenu',
+      gloss:
+        "L'attribut lang annonce une autre langue que celle du texte ; un lecteur d'écran prononce alors la page avec les règles de la mauvaise langue.",
     },
     'placeholder-only-label': {
       label: "Un champ de formulaire n'a pour libellé que son texte indicatif",
