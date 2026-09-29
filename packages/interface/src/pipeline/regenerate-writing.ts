@@ -30,17 +30,14 @@ import type {
 } from '@odysseus/core';
 import { buildFindingsProvenance } from '@odysseus/core';
 import {
-  approveWritingCandidate,
   getReportPreparation,
   reconcileFailedAuditJobs,
   recordFailedWritingCandidate,
-  recordReadyWritingCandidate,
   type AuditDocument,
 } from '@odysseus/store';
 import { WritingPassExhaustedError } from '@odysseus/llm';
 import { ReportIdentityUnconfirmedError } from '@odysseus/report';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
-import { runAnalysisStage } from './analysis-stage.js';
 import { findingsAreStale, refreshStaleAuditEvidence } from './audit-evidence.js';
 import { RegenerationConflictError } from './regeneration-conflict-error.js';
 import { releaseReportProduction, tryAcquireReportProduction } from './report-production-lock.js';
@@ -55,7 +52,7 @@ import {
   NoAnalysisPairError,
   type AllReportsStageResult,
 } from './regenerate-reports.js';
-import { catalogueContextOption } from './catalogue-site-context.js';
+import { writeSelectedAnalysis } from './write-selected-analysis.js';
 
 export { RegenerationConflictError } from './regeneration-conflict-error.js';
 export { isWritingRegenerationInFlight } from './report-production-lock.js';
@@ -168,55 +165,21 @@ export async function regenerateWriting(
 
   let partialPair: { frAnalysisId?: string; enAnalysisId?: string } = {};
   try {
-    const frStage = await runAnalysisStage(
+    const {
+      stage: frStage,
+      pair,
+      approvedAt,
+    } = await writeSelectedAnalysis(connection, {
       auditDir,
       manifest,
       findings,
-      {
-        language: 'fr',
-        findingsProvenance,
-        ...(await catalogueContextOption(connection, manifest.auditId)),
-        regenerateStructure,
-        regenerateWriting: options.regenerateWriting ?? false,
-        ...(audit.manualFields?.siren !== undefined
-          ? { manualSiren: audit.manualFields.siren.value }
-          : {}),
-        ...(audit.manualFields?.transactionalFlowOverride !== undefined
-          ? {
-              siteSignalOverrides: {
-                hasTransactionalFlow: audit.manualFields.transactionalFlowOverride,
-              },
-            }
-          : {}),
+      findingsProvenance,
+      regenerateStructure,
+      regenerateWriting: options.regenerateWriting ?? false,
+      onAnalysed: (analysisId) => {
+        partialPair = { frAnalysisId: analysisId };
       },
-      connection,
-    );
-    partialPair = { frAnalysisId: frStage.analysis.analysisId };
-
-    const pair: AnalysisSelectionRef = {
-      frAnalysisId: frStage.analysis.analysisId,
-      findingsProvenance: frStage.analysis.findingsProvenance,
-    };
-    const readied = await recordReadyWritingCandidate(
-      connection,
-      auditId,
-      pair,
-      frStage.sanitizationWarnings,
-    );
-    if (readied.writingSelection?.candidate?.status !== 'ready') {
-      throw new WritingRegenerationFailedError(
-        'odysseus: the ready writing candidate could not be recorded',
-      );
-    }
-
-    // Plan 045 section 2.1: approve immediately, no separate manual click.
-    const approved = await approveWritingCandidate(connection, auditId);
-    const candidate = approved.writingSelection?.candidate;
-    if (!candidate || candidate.status !== 'selected') {
-      throw new WritingRegenerationFailedError(
-        'odysseus: the writing candidate could not be selected after regeneration',
-      );
-    }
+    });
 
     let pdfs: RegeneratedReportsOutcome;
     markReportProductionStage(auditId, 'pdf-generation');
@@ -245,7 +208,7 @@ export async function regenerateWriting(
     }
 
     return {
-      candidate: { status: 'selected', pair, approvedAt: candidate.approvedAt },
+      candidate: { status: 'selected', pair, approvedAt },
       analyses: { fr: frStage.analysis.analysisId },
       pdfs,
       replacedApprovedSelection,

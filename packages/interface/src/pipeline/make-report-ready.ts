@@ -21,11 +21,8 @@
 import type { Connection } from 'mongoose';
 import { buildFindingsProvenance } from '@odysseus/core';
 import {
-  getAuditManualFields,
   getAuditRuntimeFields,
   reconcileFailedAuditJobs,
-  approveWritingCandidate,
-  recordReadyWritingCandidate,
   resolveSelectedAnalysisPairForAudit,
   type AuditRuntimeFields,
   syncProspectIdentityIntoAudit,
@@ -37,7 +34,6 @@ import { syncAuditDirToBucket } from '../artifacts/sync-audit-artifacts.js';
 import { backfillAuditRow } from './backfill-audit-row.js';
 import { renormalizeAudit } from './renormalize-audit.js';
 import { findingsAreStale } from './audit-evidence.js';
-import { runAnalysisStage } from './analysis-stage.js';
 import { RegenerationConflictError } from './regeneration-conflict-error.js';
 import { releaseReportProduction, tryAcquireReportProduction } from './report-production-lock.js';
 import {
@@ -53,7 +49,7 @@ import {
   NoAnalysisPairError,
   type AllReportsStageResult,
 } from './regenerate-reports.js';
-import { catalogueContextOption } from './catalogue-site-context.js';
+import { writeSelectedAnalysis } from './write-selected-analysis.js';
 
 export type MakeReportReadyRefusal =
   | { kind: 'audit-not-found' }
@@ -100,50 +96,24 @@ async function refreshWritingCandidate(
   artifactStore: ArtifactStore | undefined,
 ): Promise<void> {
   await syncProspectIdentityIntoAudit(connection, audit.auditId);
-  const manualFields = await getAuditManualFields(connection, audit.auditId);
   const { manifest, findings } = await readAuditArtifacts(
     auditDir,
     new URL(audit.siteUrl).hostname,
     audit.startedAt,
     artifactStore,
   );
-  const findingsProvenance = buildFindingsProvenance(findings);
-
-  const frStage = await runAnalysisStage(
-    auditDir,
-    manifest,
-    findings,
-    {
-      language: 'fr',
-      findingsProvenance,
-      ...(await catalogueContextOption(connection, manifest.auditId)),
-      regenerateStructure: true,
-      ...(manualFields?.siren !== undefined ? { manualSiren: manualFields.siren.value } : {}),
-      ...(manualFields?.transactionalFlowOverride !== undefined
-        ? {
-            siteSignalOverrides: {
-              hasTransactionalFlow: manualFields.transactionalFlowOverride,
-            },
-          }
-        : {}),
-    },
-    connection,
-  );
-  await recordReadyWritingCandidate(
-    connection,
-    audit.auditId,
-    {
-      frAnalysisId: frStage.analysis.analysisId,
-      findingsProvenance: frStage.analysis.findingsProvenance,
-    },
-    frStage.sanitizationWarnings,
-  );
   // The auto-selection amendment (trade-off 62, plan 045 section 2.1):
   // makeReportReady is only ever invoked by an operator action already
   // downstream of confirming the fields that matter (identity, or simply
   // "make this report reachable"), so a freshly regenerated pair does not
   // need a second, separate approval click here.
-  await approveWritingCandidate(connection, audit.auditId);
+  await writeSelectedAnalysis(connection, {
+    auditDir,
+    manifest,
+    findings,
+    findingsProvenance: buildFindingsProvenance(findings),
+    regenerateStructure: true,
+  });
 }
 
 /**

@@ -1,33 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Issue #559: no catalogue facts, as for an audit with no directory entry.
-vi.mock('../../pipeline/catalogue-site-context.js', () => ({
-  catalogueContextOption: vi.fn(async () => ({})),
-}));
-
 vi.mock('../../pipeline/audit-stage.js', () => ({ runAuditStage: vi.fn() }));
 vi.mock('@odysseus/scanner', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@odysseus/scanner')>()),
   serverLockKeys: vi.fn(async (url: string) => [new URL(url).origin, 'address:192.0.2.1']),
 }));
-vi.mock('../../pipeline/analysis-stage.js', () => ({ runAnalysisStage: vi.fn() }));
+// Issue #568: writing and selecting the analysis is one module call.
+vi.mock('../../pipeline/write-selected-analysis.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../pipeline/write-selected-analysis.js')>()),
+  writeSelectedAnalysis: vi.fn(),
+}));
 vi.mock('../../pipeline/report-stage.js', () => ({ runAllReportsStage: vi.fn() }));
 vi.mock('@odysseus/store', () => ({
-  approveWritingCandidate: vi.fn(),
   completeJob: vi.fn(),
-  recordReadyWritingCandidate: vi.fn(),
   updateJobProgress: vi.fn(),
   ensureJobRunIdentity: vi.fn(),
   isJobClaimCurrent: vi.fn(),
 }));
 import { runAuditStage } from '../../pipeline/audit-stage.js';
-import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
+import {
+  WritingSelectionFailedError,
+  writeSelectedAnalysis,
+} from '../../pipeline/write-selected-analysis.js';
 import { runAllReportsStage } from '../../pipeline/report-stage.js';
 import {
-  approveWritingCandidate,
   completeJob,
   ensureJobRunIdentity,
-  recordReadyWritingCandidate,
   isJobClaimCurrent,
   updateJobProgress,
 } from '@odysseus/store';
@@ -89,7 +87,7 @@ function fakeAuditResult() {
   };
 }
 
-function fakeAnalysisResult(language: 'fr' | 'en') {
+function fakeAnalysisResult(language: 'fr' | 'en' = 'fr') {
   return {
     analysis: { language, auditId: 'audit-1' } as never,
     analysisPath: `/artifacts/example.com/dir/analyses/x-${language}.json`,
@@ -102,6 +100,14 @@ function fakeAnalysisResult(language: 'fr' | 'en') {
     // the mocked stage result has to carry it (empty: nothing pending).
     advisoryPasses: [] as Promise<void>[],
     sanitizationWarnings: [],
+  };
+}
+
+function selected() {
+  return {
+    stage: fakeAnalysisResult(),
+    pair: { frAnalysisId: 'analysis-fr' } as never,
+    approvedAt: '2026-09-29T00:00:00.000Z',
   };
 }
 
@@ -119,9 +125,7 @@ beforeEach(() => {
   };
 
   vi.mocked(runAuditStage).mockResolvedValue(fakeAuditResult());
-  vi.mocked(runAnalysisStage).mockImplementation(async (_dir, _manifest, _findings, options) =>
-    fakeAnalysisResult((options as { language: 'fr' | 'en' }).language),
-  );
+  vi.mocked(writeSelectedAnalysis).mockImplementation(async () => selected());
   vi.mocked(runAllReportsStage).mockResolvedValue([
     {
       language: 'fr',
@@ -130,8 +134,6 @@ beforeEach(() => {
       pageCount: 44,
     },
   ]);
-  vi.mocked(approveWritingCandidate).mockResolvedValue(undefined as never);
-  vi.mocked(recordReadyWritingCandidate).mockResolvedValue(undefined as never);
   vi.mocked(completeJob).mockResolvedValue(undefined);
   vi.mocked(updateJobProgress).mockResolvedValue(undefined);
   vi.mocked(ensureJobRunIdentity).mockResolvedValue({
@@ -148,9 +150,9 @@ describe('runFullAuditJob', () => {
       calls.push('audit');
       return fakeAuditResult();
     });
-    vi.mocked(runAnalysisStage).mockImplementation(async (_d, _m, _f, options) => {
-      calls.push(`analyze-${(options as { language: string }).language}`);
-      return fakeAnalysisResult((options as { language: 'fr' | 'en' }).language);
+    vi.mocked(writeSelectedAnalysis).mockImplementation(async () => {
+      calls.push('analyze-fr');
+      return selected();
     });
     vi.mocked(runAllReportsStage).mockImplementation(async () => {
       calls.push('report-all');
@@ -286,18 +288,33 @@ describe('runFullAuditJob', () => {
     await runFullAuditJob(job, ctx);
 
     const obligationAssessment = fakeAuditResult().obligationAssessment;
-    expect(runAnalysisStage).toHaveBeenCalledTimes(1);
-    expect(runAnalysisStage).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.objectContaining({ language: 'fr', obligationAssessment }),
+    expect(writeSelectedAnalysis).toHaveBeenCalledTimes(1);
+    expect(writeSelectedAnalysis).toHaveBeenCalledWith(
       fakeConnection,
+      expect.objectContaining({ obligationAssessment }),
     );
   });
 
+  // Issue #568: the job never renders from an analysis that did not become
+  // the selected writing; the audit and analysis stay persisted.
+  it('fails the job when the analysis is not selected', async () => {
+    vi.mocked(writeSelectedAnalysis).mockRejectedValueOnce(
+      new WritingSelectionFailedError('not-selected', 'analysis-fr'),
+    );
+
+    await expect(runFullAuditJob(fakeJob(), ctx)).rejects.toBeInstanceOf(
+      WritingSelectionFailedError,
+    );
+    expect(runAllReportsStage).not.toHaveBeenCalled();
+    expect(completeJob).not.toHaveBeenCalled();
+    expect(updateJobProgress).toHaveBeenCalledWith(fakeConnection, 'job-1', {
+      phase: 'analyze-fr',
+      auditId: 'audit-1',
+    });
+  });
+
   it('releases the origin lock even when a stage throws', async () => {
-    vi.mocked(runAnalysisStage).mockRejectedValueOnce(new Error('llm boom'));
+    vi.mocked(writeSelectedAnalysis).mockRejectedValueOnce(new Error('llm boom'));
     const job = fakeJob();
 
     await expect(runFullAuditJob(job, ctx)).rejects.toThrow('llm boom');
@@ -331,19 +348,19 @@ describe('runFullAuditJob', () => {
         phase: 'analyze-fr',
         auditId: 'audit-1',
       });
-      expect(runAnalysisStage).not.toHaveBeenCalled();
+      expect(writeSelectedAnalysis).not.toHaveBeenCalled();
       expect(completeJob).not.toHaveBeenCalled();
       expect(release).toHaveBeenCalled();
     });
 
     it('skips rendering when the stop came during the French analysis', async () => {
-      vi.mocked(runAnalysisStage).mockImplementationOnce(async () => {
+      vi.mocked(writeSelectedAnalysis).mockImplementationOnce(async () => {
         ctx.cancellation.request('job-1');
-        return fakeAnalysisResult('fr');
+        return selected();
       });
 
       await expect(runFullAuditJob(fakeJob(), ctx)).rejects.toBeInstanceOf(JobCancelledError);
-      expect(runAnalysisStage).toHaveBeenCalledTimes(1);
+      expect(writeSelectedAnalysis).toHaveBeenCalledTimes(1);
       expect(runAllReportsStage).not.toHaveBeenCalled();
     });
   });

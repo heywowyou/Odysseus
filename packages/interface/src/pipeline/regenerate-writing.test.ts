@@ -5,6 +5,7 @@ vi.mock('./catalogue-site-context.js', () => ({ catalogueContextOption: vi.fn(as
 
 vi.mock('@odysseus/store', () => ({
   approveWritingCandidate: vi.fn(),
+  getAuditManualFields: vi.fn(async () => undefined),
   getReportPreparation: vi.fn(),
   reconcileFailedAuditJobs: vi.fn(),
   recordFailedWritingCandidate: vi.fn(),

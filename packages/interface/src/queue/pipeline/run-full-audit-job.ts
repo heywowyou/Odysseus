@@ -9,13 +9,7 @@
  * call against this exact structure and findings provenance.
  */
 
-import {
-  approveWritingCandidate,
-  completeJob,
-  ensureJobRunIdentity,
-  recordReadyWritingCandidate,
-  type JobDocument,
-} from '@odysseus/store';
+import { completeJob, ensureJobRunIdentity, type JobDocument } from '@odysseus/store';
 import { buildFindingsProvenance, type SiteSignalOverrides } from '@odysseus/core';
 import {
   deleteCrawlCheckpoint,
@@ -24,7 +18,6 @@ import {
   type PageWorkGuard,
 } from '@odysseus/scanner';
 import { hasMeasuredCoreWebVitals } from '@odysseus/report';
-import { runAnalysisStage } from '../../pipeline/analysis-stage.js';
 import { runAuditStage } from '../../pipeline/audit-stage.js';
 import { acquisitionClaimFor, crawlOptionsFromJob } from './job-crawl-options.js';
 import { finalizeProspectScan } from '../../pipeline/finalize-prospect-scan.js';
@@ -37,7 +30,7 @@ import {
   releaseReportProduction,
   tryAcquireReportProduction,
 } from '../../pipeline/report-production-lock.js';
-import { catalogueContextOption } from '../../pipeline/catalogue-site-context.js';
+import { writeSelectedAnalysis } from '../../pipeline/write-selected-analysis.js';
 
 export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): Promise<void> {
   const { connection } = ctx;
@@ -135,29 +128,15 @@ export async function runFullAuditJob(job: JobDocument, ctx: PipelineContext): P
         auditId: auditResult.auditId,
       });
       throwIfCancelled();
-      const frAnalysis = await runAnalysisStage(
-        auditResult.auditDir,
-        auditResult.manifest,
-        auditResult.findings,
-        {
-          language: 'fr',
-          obligationAssessment: auditResult.obligationAssessment,
-          findingsProvenance,
-          ...(await catalogueContextOption(connection, auditResult.manifest.auditId)),
-        },
-        connection,
-      );
-
-      await recordReadyWritingCandidate(
-        connection,
-        auditResult.auditId,
-        {
-          frAnalysisId: frAnalysis.analysis.analysisId,
-          findingsProvenance: frAnalysis.analysis.findingsProvenance,
-        },
-        frAnalysis.sanitizationWarnings,
-      );
-      await approveWritingCandidate(connection, auditResult.auditId);
+      // Issue #568: a candidate that is not recorded as ready and then
+      // selected fails the job; the audit and analysis stay persisted.
+      const { stage: frAnalysis } = await writeSelectedAnalysis(connection, {
+        auditDir: auditResult.auditDir,
+        manifest: auditResult.manifest,
+        findings: auditResult.findings,
+        findingsProvenance,
+        obligationAssessment: auditResult.obligationAssessment,
+      });
 
       // Plan 067: render only the canonical French report on the normal path.
       throwIfCancelled();

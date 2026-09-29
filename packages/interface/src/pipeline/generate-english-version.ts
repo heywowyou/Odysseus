@@ -9,10 +9,8 @@
 import type { Connection } from 'mongoose';
 import { buildFindingsProvenance } from '@odysseus/core';
 import {
-  approveWritingCandidate,
   attachEnglishAnalysisToSelection,
   getReportPreparation,
-  recordReadyWritingCandidate,
   resolveSelectedAnalysisPairForAudit,
   type AuditDocument,
 } from '@odysseus/store';
@@ -29,6 +27,7 @@ import { runReportStage, type ReportStageResult } from './report-stage.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import type { ArtifactStore } from '../artifacts/artifact-store.js';
 import { catalogueContextOption } from './catalogue-site-context.js';
+import { manualFieldStageOptions, selectFrenchAnalysis } from './write-selected-analysis.js';
 
 export class EnglishGenerationUnavailableError extends Error {
   constructor(message: string) {
@@ -69,11 +68,10 @@ export async function generateEnglishVersion(
     // not replace the French analysis or report.
     const preparation = await getReportPreparation(connection, auditId);
     if (preparation.writingSelection?.selected === undefined) {
-      await recordReadyWritingCandidate(connection, auditId, {
+      await selectFrenchAnalysis(connection, auditId, {
         frAnalysisId: resolution.fr.analysisId,
         findingsProvenance: resolution.fr.findingsProvenance,
       });
-      await approveWritingCandidate(connection, auditId);
       resolution = await resolveSelectedAnalysisPairForAudit(connection, auditId);
       if (resolution.kind === 'none') {
         throw new EnglishGenerationUnavailableError(
@@ -116,16 +114,7 @@ export async function generateEnglishVersion(
         ...(selectedFrench.structureGeneratedAt !== undefined
           ? { requiredStructureGeneratedAt: selectedFrench.structureGeneratedAt }
           : {}),
-        ...(audit.manualFields?.siren !== undefined
-          ? { manualSiren: audit.manualFields.siren.value }
-          : {}),
-        ...(audit.manualFields?.transactionalFlowOverride !== undefined
-          ? {
-              siteSignalOverrides: {
-                hasTransactionalFlow: audit.manualFields.transactionalFlowOverride,
-              },
-            }
-          : {}),
+        ...manualFieldStageOptions(audit.manualFields),
       },
       connection,
     );

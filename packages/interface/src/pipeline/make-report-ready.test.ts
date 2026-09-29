@@ -71,6 +71,12 @@ beforeEach(() => {
   vi.mocked(getAuditManualFields).mockResolvedValue(undefined);
   vi.mocked(reconcileFailedAuditJobs).mockResolvedValue(0);
   vi.mocked(resolveSelectedAnalysisPairForAudit).mockResolvedValue({ kind: 'none' } as never);
+  vi.mocked(recordReadyWritingCandidate).mockResolvedValue({
+    writingSelection: { candidate: { status: 'ready' } },
+  } as never);
+  vi.mocked(approveWritingCandidate).mockResolvedValue({
+    writingSelection: { candidate: { status: 'selected', approvedAt: '2026-09-12T00:01:00.000Z' } },
+  } as never);
 });
 
 describe('makeReportReady', () => {
@@ -141,6 +147,7 @@ describe('makeReportReady', () => {
     // compute from findings.json - the exact Les Flots Bleus scenario.
     vi.mocked(readAuditArtifacts).mockResolvedValue({
       manifest: {
+        auditId: 'audit-1',
         findingsProvenance: { ...freshProvenance, normalizationFingerprint: 'old-fingerprint' },
       } as never,
       findings: [],
@@ -163,8 +170,6 @@ describe('makeReportReady', () => {
           sanitizationWarnings: [],
         }) as never,
     );
-    vi.mocked(recordReadyWritingCandidate).mockResolvedValue(undefined as never);
-    vi.mocked(approveWritingCandidate).mockResolvedValue(undefined as never);
     const reports = [{ language: 'fr' }] as never;
     vi.mocked(regenerateReportsForAudit).mockResolvedValue(reports);
 
@@ -193,7 +198,7 @@ describe('makeReportReady', () => {
 
   it('rewrites stale selected French writing instead of rendering it', async () => {
     vi.mocked(readAuditArtifacts).mockResolvedValue({
-      manifest: { findingsProvenance: freshProvenance } as never,
+      manifest: { auditId: 'audit-1', findingsProvenance: freshProvenance } as never,
       findings: [],
     });
     const oldProvenance = { ...freshProvenance, normalizationFingerprint: 'old-fingerprint' };
