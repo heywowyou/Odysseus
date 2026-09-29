@@ -17,11 +17,12 @@
  *  - the URL's own last path segment is an error slug. Whole-segment only,
  *    so a genuine article at /blog/comment-eviter-les-erreurs-404 is not
  *    caught by a substring.
- *  - the page's title or first heading announces the error. Sites write
- *    this in their own language, so the patterns cover the languages this
- *    tool sells in plus the bare code, and they must match at the start of
- *    the string: a page titled "404" is an error page, one titled
- *    "Nos chambres | Erreur 404 possible" is not a shape any CMS emits.
+ *  - the page's first h1, or its title together with its first heading,
+ *    announces the error. Sites write this in their own language, so the
+ *    patterns cover the languages this tool sells in plus the bare code,
+ *    and they must match at the start of the string: a page titled "404"
+ *    is an error page, one titled "Nos chambres | Erreur 404 possible" is
+ *    not a shape any CMS emits.
  */
 import { announcesMissingPage } from '@odysseus/core';
 
@@ -61,10 +62,13 @@ export function isSoftErrorPage(page: SoftErrorPageInput): boolean {
   const firstH1 = page.headings?.find((heading) => heading.level === 1);
   if (firstH1 !== undefined && announcesMissingPage(firstH1.text)) return true;
   if (!announcesMissingPage(page.title)) return false;
-  // Plan 075 K4: an error title alone is an error page only when nothing
-  // on the page says otherwise. aflatta's shop template titled 14 offer
-  // pages « Page introuvable » while each led with its offer (« Pour 2
-  // personnes »); the page's first heading is the evidence.
+  // Plan 075 K4 and L1: an error title alone never makes an error page;
+  // the page's first heading has to announce the error too. aflatta's shop
+  // template titles every offer, gift voucher and its cart « Page
+  // introuvable »: the offers lead with a content heading, while the
+  // vouchers (« Bon 100€ … OFFRIR ») and the cart have no heading at all.
+  // Every true error page on the stored audits has an error slug or an
+  // error heading.
   const firstHeading = page.headings?.[0];
-  return firstHeading === undefined || announcesMissingPage(firstHeading.text);
+  return firstHeading !== undefined && announcesMissingPage(firstHeading.text);
 }

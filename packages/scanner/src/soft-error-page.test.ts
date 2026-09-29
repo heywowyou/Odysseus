@@ -21,10 +21,7 @@ describe('isSoftErrorPage (issue #302)', () => {
     }
   });
 
-  it('catches an error page whose URL says nothing, from its title', () => {
-    expect(isSoftErrorPage(page('https://example.com/oups', '404 - Page introuvable', []))).toBe(
-      true,
-    );
+  it('catches an error page whose URL says nothing, from its title and heading', () => {
     expect(
       isSoftErrorPage(
         page('https://example.com/oops', 'Page not found | Example', [
@@ -44,9 +41,34 @@ describe('isSoftErrorPage (issue #302)', () => {
         ]),
       ),
     ).toBe(false);
-    // The same template with no offer behind it is an error page.
+  });
+
+  it('keeps a page with an error title and no heading (plan 075 L1)', () => {
+    // aflatta, 2026-09-29: the gift vouchers (« Bon 100€ … OFFRIR ») and the
+    // cart carry the same « Page introuvable » title and no heading.
+    for (const url of [
+      'https://www.aflatta.com/detail-produit/14',
+      'https://www.aflatta.com/panier',
+    ]) {
+      expect(isSoftErrorPage(page(url, 'Page introuvable', []))).toBe(false);
+    }
+  });
+
+  it('still catches the stored true error pages', () => {
+    // haaitza and lacoorniche: error slug; domaine-d-auriac: error heading.
     expect(
-      isSoftErrorPage(page('https://www.aflatta.com/detail-produit/13', 'Page introuvable', [])),
+      isSoftErrorPage(
+        page('https://lacoorniche.com/erreur-404', 'Erreur 404 - La Co(o)rniche', [
+          { level: 1, text: 'Page 404' },
+        ]),
+      ),
+    ).toBe(true);
+    expect(
+      isSoftErrorPage(
+        page('https://domaine-d-auriac.fr/404-2', "404 - Domaine d'Auriac", [
+          { level: 1, text: 'Erreur 404, page non trouvée' },
+        ]),
+      ),
     ).toBe(true);
   });
 
