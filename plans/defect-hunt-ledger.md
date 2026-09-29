@@ -7,14 +7,19 @@ Brief: `docs/agents/audit-data-defect-hunt.md`
 
 ## Where the hunt stands
 
-- **Stop rule: 0 of 2.** The last complete sweep (11, 2026-09-29) found 5 new
-  material defects. Two consecutive complete sweeps with none are needed, the
-  second with a fresh angle.
+- **Stop rule: 0 of 2 (severity-based, adopted 2026-09-29).** The operator
+  replaced "any material defect resets the count" with blocking criteria
+  (brief, "Blocking, backlog or minor"): eleven sweeps never converged on the
+  old rule while the severity of what they found kept falling. The last
+  complete sweep (11) found 2 blocking defects (L1, L5) and 3 backlog
+  (#562 to #564). Two consecutive complete sweeps with no new blocking
+  defect are needed, the second with a fresh angle and, when any exist, new
+  sites.
 - **Data state.** Production runs `2d4afdd6` (Part K, fingerprint
   `b8af13c49ae79f87`). The 28 latest audits were refreshed after the deploy,
   and clos-sainte-marie, aflatta, labaignoirelacanau and grand-hotel-opera
-  were rescanned on it (operator approved). Part L (L1 to L5) is recorded in
-  plan 075, not implemented.
+  were rescanned on it (operator approved). Part L (L1, L5) is recorded in
+  plan 075 and L2 to L4 are issues #562 to #564; none is implemented.
 - **Access.** Read-only scripts in the app container, as in sweeps 8 to 10.
   Writes this sweep, approved by the operator on 2026-09-29: the findings
   refresh, the four rescans, and a push of the Part K commits. The
@@ -22,7 +27,8 @@ Brief: `docs/agents/audit-data-defect-hunt.md`
   `.env`, used only for that service. Live probes: one page each on aflatta
   (twice) and clos-sainte-marie, and `/llms.txt` or `/robots.txt` on nine
   already-audited sites.
-- **Next: sweep 12**, after Part L ships and the audits are refreshed, and
+- **Next: sweep 12**, after Part L ships and the audits are refreshed (the
+  backlog issues need not ship first), and
   after the rescans Part L lists (atlantichotel, whistlerparis,
   grandhotelbellevue, aflatta). Start with the start list below, then every
   angle on every latest full audit.
@@ -34,9 +40,7 @@ Angle 13 (replay against closed slices) targets:
 | Slice | Audit | Expected on the refreshed findings |
 |---|---|---|
 | L1 | aflatta (rescan) | its 14 offer and voucher pages and `/panier` analysed; `title-announces-error` over 15 pages; the error pages of lacoorniche, haaitza, yonahotel and domaine-d-auriac still soft 404s |
-| L2 | aflatta (rescan) | 0 `focus-order-mismatch` |
-| L3 | alexanderpark, bellevigne-hotels | no dead URL in `sitemap-orphan-page`; a dead-URL finding naming 7 and 1 URLs |
-| L4 | clos-sainte-marie, lacoorniche | 0 `entity-data-incomplete` on clos-sainte-marie; no `telephone` in lacoorniche's |
+| #562 to #564 | aflatta, alexanderpark, bellevigne-hotels, clos-sainte-marie, lacoorniche | only if shipped: the targets named in each issue |
 | L5 | regina-hotel, clos-sainte-marie, lescriquets | one language finding each (67 `/br/` pages; `/?lang=en`; `/boutique`), none elsewhere |
 | K1 | domaine-d-auriac, regina-hotel (regenerated or new report) | the per-check sentence states the Tab walk not concluded, never « aucune anomalie » |
 | Rescans | atlantichotel, whistlerparis, grandhotelbellevue | no NAP finding from article text on atlantichotel; `llms-txt-missing` on whistlerparis and grandhotelbellevue |
@@ -51,7 +55,11 @@ Other carried checks:
 
 ## Sweeps
 
-| Sweep | Date | Audits | Angles (brief numbering) | Complete | New material | Plan part |
+Sweeps 1 to 10 were counted under the old rule (every material defect), so
+their column holds that count; from sweep 11 the columns split blocking and
+backlog.
+
+| Sweep | Date | Audits | Angles (brief numbering) | Complete | New (blocking / backlog) | Plan part and issues |
 |---|---|---|---|---|---|---|
 | 1 | 2026-09-22 | 12 | 1, 2, 3 (large rules), 4, 6 partly | before the brief | about 25 | Evidence A to C; Parts A to D |
 | 2 | 2026-09-22 | 12 | 5 partly, 6, 7 (frames), 9, preview selection | before the brief | 9 | Part E (E1 to E8; Q1 to Q3) |
@@ -63,10 +71,11 @@ Other carried checks:
 | 8 | 2026-09-28 | 22 latest full audits (12 refreshed, grandhoteldesalpes rescan, 9 new sites), in place on the VPS | 1 to 13; fresh angle became 14 | yes | 3 | Part I (I1 to I3, Q6); plan reopened |
 | 9 | 2026-09-28 | 21 latest full audits, replayed in place with the deployed `fa806424` core | 1 to 14 (12 not applicable; 8 partial); fresh angle became 15 | yes | 3 | Part J (J1 to J3) |
 | 10 | 2026-09-29 | 28 latest full audits (21 refreshed on `9ad924f7`, 8 sites new to the hunt) | 1 to 15 (12 not applicable; 8 partial); fresh angle became 16 | yes | 6 | Part K (K1 to K6) |
-| 11 | 2026-09-29 | 28 latest full audits (refreshed on `2d4afdd6`; 4 rescans) | 1 to 16 (8 partial); fresh angle became 17 | yes | 5 | Part L (L1 to L5) |
+| 11 | 2026-09-29 | 28 latest full audits (refreshed on `2d4afdd6`; 4 rescans) | 1 to 16 (8 partial); fresh angle became 17 | yes | 2 / 3 | Part L (L1, L5); #562 to #564 |
 
 Trend of new material defects per sweep: 25, 9, 8, 7, 4, 7, 7, 3, 3, 6, 5.
-It has not converged. Sweeps that read sites no earlier sweep had seen find the
+It has not converged by count; sweep 11's five are two blocking and three
+backlog, and none changes a grade or a legal statement. Sweeps that read sites no earlier sweep had seen find the
 most: sweep 8 (nine new sites) and sweep 10 (eight new sites, four of its six
 defects found only on them).
 

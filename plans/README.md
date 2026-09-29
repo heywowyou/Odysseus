@@ -14,7 +14,7 @@ Earlier indexes are kept as history, not as binding decisions:
 
 | Plan | Title | Priority | Effort | Depends on | Status |
 | --- | --- | --- | --- | --- | --- |
-| [075](075-clean-true-audit-data.md) | Make the audit data clean and true before it reaches a report | P1 | XL | none | IN PROGRESS: Part K deployed (`2d4afdd6`), the 28 latest audits refreshed and four sites rescanned 2026-09-29; sweep 11 found five defects, recorded as Part L (L1 to L5). |
+| [075](075-clean-true-audit-data.md) | Make the audit data clean and true before it reaches a report | P1 | XL | none | IN PROGRESS: Part K deployed (`2d4afdd6`), the 28 latest audits refreshed and four sites rescanned 2026-09-29; sweep 11 found two blocking defects (Part L: L1, L5) and three backlog issues (#562 to #564). |
 
 Verified findings waiting to be planned are GitHub issues.
 

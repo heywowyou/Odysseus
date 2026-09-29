@@ -17,8 +17,9 @@ Find every way the scan's data can mislead a client: a finding that is false,
 a real defect that is missing, one defect counted several times, a page that
 should or should not have been analysed, a measurement that does not describe
 the page, and client-facing wording that states more than the evidence shows.
-Record each one as an actionable slice in the active data-quality plan. Stop
-only when the stop rule below is met.
+Record each blocking defect as an actionable slice in the active data-quality
+plan and each backlog defect as a GitHub issue. Stop only when the stop rule
+below is met.
 
 This is a search and planning task. Do not fix product code during the hunt:
 Luna or another implementer works from the plan, often in the same working
@@ -72,13 +73,11 @@ audit that has findings. Hold each finding to the evidence bar:
 - **Measured, not assumed.** Give counts per audit and name at least one real
   page or element. Where the stored data cannot settle a question, use a live
   probe (within the boundaries above) or a reading of the code at file:line.
-- **Material.** The defect changes one of these: a finding's existence, a
-  severity, the grade, a total, the analysed page population, a proof card, or
-  client-facing wording that asserts a fact. Cosmetic issues go in the ledger
-  as minor, and do not reset the stop rule.
+- **Classified.** Every finding is blocking, backlog or minor (next
+  section). Only blocking defects count toward the stop rule.
 - **New.** It is not already in the known-defect list. A known defect that
   turns out broader than recorded is a new finding only when its fix has to
-  change.
+  change. A defect introduced by an earlier sweep's fix is new.
 
 Start every sweep by running `pnpm measure:audit-data-quality` in place and
 reading its top-level `alerts`. For each audit it lists the page checks that
@@ -89,6 +88,42 @@ where to look, not a defect: a check that did not evaluate a site looks like a
 clean site, and a filter that eats real detections looks like a fixed false
 positive, so each alert is either explained in the sweep notes or recorded as
 a finding.
+
+### Blocking, backlog or minor
+
+The open web has an endless tail of site-specific quirks, so the hunt does
+not wait for zero defects. It waits until what is left cannot mislead a
+client on something that matters. The classes changed on 2026-09-29, after
+sweep 11: under the old rule, where any change to a finding counted, eleven
+sweeps never converged while the severity of what they found kept falling.
+
+A defect is **blocking** when it does at least one of these:
+
+1. It makes a critical or serious finding false, missing, split or merged,
+   or it changes the grade.
+2. It makes a client-facing sentence state something the data does not
+   support: a legal or obligation statement, a coverage or « nothing
+   detected » claim, a methodology statement, a proof card or preview claim,
+   or a model sentence that restates a deterministic fact.
+3. It changes the analysed page population of an audit by 5 pages or more,
+   or by 10 % or more of its analysed pages, or it drops a homepage, a
+   language home, or a booking, contact or legal page.
+4. It holds back a report that should go out, or lets through one that a
+   gate should hold.
+5. It stops a check from running on more than half of the pages it applies
+   to on one audit, while the report states a result for that check.
+6. It is a backlog defect found on 5 or more of the swept audits. At that
+   scale, a small defect shapes the whole service's output.
+
+A defect is **backlog** when it makes a moderate or minor finding false,
+missing, split or merged, or it moves a count or a page population without
+reaching the thresholds above. It is real and gets fixed, but it does not
+hold the hunt open.
+
+A defect is **minor** when it is cosmetic, or when it concerns a rule that
+does not exist yet and matches no WCAG 2.2 AA criterion. A missing check
+that corresponds to a WCAG A or AA criterion is judged as a missing finding
+at that criterion's usual severity (serious for level A).
 
 ### Angles (every sweep covers all of them)
 
@@ -162,12 +197,22 @@ a finding.
 
 ## Recording
 
-For each new material defect:
+For each new blocking defect:
 
 - Add an evidence row (what was measured, with numbers and one real example)
   and a slice (fix, stored-audit consequence, tests) to the active plan, in the
   matching part. Add a closure-ledger row and, where needed, a
-  definition-of-done line.
+  definition-of-done line. Name the blocking criterion (1 to 6) in the
+  evidence row.
+
+For each new backlog defect, file one GitHub issue in the private repository
+with the same evidence bar: what was measured, one real example, the fix,
+the stored-audit consequence and the tests. Title it `[P3] …` and label it
+`bug` and `audit-data`. List the issue number in the ledger. Backlog issues
+are fixed in batches between sweeps; a backlog issue that later reaches
+criterion 6 moves into the plan.
+
+Minor items go in the ledger's minor table only.
 - Keep the plan's conventions: measured evidence, trade-off references, no
   guessed legal facts, French-first client copy, no em or en dashes in site or
   preview copy, and no audit-document finding ids in code comments or test
@@ -189,8 +234,14 @@ After each sweep:
 
 ## Stop rule
 
-Stop when **two consecutive complete sweeps** find no new material defect, and
-the second of the two covered at least one new angle (angle 10).
+Stop when **two consecutive complete sweeps** find no new blocking defect, and
+the second of the two covered at least one new angle (angle 10). Backlog
+and minor defects found in those sweeps do not reset the count. They are
+filed and recorded as usual.
+
+Both sweeps must read audits the hunt has not seen before when such audits
+exist, because new sites are where most defects have come from. A sweep
+that finds no new site to read says so in its notes.
 
 Also stop, and report, when:
 
@@ -206,8 +257,8 @@ context resumes from it.
 
 Keep it short and plain, outcome first:
 
-- how many sweeps ran, and the new material defects per sweep (the trend is
-  the evidence that the search converged);
+- how many sweeps ran, and the new blocking and backlog defects per sweep
+  (the blocking trend is the evidence that the search converged);
 - the worst defects found in this run, one line each;
 - operator questions added, each with its recommendation;
 - what the data could not settle, and the smallest external action that would
@@ -235,8 +286,8 @@ Brief: docs/agents/audit-data-defect-hunt.md
 
 ## Sweeps
 
-| Sweep | Date | Audits | Angles (brief numbering) | Complete | New material | Plan part |
-|---|---|---|---|---|---|---|
+| Sweep | Date | Audits | Angles (brief numbering) | Complete | New blocking | New backlog | Plan part and issues |
+|---|---|---|---|---|---|---|---|
 
 ## Open doubts
 

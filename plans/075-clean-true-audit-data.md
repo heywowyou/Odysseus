@@ -1,6 +1,6 @@
 # Plan 075: Make the audit data clean and true before it reaches a report
 
-Status: IN PROGRESS (reopened 2026-09-24 and again 2026-09-28). Part K is deployed (`2d4afdd6`), the 28 latest audits were refreshed and four sites rescanned on 2026-09-29; sweep 11 found five defects (Part L). Closure needs Part L implemented, deployed and refreshed, the rescans listed in Part L, and two clean hunt sweeps. The earlier closure record stays below as history. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
+Status: IN PROGRESS (reopened 2026-09-24 and again 2026-09-28). Part K is deployed (`2d4afdd6`), the 28 latest audits were refreshed and four sites rescanned on 2026-09-29; sweep 11 found two blocking defects (Part L: L1, L5) and three backlog defects (issues #562 to #564), classified under the hunt's severity-based stop rule adopted on 2026-09-29. Closure needs Part L implemented, deployed and refreshed, the rescans listed in Part L, and two clean hunt sweeps. The earlier closure record stays below as history. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
 
 ## Context
 
@@ -657,6 +657,8 @@ Part K targets on the refreshed and rescanned data:
 
 #### Evidence L
 
+Classified under the brief's blocking criteria (adopted 2026-09-29, after this sweep): L1 is blocking by criterion 3 (6 of aflatta's 38 pages, 16 %), L5 by criterion 1 (a missing level A finding on 67 pages). L2, L3 and L4 are backlog and moved to GitHub issues #562, #563 and #564; their evidence rows stay here as the record.
+
 | Defect | Measured |
 |---|---|
 | An error title over a page without a heading still removes a content page | aflatta rescan (`2026-09-28T23-48-24Z`): 9 offer pages are analysed and `title-announces-error` covers them, but 6 pages remain `soft-error-page` on K4's "no heading" branch (`soft-error-page.ts`): the five gift vouchers `/detail-produit/13` to `/17` (linked from `/bon-cadeau` as « Bon 50€ » to « Bon 250€ ») and `/panier`, each titled « Page introuvable » with no heading, 690 to 809 visible characters. Live probe of `/detail-produit/14` on 2026-09-29: « Bon 100€ Bon de 100 € à utiliser sur le domaine. 100 € OFFRIR Retour aux bons cadeaux », no `h1` to `h3`. Across every stored soft 404 on the 28 audits, the no-heading branch decides only these six pages; every true error page (haaitza and lacoorniche `/erreur-404`, yonahotel `/fr/erreur-404`, domaine-d-auriac `/404-2`) has an error slug or an error heading. Sweep 10 read `/detail-produit/13` as an empty offer, and K4's test encodes that reading. |
@@ -667,7 +669,7 @@ Part K targets on the refreshed and rescanned data:
 
 Checked and clean or already known in this sweep: every critical finding on the four rescans read (a Swiper and a Wix slider arrow without a name, a Wix date button with `aria-selected`, an unlabelled `#demipension` select, a popup close icon, clos-sainte-marie's lab FCP 2.9 s and LCP 5.4 s without field data) and true, apart from the lab tiering already covered by E5 and Q2. JSON-LD absence confirmed on grand-hotel-opera (0 blocks on 173 pages). labaignoirelacanau's five lab criticals of 2026-09-24 are gone because CrUX now has field data for the origin (LCP p75 1.3 s), as designed; the rescans' executive summaries restate CrUX correctly (grand-hotel-opera LCP 3.1 s and CLS 0.13 « intermédiaire », INP good; aflatta and labaignoirelacanau favourable). The same vendor components get the same rule and severity across audits (YouTube `youtube-tracking-embed` on 7, Hijiffy contrast on 2, WooCommerce account and cart pages on 2). grand-hotel-opera's and whistlerparis's previews, published and emailed on 2026-09-28, match their audits' digests; grand-hotel-opera's was built on the pre-rescan audit (« Sérieux 12 » against 10 now), kept by the standing decision on sent previews.
 
-Rescans still needed before these audits' reports go out, for scan-time fixes they predate: atlantichotel (`2026-09-22`, before F4: `nap-phone-mismatch` on 4 news articles and `nap-postal-code-mismatch` on 1 compare the site's JSON-LD with numbers inside the articles, such as a festival's phone number); whistlerparis and grandhotelbellevue (before `a2b99fac`: their `/llms.txt` redirects to the homepage, live probe 2026-09-29, yet the stored check reads it as found, so `llms-txt-missing` is absent); aflatta again once L1 and L2 ship.
+Rescans still needed before these audits' reports go out, for scan-time fixes they predate: atlantichotel (`2026-09-22`, before F4: `nap-phone-mismatch` on 4 news articles and `nap-postal-code-mismatch` on 1 compare the site's JSON-LD with numbers inside the articles, such as a festival's phone number); whistlerparis and grandhotelbellevue (before `a2b99fac`: their `/llms.txt` redirects to the homepage, live probe 2026-09-29, yet the stored check reads it as found, so `llms-txt-missing` is absent); aflatta again once L1 ships (and #562, if it ships first).
 
 #### Slices
 
@@ -676,21 +678,7 @@ Rescans still needed before these audits' reports go out, for scan-time fixes th
   - Stored audits: the soft-404 status is set at scan time; aflatta needs a rescan.
   - Target: an aflatta rescan analyses its 14 offer and voucher pages and `/panier`; `title-announces-error` covers 15 pages; lacoorniche, haaitza, yonahotel and domaine-d-auriac error pages stay soft 404s.
   - Tests: soft-error-page unit tests with the stored voucher shape (error title, no heading) and the four stored true error shapes; replace K4's `/detail-produit/13` case.
-- **L2. A carousel that moves during the Tab walk is not an inversion.**
-  - At each Tab press, record whether the tabbables the focus jumped over were visible and focusable at that moment. Count an inversion only when a skipped element was focusable when the walk passed it. A walk whose skips all come from elements that became focusable later records no inversion.
-  - Stored audits: the stored walk has no per-step visibility, so the finding stays until a rescan; no refresh change.
-  - Target: an aflatta rescan has 0 `focus-order-mismatch`; the canary audit's two real inversions still report.
-  - Tests: a scanner e2e with an autoplaying slider whose hidden slides become focusable during the walk, and one with a positive `tabindex`; the canary audit.
-- **L3. The sitemap population excludes dead URLs, and dead URLs are reported.**
-  - A sitemap URL the crawl resolved as `http-error-status` (404 or 410) or `soft-error-page` leaves the eligible population for `sitemap-stale` and `sitemap-orphan-page`, as redirected URLs already do, and a minor finding states how many dead URLs the sitemap lists and names them. French first: label « Le plan du site liste des adresses qui n'existent plus », remediation « Retirez du plan du site les adresses qui renvoient une erreur, ou rétablissez les pages concernées. » Extending `sitemap-lists-redirects` or adding a rule is decided when implementing, after reading its label and remediation.
-  - Stored audits: the page statuses are stored, so a refresh applies it.
-  - Targets: alexanderpark has no `sitemap-orphan-page` and a dead-URL finding naming its 7 URLs; bellevigne-hotels likewise with 1.
-  - Tests: normalize-sitemap unit tests with the stored alexanderpark shape (dead orphans), a live orphan and a mixed case.
-- **L4. An entity is judged per page, with its `contactPoint`.**
-  - Read `telephone` from `contactPoint` as well as the node's top level. Report `entity-data-incomplete` for a page only when no business entity on the page carries all the required fields, and name the fields missing from the most complete one.
-  - Stored audits: JSON-LD is stored, so a refresh applies it.
-  - Targets: clos-sainte-marie 0 `entity-data-incomplete`; lacoorniche's findings no longer list `telephone`; lodgekerisper, hotelmacchi, alexanderpark, grandhoteldesalpes and haaitza keep theirs.
-  - Tests: normalize-geo unit tests with the stored clos-sainte-marie pair of blocks, a `contactPoint`-only telephone, and a genuinely incomplete entity.
+- **L2 to L4: backlog, moved to issues.** The carousel inversion (#562), dead sitemap URLs counted as orphans (#563) and the per-node entity check (#564) are specified there with their targets and tests.
 - **L5. A declared language must match the page's content.**
   - Two checks. First, an hreflang target whose `<html lang>` names another language than the hreflang code is a finding on the declaring page (stored data suffices). Second, a page whose declared language differs from the language of its visible text: detected deterministically from the stored title and headings of every page sharing that code (a stop-word and diacritic profile over the tool's languages), reported only with a clear margin and at least three pages agreeing, so one mixed page never decides. French first for the accessibility rule: label « La langue déclarée de la page ne correspond pas à celle de son contenu », remediation « Indiquez dans l'attribut lang le code de la langue réellement utilisée (par exemple pt ou pt-BR pour le portugais), et le même code dans les liens hreflang. » WCAG 3.1.1. Severities are measured on the 28 audits and recorded in trade-off 111; `serious` is proposed for the language of page, as for `html-lang-valid`.
   - If the text detector cannot meet the margin on the stored data, the second check becomes a line of the manual accessibility checklist instead, and the first check ships alone.
@@ -738,7 +726,7 @@ Minor, not slices: clos-sainte-marie is a one-page site whose sitemap route alia
 - Part I: a browser-language redirect is never counted as a redirect or analysed as a page, `link-name` follows the Q6 answer with lescriquets and heurope at their I2 targets, and no model sentence states that the obligation applies or does not apply (I1 to I3, Q6 answered).
 - Part J: generated ids and widget state classes no longer split a component, the writer never calls a lab metric good beside a critical finding for it, and a dialog holding focus makes the Tab walk inconclusive instead of a finding (J1 to J3).
 - Part K: the report states a check's clean result only over the pages it ran on, a probe that reports nothing cannot take the interactive checks down, a dead link is a broken link and never a blocked page, an error title alone never removes a content page, deliberate utility pages are not hidden public pages, and the legal-notice sentence never names a link the site does not have (K1 to K6).
-- Part L: a content page without a heading is never dropped for its title, a moving carousel is not a focus-order defect, dead sitemap URLs are reported as dead and never as orphan pages, an entity is judged with its `contactPoint` and the page's other entities, and a declared language that contradicts the content is reported (L1 to L5).
+- Part L: a content page without a heading is never dropped for its title, and a declared language that contradicts the content is reported (L1 and L5).
 - The requirement-to-proof ledger below is complete before the plan moves to DONE.
 
 ## Executable closure contract
@@ -814,9 +802,6 @@ The closure artifact is the requirement-to-proof ledger below. Every row names i
 | Utility pages are deliberate noindex | `urls.ts`, `normalize-head-metadata.ts` | Code, pattern list | haaitza, auriac and genuine-hidden-page unit tests | Harness: 0 `noindex-on-public-page` on haaitza and domaine-d-auriac |
 | The legal-notice sentence matches the check | `methodology.ts` `renderMentionsLegalesCoverageNote` | Code, FR-first copy checked against `obligation-basis.md` | Resolved, fallback and merged `perPage` render tests | Operator reads the clos-sainte-marie methodology section |
 | An error title needs an error slug or heading | `soft-error-page.ts` | Code | Stored voucher shape and four true error shapes | aflatta rescan analyses its 15 pages |
-| A moving carousel is not an inversion | `keyboard-navigation.ts`, `normalize-keyboard-navigation.ts` | Code | Autoplaying-slider and positive-tabindex scanner e2e; canary audit | aflatta rescan: 0 `focus-order-mismatch` |
-| Dead sitemap URLs are dead, not orphans | `normalize-sitemap.ts`, copy | Code, FR-first copy | Stored alexanderpark shape, live orphan, mixed case | Harness: alexanderpark and bellevigne-hotels without dead orphans |
-| An entity is judged per page with its `contactPoint` | `normalize-geo.ts` | Code | Stored clos-sainte-marie blocks, `contactPoint` telephone, incomplete entity | Harness: clos-sainte-marie 0 `entity-data-incomplete` |
 | A declared language matches the content | new rules or checklist line, `normalize.ts`, copy | Code, FR-first copy, trade-off 111 severities | Stored regina, clos-sainte-marie and lescriquets shapes; correct multilingual site | Harness: regina, clos-sainte-marie and lescriquets gain one finding each, no other audit |
 | Provenance consistent | `normalization-fingerprint.ts` | Fingerprint bump | `pnpm run check`, findings-provenance test | none |
 
