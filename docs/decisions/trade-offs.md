@@ -5890,6 +5890,12 @@ measured on the 28 latest production audits:
   floor and a twofold margin, and never when the text reads as the site's
   main language (untranslated copy). It fires on one audit (regina-hotel,
   67 Portuguese pages declared Breton).
+- `sitemap-lists-dead-urls` (issue #563) is minor, like
+  `sitemap-lists-redirects`: a dead entry wastes a crawler's visit but hides
+  no page. It is its own rule rather than an extension of the redirect rule,
+  because the remedy differs (remove or restore the page, not replace the URL
+  with its final address). It fires on two audits (alexanderpark's 7 `/en/`
+  URLs, bellevigne-hotels' one room page), which were orphans before.
 
 ### 112. Odysseus audits businesses in France and the EU only (operator decision, 2026-09-23)
 

@@ -791,6 +791,10 @@ export const REMEDIATION_EN: Readonly<Record<string, RemediationEntry>> = {
     text: 'Replace redirected or off-site sitemap entries with the final canonical URLs that belong to this site.',
     snippet: { kind: 'not-applicable' },
   },
+  'sitemap-lists-dead-urls': {
+    text: 'Remove the addresses that return an error from the sitemap, or restore the pages concerned.',
+    snippet: { kind: 'not-applicable' },
+  },
   'sitemap-lists-noindex': {
     text: 'Remove these pages from the sitemap if keeping them out of search results is intended; otherwise, remove the noindex directive.',
     snippet: { kind: 'not-applicable' },

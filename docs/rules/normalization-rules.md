@@ -581,6 +581,10 @@ finding. Relative links that resolve to the same identity do not create a
 self-nesting finding; genuine relative nesting is bounded and reported once.
 Sitemap entries that redirect or point off-site use the separate minor
 `sitemap-lists-redirects` rule and are removed from stale/orphan comparisons.
+Entries the crawl resolved as gone (a 404 or 410 answer, or a
+`soft-error-page`) use the separate minor `sitemap-lists-dead-urls` rule and
+are removed from the same comparisons, so a dead URL is never described as a
+live orphan page (issue #563).
 A `language-redirect` page (plan 075 I1) is neither: the site sent our French
 browser to its translation, and the landing page lists it among its hreflang
 or language-switcher alternates. It is counted by no sitemap rule, left out

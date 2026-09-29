@@ -88,6 +88,9 @@ export const CUSTOM_RULE_CONFIRMATION: Readonly<Record<string, RuleConfirmation>
   'canonical-target-noindex': unconfirmed(),
   'sitemap-orphan-page': confirmed(),
   'sitemap-lists-redirects': confirmed(),
+  'sitemap-lists-dead-urls': confirmed(
+    "Read in sweep 11 (issue #563) as sitemap-orphan-page findings whose URLs all answer 404: alexanderpark's 7 /en/ pages and bellevigne-hotels' /chambres/la-cosy-pour-4.",
+  ),
   'sitemap-lists-noindex': confirmed(),
   'robots-disallow-broad': confirmed(),
   'relative-link-nesting': confirmed(),

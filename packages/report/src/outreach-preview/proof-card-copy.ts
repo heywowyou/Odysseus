@@ -712,6 +712,10 @@ export const OUTREACH_PROOF_CARD_COPY: Readonly<Record<string, OutreachProofCard
     fr: 'Le sitemap contient des adresses qui redirigent ou appartiennent à un autre site.',
     en: 'The sitemap contains addresses that redirect or belong to another site.',
   },
+  'sitemap-lists-dead-urls': {
+    fr: "Le plan du site contient des adresses qui n'existent plus.",
+    en: 'The sitemap contains addresses that no longer exist.',
+  },
   'sitemap-lists-noindex': {
     fr: 'Le sitemap soumet aux moteurs de recherche des pages qui demandent à ne pas être indexées.',
     en: 'The sitemap submits pages to search engines that ask not to be indexed.',

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   extractSitemapCandidates,
+  SITEMAP_LISTS_DEAD_URLS_RULE_ID,
   SITEMAP_LISTS_REDIRECTS_RULE_ID,
   SITEMAP_MISSING_RULE_ID,
   SITEMAP_STALE_RULE_ID,
@@ -274,5 +275,80 @@ describe('sitemap-lists-redirects', () => {
       redirectedUrls: ['https://example.com/fr/chambres'],
       externalUrls: [],
     });
+  });
+});
+
+describe('sitemap-lists-dead-urls', () => {
+  const home = 'https://example.com/';
+  const live = [
+    'https://example.com/',
+    'https://example.com/chambres',
+    'https://example.com/contact',
+  ];
+  const dead = [
+    'https://example.com/en/accommodation',
+    'https://example.com/en/meetings',
+    'https://example.com/en/wellness',
+  ];
+
+  it('reports dead sitemap URLs once and never as orphans or drift', () => {
+    const candidates = extractSitemapCandidates(
+      baseInput({
+        pageUrl: home,
+        entries: [...live, ...dead].map((url) => ({ url })),
+        crawledUrls: live,
+        discoveredUrls: live,
+        deadUrls: dead,
+      }),
+    );
+    expect(candidates.map((candidate) => candidate.ruleId)).toEqual([
+      SITEMAP_LISTS_DEAD_URLS_RULE_ID,
+    ]);
+    expect(candidates[0]?.severity).toBe('minor');
+    expect(candidates[0]?.rawEvidenceForPage).toEqual({ deadUrls: dead });
+  });
+
+  it('still reports a live orphan next to dead entries', () => {
+    const orphan = 'https://example.com/offres';
+    const candidates = extractSitemapCandidates(
+      baseInput({
+        pageUrl: home,
+        entries: [...live, orphan, dead[0]!].map((url) => ({ url })),
+        crawledUrls: live,
+        discoveredUrls: live,
+        deadUrls: [dead[0]!],
+      }),
+    );
+    const orphans = candidates.find((c) => c.ruleId === SITEMAP_ORPHAN_PAGE_RULE_ID);
+    expect(orphans?.rawEvidenceForPage).toEqual({ orphanUrls: [orphan] });
+    const deadFinding = candidates.find((c) => c.ruleId === SITEMAP_LISTS_DEAD_URLS_RULE_ID);
+    expect(deadFinding?.rawEvidenceForPage).toEqual({ deadUrls: [dead[0]] });
+  });
+
+  it('reports a live orphan alone when the sitemap lists no dead URL', () => {
+    const orphan = 'https://example.com/offres';
+    const candidates = extractSitemapCandidates(
+      baseInput({
+        pageUrl: home,
+        entries: [...live, orphan].map((url) => ({ url })),
+        crawledUrls: live,
+        discoveredUrls: live,
+      }),
+    );
+    expect(candidates.map((candidate) => candidate.ruleId)).toEqual([SITEMAP_ORPHAN_PAGE_RULE_ID]);
+  });
+
+  it('leaves dead URLs out of the stale population', () => {
+    const candidates = extractSitemapCandidates(
+      baseInput({
+        pageUrl: home,
+        entries: [live[0]!, ...dead].map((url) => ({ url })),
+        crawledUrls: live,
+        discoveredUrls: live,
+        deadUrls: dead,
+      }),
+    );
+    const stale = candidates.find((c) => c.ruleId === SITEMAP_STALE_RULE_ID);
+    expect(stale?.rawEvidenceForPage).toMatchObject({ sitemapEntryCount: 1, matchedCount: 1 });
   });
 });

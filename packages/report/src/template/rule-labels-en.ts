@@ -103,6 +103,7 @@ export const RULE_LABELS_EN: Readonly<Record<string, string>> = {
   'server-response-time': 'The server responds slowly',
   'sitemap-orphan-page': 'The sitemap lists pages that cannot be reached from the site itself',
   'sitemap-lists-redirects': 'The sitemap lists redirected or off-site URLs',
+  'sitemap-lists-dead-urls': 'The sitemap lists addresses that no longer exist',
   'sitemap-lists-noindex': 'The sitemap lists pages that ask not to be indexed',
   'speed-index': 'Visible content fills in slowly (Speed Index)',
   'structured-data-entity-missing': 'No structured data identifies this business as an entity',

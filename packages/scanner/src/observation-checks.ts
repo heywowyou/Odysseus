@@ -58,6 +58,7 @@ const CUSTOM_RULE_CHECKS: Readonly<Record<string, string>> = {
   'sitemap-stale': 'sitemap-check',
   'sitemap-orphan-page': 'sitemap-check',
   'sitemap-lists-redirects': 'sitemap-check',
+  'sitemap-lists-dead-urls': 'sitemap-check',
   'image-oversized': 'lighthouse',
   'image-legacy-format': 'lighthouse',
   'lcen-mentions-legales-missing': 'mentions-legales',

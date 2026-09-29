@@ -179,6 +179,7 @@ export const CUSTOM_CHECK_SEVERITY: Record<string, Severity> = {
   'canonical-target-noindex': 'moderate',
   'sitemap-orphan-page': 'minor',
   'sitemap-lists-redirects': 'minor',
+  'sitemap-lists-dead-urls': 'minor',
   'sitemap-lists-noindex': 'minor',
   'robots-disallow-broad': 'moderate',
   'relative-link-nesting': 'moderate',

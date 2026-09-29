@@ -839,6 +839,10 @@ export const REMEDIATION_FR: Readonly<Record<string, RemediationEntry>> = {
     text: 'Remplacez les entrées redirigées ou externes du plan de site par les URL finales et canoniques appartenant à ce site.',
     snippet: { kind: 'not-applicable' },
   },
+  'sitemap-lists-dead-urls': {
+    text: 'Retirez du plan du site les adresses qui renvoient une erreur, ou rétablissez les pages concernées.',
+    snippet: { kind: 'not-applicable' },
+  },
   'sitemap-lists-noindex': {
     text: 'Retirez ces pages du plan de site si leur exclusion des résultats de recherche est voulue ; sinon, retirez la directive noindex.',
     snippet: { kind: 'not-applicable' },

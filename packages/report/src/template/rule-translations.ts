@@ -508,6 +508,11 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
       gloss:
         'Le plan de site doit contenir les URL finales du site, pas des adresses qui redirigent ou qui appartiennent à un autre domaine.',
     },
+    'sitemap-lists-dead-urls': {
+      label: "Le plan du site liste des adresses qui n'existent plus",
+      gloss:
+        "Le plan de site soumet aux moteurs de recherche des adresses qui renvoient une erreur au lieu d'une page.",
+    },
     'sitemap-lists-noindex': {
       label: 'Le sitemap liste des pages qui demandent à ne pas être indexées',
       gloss:

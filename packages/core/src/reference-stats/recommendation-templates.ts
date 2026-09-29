@@ -197,6 +197,15 @@ const RAW_TEMPLATES: Record<string, RecommendationTemplate[]> = {
       },
     },
   ],
+  'sitemap-lists-dead-urls': [
+    {
+      id: 'sitemap-lists-dead-urls-remove-or-restore',
+      text: {
+        fr: 'Retirez du plan du site les adresses qui renvoient une erreur, ou rétablissez les pages concernées.',
+        en: 'Remove the addresses that return an error from the sitemap, or restore the pages concerned.',
+      },
+    },
+  ],
   'sitemap-lists-noindex': [
     {
       id: 'sitemap-lists-noindex-align-sitemap',

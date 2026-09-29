@@ -15,6 +15,7 @@ export const SITEMAP_MISSING_RULE_ID = 'sitemap-missing';
 export const SITEMAP_STALE_RULE_ID = 'sitemap-stale';
 export const SITEMAP_ORPHAN_PAGE_RULE_ID = 'sitemap-orphan-page';
 export const SITEMAP_LISTS_REDIRECTS_RULE_ID = 'sitemap-lists-redirects';
+export const SITEMAP_LISTS_DEAD_URLS_RULE_ID = 'sitemap-lists-dead-urls';
 
 export interface SitemapEntryInput {
   url: string;
@@ -48,6 +49,10 @@ export interface SitemapCheckInput {
    *  translation. Neither redirects nor absent pages, so they are counted
    *  by no sitemap rule and left out of the stale and orphan comparisons. */
   languageAlternateUrls?: string[];
+  /** Sitemap URLs the crawl resolved as gone: a 404 or 410 answer, or a
+   *  soft-error page. They are not pages, so they leave the stale and orphan
+   *  comparisons and are counted by their own finding instead. */
+  deadUrls?: string[];
   /** Every page the crawl actually visited, so staleness can be judged
    *  by how well the sitemap's own URL list matches what is really
    *  there - not by an arbitrary "how old is too old" date threshold. */
@@ -166,10 +171,19 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
   const externalUrls = pageEntries
     .map((entry) => normalizeUrl(entry.url, pageUrl))
     .filter((url) => isOffSiteUrl(url, pageUrl));
+  const deadSet = new Set((input.deadUrls ?? []).map((url) => normalizeUrl(url, pageUrl)));
+  const deadUrls = [
+    ...new Set(
+      pageEntries
+        .map((entry) => normalizeUrl(entry.url, pageUrl))
+        .filter((url) => deadSet.has(url) && !redirectedSet.has(url)),
+    ),
+  ];
   const excludedFromComparisons = new Set([
     ...redirectedUrls,
     ...externalUrls,
     ...languageAlternateSet,
+    ...deadUrls,
   ]);
   const eligiblePageEntries = pageEntries.filter(
     (entry) => !excludedFromComparisons.has(normalizeUrl(entry.url, pageUrl)),
@@ -190,8 +204,23 @@ export function extractSitemapCandidates(input: SitemapCheckInput): FindingCandi
     });
   }
 
-  // A sitemap made entirely of redirected/off-site URLs still has a useful
-  // distinct finding, but there is no eligible population against which to
+  if (deadUrls.length > 0) {
+    candidates.push({
+      source: 'custom',
+      ruleId: SITEMAP_LISTS_DEAD_URLS_RULE_ID,
+      category: 'seo',
+      severity: severityFromCustom(SITEMAP_LISTS_DEAD_URLS_RULE_ID),
+      wcagCriteria: [],
+      title: 'The sitemap lists URLs that no longer exist',
+      description: `The sitemap lists ${deadUrls.length} URL(s) that answer with an error, for example: ${deadUrls.slice(0, 3).join(', ')}. Search engines that follow the sitemap reach error pages instead of content.`,
+      pageUrl,
+      element: null,
+      rawEvidenceForPage: { deadUrls },
+    });
+  }
+
+  // A sitemap made entirely of redirected, off-site or dead URLs still has a
+  // useful distinct finding, but there is no eligible population against which to
   // make a stale or orphan claim.
   if (eligiblePageEntries.length === 0) return candidates;
   if (input.crawledUrls.length === 0) return candidates;

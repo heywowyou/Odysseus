@@ -52,8 +52,20 @@ export function buildNormalizeAuditInput(
   const languageAlternateUrls = manifestPages
     .filter((page) => page.status === 'language-redirect')
     .map((page) => page.url);
+  // A sitemap URL that answered 404 or 410, or served an error template, is
+  // not a page the site lacks a link to: it is a dead entry (issue #563).
+  const sitemapDeadUrls = manifestPages
+    .filter(
+      (page) =>
+        page.status === 'soft-error-page' ||
+        (page.status === 'http-error-status' &&
+          (page.httpStatus === 404 || page.httpStatus === 410)),
+    )
+    .map((page) => page.url);
   const pages =
-    sitemapRedirectedUrls.length === 0 && languageAlternateUrls.length === 0
+    sitemapRedirectedUrls.length === 0 &&
+    languageAlternateUrls.length === 0 &&
+    sitemapDeadUrls.length === 0
       ? [...options.pages]
       : options.pages.map((page) =>
           page.sitemapCheck === undefined
@@ -69,6 +81,7 @@ export function buildNormalizeAuditInput(
                     ]),
                   ],
                   ...(languageAlternateUrls.length > 0 ? { languageAlternateUrls } : {}),
+                  ...(sitemapDeadUrls.length > 0 ? { deadUrls: sitemapDeadUrls } : {}),
                 },
               },
         );
