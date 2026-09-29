@@ -78,7 +78,9 @@ describe('dependency-cruiser architecture rules', () => {
     ]);
     const errors = violations.filter((violation) => violation.rule.severity === 'error');
     expect(errors).toEqual([]);
-  });
+    // Cruises every package (about 2,100 modules): some 8 s alone, and past
+    // the 20 s default when the full parallel suite shares the CPU.
+  }, 60_000);
 
   it("flags a package reaching directly into another package's src", async () => {
     const file = writeFixture(
