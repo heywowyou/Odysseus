@@ -18,22 +18,13 @@
  * without widening suppression beyond the reach decided above.
  */
 
-import {
-  addSuppressionEntry,
-  closeOutreachThreadsForDomain,
-  findProspectsByEmail,
-  listLivePreviewsForDomain,
-  recordProspectOutcome,
-  revokeOutreachPreview,
-} from '@odysseus/store';
-import { isFreeMailDomain, emailDomain, primaryWebsite } from '@odysseus/core';
+import { addSuppressionEntry, findProspectsByEmail } from '@odysseus/store';
+import { isFreeMailDomain, emailDomain } from '@odysseus/core';
 import type { Connection } from 'mongoose';
 import { logger } from '../logger.js';
 import { createConfiguredMailboxDraftAdapter } from './configured-mailbox-draft-adapter.js';
-import {
-  retryPendingMailboxDraftDeletions,
-  withdrawOutreachForProspect,
-} from './withdraw-prospect-outreach.js';
+import { retryPendingMailboxDraftDeletions } from './withdraw-prospect-outreach.js';
+import { optOutProspect } from '../prospect-lifecycle/prospect-lifecycle.js';
 import {
   deriveOptOutLinkKey,
   OPT_OUT_REQUEST_PREFIX,
@@ -99,26 +90,18 @@ async function applyOptOut(
 
   let mailboxDraftsNotRemoved = 0;
   for (const prospect of await findProspectsByEmail(connection, address)) {
-    // A won or lost prospect keeps its result; the suppression above
-    // already stops any further contact.
-    await recordProspectOutcome(connection, prospect.prospectId, 'opt-out', ACTOR, {
-      suppression: 'already-applied',
-    });
-    const withdrawn = await withdrawOutreachForProspect(
+    // The same opt-out as the dashboard's (issue #569), without widening the
+    // suppression written above. A failure leaves the request for a retry.
+    const outcome = await optOutProspect(
       connection,
       prospect.prospectId,
-      'opted-out',
       { publisher: () => publisher, mailbox },
+      { actor: ACTOR, suppression: 'already-applied' },
     );
-    mailboxDraftsNotRemoved += withdrawn.mailboxDraftsNotRemoved;
-    const website = primaryWebsite(prospect.websites);
-    if (website === undefined) continue;
-    for (const preview of await listLivePreviewsForDomain(connection, website.registrableDomain)) {
-      // Object first, record second, as in every other revocation.
-      await publisher.delete(preview.objectKey);
-      await revokeOutreachPreview(connection, preview.previewId, OPT_OUT_REASON);
+    if (outcome.kind === 'withdrawal-failed') throw outcome.error;
+    if (outcome.kind === 'opted-out') {
+      mailboxDraftsNotRemoved += outcome.effects.withdrawn.mailboxDraftsNotRemoved;
     }
-    await closeOutreachThreadsForDomain(connection, website.registrableDomain, OPT_OUT_REASON);
   }
   return mailboxDraftsNotRemoved;
 }

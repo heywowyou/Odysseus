@@ -9,8 +9,9 @@
  * `odysseus artifacts archived-prospects` (issue #381): archived prospects
  * that still own audits, archived before archive purged scan storage or left
  * part-way by a failed purge. Dry run by default; `--apply` runs the same
- * `purgeProspectAuditStorage` the archive action uses, skipping any prospect
- * with a queued or running job. No network request reaches a prospect site.
+ * purge the archive action uses (issue #569), skipping any prospect with a
+ * queued or running job; it cannot see work in the server's own process. No
+ * network request reaches a prospect site.
  *
  * `odysseus artifacts retention` (plan 077): superseded audits, reports,
  * analyses and quality candidates past the grace period. Dry run by
@@ -40,12 +41,12 @@ import {
   DEFAULT_ORPHAN_MIN_AGE_MS,
   deleteAuditArtifacts,
   findRemoteArtifactOrphans,
-  purgeProspectAuditStorage,
+  persistedProspectWorkProbe,
+  purgeArchivedProspectAudits,
 } from '@odysseus/interface';
 import { getArtifactsRoot } from '@odysseus/scanner';
 import {
   connectToMongo,
-  countActiveProspectDeletionJobs,
   disconnectFromMongo,
   listArchivedProspectsWithAudits,
   listAuditStorageIdentities,
@@ -240,26 +241,31 @@ export function registerArtifactsCommand(program: Command): void {
           if (pending.length > 0) console.log('Dry run: re-run with --apply to purge them.');
           return;
         }
-        const store = createConfiguredArtifactStore();
+        // This process cannot see the server's in-process work (a stopped
+        // job still finishing its stage, report production) and nothing
+        // persists it, so the probe checks queued or running job rows only.
+        const storage = {
+          artifactsRoot: getArtifactsRoot(),
+          store: createConfiguredArtifactStore(),
+          workInFlight: persistedProspectWorkProbe(connection),
+        };
         let failed = 0;
         for (const row of pending) {
-          if ((await countActiveProspectDeletionJobs(connection, row.prospectId)) > 0) {
+          const outcome = await purgeArchivedProspectAudits(connection, row.prospectId, storage);
+          if (outcome.kind === 'refused') {
             failed += 1;
             console.log(`SKIPPED   ${row.prospectId}: a job is queued or running`);
             continue;
           }
-          try {
-            const purged = await purgeProspectAuditStorage(connection, row.prospectId, {
-              artifactsRoot: getArtifactsRoot(),
-              store,
-            });
-            console.log(
-              `PURGED    ${row.prospectId} (${purged.audits} audit(s) deleted, ${purged.auditsKept} delivered audit(s) kept slimmed, ${purged.remoteObjectsDeleted} bucket object(s))`,
-            );
-          } catch (error) {
+          if (outcome.kind === 'purge-failed') {
             failed += 1;
-            console.log(`FAILED    ${row.prospectId}: ${(error as Error).message}`);
+            console.log(`FAILED    ${row.prospectId}: ${outcome.message}`);
+            continue;
           }
+          const { purged } = outcome;
+          console.log(
+            `PURGED    ${row.prospectId} (${purged.audits} audit(s) deleted, ${purged.auditsKept} delivered audit(s) kept slimmed, ${purged.remoteObjectsDeleted} bucket object(s))`,
+          );
         }
         if (failed > 0) process.exitCode = 1;
       } finally {

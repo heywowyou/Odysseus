@@ -6,7 +6,6 @@ import {
   appendProspectEvent,
   attachAuditToProspect,
   checkOutreachAction,
-  confirmOutreachSentByOperator,
   createProspectHub,
   createRandomIndependentProspectFromDirectory,
   findProspectsByDomain,
@@ -27,19 +26,14 @@ import {
   listProspectEvents,
   listProspects,
   listOutreachPreviews,
-  archiveProspect,
-  countActiveProspectDeletionJobs,
   countProspectDeletionImpact,
   restoreProspect,
   markOutreachDraftDeletionPending,
   revokeOutreachPreview,
-  recordProspectOutcome,
   removeProspectEmail,
   removeProspectWebsite,
   setOutreachProspectEmail,
   setPrimaryProspectWebsite,
-  setProspectStatus,
-  applyAutomaticProspectStatus,
   isEditableProspectField,
   updateProspect,
   type DirectoryFilter,
@@ -55,16 +49,25 @@ import {
   type ProspectWebsiteKind,
 } from '@odysseus/core';
 import { getArtifactsRoot } from '@odysseus/scanner';
+import type { ServerResponse } from 'node:http';
 import type { Router } from '../router.js';
+import {
+  archiveProspectAction,
+  deleteProspectAction,
+  PROSPECT_OUTCOMES,
+  recordProspectOutcomeAction,
+  setProspectStatusAction,
+  type OptOutOutcome,
+  type ProspectLifecycleAdapters,
+  type ProspectOutcome,
+  type ProspectStorageAdapters,
+} from '../prospect-lifecycle/prospect-lifecycle.js';
 import type { JobQueue } from '../queue/job-queue.js';
 import {
   isAnyReportProductionInFlight,
   isReportProductionInFlight,
 } from '../pipeline/report-production-lock.js';
-import { AuditArtifactDeletionError } from '../artifacts/delete-audit-artifacts.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
-import { purgeProspectAuditStorage } from '../artifacts/purge-prospect-audit-storage.js';
-import { deleteProspectWithStorage } from '../artifacts/delete-prospect-with-storage.js';
 import { readJsonBodyOrRespond, sendError, sendJson } from '../http-utils.js';
 import { getPreviewPublicBaseUrl, isMailboxConfigured } from '../config.js';
 import { createConfiguredMailboxDraftAdapter } from '../outreach/configured-mailbox-draft-adapter.js';
@@ -75,7 +78,6 @@ import { syncMailbox } from '../outreach/mailbox-sync.js';
 import {
   deletePendingMailboxDraftRows,
   mailboxDraftDeletionWarningFields,
-  withdrawOutreachForProspect,
 } from '../outreach/withdraw-prospect-outreach.js';
 import {
   createFirstEmailForProspect,
@@ -197,19 +199,51 @@ function languageFromBody(body: unknown, fallback: 'fr' | 'en'): 'fr' | 'en' | n
   return language === 'fr' || language === 'en' ? language : null;
 }
 
+/** An opt-out's answer, from whichever route recorded it. */
+function sendOptOutOutcome(
+  res: ServerResponse,
+  outcome: { kind: 'not-found' } | Exclude<OptOutOutcome, { kind: 'not-found' }>,
+): void {
+  if (outcome.kind === 'not-found') {
+    sendError(res, 404, 'prospect not found');
+    return;
+  }
+  if (outcome.kind === 'withdrawal-failed') {
+    sendError(res, 503, 'the opt-out was saved but live previews could not be removed');
+    return;
+  }
+  sendJson(res, 200, { ...outcome.prospect, withdrawn: outcome.effects.withdrawn });
+}
+
 export function registerProspectHubRoutes(
   router: Router,
   connection: Connection,
   queue: Pick<JobQueue, 'isJobInFlight'>,
 ): void {
   /** Work that can still write this prospect's audits although no job row is
-   *  queued or running: a stopped job finishing its stage, or report production. */
+   *  queued or running: a stopped job finishing its stage, or report
+   *  production. Both live in this process only. */
   async function prospectWorkInFlight(prospectId: string): Promise<boolean> {
     const jobIds = await listProspectScopeJobIds(connection, prospectId);
     if (jobIds.some((jobId) => queue.isJobInFlight(jobId))) return true;
     if (!isAnyReportProductionInFlight()) return false;
     const audits = await listProspectAudits(connection, prospectId);
     return audits.some((audit) => isReportProductionInFlight(audit.auditId));
+  }
+
+  function outreachAdapters(): ProspectLifecycleAdapters {
+    return {
+      publisher: createConfiguredPreviewPublisher,
+      mailbox: createConfiguredMailboxDraftAdapter(),
+    };
+  }
+
+  function storageAdapters(): ProspectStorageAdapters {
+    return {
+      artifactsRoot: getArtifactsRoot(),
+      store: createConfiguredArtifactStore(),
+      workInFlight: prospectWorkInFlight,
+    };
   }
 
   // Issue #533: the outreach funnel per campaign, counts only, for the To do
@@ -850,174 +884,90 @@ export function registerProspectHubRoutes(
       sendError(res, 400, 'status is invalid');
       return;
     }
-    const requestedStatus = status as ProspectStatus;
-    const prospect =
-      requestedStatus === 'opted-out'
-        ? await applyAutomaticProspectStatus(connection, params['prospectId']!, requestedStatus)
-        : await setProspectStatus(connection, params['prospectId']!, requestedStatus);
-    if (prospect === null) {
-      sendError(res, 404, 'prospect not found');
-      return;
-    }
-    if (requestedStatus === 'contacted' || requestedStatus === 'follow-up') {
-      // A manual contacted/follow-up with a touch still drafted means the
-      // operator sent it in an email the mailbox sync cannot see (one message
-      // to a contact shared by several prospects). Confirm that send, or the
-      // draft stays in review forever. Rerunning the same status repairs a
-      // prospect set by hand before this existed.
-      const confirmed = await confirmOutreachSentByOperator(
-        connection,
-        prospect.prospectId,
-        requestedStatus,
-      );
-      if (confirmed.touch === undefined) {
-        sendJson(res, 200, prospect);
-        return;
-      }
-      const mailboxDraftsNotRemoved = await deletePendingMailboxDraftRows(
-        connection,
-        confirmed.providerDrafts,
-        createConfiguredMailboxDraftAdapter(),
-      );
+    const outcome = await setProspectStatusAction(
+      connection,
+      params['prospectId']!,
+      status as ProspectStatus,
+      outreachAdapters(),
+    );
+    if (outcome.kind === 'updated') {
       sendJson(res, 200, {
-        ...prospect,
-        sendConfirmed: { touch: confirmed.touch, threadClosed: confirmed.threadClosed },
-        ...mailboxDraftDeletionWarningFields(mailboxDraftsNotRemoved),
+        ...outcome.prospect,
+        ...(outcome.sendConfirmed !== undefined
+          ? {
+              sendConfirmed: outcome.sendConfirmed,
+              ...mailboxDraftDeletionWarningFields(outcome.mailboxDraftsNotRemoved ?? 0),
+            }
+          : {}),
       });
       return;
     }
-    if (status !== 'opted-out') {
-      sendJson(res, 200, prospect);
-      return;
-    }
-    // The status selector is also allowed to record an opt-out. Keep its
-    // side effects identical to the explicit outcome path: provider drafts,
-    // live previews and the thread must leave circulation together.
-    try {
-      const withdrawn = await withdrawOutreachForProspect(
-        connection,
-        prospect.prospectId,
-        'opted-out',
-        {
-          publisher: createConfiguredPreviewPublisher,
-          mailbox: createConfiguredMailboxDraftAdapter(),
-        },
-      );
-      sendJson(res, 200, { ...prospect, withdrawn });
-    } catch {
-      sendError(res, 503, 'the opt-out was saved but live previews could not be removed');
-    }
+    sendOptOutOutcome(res, outcome);
   });
 
   router.post('/api/prospects/:prospectId/outcome', async ({ req, res, params }) => {
     const body = recordBody(await readJsonBodyOrRespond(req, res));
     if (res.headersSent) return;
-    const outcome = body?.['outcome'];
+    const requested = body?.['outcome'];
     if (
-      typeof outcome !== 'string' ||
-      ![
-        'no-reply',
-        'reply-positive',
-        'reply-not-now',
-        'reply-negative',
-        'opt-out',
-        'call',
-        'quoted',
-        'won',
-        'lost',
-      ].includes(outcome)
+      typeof requested !== 'string' ||
+      !PROSPECT_OUTCOMES.includes(requested as ProspectOutcome)
     ) {
       sendError(res, 400, 'outcome is invalid');
       return;
     }
-    // Issue #278: a reply outcome describes an email that was sent. Refuse it
-    // until the mailbox has confirmed a send, instead of storing nonsense.
-    if (['no-reply', 'reply-positive', 'reply-not-now', 'reply-negative'].includes(outcome)) {
-      const thread = await findOutreachThreadByProspect(connection, params['prospectId']!);
-      if (thread === null || thread.touches.length === 0) {
+    const outcome = await recordProspectOutcomeAction(
+      connection,
+      params['prospectId']!,
+      requested as ProspectOutcome,
+      outreachAdapters(),
+    );
+    if (outcome.kind === 'recorded') {
+      sendJson(res, 200, outcome.prospect);
+      return;
+    }
+    if (outcome.kind === 'refused') {
+      if (outcome.refusal === 'nothing-sent') {
         sendJson(res, 409, {
           error: 'nothing has been sent to this prospect yet',
           refusal: 'nothing-sent',
         });
-        return;
+      } else {
+        sendError(res, 409, outcome.message);
       }
+      return;
     }
-    try {
-      const prospect = await recordProspectOutcome(connection, params['prospectId']!, outcome);
-      if (prospect === null) {
-        sendError(res, 404, 'prospect not found');
-        return;
-      }
-      if (outcome !== 'opt-out') {
-        sendJson(res, 200, prospect);
-        return;
-      }
-      // Issue #273: an opt-out also takes pending drafts, live previews and
-      // the thread out of circulation, and tells the operator what went.
-      let withdrawn;
-      try {
-        withdrawn = await withdrawOutreachForProspect(
-          connection,
-          prospect.prospectId,
-          'opted-out',
-          {
-            publisher: createConfiguredPreviewPublisher,
-            mailbox: createConfiguredMailboxDraftAdapter(),
-          },
-        );
-      } catch {
-        sendError(res, 503, 'the opt-out was saved but live previews could not be removed');
-        return;
-      }
-      sendJson(res, 200, { ...prospect, withdrawn });
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AutomaticStatusTransitionError') {
-        sendError(res, 409, error.message);
-        return;
-      }
-      throw error;
-    }
+    sendOptOutOutcome(res, outcome);
   });
 
   // Plan 050, amended by issue #381: archive is the ordinary way to take a
-  // prospect out of active work. It keeps the CRM record, correspondence,
-  // suppression and directory link, and never withdraws outreach, but it
-  // permanently removes the prospect's audits and their stored files. It
-  // refuses while a job for the prospect is queued or running, while a
-  // stopped job is still finishing its stage in this process, or while one of
-  // its audits is in report production (any of those could recreate the
-  // audits or their files), archives, then purges. A storage failure
-  // answers 503 with the prospect archived and the remaining audits still
-  // attached; repeating the archive resumes the purge.
+  // prospect out of active work; archiveProspectAction owns its rules. A
+  // storage failure answers 503 with the prospect archived and the remaining
+  // audits still attached; repeating the archive resumes the purge.
   router.post('/api/prospects/:prospectId/archive', async ({ res, params }) => {
-    const prospectId = params['prospectId']!;
-    if ((await getProspectHub(connection, prospectId)) === null) {
-      sendError(res, 404, 'prospect not found');
-      return;
-    }
-    if ((await countActiveProspectDeletionJobs(connection, prospectId)) > 0) {
-      sendError(res, 409, 'prospect has an unfinished job; cancel it or wait for it to end');
-      return;
-    }
-    if (await prospectWorkInFlight(prospectId)) {
-      sendError(res, 409, 'work for this prospect is still finishing; try again shortly');
-      return;
-    }
-    const result = await archiveProspect(connection, prospectId);
-    if (result === null) {
-      sendError(res, 404, 'prospect not found');
-      return;
-    }
-    try {
-      // Issue #560: delivered audits come back slimmed (auditsKept), not deleted.
-      const purged = await purgeProspectAuditStorage(connection, prospectId, {
-        artifactsRoot: getArtifactsRoot(),
-        store: createConfiguredArtifactStore(),
-      });
-      sendJson(res, 200, { ...result, purged });
-    } catch (error) {
-      if (!(error instanceof AuditArtifactDeletionError)) throw error;
-      sendError(res, 503, `prospect archived but ${error.message}; archive again to finish`);
+    const outcome = await archiveProspectAction(
+      connection,
+      params['prospectId']!,
+      storageAdapters(),
+    );
+    switch (outcome.kind) {
+      case 'not-found':
+        sendError(res, 404, 'prospect not found');
+        return;
+      case 'refused':
+        sendError(
+          res,
+          409,
+          outcome.refusal === 'active-job'
+            ? 'prospect has an unfinished job; cancel it or wait for it to end'
+            : 'work for this prospect is still finishing; try again shortly',
+        );
+        return;
+      case 'purge-failed':
+        sendError(res, 503, `prospect archived but ${outcome.message}; archive again to finish`);
+        return;
+      case 'archived':
+        sendJson(res, 200, { ...outcome.result, purged: outcome.purged });
     }
   });
 
@@ -1046,27 +996,20 @@ export function registerProspectHubRoutes(
   // the deletion can be retried; the reverse order would lose the only
   // record naming the objects left behind.
   router.delete('/api/prospects/:prospectId', async ({ res, params }) => {
-    const prospectId = params['prospectId']!;
-    if ((await getProspectHub(connection, prospectId)) === null) {
-      sendError(res, 404, 'prospect not found');
-      return;
-    }
-    if (await prospectWorkInFlight(prospectId)) {
-      sendError(res, 409, 'work for this prospect is still finishing; try again shortly');
-      return;
-    }
-    const outcome = await deleteProspectWithStorage(connection, prospectId, {
-      artifactsRoot: getArtifactsRoot(),
-      store: createConfiguredArtifactStore(),
-      publisher: createConfiguredPreviewPublisher,
-      mailbox: createConfiguredMailboxDraftAdapter(),
+    const outcome = await deleteProspectAction(connection, params['prospectId']!, {
+      ...outreachAdapters(),
+      ...storageAdapters(),
     });
     if ('deleted' in outcome) {
       sendJson(res, 200, outcome.deleted);
       return;
     }
     const status =
-      outcome.refusal === 'not-found' ? 404 : outcome.refusal === 'active-job' ? 409 : 503;
+      outcome.refusal === 'not-found'
+        ? 404
+        : outcome.refusal === 'active-job' || outcome.refusal === 'work-in-flight'
+          ? 409
+          : 503;
     sendError(res, status, outcome.detail);
   });
 }

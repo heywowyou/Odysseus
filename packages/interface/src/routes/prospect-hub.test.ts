@@ -57,6 +57,8 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   markOutreachDraftDeletionPending: vi.fn(),
   markOutreachDraftDeleted: vi.fn(),
   revokeOutreachPreview: vi.fn(),
+  listLivePreviewsForDomain: vi.fn(async () => []),
+  closeOutreachThreadsForDomain: vi.fn(async () => 0),
   recordProspectOutcome: vi.fn(),
   removeProspectEmail: vi.fn(),
   removeProspectWebsite: vi.fn(),
@@ -714,6 +716,7 @@ describe('prospect hub routes', () => {
     vi.mocked(recordProspectOutcome).mockResolvedValue({
       prospectId: 'p-1',
       status: 'opted-out',
+      websites: [],
     } as never);
     vi.mocked(listOutreachPreviews).mockResolvedValue([{ objectKey: 'k/preview.html' }] as never);
     vi.mocked(withdrawProspectOutreach).mockResolvedValue({
@@ -788,10 +791,13 @@ describe('prospect hub routes', () => {
     expect(deleteMailboxDraft).not.toHaveBeenCalled();
   });
 
+  // Issue #569: the status selector opts out exactly as the outcome does,
+  // recording the opted-out event through recordProspectOutcome.
   it('withdraws outreach when the status selector records an opt-out', async () => {
-    vi.mocked(applyAutomaticProspectStatus).mockResolvedValue({
+    vi.mocked(recordProspectOutcome).mockResolvedValue({
       prospectId: 'p-1',
       status: 'opted-out',
+      websites: [],
     } as never);
     vi.mocked(withdrawProspectOutreach).mockResolvedValue({
       drafts: 1,
@@ -811,7 +817,13 @@ describe('prospect hub routes', () => {
       status: 'opted-out',
       withdrawn: { drafts: 1, previews: 0, threadClosed: true },
     });
-    expect(applyAutomaticProspectStatus).toHaveBeenCalledWith(fakeConnection, 'p-1', 'opted-out');
+    expect(recordProspectOutcome).toHaveBeenCalledWith(
+      fakeConnection,
+      'p-1',
+      'opt-out',
+      'operator',
+      {},
+    );
     expect(setProspectStatus).not.toHaveBeenCalled();
     expect(withdrawProspectOutreach).toHaveBeenCalledWith(fakeConnection, 'p-1', 'opted-out');
   });

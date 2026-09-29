@@ -108,7 +108,9 @@ export type {
   DirectoryFilter,
   NewProspectHubInput,
   ProspectHubFilter,
+  ProspectLifecycleResult,
   ProspectPatch,
+  ProspectStatusSuppressionOptions,
   WithdrawnProspectOutreach,
 } from './prospect-hub.js';
 export {

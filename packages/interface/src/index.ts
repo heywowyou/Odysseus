@@ -20,7 +20,10 @@ export {
   DEFAULT_ORPHAN_MIN_AGE_MS,
   findRemoteArtifactOrphans,
 } from './artifacts/remote-artifact-orphans.js';
-export { purgeProspectAuditStorage } from './artifacts/purge-prospect-audit-storage.js';
+export {
+  persistedProspectWorkProbe,
+  purgeArchivedProspectAudits,
+} from './prospect-lifecycle/prospect-lifecycle.js';
 export {
   RETENTION_RUN_CAP,
   runRetention,

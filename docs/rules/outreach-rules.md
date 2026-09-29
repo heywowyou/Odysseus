@@ -298,6 +298,11 @@ Lifecycle rules:
 - Nothing publishes automatically, and no first-touch draft exists before an
   explicit publication. Suppression blocks publication and revokes every live
   preview for the domain.
+- An opt-out has the same effects whichever way it arrives (the dashboard
+  status, the dashboard outcome, the public form): suppression, an
+  `opted-out` event, the prospect's drafts, previews and thread withdrawn,
+  and every live preview and open thread of its domain taken out of
+  circulation (issue #569, `packages/interface/src/prospect-lifecycle`).
 - The preview and paid report come from the same stored Full scan. Publication
   waits for the current report pair; report/preview regeneration reuses stored
   evidence and never asks for a rescan merely because prose or selection
