@@ -4,7 +4,11 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildAuditDir } from '@odysseus/scanner';
 import type { ArtifactStore } from './artifact-store.js';
-import { AuditArtifactDeletionError, deleteAuditArtifacts } from './delete-audit-artifacts.js';
+import {
+  AuditArtifactDeletionError,
+  deleteAuditArtifacts,
+  jobRunArtifactLocation,
+} from './delete-audit-artifacts.js';
 
 function memoryStore(
   initial: string[],
@@ -111,4 +115,23 @@ describe('deleteAuditArtifacts (issue #384)', () => {
       await expect(failure).rejects.toMatchObject({ half: 'remote' });
     },
   );
+});
+
+describe('jobRunArtifactLocation', () => {
+  it('names the directory a job run writes, from its run identity', () => {
+    const startedAt = new Date('2026-09-29T11:34:35Z');
+    expect(
+      jobRunArtifactLocation({
+        siteUrl: 'https://www.hotel.example/',
+        runIdentity: { startedAt, auditId: 'run-1' },
+      }),
+    ).toEqual({ siteUrl: 'https://www.hotel.example/', startedAt, auditId: 'run-1' });
+  });
+
+  it('names nothing for a job that never started a run', () => {
+    expect(jobRunArtifactLocation({ siteUrl: 'https://hotel.example/' })).toBeNull();
+    expect(
+      jobRunArtifactLocation({ runIdentity: { startedAt: new Date(), auditId: 'run-1' } }),
+    ).toBeNull();
+  });
 });

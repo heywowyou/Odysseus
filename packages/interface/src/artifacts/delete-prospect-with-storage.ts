@@ -17,13 +17,18 @@ import {
   deleteProspectPermanently,
   getProspectHub,
   listProspectAudits,
+  listProspectScopeJobRuns,
   type ProspectCascadeCounts,
 } from '@odysseus/store';
 import type { MailboxDraftAdapter } from '../outreach/mailbox-draft-adapter.js';
 import type { PreviewPublisher } from '../outreach/preview-publisher.js';
 import { withdrawOutreachForProspect } from '../outreach/withdraw-prospect-outreach.js';
 import type { ArtifactStore } from './artifact-store.js';
-import { AuditArtifactDeletionError, deleteAuditArtifacts } from './delete-audit-artifacts.js';
+import {
+  AuditArtifactDeletionError,
+  deleteAuditArtifacts,
+  jobRunArtifactLocation,
+} from './delete-audit-artifacts.js';
 
 export interface ProspectDeletionDeps {
   artifactsRoot: string;
@@ -88,6 +93,17 @@ export async function deleteProspectWithStorage(
   try {
     for (const audit of audits) {
       await deleteAuditArtifacts(audit, { artifactsRoot: deps.artifactsRoot, store: deps.store });
+    }
+    // The prospect's jobs are deleted with it, and a failed or stopped run
+    // left a directory no audit names; once the jobs are gone nothing would.
+    for (const job of await listProspectScopeJobRuns(connection, prospectId)) {
+      const location = jobRunArtifactLocation(job);
+      if (location !== null) {
+        await deleteAuditArtifacts(location, {
+          artifactsRoot: deps.artifactsRoot,
+          store: deps.store,
+        });
+      }
     }
   } catch (error) {
     if (!(error instanceof AuditArtifactDeletionError)) throw error;

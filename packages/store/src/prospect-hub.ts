@@ -27,7 +27,11 @@ import {
   type DirectoryEntryDocument,
 } from './schemas/directory-entry.schema.js';
 import { createAuditModel, type AuditDocument } from './schemas/audit.schema.js';
-import { createJobModel, JOB_STATUSES_CAN_STILL_WRITE } from './schemas/job.schema.js';
+import {
+  createJobModel,
+  JOB_STATUSES_CAN_STILL_WRITE,
+  type JobRunIdentity,
+} from './schemas/job.schema.js';
 import { createAnalysisModel } from './schemas/analysis.schema.js';
 import { createFindingModel } from './schemas/finding.schema.js';
 import { createReportModel } from './schemas/report.schema.js';
@@ -1166,6 +1170,20 @@ export async function listProspectScopeJobIds(
     .select({ jobId: 1, _id: 0 })
     .lean<{ jobId: string }[]>();
   return jobs.map((job) => job.jobId);
+}
+
+/** The site and run identity of every job in the prospect's deletion scope
+ *  that started a run, so the interface can remove each run's directory,
+ *  including the runs that never persisted an audit. */
+export async function listProspectScopeJobRuns(
+  connection: Connection,
+  prospectId: string,
+): Promise<{ siteUrl: string; runIdentity: JobRunIdentity }[]> {
+  const scope = await prospectDeletionScope(connection, prospectId);
+  return createJobModel(connection)
+    .find({ $and: [scope.job, { siteUrl: { $exists: true }, runIdentity: { $exists: true } }] })
+    .select({ siteUrl: 1, runIdentity: 1, _id: 0 })
+    .lean<{ siteUrl: string; runIdentity: JobRunIdentity }[]>();
 }
 
 /** What deleteProspectPermanently would remove, counted without removing

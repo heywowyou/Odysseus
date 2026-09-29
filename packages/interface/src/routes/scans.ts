@@ -35,6 +35,8 @@ import type { Router } from '../router.js';
 import {
   AuditArtifactDeletionError,
   deleteAuditArtifacts,
+  jobRunArtifactLocation,
+  type AuditArtifactLocation,
 } from '../artifacts/delete-audit-artifacts.js';
 import { createConfiguredArtifactStore } from '../artifacts/configured-artifact-store.js';
 import {
@@ -812,10 +814,35 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
     const capability = deleteJobCapability(capabilityInputs(job, queue));
     if (!recheckCapability(res, capability, query.get('stateToken'))) return;
 
+    const artifactStore = createConfiguredArtifactStore();
+    // Storage before records: a failure answers 503 with the rows kept, so
+    // the operator can retry instead of being told the space was reclaimed.
+    const removeArtifacts = async (location: AuditArtifactLocation): Promise<boolean> => {
+      try {
+        await deleteAuditArtifacts(location, {
+          artifactsRoot: getArtifactsRoot(),
+          store: artifactStore,
+        });
+        return true;
+      } catch (error) {
+        if (!(error instanceof AuditArtifactDeletionError)) throw error;
+        sendProblem(res, 503, {
+          code: 'storage-unavailable',
+          message: `${error.message}; nothing else was deleted for it, retry`,
+          retryable: true,
+        });
+        return false;
+      }
+    };
+    // The job's own run directory goes too: a failed, stopped or interrupted
+    // run never persists an audit, and nothing else names its directory.
+    const runLocation = jobRunArtifactLocation(job);
+
     // A queued job has produced no audits. Deleting it only while it is
     // still unclaimed closes the race where the worker claims it between the
     // read above and the delete, which would leave a running pipeline with
-    // no job row to report into.
+    // no job row to report into. A job requeued after an interrupted run
+    // keeps that run's directory, removed once the row is gone.
     if (job.status === 'queued') {
       const deleted = await deleteJob(connection, jobId, { onlyIfStatusNot: ['running'] });
       if (!deleted) {
@@ -826,6 +853,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         });
         return;
       }
+      if (runLocation !== null && !(await removeArtifacts(runLocation))) return;
       sendJson(res, 200, { jobId, deleted: true, auditsDeleted: 0 });
       return;
     }
@@ -847,27 +875,12 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       return;
     }
 
-    const artifactStore = createConfiguredArtifactStore();
     for (const auditId of auditIds) {
       const audit = await getAudit(connection, auditId);
-      if (audit !== null) {
-        try {
-          await deleteAuditArtifacts(audit, {
-            artifactsRoot: getArtifactsRoot(),
-            store: artifactStore,
-          });
-        } catch (error) {
-          if (!(error instanceof AuditArtifactDeletionError)) throw error;
-          sendProblem(res, 503, {
-            code: 'storage-unavailable',
-            message: `${error.message}; nothing else was deleted for it, retry`,
-            retryable: true,
-          });
-          return;
-        }
-      }
+      if (audit !== null && !(await removeArtifacts(audit))) return;
       await deleteAuditCascade(connection, auditId);
     }
+    if (runLocation !== null && !(await removeArtifacts(runLocation))) return;
 
     const deleted = await deleteJob(connection, jobId, { onlyIfStatusNot: ['queued', 'running'] });
     sendJson(res, 200, { jobId, deleted, auditsDeleted: auditIds.size });

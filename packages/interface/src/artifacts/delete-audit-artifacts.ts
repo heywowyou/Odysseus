@@ -79,6 +79,25 @@ export async function deleteAuditArtifacts(
   }
 }
 
+/**
+ * The directory a scan job's run writes to (plan 035: its run identity's
+ * startedAt names it). A run that failed, was stopped or was interrupted
+ * never persists an audit, so deleting only the job's audits left that
+ * directory, and a cancelled crawl can leave hundreds of megabytes. `null`
+ * for a job that never started a run or names no site.
+ */
+export function jobRunArtifactLocation(job: {
+  siteUrl?: string | undefined;
+  runIdentity?: { startedAt: Date; auditId: string } | undefined;
+}): AuditArtifactLocation | null {
+  if (job.siteUrl === undefined || job.runIdentity === undefined) return null;
+  return {
+    siteUrl: job.siteUrl,
+    startedAt: new Date(job.runIdentity.startedAt),
+    auditId: job.runIdentity.auditId,
+  };
+}
+
 /** Deletes every object under `prefix` and returns how many there were. */
 export async function deletePrefix(store: ArtifactStore, prefix: string): Promise<number> {
   const keys = (await store.list(prefix)).filter(

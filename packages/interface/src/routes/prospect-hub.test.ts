@@ -35,6 +35,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   listDirectory: vi.fn(),
   listProspectAudits: vi.fn(),
   listProspectScopeJobIds: vi.fn(),
+  listProspectScopeJobRuns: vi.fn(async () => []),
   listProspectEvents: vi.fn(),
   listProspectTodo: vi.fn(),
   listProspects: vi.fn(),

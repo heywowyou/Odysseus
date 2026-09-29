@@ -124,6 +124,7 @@ export {
   archiveProspect,
   countActiveProspectDeletionJobs,
   listProspectScopeJobIds,
+  listProspectScopeJobRuns,
   countProspectDeletionImpact,
   createProspectHub,
   createRandomIndependentProspectFromDirectory,

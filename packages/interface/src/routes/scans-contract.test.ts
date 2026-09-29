@@ -436,9 +436,18 @@ describe('DELETE /api/scans/:jobId', () => {
     inFlight: boolean,
     audit: unknown = null,
     status = 'cancelled',
-    options: { tokenFrom?: { status: string; inFlight: boolean } } = {},
+    options: {
+      tokenFrom?: { status: string; inFlight: boolean };
+      job?: Record<string, unknown>;
+    } = {},
   ): Promise<number> {
-    const job = { jobId: 'job-1', type: 'full-audit', status, auditId: 'audit-1' };
+    const job = {
+      jobId: 'job-1',
+      type: 'full-audit',
+      status,
+      auditId: 'audit-1',
+      ...options.job,
+    };
     vi.mocked(getJob).mockResolvedValue(job as never);
     vi.mocked(getAudit).mockResolvedValue(audit as never);
     const seen = options.tokenFrom ?? { status, inFlight };
@@ -525,6 +534,33 @@ describe('DELETE /api/scans/:jobId', () => {
       'hotel.example/2026-09-16T10-00-00Z/manifest.json',
     );
     expect(deleteAuditCascade).toHaveBeenCalled();
+  });
+
+  const run = {
+    siteUrl: 'https://hotel.example/',
+    runIdentity: { startedAt: new Date('2026-09-29T11:34:35Z'), auditId: 'run-1' },
+  };
+
+  it('removes the run directory of a stopped job that persisted no audit', async () => {
+    vi.mocked(deleteJob).mockResolvedValue(true as never);
+    expect(await remove(false, null, 'cancelled', { job: { ...run, auditId: undefined } })).toBe(
+      200,
+    );
+    expect(artifactStore.list).toHaveBeenCalledWith('hotel.example/2026-09-29T11-34-35Z/');
+    expect(deleteJob).toHaveBeenCalled();
+  });
+
+  it('removes the directory of an interrupted run whose job was requeued', async () => {
+    vi.mocked(deleteJob).mockResolvedValue(true as never);
+    expect(await remove(false, null, 'queued', { job: run })).toBe(200);
+    expect(artifactStore.list).toHaveBeenCalledWith('hotel.example/2026-09-29T11-34-35Z/');
+    expect(getAudit).not.toHaveBeenCalled();
+  });
+
+  it('keeps the job row and answers 503 when the run directory cannot be removed', async () => {
+    artifactStore.list.mockRejectedValueOnce(new Error('provider down'));
+    expect(await remove(false, null, 'failed', { job: { ...run, auditId: undefined } })).toBe(503);
+    expect(deleteJob).not.toHaveBeenCalled();
   });
 
   it('keeps the records and answers 503 when bucket cleanup fails (issue #384)', async () => {
