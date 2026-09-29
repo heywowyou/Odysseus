@@ -7,8 +7,8 @@
 
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { attachProviderThreadId } from '@odysseus/store/outreach-threads.js';
 import {
-  attachProviderThreadId,
   findOutreachThreadById,
   listOutreachDrafts,
   openOutreachThread,

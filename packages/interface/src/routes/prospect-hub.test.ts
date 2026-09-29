@@ -16,7 +16,6 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   checkOutreachAction: vi.fn(),
   confirmOutreachSentByOperator: vi.fn(),
   createProspectHub: vi.fn(),
-  applyAutomaticProspectStatus: vi.fn(),
   createRandomIndependentProspectFromDirectory: vi.fn(),
   archiveProspect: vi.fn(),
   countActiveProspectDeletionJobs: vi.fn(),
@@ -116,7 +115,6 @@ import {
   checkOutreachAction,
   confirmOutreachSentByOperator,
   createProspectHub,
-  applyAutomaticProspectStatus,
   createRandomIndependentProspectFromDirectory,
   archiveProspect,
   countActiveProspectDeletionJobs,
@@ -151,8 +149,8 @@ import {
   setProspectStatus,
   updateProspect,
   withdrawProspectOutreach,
-  type ProspectTodoRow,
 } from '@odysseus/store';
+import type { ProspectTodoRow } from '@odysseus/store/prospect-work.js';
 import { buildAuditDir } from '@odysseus/scanner';
 import {
   releaseReportProduction,
@@ -227,7 +225,6 @@ beforeEach(() => {
   vi.mocked(countActiveAndAuditedProspects).mockResolvedValue({ active: 0, audited: 0 });
   vi.mocked(listDirectory).mockResolvedValue(emptyPage as never);
   vi.mocked(setProspectStatus).mockResolvedValue({ status: 'audited' } as never);
-  vi.mocked(applyAutomaticProspectStatus).mockResolvedValue({ status: 'opted-out' } as never);
   vi.mocked(recordProspectOutcome).mockResolvedValue({ status: 'replied' } as never);
   vi.mocked(deleteProspectPermanently).mockResolvedValue({ deleted: true } as never);
   vi.mocked(countActiveProspectDeletionJobs).mockResolvedValue(0);

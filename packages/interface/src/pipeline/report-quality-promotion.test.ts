@@ -2,11 +2,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Sha256Digest } from '@odysseus/core';
 import { ReportProfileBenchmarkNotCurrentError } from '@odysseus/llm';
-import {
-  createReportBundleModel,
-  getReportBundleByDigest,
-  recordQualityApprovedBundle,
-} from '@odysseus/store';
+import { getReportBundleByDigest, recordQualityApprovedBundle } from '@odysseus/store';
+import { createReportBundleModel } from '@odysseus/store/schemas/report-quality.schema.js';
 import { probeMongoAvailability, scopedMongoTestUri } from '@odysseus/store/test-support.js';
 import { InMemoryArtifactStore } from './report-quality-pipeline.fixtures.js';
 import { approveAndPromoteReportQualityBundle } from './report-quality-promotion.js';

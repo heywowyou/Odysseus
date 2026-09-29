@@ -19,8 +19,6 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   addDirectoryEntriesToProspects,
   createAuditModel,
-  createDirectoryEntryModel,
-  createProspectHubModel,
   createReportModel,
   listArchivedProspectsWithAudits,
   findOutreachThreadByProspect,
@@ -31,6 +29,8 @@ import {
   openOutreachThread,
   upsertDirectoryEntries,
 } from '@odysseus/store';
+import { createDirectoryEntryModel } from '@odysseus/store/schemas/directory-entry.schema.js';
+import { createProspectHubModel } from '@odysseus/store/schemas/prospect-hub.schema.js';
 import { buildAuditDir } from '@odysseus/scanner';
 import { probeMongoAvailability, scopedMongoTestUri } from '@odysseus/store/test-support.js';
 import { Router } from '../router.js';

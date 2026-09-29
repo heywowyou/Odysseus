@@ -7,11 +7,11 @@ export type {
 } from './schemas/audit.schema.js';
 export { persistAudit } from './persist-audit.js';
 export { findDirectoryEntryForAudit } from './audit-directory-entry.js';
-export type { AnalysisDocument, AnalysisDocumentFields } from './schemas/analysis.schema.js';
+export type { AnalysisDocument } from './schemas/analysis.schema.js';
 export { persistAnalysis } from './persist-analysis.js';
 export { upsertSireneCache, getCachedSireneProfile } from './persist-sirene-cache.js';
 export { createReportModel } from './schemas/report.schema.js';
-export type { ReportDocument, ReportDocumentFields } from './schemas/report.schema.js';
+export type { ReportDocument } from './schemas/report.schema.js';
 export { persistReport } from './persist-report.js';
 export { resolveReportVariant } from './report-variants.js';
 export { getLatestReportApproval, persistReportApproval } from './report-approvals.js';
@@ -46,7 +46,7 @@ export {
   settleCancelRequestedJob,
   updateJobProgress,
 } from './jobs.js';
-export type { JobProgressPatch, NewJobInput } from './jobs.js';
+export type { JobProgressPatch } from './jobs.js';
 export { backfillQueueOrder, readScanQueue, reorderScanQueue } from './job-queue-order.js';
 export { reconcileFailedAuditJobs } from './reconcile-jobs.js';
 export {
@@ -94,7 +94,6 @@ export {
   recordFailedWritingCandidate,
   recordReadyWritingCandidate,
   resolveSelectedAnalysisPairForAudit,
-  WritingSelectionConflictError,
 } from './report-preparations.js';
 export type { SelectedAuditAnalysisPairResolution } from './report-preparations.js';
 export {
@@ -115,7 +114,6 @@ export type {
 } from './prospect-hub.js';
 export {
   addDirectoryEntriesToProspects,
-  applyAutomaticProspectStatus,
   advanceProspectStatus,
   appendProspectEvent,
   archiveProspect,
@@ -152,12 +150,9 @@ export {
 } from './prospect-identity.js';
 export type { AuditIdentityValues } from './prospect-identity.js';
 export { canonicalJobTypeForScanIntent, displayJobIntent } from './scan-intents.js';
-export { createDirectoryEntryModel } from './schemas/directory-entry.schema.js';
-export { createProspectHubModel } from './schemas/prospect-hub.schema.js';
 export { checkOutreachAction, checkScanLaunch, registrableDomainForScan } from './guards.js';
 export type { OutreachActionRefusal } from './guards.js';
 export {
-  auditDataVersionState,
   effectiveAuditScanIntent,
   isOutreachQualifyingAudit,
 } from './prospect-audit-qualification.js';
@@ -184,7 +179,6 @@ export {
   openOutreachThread,
   findOutreachThreadById,
   findOutreachThreadByProspect,
-  attachProviderThreadId,
   transitionOutreachThread,
   markOutreachThreadDrafted,
   recordOutreachThreadTouchSent,
@@ -225,7 +219,7 @@ export {
   findAuditsWithUnreadyReports,
   loadOutreachReportReadiness,
 } from './outreach-report-readiness.js';
-export type { ProspectTodoRow, ProspectWorkAudit } from './prospect-work.js';
+export type { ProspectWorkAudit } from './prospect-work.js';
 export {
   removeProspectEmail,
   removeProspectWebsite,
@@ -238,10 +232,7 @@ export type {
   ReportBundleDocument,
   ActiveReportBundleDocument,
 } from './schemas/report-quality.schema.js';
-export {
-  createReportQualityRunModel,
-  createReportBundleModel,
-} from './schemas/report-quality.schema.js';
+export { createReportQualityRunModel } from './schemas/report-quality.schema.js';
 export {
   acquireReportQualityLease,
   renewReportQualityLease,

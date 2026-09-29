@@ -51,6 +51,7 @@
     "fast-check": "4.10.2",
     "globals": "17.12.0",
     "jsdom": "30.1.0",
+    "mongodb-memory-server-core": "^11.3.0",
     "playwright": "1.63.0",
     "prettier": "3.9.8",
     "tsx": "4.23.15",

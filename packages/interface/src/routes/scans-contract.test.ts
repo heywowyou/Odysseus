@@ -52,8 +52,8 @@ import {
   readScanQueue,
   reorderScanQueue,
   requestJobCancellation,
-  type NewJobInput,
 } from '@odysseus/store';
+import type { NewJobInput } from '@odysseus/store/jobs.js';
 import { CrawlCoverageInsufficientError } from '@odysseus/core';
 import { cancelJobCapability, deleteJobCapability } from '../operator/job-capabilities.js';
 import {

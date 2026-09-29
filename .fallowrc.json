@@ -2,7 +2,11 @@
   "entry": [
     // pnpm loads it itself (issue #528's html-validate peer hook).
     ".pnpmfile.cjs",
-    "scripts/*.mjs",
+    // Vitest's global setups are left to the vitest plugin, which reads
+    // them from vitest.config.ts as test tooling: the in-memory MongoDB
+    // (issue #572) is a dev dependency on purpose.
+    "scripts/[!v]*.mjs",
+    "scripts/validate-local-audit.mjs",
     "scripts/build-pushback-corpus.ts",
     "packages/interface/src/dashboard/index.html",
     "packages/interface/src/dashboard/main.tsx",

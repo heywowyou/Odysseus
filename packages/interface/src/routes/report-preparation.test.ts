@@ -14,12 +14,6 @@ import {
 } from '@odysseus/core';
 
 vi.mock('@odysseus/store', () => {
-  class WritingSelectionConflictError extends Error {
-    constructor(message: string) {
-      super(message);
-      this.name = 'WritingSelectionConflictError';
-    }
-  }
   return {
     getAudit: vi.fn(),
     getAuditManualFields: vi.fn(async () => undefined),
@@ -30,7 +24,6 @@ vi.mock('@odysseus/store', () => {
     approveWritingCandidate: vi.fn(),
     recordReadyWritingCandidate: vi.fn(),
     recordFailedWritingCandidate: vi.fn(),
-    WritingSelectionConflictError,
   };
 });
 
@@ -80,8 +73,8 @@ import {
   patchReportPreparationInputs,
   recordFailedWritingCandidate,
   recordReadyWritingCandidate,
-  WritingSelectionConflictError,
 } from '@odysseus/store';
+import { WritingSelectionConflictError } from '@odysseus/store/report-preparations.js';
 import { runAnalysisStage } from '../pipeline/analysis-stage.js';
 import { refreshStaleAuditEvidence } from '../pipeline/audit-evidence.js';
 import {

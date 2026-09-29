@@ -31,9 +31,9 @@ import {
   persistAnalysis,
   persistAudit,
   persistReport,
-  type AnalysisDocumentFields,
-  type ReportDocumentFields,
 } from '@odysseus/store';
+import type { AnalysisDocumentFields } from '@odysseus/store/schemas/analysis.schema.js';
+import type { ReportDocumentFields } from '@odysseus/store/schemas/report.schema.js';
 import {
   buildAuditDir,
   EVIDENCE_QUALITY_ASSESSMENT_PATH,

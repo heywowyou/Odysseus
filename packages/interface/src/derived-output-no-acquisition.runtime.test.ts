@@ -4,7 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NORMALIZATION_FINGERPRINT, type AuditManifest } from '@odysseus/core';
-import { auditDataVersionState, isOutreachQualifyingAudit } from '@odysseus/store';
+import { isOutreachQualifyingAudit } from '@odysseus/store';
+import { auditDataVersionState } from '@odysseus/store/prospect-audit-qualification.js';
 
 /**
  * Plan 050 closure proof, runtime half (the static half is

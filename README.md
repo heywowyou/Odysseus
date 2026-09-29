@@ -100,8 +100,12 @@ pnpm run test:all         # runs all three projects (unit, e2e, e2e-serial); the
 pnpm run test:store:down  # stops it again
 ```
 
-Mongo-backed integration suites skip when the test database is unreachable,
-so a machine without Docker still runs the rest. With
+Mongo-backed integration suites run against `mongo-test` when it is up.
+When it is not, and no `MONGODB_TEST_URI` is set, the run starts one
+in-memory single-node replica set instead (`mongodb-memory-server-core`,
+issue #572), so a machine without Docker still runs them; the first run
+downloads a `mongod` binary into the user cache. `ODYSSEUS_TEST_MONGO=docker`
+keeps the older behaviour, where those suites skip without Docker. With
 `REQUIRE_MONGO_TESTS=1`, as the release gate sets it, an unreachable database
 fails the run instead.
 `mongo-test` is a single-node replica set, as production's Atlas cluster is,

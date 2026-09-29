@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@odysseus/store', () => ({
-  attachProviderThreadId: vi.fn(),
   attachReferenceAuditDraft: vi.fn(),
   checkOutreachAction: vi.fn(),
   createAuditModel: vi.fn(),
