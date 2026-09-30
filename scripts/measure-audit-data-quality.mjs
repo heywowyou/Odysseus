@@ -260,45 +260,22 @@ function qualityStats(findings, manifest, scans) {
   };
 }
 
-function normalizeInput(manifest, pages) {
-  return {
+// The replay builds normalizeAudit's input with the same builder a refresh
+// uses, so it sees what a refresh sees: a copy of its own once dropped the
+// redirected URLs the sitemap rule is given and reported a sitemap finding
+// that the refresh keeps as gone. The manifest's page statuses are the last
+// refresh's verdicts.
+function normalizeInput(buildNormalizeAuditInput, manifest, pages) {
+  return buildNormalizeAuditInput({
     auditId: manifest.auditId,
     startedAt: new Date(manifest.startedAt),
+    manifest,
+    manifestPages: manifest.pages ?? [],
     pages,
     ...(manifest.translationClusters !== undefined
       ? { translationClusters: manifest.translationClusters }
       : {}),
-    ...(manifest.coverageLimitations !== undefined
-      ? { coverageLimitations: manifest.coverageLimitations }
-      : {}),
-    ...(manifest.cruxFieldData !== undefined ? { cruxFieldData: manifest.cruxFieldData } : {}),
-    crawl: {
-      startUrl: manifest.crawl.startUrl,
-      ...(manifest.crawl.homepageUrl !== undefined
-        ? { homepageUrl: manifest.crawl.homepageUrl }
-        : {}),
-      robotsTxtFound: manifest.crawl.robotsTxtFound,
-      pages: (manifest.pages ?? []).map((page) => ({
-        url: page.url,
-        status: page.status,
-        ...(page.depth !== undefined ? { depth: page.depth } : {}),
-        ...(page.httpStatus !== undefined ? { httpStatus: page.httpStatus } : {}),
-        ...(page.discoveredFrom !== undefined ? { discoveredFrom: page.discoveredFrom } : {}),
-      })),
-      ...(manifest.crawl.robotsDisallowMatches !== undefined
-        ? { robotsDisallowMatches: manifest.crawl.robotsDisallowMatches }
-        : {}),
-      ...(manifest.crawl.aiCrawlerBlocks !== undefined
-        ? { aiCrawlerBlocks: manifest.crawl.aiCrawlerBlocks }
-        : {}),
-      ...(manifest.crawl.sitemapUrls !== undefined
-        ? { sitemapUrls: manifest.crawl.sitemapUrls }
-        : {}),
-      ...(manifest.relativeLinkNestingSummary !== undefined
-        ? { relativeLinkNestingSummary: manifest.relativeLinkNestingSummary }
-        : {}),
-    },
-  };
+  });
 }
 
 async function main() {
@@ -319,6 +296,16 @@ async function main() {
   } catch {
     // The stored-data table remains useful without a build; the after pass is
     // explicitly marked unavailable instead of silently pretending equality.
+  }
+  let buildNormalizeAuditInput;
+  try {
+    ({ buildNormalizeAuditInput } = await import(
+      pathToFileURL(
+        path.join(repoRoot, 'packages/interface/dist/pipeline/normalize-audit-input.js'),
+      ).href
+    ));
+  } catch {
+    // Without the interface build the after pass is marked unavailable below.
   }
   let registry = [];
   try {
@@ -356,16 +343,16 @@ async function main() {
     let afterUnavailableReason;
     if (missingVisitedPageScanCount > 0) {
       afterUnavailableReason = `${missingVisitedPageScanCount} visited page scan artifact(s) missing; after-pass skipped`;
-    } else if (normalizeAudit !== undefined) {
+    } else if (normalizeAudit !== undefined && buildNormalizeAuditInput !== undefined) {
       try {
-        const replayed = normalizeAudit(normalizeInput(manifest, pages));
+        const replayed = normalizeAudit(normalizeInput(buildNormalizeAuditInput, manifest, pages));
         after = qualityStats(replayed, manifest, pages);
         evaluationAfter = ledgerFor(replayed);
       } catch (error) {
         normalizeError = error instanceof Error ? error.message : String(error);
       }
     } else {
-      afterUnavailableReason = 'local core build unavailable; after-pass skipped';
+      afterUnavailableReason = 'local core or interface build unavailable; after-pass skipped';
     }
     audits.push({
       audit: path.relative(artifactsRoot, auditDir),
