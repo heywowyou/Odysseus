@@ -583,18 +583,49 @@ function classifyLighthouseFailure(message: string, m: ReportStrings['methodolog
   return reasons.unknown;
 }
 
+/** Plan 075 M6: the note speaks of the analysed pages Lighthouse was planned
+ *  for. It used to count every page carrying a Lighthouse error, 404 pages
+ *  included, over every analysed page, and to open with "n'a pas abouti sur
+ *  ce site" whatever the share: domaine-d-auriac, 66 pages measured and no
+ *  analysed page failed, read "8/151 pages". A manifest without pass
+ *  coverage keeps the older reading: analysed pages with an error. */
+function lighthouseFailureScope(manifest: AuditManifest): {
+  failures: string[];
+  planned: number;
+} {
+  const analysed = manifest.pages.filter((page) => page.status === 'visited');
+  const withCoverage = analysed.filter((page) => page.analysisCoverage !== undefined);
+  if (withCoverage.length === 0) {
+    return {
+      failures: analysed.flatMap((page) =>
+        page.errors.lighthouse !== undefined ? [page.errors.lighthouse] : [],
+      ),
+      planned: analysed.length,
+    };
+  }
+  const planned = withCoverage.filter(
+    (page) => page.analysisCoverage!.passes.lighthouse.outcome !== 'not-planned',
+  );
+  return {
+    failures: planned.flatMap((page) =>
+      page.analysisCoverage!.passes.lighthouse.outcome === 'failed'
+        ? [page.errors.lighthouse ?? '']
+        : [],
+    ),
+    planned: planned.length,
+  };
+}
+
 function summarizeLighthouseFailures(
   strings: ReportStrings,
   manifest: AuditManifest,
   language: ReportLanguage,
 ): string | undefined {
   const m = strings.methodology;
-  const failures = manifest.pages
-    .map((page) => page.errors.lighthouse)
-    .filter((message): message is string => message !== undefined);
+  const { failures, planned } = lighthouseFailureScope(manifest);
   if (failures.length === 0) return undefined;
 
-  const totalPages = manifest.pages.filter((page) => page.status === 'visited').length;
+  const totalPages = planned;
   const counts = new Map<string, number>();
   for (const message of failures) {
     const reason = classifyLighthouseFailure(message, m);
@@ -611,7 +642,14 @@ function summarizeLighthouseFailures(
       }),
     );
 
-  return `${m.lighthouseFailureIntroSentence} ${reasonLines.join(' ')}`;
+  const intro =
+    failures.length >= planned
+      ? m.lighthouseFailureIntroSentence
+      : fillTemplate(m.lighthouseFailureSomePagesIntroTemplate, {
+          failed: formatNumber(failures.length, language),
+          planned: formatNumber(planned, language),
+        });
+  return `${intro} ${reasonLines.join(' ')}`;
 }
 
 function privacySecurityCoverageNote(

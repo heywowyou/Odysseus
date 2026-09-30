@@ -1238,6 +1238,9 @@ export const fr: ReportStrings = {
     // guessed or generic explanation.
     lighthouseFailureIntroSentence:
       "La mesure de performance (Lighthouse) n'a pas abouti sur ce site pour cet audit. Détail des échecs constatés :",
+    // Plan 075 M6: most pages measured, some did not.
+    lighthouseFailureSomePagesIntroTemplate:
+      "La mesure de performance (Lighthouse) n'a pas abouti sur {failed} des {planned} pages où elle était prévue. Détail des échecs constatés :",
     lighthouseFailureReasonTemplate: '{count}/{total} pages : {reason}',
     lighthouseFailureReasons: {
       browserUnreachable: "le navigateur de mesure n'a pas pu être contacté",

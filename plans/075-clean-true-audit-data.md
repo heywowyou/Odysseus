@@ -751,6 +751,7 @@ Rescans needed before these audits' reports go out: atrium-hotel (M1), leprieure
   - Stored audits: a re-render applies it.
   - Target: domaine-d-auriac prints no failure note; prieuré states 2 pages, regina-hotel 7, yonahotel 18.
   - Tests: methodology render tests for none, some and all pages failed, and a 404 page carrying a Lighthouse error.
+  - **Implemented 2026-09-30.** The note counts the analysed pages whose Lighthouse pass failed, over the analysed pages it was planned for, and states « n'a pas abouti sur {n} des {total} pages où elle était prévue » when some succeeded; « sur ce site » stays for an audit where every planned page failed. A manifest without pass coverage keeps the older count of analysed pages with a Lighthouse error. Tests: `methodology.test.ts` (none failed with a 404 page carrying an error, some failed, all failed).
 - **M7. A site's catch-all answer is a soft 404.**
   - At crawl start, fetch one path that cannot exist (one extra polite request) and keep the answer's fingerprint when it is 200; a page that matches it is `soft-error-page`.
   - Stored audits: scan-time; yonahotel needs a rescan.

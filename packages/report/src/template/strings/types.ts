@@ -1564,6 +1564,10 @@ export interface ReportStrings {
      *  failed on at least one page, giving the real per-reason failure
      *  counts instead of a dead-end pointer with no follow-through. */
     lighthouseFailureIntroSentence: string;
+    /** Plan 075 M6: the intro when only some of the pages Lighthouse was
+     *  planned for failed; the sentence above is kept for all of them.
+     *  Template: {failed}, {planned}. */
+    lighthouseFailureSomePagesIntroTemplate: string;
     /** Template: {count}, {total}, {reason}. One line per distinct
      *  failure cause across the scan. */
     lighthouseFailureReasonTemplate: string;

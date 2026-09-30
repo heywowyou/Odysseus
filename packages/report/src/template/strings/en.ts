@@ -1098,6 +1098,8 @@ export const en: ReportStrings = {
     mentionsLegalesFallbackPagePlural: 'the {count} visited pages',
     lighthouseFailureIntroSentence:
       'Performance measurement (Lighthouse) did not complete on this site for this audit. Failure detail:',
+    lighthouseFailureSomePagesIntroTemplate:
+      'Performance measurement (Lighthouse) did not complete on {failed} of the {planned} pages it was planned for. Failure detail:',
     lighthouseFailureReasonTemplate: '{count}/{total} pages: {reason}',
     lighthouseFailureReasons: {
       browserUnreachable: 'the measurement browser could not be reached',

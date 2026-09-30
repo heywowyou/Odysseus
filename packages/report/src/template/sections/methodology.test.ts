@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { AuditManifest, ObligationAssessment } from '@odysseus/core';
+import type {
+  AuditManifest,
+  ManifestPageEntry,
+  ObligationAssessment,
+  PageAnalysisCoverage,
+} from '@odysseus/core';
 import {
   lowercaseInitial,
   renderLegalCitationParagraph,
@@ -1159,5 +1164,75 @@ describe('renderMethodology complementary-check note over the pages each check c
       'ordre de focus (aucune anomalie détectée sur 4 pages évaluées, contrôle non abouti sur les 7 autres pages)',
     );
     expect(fr).toContain('sous-titres vidéo (aucune anomalie détectée)');
+  });
+});
+
+// Plan 075 M6: domaine-d-auriac measured 66 pages and printed « n'a pas
+// abouti sur ce site » for eight 404 pages.
+describe('the Lighthouse failure note', () => {
+  const pass = (outcome: 'completed' | 'failed' | 'not-planned'): PageAnalysisCoverage => ({
+    plannerVersion: 'v3',
+    role: 'unknown',
+    confidence: 'fallback',
+    reasonCodes: [],
+    passes: {
+      rendered: { outcome: 'completed' as const },
+      axe: { outcome: 'completed' as const },
+      extended: { outcome: 'completed' as const },
+      lighthouse: outcome === 'failed' ? { outcome, failedCheckIds: ['lighthouse'] } : { outcome },
+    },
+  });
+  const noFcp = 'Lighthouse runtime error: NO_FCP: The page did not paint any content.';
+
+  async function withLighthouse(
+    outcomes: readonly ('completed' | 'failed' | 'not-planned')[],
+    deadPageError = false,
+  ): Promise<AuditManifest> {
+    const manifest = await loadSmallSiteManifest();
+    const pages: ManifestPageEntry[] = manifest.pages
+      .slice(0, outcomes.length)
+      .map((page, index) => ({
+        ...page,
+        analysisCoverage: pass(outcomes[index]!),
+        errors: outcomes[index] === 'failed' ? { lighthouse: noFcp } : {},
+      }));
+    if (deadPageError) {
+      pages.push({
+        url: 'https://example.com/404-2',
+        depth: 1,
+        status: 'http-error-status',
+        discoveryMethod: 'link',
+        httpStatus: 404,
+        errors: { lighthouse: 'Lighthouse runtime error: ERRORED_DOCUMENT_REQUEST' },
+      });
+    }
+    return { ...manifest, pages };
+  }
+
+  it('prints nothing when no analysed page failed, whatever a 404 page carries', async () => {
+    const manifest = await withLighthouse(['completed', 'completed', 'not-planned'], true);
+    expect(renderMethodology(getStrings('fr'), 11, manifest, 'fr')).not.toContain("n'a pas abouti");
+  });
+
+  it('states the failed pages over the pages Lighthouse was planned for', async () => {
+    const manifest = await withLighthouse(
+      ['completed', 'failed', 'completed', 'not-planned'],
+      true,
+    );
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
+
+    expect(html).toContain(
+      'La mesure de performance (Lighthouse) n’a pas abouti sur 1 des 3 pages où elle était prévue.',
+    );
+    expect(html).toContain('1/3 pages');
+    expect(html).not.toContain('abouti sur ce site');
+  });
+
+  it('keeps the site-wide sentence when every planned page failed', async () => {
+    const manifest = await withLighthouse(['failed', 'failed', 'not-planned']);
+    const html = renderMethodology(getStrings('fr'), 11, manifest, 'fr');
+
+    expect(html).toContain('n’a pas abouti sur ce site pour cet audit');
+    expect(html).toContain('2/2 pages');
   });
 });
