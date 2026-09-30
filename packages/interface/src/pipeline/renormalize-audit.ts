@@ -23,6 +23,8 @@ import {
   markInconclusiveChecks,
   nameDeadLinkReferrers,
   markLanguageRedirects,
+  markQueryVariants,
+  queryVariantFactsOf,
   scannedPageFactsOf,
   normalizeAudit,
   type AuditManifest,
@@ -174,28 +176,33 @@ export async function renormalizeAudit(
     if (verdict.status === 'http-error-status') deadLinkUrls.add(entry.url);
     return applyScannedPageVerdict(entry, verdict);
   });
-  const classifiedPages = markLanguageRedirects(
-    nameDeadLinkReferrers(
-      verdictPages,
-      // The stored scan.json carries the page's post-render links beside the
-      // normalize fields; they name the referrer of a dead link.
+  // Plan 075 M3 runs last: a query copy is judged against the pages that
+  // are still analysed once every other status is known.
+  const classifiedPages = markQueryVariants(
+    markLanguageRedirects(
+      nameDeadLinkReferrers(
+        verdictPages,
+        // The stored scan.json carries the page's post-render links beside the
+        // normalize fields; they name the referrer of a dead link.
+        pages.map((page) => ({
+          url: page.url,
+          ...(Array.isArray((page as { surfaceLinks?: unknown }).surfaceLinks)
+            ? {
+                surfaceLinks: (page as unknown as { surfaceLinks: { url: string }[] }).surfaceLinks,
+              }
+            : {}),
+        })),
+        deadLinkUrls,
+      ),
       pages.map((page) => ({
-        url: page.url,
-        ...(Array.isArray((page as { surfaceLinks?: unknown }).surfaceLinks)
-          ? {
-              surfaceLinks: (page as unknown as { surfaceLinks: { url: string }[] }).surfaceLinks,
-            }
-          : {}),
+        pageUrl: page.url,
+        alternateUrls: [
+          ...(page.headMetadata?.hreflangLinks ?? []).map((link) => link.href),
+          ...(page.headMetadata?.languageSwitcherLinks ?? []).map((link) => link.href),
+        ],
       })),
-      deadLinkUrls,
     ),
-    pages.map((page) => ({
-      pageUrl: page.url,
-      alternateUrls: [
-        ...(page.headMetadata?.hreflangLinks ?? []).map((link) => link.href),
-        ...(page.headMetadata?.languageSwitcherLinks ?? []).map((link) => link.href),
-      ],
-    })),
+    pages.map(queryVariantFactsOf),
   );
 
   // B2 (2026-08-24): collapses language-variant duplicates. Manifests

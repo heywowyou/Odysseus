@@ -195,6 +195,11 @@ export const fr: ReportStrings = {
         singular: 'version dans une autre langue',
         plural: 'versions dans une autre langue',
       },
+      // Plan 075 M3: the same page again, reached with a query string.
+      'query-variant': {
+        singular: 'copie d’une page analysée (paramètres d’adresse)',
+        plural: 'copies de pages analysées (paramètres d’adresse)',
+      },
       'soft-error-page': { singular: 'page d’erreur', plural: 'pages d’erreur' },
       blocked: { singular: 'page bloquée', plural: 'pages bloquées' },
       'coverage-missing': {

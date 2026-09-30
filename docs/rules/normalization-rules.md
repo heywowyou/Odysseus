@@ -111,6 +111,20 @@ route. A scanned page whose raw document has a kept signature is
 `soft-error-page`. Audits scanned before the probe carry none and keep their
 verdicts.
 
+**Query-string copies** (plan 075 M3). A scanned page whose URL differs from
+an analysed page only by its query string is that page again when it
+declares the query-less URL as its only canonical, or when its raw document
+has the query-less page's text signature. `markQueryVariants` runs after the
+page verdicts and the language redirects, on scan and on refresh, and marks it
+`query-variant` (`variantOfUrl` names the page); its coverage is set aside and
+the coverage discloses it. A query page stays analysed when the query-less page
+is not analysed, when its query selects other content, or when a page without
+a query declares it as an hreflang alternate (clos-sainte-marie's
+`/?lang=en`, which L5 must keep reading). At link admission, known campaign
+and click parameters (`utm_*`, `gclid`, `gbraid`, `wbraid`, `dclid`,
+`fbclid`, `msclkid`, `yclid`, `igshid`, `_gl`, `_ga`, `mc_cid`, `mc_eid`) are
+dropped, so a tagged link is never crawled beside its page.
+
 **Render diff:** emits nothing at all for a page whose no-JavaScript
 fetch did not receive the page (issue #301). `unusableRawFetches` in
 `normalize-renderdiff.ts` judges that from `RenderDiffResult.rawDocument`,

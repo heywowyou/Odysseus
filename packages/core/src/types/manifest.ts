@@ -309,6 +309,12 @@ export type ManifestPageStatus =
    *  scan by markLanguageRedirects, since the landing page's alternates are
    *  only known once it is scanned. */
   | 'language-redirect'
+  /** Plan 075 M3: a URL that differs from an analysed page only by its
+   *  query string, and that declares that page as its canonical or serves
+   *  its raw document (a dated booking link, a tracking tag, a menu state).
+   *  The same page again, not analysed; `variantOfUrl` names it. Assigned
+   *  after the whole scan by markQueryVariants, like 'language-redirect'. */
+  | 'query-variant'
   /** A 200 response that tells the visitor the page does not exist (issue
    *  #302): an error template served under its own URL. Decided post-hoc
    *  in write-audit.ts from the page's slug, title and h1, the same
@@ -479,6 +485,9 @@ export interface ManifestPageEntry {
    *  'language-redirect': the URL the browser actually landed on. Traceability only, not required for any
    *  coverage or dedupe logic. */
   redirectTargetUrl?: string;
+  /** Populated only for status 'query-variant': the analysed page this URL
+   *  repeats. */
+  variantOfUrl?: string;
   /** Plan 021. Optional for historical manifests; absence on a current
    *  inventory-only page means no content analysis was planned because the
    *  page was not successfully crawled HTML. */

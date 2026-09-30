@@ -184,6 +184,7 @@ const BLOCKED_PROOF_STATUSES = new Set<string>([
   'blocked',
   'redirect-interstitial',
   'language-redirect',
+  'query-variant',
   'soft-error-page',
   'http-error-status',
   'skipped-external-redirect',

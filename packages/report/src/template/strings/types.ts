@@ -298,6 +298,7 @@ export interface ReportStrings {
       | 'http-error-status'
       | 'redirect-interstitial'
       | 'language-redirect'
+      | 'query-variant'
       | 'soft-error-page'
       | 'blocked'
       | 'coverage-missing',

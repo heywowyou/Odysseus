@@ -331,3 +331,29 @@ describe('slashed spellings', () => {
     expect(slashedSpelling('https://hotel.example/')).toBeUndefined();
   });
 });
+
+// Plan 075 M3: yonahotel.com linked its own pages with analytics tags.
+describe('normalizePageUrl tracking parameters', () => {
+  const base = 'https://www.yonahotel.com/fr';
+
+  it('drops campaign and click identifiers', () => {
+    expect(
+      normalizePageUrl(
+        '/fr/yuzu-spa-restaurant-obernai?_gl=1*90m0or*_up*MQ..&gclid=Cj0KCQjw&gbraid=0AAAAACm',
+        base,
+      ),
+    ).toBe('https://www.yonahotel.com/fr/yuzu-spa-restaurant-obernai');
+    expect(normalizePageUrl('/fr/spa?utm_source=site&utm_medium=popin', base)).toBe(
+      'https://www.yonahotel.com/fr/spa',
+    );
+  });
+
+  it('keeps a parameter that may select content', () => {
+    expect(normalizePageUrl('/fr/booking/room?info[room_id]=102258&fbclid=x', base)).toBe(
+      'https://www.yonahotel.com/fr/booking/room?info%5Broom_id%5D=102258',
+    );
+    expect(normalizePageUrl('/fra/promotions/viewReservitRate?rate_id=170830', base)).toBe(
+      'https://www.yonahotel.com/fra/promotions/viewReservitRate?rate_id=170830',
+    );
+  });
+});

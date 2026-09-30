@@ -34,6 +34,8 @@ import {
   markInconclusiveChecks,
   scannedPageFactsOf,
   markLanguageRedirects,
+  markQueryVariants,
+  queryVariantFactsOf,
   type AuditConfigSnapshot,
   type AuditManifest,
   type AuditManifestSiteSignals,
@@ -756,15 +758,19 @@ export async function writeAuditArtifacts(
     // Plan 075 I1: a redirect onto the page's own translation only chose a
     // language; the landing page's alternates are known only now.
     pages: markInconclusiveChecks(
-      markLanguageRedirects(
-        manifestPages,
-        normalizePages.map((page) => ({
-          pageUrl: page.url,
-          alternateUrls: [
-            ...(page.headMetadata?.hreflangLinks ?? []).map((link) => link.href),
-            ...(page.headMetadata?.languageSwitcherLinks ?? []).map((link) => link.href),
-          ],
-        })),
+      // Plan 075 M3: a query-string copy of an analysed page is that page.
+      markQueryVariants(
+        markLanguageRedirects(
+          manifestPages,
+          normalizePages.map((page) => ({
+            pageUrl: page.url,
+            alternateUrls: [
+              ...(page.headMetadata?.hreflangLinks ?? []).map((link) => link.href),
+              ...(page.headMetadata?.languageSwitcherLinks ?? []).map((link) => link.href),
+            ],
+          })),
+        ),
+        normalizePages.map(queryVariantFactsOf),
       ),
       // Plan 075 K1: which checks ran without concluding, for the report.
       normalizePages.map((page) => ({

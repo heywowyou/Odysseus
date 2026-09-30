@@ -217,11 +217,27 @@ export function normalizePageUrl(
   if (NON_HTML_EXTENSIONS.has(path.posix.extname(resolved.pathname).toLowerCase()))
     return undefined;
   if (isNonPublicWordPressObject(resolved)) return undefined;
+  dropTrackingParameters(resolved);
   resolved.hash = '';
   const normalized = normalizeUrlIdentity(resolved.toString()) ?? resolved.toString();
   const exclusionRegexes = (options.exclusionPatterns ?? []).map(globToRegExp);
   if (exclusionRegexes.some((pattern) => pattern.test(normalized))) return undefined;
   return normalized;
+}
+
+/** Campaign and click identifiers that analytics and ad platforms append to
+ *  a link. They never select content, so a link carrying them is the page
+ *  without them (plan 075 M3: yonahotel.com linked its own pages with
+ *  `_gl` and `gclid` values, and each tagged copy was crawled and analysed
+ *  beside the clean page). */
+const TRACKING_PARAMETER =
+  /^(?:utm_[a-z0-9_]+|gclid|gbraid|wbraid|dclid|fbclid|msclkid|yclid|igshid|_gl|_ga|mc_cid|mc_eid)$/i;
+
+function dropTrackingParameters(url: URL): void {
+  const tracking = [...url.searchParams.keys()].filter((key) => TRACKING_PARAMETER.test(key));
+  if (tracking.length === 0) return;
+  for (const key of tracking) url.searchParams.delete(key);
+  if ([...url.searchParams.keys()].length === 0) url.search = '';
 }
 
 /** The page-identity half of normalizePageUrl, on its own: trailing-slash

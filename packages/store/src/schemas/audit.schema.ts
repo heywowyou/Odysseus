@@ -308,6 +308,8 @@ const manifestPageEntrySchema = new Schema(
         // Plan 075 I1: a translation the site redirected our French browser
         // away from. Listed here, or saving such an audit is rejected.
         'language-redirect',
+        // Plan 075 M3: a query-string copy of an analysed page.
+        'query-variant',
         // Issue #302: a 200 serving an error template.
         'soft-error-page',
         'error',

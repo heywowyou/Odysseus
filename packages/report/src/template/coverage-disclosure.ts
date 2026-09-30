@@ -16,6 +16,7 @@ const WITHOUT_CONTENT_REASON_ORDER: readonly PageWithoutContentAnalysisReason[] 
   'http-error-status',
   'redirect-interstitial',
   'language-redirect',
+  'query-variant',
   'soft-error-page',
   'blocked',
   'coverage-missing',

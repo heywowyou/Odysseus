@@ -58,6 +58,10 @@ export type CrawlPageStatus =
    *  browser away from (plan 075 I1). Neither broken nor an invalid
    *  hreflang target. Kept in sync with ManifestPageStatus by hand. */
   | 'language-redirect'
+  /** The same page as an analysed one, reached with a query string (plan
+   *  075 M3). Neither broken nor an invalid hreflang target. Kept in sync
+   *  with ManifestPageStatus by hand. */
+  | 'query-variant'
   /** A 200 whose content says the page does not exist (issue #302). Like
    *  'redirect-interstitial' above, assigned after the scan, and not a
    *  broken target - isBrokenTarget must not flag it, since the link

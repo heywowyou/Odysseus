@@ -172,6 +172,10 @@ export const en: ReportStrings = {
         singular: 'version in another language',
         plural: 'versions in another language',
       },
+      'query-variant': {
+        singular: 'copy of an analysed page (address parameters)',
+        plural: 'copies of analysed pages (address parameters)',
+      },
       'soft-error-page': { singular: 'error page', plural: 'error pages' },
       blocked: { singular: 'blocked page', plural: 'blocked pages' },
       'coverage-missing': {
