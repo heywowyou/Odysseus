@@ -231,6 +231,14 @@ prospect/site without asking the operator to select the same prospect again.
 The prospect page's paid report action is secondary; it is not inserted into
 the outreach sequence.
 
+A prospect-linked Audits row shows the prospect's Results status as a badge
+beside the prospect name once the prospect has been contacted (`contacted`
+through `opted-out`); `new` and `audited` rows carry no badge. The filter bar's
+contact select narrows the list to scans of contacted prospects or of
+prospect-linked scans not yet contacted. The badge describes the prospect, so
+every scan of a contacted prospect carries it, not only the scan behind the
+sent preview.
+
 Deterministic scanner findings remain the source of truth. The dashboard only
 groups and explains structured results already present in the API. Suppression,
 robots/pacing, complete-coverage, and manual-send rules remain unchanged; data

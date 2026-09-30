@@ -223,6 +223,9 @@ export const scanSummarySchema = z.object({
   /** Present on rows linked to a prospect: the scan queue's labels and the
    *  Audits table's hotel link. */
   prospectName: z.string().optional(),
+  /** The linked prospect's sales status (prospect-hub-model ProspectStatus),
+   *  so the Audits table can mark scans of prospects already contacted. */
+  prospectStatus: z.string().optional(),
   capabilities: jobCapabilitiesSchema,
 });
 

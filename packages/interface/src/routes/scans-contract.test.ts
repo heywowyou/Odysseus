@@ -16,7 +16,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   deleteJob: vi.fn(),
   readScanQueue: vi.fn(),
   reorderScanQueue: vi.fn(),
-  getProspectNames: vi.fn(async () => new Map()),
+  getProspectLabels: vi.fn(async () => new Map()),
   listJobs: vi.fn(async () => []),
   findAuditsWithUnreadyReports: vi.fn(async () => new Set<string>()),
   getStoredPrimarySeverityRollups: vi.fn(async () => new Map()),

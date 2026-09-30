@@ -37,6 +37,8 @@ import { usePolling } from '../lib/use-polling';
 import { currentPhaseLabel } from './scan-progress-model';
 import {
   computeKpis,
+  contactedStatus,
+  filterByContact,
   filterSummaries,
   groupByDay,
   listStatus,
@@ -50,6 +52,7 @@ import {
 } from './audits-model';
 import type {
   AuditsKpis,
+  ContactFilter,
   SeverityBadge,
   SeverityKey,
   SortOrder,
@@ -111,21 +114,22 @@ export function AuditsPage(): JSX.Element {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('');
+  const [contactFilter, setContactFilter] = useState<ContactFilter>('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const [pendingAction, setPendingAction] = useState<PendingScanAction | null>(null);
   const [page, setPage] = useState(1);
   // A new search, filter or order starts from the newest page again.
-  useEffect(() => setPage(1), [search, statusFilter, sortOrder]);
+  useEffect(() => setPage(1), [search, statusFilter, contactFilter, sortOrder]);
 
   const visible = useMemo(
     () =>
       sortSummaries(
-        filterSummaries(data ?? [], statusFilter).filter((summary) =>
-          searchMatches(summary, search, strings.audits),
+        filterByContact(filterSummaries(data ?? [], statusFilter), contactFilter).filter(
+          (summary) => searchMatches(summary, search, strings.audits),
         ),
         sortOrder,
       ),
-    [data, statusFilter, search, sortOrder, strings.audits],
+    [data, statusFilter, contactFilter, search, sortOrder, strings.audits],
   );
   const paged = pageOf(visible, page);
   const kpis = useMemo(() => computeKpis(data ?? []), [data]);
@@ -310,6 +314,7 @@ export function AuditsPage(): JSX.Element {
                     const site = siteLabel(summary, strings.audits);
                     const badges: SeverityBadge[] = severityBadges(summary.severityRollup);
                     const type = typeBadge(summary, strings);
+                    const contacted = contactedStatus(summary);
                     return (
                       <TableRow key={summary.jobId} onClick={() => void navigate(target)}>
                         <TableCell className="whitespace-nowrap">
@@ -334,13 +339,22 @@ export function AuditsPage(): JSX.Element {
                             hotel a prospect-linked audit belongs to, named and
                             linked to its hub; the row still opens the audit. */}
                           {summary.prospectId !== undefined ? (
-                            <Link
-                              to={`/prospects/${encodeURIComponent(summary.prospectId)}`}
-                              className="mt-0.5 block text-xs text-ink-soft hover:text-accent-bright"
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              {summary.prospectName ?? strings.nav.prospects}
-                            </Link>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                              <Link
+                                to={`/prospects/${encodeURIComponent(summary.prospectId)}`}
+                                className="text-xs text-ink-soft hover:text-accent-bright"
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                {summary.prospectName ?? strings.nav.prospects}
+                              </Link>
+                              {/* Only a contacted prospect carries a badge, so
+                                "new" and "audited" rows stay quiet. */}
+                              {contacted !== undefined ? (
+                                <Badge tone="accent" className="whitespace-nowrap">
+                                  {strings.prospectHub.results.statusLabels[contacted] ?? contacted}
+                                </Badge>
+                              ) : null}
+                            </div>
                           ) : null}
                         </TableCell>
                         <TableCell>
@@ -616,6 +630,17 @@ export function AuditsPage(): JSX.Element {
                   {strings.common.statusLabels[status]}
                 </option>
               ))}
+            </Select>
+          </div>
+          <div className="w-52">
+            <Select
+              value={contactFilter}
+              onChange={(event) => setContactFilter(event.target.value as ContactFilter)}
+              aria-label={strings.audits.contactFilterLabel}
+            >
+              <option value="">{strings.audits.contactFilterAll}</option>
+              <option value="contacted">{strings.audits.contactFilterContacted}</option>
+              <option value="not-contacted">{strings.audits.contactFilterNotContacted}</option>
             </Select>
           </div>
           <div className="w-44">

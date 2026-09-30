@@ -17,6 +17,7 @@ import {
   directoryEntryToProspectInput,
   fillMissingProspectIdentity,
   getProspectHub,
+  getProspectLabels,
   listProspects,
   listProspectScopeJobIds,
   recordProspectOutcome,
@@ -631,5 +632,30 @@ describe.skipIf(!mongoAvailable)('prospect scope job listing', () => {
     expect((await listProspectScopeJobIds(connection!, prospect.prospectId)).sort()).toEqual(
       [startedFor, linkedByAudit].sort(),
     );
+  });
+});
+
+describe.skipIf(!mongoAvailable)('getProspectLabels', () => {
+  it('returns each known prospect name and status and omits unknown IDs', async () => {
+    const contacted = await createProspectHub(connection!, {
+      sector: 'hotel',
+      name: 'Labels Contacted',
+      status: 'contacted',
+    });
+    const fresh = await createProspectHub(connection!, { sector: 'hotel', name: 'Labels New' });
+
+    const labels = await getProspectLabels(connection!, [
+      contacted.prospectId,
+      fresh.prospectId,
+      contacted.prospectId,
+      'missing-prospect',
+    ]);
+
+    expect(labels.get(contacted.prospectId)).toEqual({
+      name: 'Labels Contacted',
+      status: 'contacted',
+    });
+    expect(labels.get(fresh.prospectId)).toEqual({ name: 'Labels New', status: 'new' });
+    expect(labels.has('missing-prospect')).toBe(false);
   });
 });

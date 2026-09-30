@@ -17,7 +17,7 @@ import {
   getAudit,
   getLatestFullAuditEstimateSource,
   getProspectHub,
-  getProspectNames,
+  getProspectLabels,
   findAuditsWithUnreadyReports,
   getJob,
   listJobs,
@@ -580,9 +580,10 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
 
     const auditIds = jobs.map((job) => job.auditId).filter((id): id is string => id !== undefined);
     const rollups = await getSeverityRollupsForPoll(connection, auditIds);
-    // The scan queue and the Audits table both name the linked hotel, so
-    // every prospect-linked row pays for the (single, batched) lookup.
-    const prospectNames = await getProspectNames(
+    // The scan queue and the Audits table both name the linked hotel, and
+    // the table shows its sales status, so every prospect-linked row pays
+    // for the (single, batched) lookup.
+    const prospectLabels = await getProspectLabels(
       connection,
       jobs.map((job) => job.prospectId).filter((id): id is string => id !== undefined),
     );
@@ -604,7 +605,10 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         (unreadyReports.has(job.auditId) || reportProductionState(job.auditId).status === 'failed');
       return {
         prospectId: job.prospectId,
-        prospectName: job.prospectId === undefined ? undefined : prospectNames.get(job.prospectId),
+        prospectName:
+          job.prospectId === undefined ? undefined : prospectLabels.get(job.prospectId)?.name,
+        prospectStatus:
+          job.prospectId === undefined ? undefined : prospectLabels.get(job.prospectId)?.status,
         jobId: job.jobId,
         type: displayJobIntent(job.type, job.scanType),
         status: job.status,
@@ -643,7 +647,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
    *  the literal segment wins. */
   router.get('/api/scans/queue', async ({ res }) => {
     const snapshot = await readScanQueue(connection);
-    const prospectNames = await getProspectNames(
+    const prospectLabels = await getProspectLabels(
       connection,
       snapshot.jobs
         .map((job) => job.options.prospectId)
@@ -660,7 +664,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         prospectName:
           job.options.prospectId === undefined
             ? undefined
-            : prospectNames.get(job.options.prospectId),
+            : prospectLabels.get(job.options.prospectId)?.name,
         createdAt: job.createdAt,
         position: index + 1,
         options: queuedOptionsSummary(job.options),

@@ -15,6 +15,12 @@ export interface AuditsStrings {
   severityColumn: string;
   searchPlaceholder: string;
   statusFilterAll: string;
+  /** Prospect contact filter: every scan, then scans of prospects already
+   *  contacted (Results statuses) or not yet contacted. */
+  contactFilterLabel: string;
+  contactFilterAll: string;
+  contactFilterContacted: string;
+  contactFilterNotContacted: string;
   sortNewest: string;
   sortOldest: string;
   kpiRunning: string;
@@ -71,6 +77,10 @@ export const audits = {
     severityColumn: 'Gravité',
     searchPlaceholder: 'Rechercher un site…',
     statusFilterAll: 'Tous les statuts',
+    contactFilterLabel: 'Filtrer par contact du prospect',
+    contactFilterAll: 'Contact : tous',
+    contactFilterContacted: 'Prospects contactés',
+    contactFilterNotContacted: 'Prospects non contactés',
     sortNewest: 'Plus récents d’abord',
     sortOldest: 'Plus anciens d’abord',
     kpiRunning: 'En cours',
@@ -115,6 +125,10 @@ export const audits = {
     severityColumn: 'Severity',
     searchPlaceholder: 'Search a site…',
     statusFilterAll: 'All statuses',
+    contactFilterLabel: 'Filter by prospect contact',
+    contactFilterAll: 'Contact: all',
+    contactFilterContacted: 'Contacted prospects',
+    contactFilterNotContacted: 'Prospects not contacted',
     sortNewest: 'Newest first',
     sortOldest: 'Oldest first',
     kpiRunning: 'Running',

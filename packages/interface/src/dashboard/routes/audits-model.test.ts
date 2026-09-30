@@ -3,6 +3,8 @@ import {
   groupByDay,
   pageOf,
   computeKpis,
+  contactedStatus,
+  filterByContact,
   filterSummaries,
   hostnameOf,
   listStatus,
@@ -94,6 +96,37 @@ describe('computeKpis', () => {
     expect(filterSummaries(summaries, 'needs-input')).toHaveLength(kpis.needsInput);
     expect(filterSummaries(summaries, 'report-issue')).toHaveLength(kpis.reportIssue);
     expect(filterSummaries(summaries, 'failed')).toHaveLength(kpis.failed);
+  });
+});
+
+describe('contactedStatus', () => {
+  it('returns a Results status and nothing for new, audited or unlinked scans', () => {
+    expect(contactedStatus(makeSummary({ prospectStatus: 'contacted' }))).toBe('contacted');
+    expect(contactedStatus(makeSummary({ prospectStatus: 'opted-out' }))).toBe('opted-out');
+    expect(contactedStatus(makeSummary({ prospectStatus: 'audited' }))).toBeUndefined();
+    expect(contactedStatus(makeSummary({ prospectStatus: 'new' }))).toBeUndefined();
+    expect(contactedStatus(makeSummary())).toBeUndefined();
+  });
+});
+
+describe('filterByContact', () => {
+  const summaries = [
+    makeSummary({ jobId: 'contacted', prospectId: 'p1', prospectStatus: 'follow-up' }),
+    makeSummary({ jobId: 'audited', prospectId: 'p2', prospectStatus: 'audited' }),
+    makeSummary({ jobId: 'unlinked' }),
+  ];
+  const ids = (rows: { jobId: string }[]): string[] => rows.map((row) => row.jobId);
+
+  it('keeps every scan when the filter is empty', () => {
+    expect(ids(filterByContact(summaries, ''))).toEqual(['contacted', 'audited', 'unlinked']);
+  });
+
+  it('keeps only scans of contacted prospects', () => {
+    expect(ids(filterByContact(summaries, 'contacted'))).toEqual(['contacted']);
+  });
+
+  it('keeps prospect-linked scans not yet contacted and drops unlinked scans', () => {
+    expect(ids(filterByContact(summaries, 'not-contacted'))).toEqual(['audited']);
   });
 });
 

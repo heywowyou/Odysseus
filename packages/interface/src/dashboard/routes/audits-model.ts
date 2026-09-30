@@ -1,6 +1,8 @@
 import type { DashboardStrings } from '../i18n/types';
 import type { ScanSummary, SeverityRollup } from '../lib/api-types';
 import type { DisplayJobStatus } from '../lib/job-outcome';
+import { PROSPECT_RESULT_STATUSES } from './prospect-hub-model';
+import type { ProspectResultStatus } from './prospect-hub-model';
 
 /** Sort order of the audits list; newest is the default so the operator
  *  sees fresh scans first. */
@@ -8,6 +10,10 @@ export type SortOrder = 'newest' | 'oldest';
 
 /** Value of the status filter select; the empty string means every status. */
 export type StatusFilter = DisplayJobStatus | '';
+
+/** Value of the prospect contact filter; the empty string means every scan,
+ *  including scans linked to no prospect. */
+export type ContactFilter = '' | 'contacted' | 'not-contacted';
 
 /** Header KPIs of the audits page, derived from the polled summaries. */
 export interface AuditsKpis {
@@ -62,6 +68,31 @@ export function filterSummaries(summaries: ScanSummary[], status: StatusFilter):
     return [...summaries];
   }
   return summaries.filter((summary) => listStatus(summary) === status);
+}
+
+/** The linked prospect's status when it has been contacted: one of the
+ *  Prospects Results statuses (contacted through opted-out). Undefined for a
+ *  scan with no prospect or a prospect still `new` or `audited`. */
+export function contactedStatus(
+  summary: Pick<ScanSummary, 'prospectStatus'>,
+): ProspectResultStatus | undefined {
+  const status = summary.prospectStatus;
+  return PROSPECT_RESULT_STATUSES.find((resultStatus) => resultStatus === status);
+}
+
+/** Rows matching the prospect contact filter. "Not contacted" keeps only
+ *  prospect-linked scans, since a scan without a prospect has no one to
+ *  contact. Always returns a new array, like filterSummaries. */
+export function filterByContact(
+  summaries: readonly ScanSummary[],
+  filter: ContactFilter,
+): ScanSummary[] {
+  if (filter === '') return [...summaries];
+  return summaries.filter((summary) =>
+    filter === 'contacted'
+      ? contactedStatus(summary) !== undefined
+      : summary.prospectId !== undefined && contactedStatus(summary) === undefined,
+  );
 }
 
 /** The status a list row shows: the server's `outcomeCode`, verbatim. The

@@ -318,17 +318,21 @@ export async function getProspectHub(
   return createProspectHubModel(connection).findOne({ prospectId }).lean<ProspectHubDocument>();
 }
 
-/** Display names for a set of prospect IDs, for lists that show many jobs at
- *  once (the Audits page scan queue). Unknown IDs are simply absent. */
-export async function getProspectNames(
+/** Display name and sales status for a set of prospect IDs, for lists that
+ *  show many jobs at once (the Audits table and its scan queue). Unknown IDs
+ *  are simply absent. */
+export async function getProspectLabels(
   connection: Connection,
   prospectIds: readonly string[],
-): Promise<Map<string, string>> {
+): Promise<Map<string, { name: string; status: ProspectStatus }>> {
   if (prospectIds.length === 0) return new Map();
   const rows = await createProspectHubModel(connection)
-    .find({ prospectId: { $in: [...new Set(prospectIds)] } }, { prospectId: 1, name: 1, _id: 0 })
-    .lean<{ prospectId: string; name: string }[]>();
-  return new Map(rows.map((row) => [row.prospectId, row.name]));
+    .find(
+      { prospectId: { $in: [...new Set(prospectIds)] } },
+      { prospectId: 1, name: 1, status: 1, _id: 0 },
+    )
+    .lean<{ prospectId: string; name: string; status: ProspectStatus }[]>();
+  return new Map(rows.map((row) => [row.prospectId, { name: row.name, status: row.status }]));
 }
 
 export async function findProspectsByDomain(

@@ -126,7 +126,7 @@ export {
   deleteProspectPermanently,
   fillMissingProspectIdentity,
   getProspectHub,
-  getProspectNames,
+  getProspectLabels,
   findProspectsByDomain,
   findProspectsByEmail,
   listDirectory,
