@@ -122,10 +122,12 @@ document explicitly promotes their content.
 - `docs/agents/issue-tracker.md`: issue workflow when issues are being used.
 - `docs/agents/triage-labels.md`: issue-label vocabulary.
 - `docs/agents/model-prompting.md`: host-specific deltas.
-- `docs/agents/audit-data-defect-hunt.md`: explicit-only brief for a
-  repeated read-only search of stored audit data, with a convergence stop rule.
-- `.agents/skills/client-report-finalizer/SKILL.md`: explicit pre-delivery
-  finalization of an existing paid report against its exact PDF and stored lineage.
+- `docs/agents/audit-data-defect-hunt.md`: explicit-only brief for an
+  occasional read-only search of every stored audit, after a batch of new
+  sites or a large crawler change.
+- `.agents/skills/audit-finalizer/SKILL.md`: explicit pre-send finalization of
+  one audit: its scan data first, then its outreach preview or its paid report
+  against the exact PDF and stored lineage.
 - `.agents/skills/*`: optional specialist workflows. Workflow-changing modes
   are explicit-only.
 

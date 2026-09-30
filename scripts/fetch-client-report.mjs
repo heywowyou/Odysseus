@@ -1,6 +1,6 @@
 // Read-only retrieval of one hosted audit's current report for the
-// client-report-finalizer skill. Usage (from the repository root):
-//   node scripts/fetch-client-report.mjs <auditId> <outDir> [fr|en ...]
+// audit-finalizer skill. Usage (from the repository root):
+//   node scripts/fetch-client-report.mjs <auditId> <outDir> [fr|en|preview ...]
 //
 // Logs into the operator dashboard with ODYSSEUS_DASHBOARD_PASSWORD from the
 // repository .env, downloads the audit record, the report-quality lineage, the
@@ -14,6 +14,10 @@
 // from, unpacked one file per member so the operator can read and later diff
 // them. `odysseus report:finalize` renders from that directory; the hosted PDF
 // beside it is the baseline being corrected.
+//
+// `preview` fetches the outreach preview the audit would publish, as the
+// operator-only render (`preview.html` and `preview.pdf`), or prints why the
+// audit cannot have one yet. It reads; it never publishes.
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -28,9 +32,9 @@ if (
   !auditId ||
   !outDirArg ||
   !AUDIT_ID_PATTERN.test(auditId) ||
-  languages.some((language) => language !== 'fr' && language !== 'en')
+  languages.some((language) => !['fr', 'en', 'preview'].includes(language))
 ) {
-  console.error('usage: fetch-client-report.mjs <auditId> <outDir> [fr|en ...]');
+  console.error('usage: fetch-client-report.mjs <auditId> <outDir> [fr|en|preview ...]');
   process.exit(2);
 }
 
@@ -77,7 +81,29 @@ try {
     writeFileSync(join(outDir, name), body, { mode: 0o600 });
     console.log(`${name}: ${body.length} bytes`);
   }
-  for (const language of languages) {
+  if (languages.includes('preview')) {
+    const { status, body } = await get(`/api/audits/${auditId}/outreach-preview`);
+    const outcome = status === 200 ? JSON.parse(body.toString('utf8')) : undefined;
+    if (outcome?.rendered === true) {
+      writeFileSync(join(outDir, 'preview.html'), outcome.html, { mode: 0o600 });
+      console.log(`preview.html: ${Buffer.byteLength(outcome.html)} bytes`);
+      const pdf = await get(`/api/audits/${auditId}/outreach-preview/pdf`);
+      if (pdf.status === 200) {
+        writeFileSync(join(outDir, 'preview.pdf'), pdf.body, { mode: 0o600 });
+        console.log(`preview.pdf: sha256:${createHash('sha256').update(pdf.body).digest('hex')}`);
+      } else {
+        console.error(`preview.pdf: HTTP ${pdf.status}`);
+        failed = true;
+      }
+    } else if (outcome?.rendered === false) {
+      console.error(`preview: refused ${JSON.stringify(outcome.refusal)}`);
+      failed = true;
+    } else {
+      console.error(`preview: HTTP ${status} ${body.toString('utf8').slice(0, 200)}`);
+      failed = true;
+    }
+  }
+  for (const language of languages.filter((language) => language !== 'preview')) {
     const { status, body } = await get(`/api/audits/${auditId}/report/${language}/preview`);
     if (status !== 200) {
       console.error(`${language}.pdf: HTTP ${status} ${body.toString('utf8').slice(0, 200)}`);
