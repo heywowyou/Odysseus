@@ -737,10 +737,17 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       sendError(res, 404, 'job not found');
       return;
     }
-    const prospect =
-      job.options.prospectId === undefined
-        ? null
-        : await getProspectHub(connection, job.options.prospectId);
+    // Same rule as the list: a stored audit owns the prospect link, so a
+    // scan attached after it ran opens and relaunches for that prospect.
+    const auditLinks =
+      job.auditId === undefined
+        ? new Map<string, string | undefined>()
+        : await getAuditProspectLinks(connection, [job.auditId]);
+    const prospectId =
+      job.auditId !== undefined && auditLinks.has(job.auditId)
+        ? auditLinks.get(job.auditId)
+        : job.options.prospectId;
+    const prospect = prospectId === undefined ? null : await getProspectHub(connection, prospectId);
     sendJson(res, 200, {
       ...job,
       type: displayJobIntent(job.type, job.options.scanType),
@@ -761,7 +768,7 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
       // The coverage gate's remedy link, declared structurally instead of
       // the browser matching the stored failure sentence (plan 060 §5.3).
       coverageGateBlocked: isCrawlCoverageGateMessage(job.error),
-      prospectId: job.options.prospectId,
+      prospectId,
       prospectName: prospect?.name,
       work: projectLegacyJob(job),
       capabilities: jobCapabilities(capabilityInputs(job, queue)),

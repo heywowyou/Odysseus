@@ -128,6 +128,7 @@ beforeEach(() => {
   });
   vi.mocked(findProspectsByDomain).mockResolvedValue([{ prospectId: 'prospect-1' }] as never);
   vi.mocked(getProspectHub).mockResolvedValue({ prospectId: 'prospect-1' } as never);
+  vi.mocked(getAuditProspectLinks).mockResolvedValue(new Map());
   vi.mocked(requestJobCancellation).mockResolvedValue('cancel-requested');
   vi.mocked(createJob).mockImplementation(
     async (_connection, input: NewJobInput) =>
@@ -1148,5 +1149,46 @@ describe('GET /api/scans names the prospect the audit is linked to', () => {
       prospectId: 'p-queued',
       prospectStatus: 'new',
     });
+  });
+});
+
+describe('GET /api/scans/:jobId names the prospect the audit is linked to', () => {
+  const finishedJob = (options: Record<string, unknown>): Record<string, unknown> => ({
+    jobId: 'job-1',
+    type: 'full-audit',
+    status: 'complete',
+    phase: 'done',
+    createdAt: new Date('2026-09-18T10:00:00Z'),
+    progress: {},
+    auditId: 'audit-1',
+    options,
+  });
+
+  it('opens the prospect an audit was attached to after the scan', async () => {
+    vi.mocked(getJob).mockResolvedValue(finishedJob({}) as never);
+    vi.mocked(getAuditProspectLinks).mockResolvedValue(new Map([['audit-1', 'p-attached']]));
+    vi.mocked(getProspectHub).mockResolvedValue({
+      prospectId: 'p-attached',
+      name: 'Hôtel Rattaché',
+    } as never);
+
+    const response = await get('/api/scans/job-1');
+
+    expect(response.body).toMatchObject({
+      prospectId: 'p-attached',
+      prospectName: 'Hôtel Rattaché',
+    });
+    expect(vi.mocked(getProspectHub).mock.calls.at(-1)?.[1]).toBe('p-attached');
+  });
+
+  it('names no prospect once the audit is detached', async () => {
+    vi.mocked(getJob).mockResolvedValue(finishedJob({ prospectId: 'p-old' }) as never);
+    vi.mocked(getAuditProspectLinks).mockResolvedValue(new Map([['audit-1', undefined]]));
+
+    const response = await get('/api/scans/job-1');
+
+    const body = response.body as { prospectId?: string; prospectName?: string };
+    expect(body.prospectId).toBeUndefined();
+    expect(body.prospectName).toBeUndefined();
   });
 });
