@@ -288,16 +288,21 @@ table above.
 - **Late-payment rate:** the ECB refinancing rate plus 10 points. For the
   second half of 2026 that is 12.40 % (ECB rate 2.40 % since June 2026);
   the rate resets each 1 January and 1 July.
-- **Custom mention (conditions):**
+- **Customised legal information (Shine default, every document, locked
+  2026-09-30).** Shared with Cult of Aurora invoices, so it names no
+  Odysseus service and scopes the late-payment terms to business clients:
 
-  > Paiement à réception du devis signé. Aucun escompte pour paiement
-  > anticipé. En cas de retard de paiement : pénalités au taux de la BCE
-  > majoré de 10 points (12,40 % au second semestre 2026) et indemnité
-  > forfaitaire pour frais de recouvrement de 40 € (art. L. 441-10 et
-  > D. 441-5 du code de commerce). Prestation soumise aux conditions
-  > générales de vente jointes à ce devis et consultables sur
-  > https://www.odysseusaudit.com/cgv. Bon pour accord (date, nom,
-  > signature) :
+  > Jules Fontaine, entrepreneur individuel (EI). TVA non applicable, art.
+  > 293 B du CGI. Aucun escompte pour paiement anticipé. Clients
+  > professionnels : en cas de retard de paiement, pénalités au taux de la
+  > BCE majoré de 10 points et indemnité forfaitaire pour frais de
+  > recouvrement de 40 € (art. L. 441-10 et D. 441-5 du code de commerce).
+
+- **Per-quote mention (Odysseus quotes only, never on invoices):**
+
+  > Prestation soumise aux conditions générales de vente jointes à ce devis
+  > et consultables sur https://www.odysseusaudit.com/cgv. Bon pour accord
+  > (date, nom, signature) :
 
 - **Attachment:** the terms as a PDF (browser print of `/cgv`), attached
   to the quote email every time. A link alone is not enough (Cass. com.
