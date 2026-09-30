@@ -18,18 +18,15 @@
  *  - an audit that analysed almost none of what it inventoried.
  */
 
-export const MIN_REDIRECT_COLLAPSE_PAGES = 5;
-export const REDIRECT_COLLAPSE_SHARE = 0.3;
-export const MIN_SHARED_DOCUMENT_PAGES = 3;
-export const MIN_QUERY_STRING_PAGES = 3;
-export const MIN_INVENTORY_FOR_THIN_ANALYSIS = 10;
-export const THIN_ANALYSIS_SHARE = 0.2;
+const MIN_REDIRECT_COLLAPSE_PAGES = 5;
+const REDIRECT_COLLAPSE_SHARE = 0.3;
+const MIN_SHARED_DOCUMENT_PAGES = 3;
+const MIN_QUERY_STRING_PAGES = 3;
+const MIN_INVENTORY_FOR_THIN_ANALYSIS = 10;
+const THIN_ANALYSIS_SHARE = 0.2;
 
 /** Rules that state something is missing from the whole site. */
-export const SITE_ABSENCE_RULE_IDS = [
-  'lcen-mentions-legales-missing',
-  'accessibility-statement-missing',
-];
+const SITE_ABSENCE_RULE_IDS = ['lcen-mentions-legales-missing', 'accessibility-statement-missing'];
 
 const NON_HTML_CONTENT_TYPE = /^(?!text\/html|application\/xhtml\+xml)[a-z]+\/[a-z0-9.+-]+/i;
 const NON_HTML_PATH = /(?:\/feed\/?|\.(?:xml|rss|atom|json|pdf|txt|jpe?g|png|webp|gif|svg))$/i;
