@@ -422,6 +422,15 @@ lives in the crawler and not in normalization. Consequences worth stating:
   plus role pages chosen from `normalizePageUrl`-normalized links and never
   maintains a crawl frontier, so it has no second door for a slash variant
   (and must not grow one; trade-off 35).
+- **The site serves only the slashed spelling**: the crawl requests the
+  identity, and plan 075 A4 learns a served spelling from a redirect back to
+  the same identity. Some sites instead send the bare spelling to the
+  homepage (atrium-hotel.fr: `/chambres` 302 to `/`, `/chambres/` 200). When
+  the link, hreflang or sitemap entry wrote the slash and the bare fetch
+  lands on another identity, the crawl fetches the written spelling once; a
+  2xx answer on the same identity makes it the page's served spelling, used
+  by every later pass. A bare link that redirects elsewhere stays a redirect
+  and costs no extra fetch (plan 075 M1).
 
 **Legacy stored audits are not repaired by normalization, deliberately.**
 A stored audit that crawled both spellings carries two `scan.json` files

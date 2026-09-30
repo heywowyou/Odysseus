@@ -722,6 +722,7 @@ Rescans needed before these audits' reports go out: atrium-hotel (M1), leprieure
   - Stored audits: scan-time; atrium-hotel needs a rescan.
   - Target: an atrium-hotel rescan analyses its room, contact and legal pages, and its legal-notice finding is decided on its legal notice page.
   - Tests: a crawl e2e fixture that redirects every slash-less path to `/` and serves the slashed spelling; the existing same-identity redirect case unchanged.
+  - **Implemented 2026-09-30.** A queue item remembers that its link, hreflang or sitemap entry wrote the slash (`writtenWithSlash`). When the bare fetch lands on another identity, the crawl fetches the slashed spelling once, and a 2xx answer on the same identity is recorded as the page's `servedUrl`. Tests: `crawl-redirect.e2e.test.ts` (slash-only page visited with its served spelling; a bare link that redirects home stays a redirect), `links.test.ts`.
 - **M2. Non-Latin text is never scored against Latin profiles.**
   - `html-lang-content-mismatch` skips a language group whose title and heading letters are mostly outside the Latin script; the hreflang-target check is unchanged.
   - Stored audits: a refresh applies it.

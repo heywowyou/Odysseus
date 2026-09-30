@@ -240,6 +240,32 @@ export function normalizePageIdentityUrl(url: string): string | undefined {
   return normalizeUrlIdentity(url);
 }
 
+/** Whether a link or sitemap entry, as written, spells its path with a
+ *  trailing slash the page identity drops. The crawl keeps this as a hint:
+ *  some sites serve a page only under its slashed spelling and redirect the
+ *  bare one to the homepage (atrium-hotel.fr). */
+export function isWrittenWithTrailingSlash(absoluteUrl: string): boolean {
+  try {
+    const { pathname } = new URL(absoluteUrl);
+    return pathname.length > 1 && pathname.endsWith('/');
+  } catch {
+    return false;
+  }
+}
+
+/** The slashed spelling of a slash-free page identity, or undefined for the
+ *  root path, which has no other spelling. */
+export function slashedSpelling(identityUrl: string): string | undefined {
+  try {
+    const url = new URL(identityUrl);
+    if (url.pathname === '/' || url.pathname.endsWith('/')) return undefined;
+    url.pathname = `${url.pathname}/`;
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 export interface RelativeLinkNestingEvidence {
   sourceUrl: string;
   href: string;

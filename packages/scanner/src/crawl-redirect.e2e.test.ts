@@ -179,3 +179,68 @@ describe('a site that redirects by browser language', () => {
     expect(acceptLanguages.some((header) => header.startsWith('fr-FR'))).toBe(true);
   }, 30_000);
 });
+
+// A site that serves its pages only under the slashed spelling its links
+// use and redirects the bare spelling to the homepage (atrium-hotel.fr):
+// fetching the slash-free identity alone recorded every page as a redirect
+// to the homepage.
+describe('a page served only with its trailing slash', () => {
+  const PORT = 5195;
+  const origin = `http://localhost:${PORT}`;
+  let server: Server;
+  let ownBrowser: Browser;
+
+  beforeAll(async () => {
+    server = http.createServer((req, res) => {
+      const url = req.url ?? '/';
+      if (url === '/') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(
+          '<html lang="fr"><body><a href="/chambres/">Chambres</a>' +
+            '<a href="/ancienne-offre">Offre</a></body></html>',
+        );
+        return;
+      }
+      if (url === '/chambres/') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end('<html lang="fr"><body><h1>Chambres</h1></body></html>');
+        return;
+      }
+      res.writeHead(302, { Location: `${origin}/` });
+      res.end();
+    });
+    await listen(server, PORT);
+    ({ browser: ownBrowser } = await launchBrowser());
+  }, 30_000);
+
+  afterAll(async () => {
+    await ownBrowser?.close();
+    await close(server);
+  });
+
+  it('fetches the slashed spelling the link wrote and records it as the served spelling', async () => {
+    const result = await crawlSite(`${origin}/`, {
+      browser: ownBrowser,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+    });
+
+    const rooms = result.pages.find((page) => page.url === `${origin}/chambres`);
+    expect(rooms?.status).toBe('visited');
+    expect(rooms?.servedUrl).toBe(`${origin}/chambres/`);
+  }, 30_000);
+
+  it('keeps a bare link that redirects home a redirect, without a second fetch', async () => {
+    const result = await crawlSite(`${origin}/`, {
+      browser: ownBrowser,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+    });
+
+    const offer = result.pages.find((page) => page.url === `${origin}/ancienne-offre`);
+    expect(offer?.status).toBe('redirect-interstitial');
+    expect(offer?.redirectTargetUrl).toBe(`${origin}/`);
+  }, 30_000);
+});

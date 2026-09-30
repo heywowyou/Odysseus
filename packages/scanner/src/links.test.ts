@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  isWrittenWithTrailingSlash,
+  slashedSpelling,
   globToRegExp,
   classifyNonPublicPluginObject,
   isLanguageHomepagePath,
@@ -312,5 +314,20 @@ describe('normalizePageIdentityUrl (issue #102)', () => {
 
   it('returns undefined for an unparsable URL instead of throwing', () => {
     expect(normalizePageIdentityUrl('not a url')).toBeUndefined();
+  });
+});
+
+describe('slashed spellings', () => {
+  it('reads a trailing slash on any path but the root', () => {
+    expect(isWrittenWithTrailingSlash('https://hotel.example/chambres/')).toBe(true);
+    expect(isWrittenWithTrailingSlash('https://hotel.example/chambres')).toBe(false);
+    expect(isWrittenWithTrailingSlash('https://hotel.example/')).toBe(false);
+  });
+
+  it('gives the slashed spelling of an identity, keeping its query', () => {
+    expect(slashedSpelling('https://hotel.example/chambres?lang=fr')).toBe(
+      'https://hotel.example/chambres/?lang=fr',
+    );
+    expect(slashedSpelling('https://hotel.example/')).toBeUndefined();
   });
 });

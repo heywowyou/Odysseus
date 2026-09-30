@@ -34,9 +34,11 @@ import {
   globToRegExp,
   isLanguageHomepagePath,
   isSameSiteHostname,
+  isWrittenWithTrailingSlash,
   normalizePageIdentityUrl,
   normalizePageUrl,
   classifyNonPublicPluginObject,
+  slashedSpelling,
 } from './links.js';
 import {
   decideLinkAdmission,
@@ -360,6 +362,10 @@ export interface QueueItem {
   discoveryMethod: PageDiscoveryMethod;
   /** Carries the requested start URL's landed target through a redirect. */
   isHomepage?: boolean;
+  /** The link or sitemap entry spelled the path with a trailing slash. When
+   *  the slash-free identity redirects off itself, the slashed spelling is
+   *  fetched once before the URL is recorded as a redirect. */
+  writtenWithSlash?: true;
 }
 
 /** How long link extraction waits for a client-side redirect's document
@@ -486,6 +492,14 @@ function safeHostname(url: string): string | null {
     return new URL(url).hostname || null;
   } catch {
     return null;
+  }
+}
+
+function writtenWithSlash(observedHref: string, documentBase: string): boolean {
+  try {
+    return isWrittenWithTrailingSlash(new URL(observedHref, documentBase).href);
+  } catch {
+    return false;
   }
 }
 
@@ -681,6 +695,15 @@ export async function crawlSite(
     for (const url of resumeState.eligibleSitemapUrls) eligibleSitemapUrls.add(url);
     filteredSitemapPageCount = resumeState.filteredSitemapPageCount;
     supplementalPhaseStarted = resumeState.supplementalPhaseStarted;
+  }
+
+  // Derived from the sitemap result, which a resumed crawl restores, so the
+  // hint survives a resume without its own frontier field.
+  const sitemapSlashSpelled = new Set<string>();
+  for (const entry of sitemap?.pageEntries ?? []) {
+    if (!isWrittenWithTrailingSlash(entry.url)) continue;
+    const identity = normalizePageUrl(entry.url, startUrlIdentity, { allowWwwApex: true });
+    if (identity !== undefined) sitemapSlashSpelled.add(identity);
   }
 
   options.onProgress?.({
@@ -1077,21 +1100,23 @@ export async function crawlSite(
             // measures the gap between the requests a site actually receives and
             // not between bookkeeping steps. Opening a Playwright page is local
             // work and sends nothing, so it is free to happen inside the gap.
-            const navigate = () =>
-              paceNavigation(() => browserPage.goto(item.url, { waitUntil: 'load' }));
+            const navigate = (url = item.url) =>
+              paceNavigation(() => browserPage.goto(url, { waitUntil: 'load' }));
             // A page whose `load` event never fires inside the timeout (a
             // hanging third-party resource, most often) still served its
             // document. One paced retry that waits only for the document
             // separates that from a page that really does not answer; before
             // it, a real 200 page was recorded as 'error' and reported as a
             // broken link and an invalid hreflang target.
-            const navigateAfterLoadTimeout = async (): ReturnType<typeof navigate> => {
+            const navigateAfterLoadTimeout = async (
+              url = item.url,
+            ): ReturnType<typeof navigate> => {
               try {
-                return await navigate();
+                return await navigate(url);
               } catch (error) {
                 if (!isNavigationTimeout(error)) throw error;
                 return paceNavigation(() =>
-                  browserPage.goto(item.url, { waitUntil: 'domcontentloaded' }),
+                  browserPage.goto(url, { waitUntil: 'domcontentloaded' }),
                 );
               }
             };
@@ -1184,7 +1209,7 @@ export async function crawlSite(
               observed = await observeResponse();
               challengeMarkers = observed.markers;
             }
-            const contentType = response?.headers()['content-type'];
+            let contentType = response?.headers()['content-type'];
 
             // A stub URL like /facebook or /instagram that server-side or
             // client-side redirects out to a social platform is not a page of
@@ -1195,15 +1220,44 @@ export async function crawlSite(
             // errors out, and the resulting 'error' status then got reported
             // as a broken internal link even though the redirect itself
             // worked exactly as the site intended.
-            const finalHost = safeHostname(browserPage.url());
-            const isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
-            const landedUrl = browserPage.url();
-            const landedIdentity = normalizePageIdentityUrl(landedUrl);
-            const isSameSiteRedirect =
+            let finalHost = safeHostname(browserPage.url());
+            let isOffSite = finalHost !== null && !isSameSiteHostname(requestedHost, finalHost);
+            let landedUrl = browserPage.url();
+            let landedIdentity = normalizePageIdentityUrl(landedUrl);
+            let isSameSiteRedirect =
               !isOffSite &&
               sameSiteServerRedirect(item.url, landedUrl) &&
               landedIdentity !== undefined &&
               landedIdentity !== item.url;
+
+            // A site can serve a page only under the slashed spelling its
+            // links use and send the bare spelling to its homepage
+            // (atrium-hotel.fr: /chambres 302 to /, /chambres/ 200). Fetch the
+            // written spelling once; when it answers as the page itself, it is
+            // the served spelling and the page is not a redirect.
+            const slashed = slashedSpelling(item.url);
+            if (isSameSiteRedirect && item.writtenWithSlash === true && slashed !== undefined) {
+              const retried = await navigateAfterLoadTimeout(slashed).catch(() => null);
+              const retriedStatus = retried?.status();
+              if (
+                retried !== null &&
+                retriedStatus !== undefined &&
+                retriedStatus >= 200 &&
+                retriedStatus < 300 &&
+                normalizePageIdentityUrl(browserPage.url()) === item.url
+              ) {
+                response = retried;
+                httpStatus = retriedStatus;
+                observed = await observeResponse();
+                challengeMarkers = observed.markers;
+                contentType = response.headers()['content-type'];
+                finalHost = safeHostname(browserPage.url());
+                isOffSite = false;
+                landedUrl = browserPage.url();
+                landedIdentity = item.url;
+                isSameSiteRedirect = false;
+              }
+            }
 
             if (isOffSite || (finalHost !== null && isSocialPlatformHost(finalHost))) {
               recordFromIteration({
@@ -1217,8 +1271,8 @@ export async function crawlSite(
               });
             } else if (
               isSameSiteRedirect &&
-              (finalHost === null ||
-                isAllowedByRobots(robotsRules, robotsTarget(browserPage.url())))
+              landedIdentity !== undefined &&
+              (finalHost === null || isAllowedByRobots(robotsRules, robotsTarget(landedUrl)))
             ) {
               // Server redirects are inventory facts, not content pages. Keep
               // the requested spelling visible, then enqueue the actual target
@@ -1262,7 +1316,7 @@ export async function crawlSite(
               }
             } else if (
               finalHost !== null &&
-              !isAllowedByRobots(robotsRules, robotsTarget(browserPage.url()))
+              !isAllowedByRobots(robotsRules, robotsTarget(landedUrl))
             ) {
               // A redirect can land on a path robots.txt disallows even though
               // the requested URL was allowed; the landed page is then treated
@@ -1490,6 +1544,9 @@ export async function crawlSite(
                     depth: item.depth + 1,
                     discoveredFrom: item.url,
                     discoveryMethod: 'link',
+                    ...(writtenWithSlash(pageLink.observedHref, documentBase)
+                      ? { writtenWithSlash: true as const }
+                      : {}),
                   });
                 }
 
@@ -1547,6 +1604,9 @@ export async function crawlSite(
                     depth: item.depth + 1,
                     discoveredFrom: item.url,
                     discoveryMethod: 'link',
+                    ...(writtenWithSlash(hreflangLink.observedHref, documentBase)
+                      ? { writtenWithSlash: true as const }
+                      : {}),
                   });
                 }
               }
@@ -1649,6 +1709,7 @@ export async function crawlSite(
           depth: 0,
           discoveryMethod: linkDiscoveredUrls.has(url) ? 'link' : 'sitemap-only',
           ...(linkDiscoveredFrom.has(url) ? { discoveredFrom: linkDiscoveredFrom.get(url)! } : {}),
+          ...(sitemapSlashSpelled.has(url) ? { writtenWithSlash: true as const } : {}),
         });
       }
     }
