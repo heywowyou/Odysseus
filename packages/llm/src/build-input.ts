@@ -1,4 +1,7 @@
 import {
+  CRUX_CLS_POOR_RULE_ID,
+  CRUX_INP_POOR_RULE_ID,
+  CRUX_LCP_POOR_RULE_ID,
   isConfinedToThirdPartyFrame,
   isUnconfirmedRule,
   reportPopulation,
@@ -59,6 +62,17 @@ export const MAX_PAGE_URLS_FOR_LLM = 3;
 /** URLs are site-controlled scanner evidence just like titles and descriptions. */
 export const MAX_PAGE_URL_CHARS_FOR_LLM = 200;
 
+/** Plan 075 M5: findings about the whole origin that normalization attaches
+ *  to the homepage only because every finding needs a page (normalize-crux.ts).
+ *  Handing the model that page led it to write field data up as the
+ *  homepage's; the model sees no page for them, so the finding reads as the
+ *  site's. The report and the ranking still read finding.pageUrls itself. */
+const SITE_SCOPED_RULE_IDS: ReadonlySet<string> = new Set([
+  CRUX_LCP_POOR_RULE_ID,
+  CRUX_CLS_POOR_RULE_ID,
+  CRUX_INP_POOR_RULE_ID,
+]);
+
 /** The bounded copy of a finding every model input carries: the analysis
  *  passes here, and the report-quality roles' evidence (issue #548). */
 export function toLlmFindingShape(finding: Finding): StructureInput['findings'][number] {
@@ -71,7 +85,7 @@ export function toLlmFindingShape(finding: Finding): StructureInput['findings'][
     wcagCriteria: finding.wcagCriteria,
     title: boundScannerText(finding.title, MAX_FINDING_TITLE_CHARS_FOR_LLM),
     description: boundScannerText(finding.description, MAX_FINDING_DESCRIPTION_CHARS_FOR_LLM),
-    pageUrls: finding.pageUrls
+    pageUrls: (SITE_SCOPED_RULE_IDS.has(finding.ruleId) ? [] : finding.pageUrls)
       .slice(0, MAX_PAGE_URLS_FOR_LLM)
       .map((url) => boundScannerText(url, MAX_PAGE_URL_CHARS_FOR_LLM)),
     occurrences: finding.occurrences,

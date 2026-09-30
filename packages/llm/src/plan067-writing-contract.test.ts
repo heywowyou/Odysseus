@@ -383,4 +383,47 @@ describe('Plan 067 writing contract', () => {
       ).toBe(text);
     });
   });
+
+  // Plan 075 M5: CrUX field data covers the audited origin, yet two stored
+  // analyses tied it to the homepage.
+  describe('field data is never tied to one page', () => {
+    it('drops the two stored sentences and keeps the rest of the prose', () => {
+      const unsafe = output({
+        executiveSummary:
+          "Les priorités portent sur la vitesse. Les données de terrain montrent que l'affichage du plus grand élément visible de la page d'accueil dépasse le seuil attendu.",
+      });
+      unsafe.themes[0]!.businessImpact =
+        "D'après les données recueillies auprès de visiteurs réels, le délai d'affichage du plus grand élément visible de la page d'accueil dépasse le seuil attendu. Les visiteurs attendent avant de voir le contenu.";
+
+      const sanitized = sanitizeWritingOutput(baseInput, unsafe);
+
+      expect(sanitized.output.executiveSummary).toBe('Les priorités portent sur la vitesse.');
+      expect(sanitized.output.themes[0]!.businessImpact).toBe(
+        'Les visiteurs attendent avant de voir le contenu.',
+      );
+      expect(sanitized.warnings).toContainEqual({
+        code: 'performance-contradiction-removed',
+        field: 'executiveSummary',
+      });
+    });
+
+    it('drops the English equivalent', () => {
+      const english = output({
+        executiveSummary:
+          'Field data shows the largest element on the homepage takes too long to appear.',
+      });
+      expect(
+        sanitizeWritingOutput({ ...baseInput, language: 'en' }, english).output.executiveSummary,
+      ).not.toContain('Field data');
+    });
+
+    it('keeps field data stated for the site and a homepage sentence without field data', () => {
+      const text =
+        "Les données de terrain montrent un affichage lent sur l'ensemble du site. La page d'accueil charge un carrousel lourd.";
+      expect(
+        sanitizeWritingOutput(baseInput, output({ executiveSummary: text })).output
+          .executiveSummary,
+      ).toBe(text);
+    });
+  });
 });

@@ -180,3 +180,40 @@ export function findPerformanceEvidenceViolations(
   }
   return violations;
 }
+
+/** Plan 075 M5: CrUX field data is fetched for the audited origin, never for
+ *  one page (packages/scanner/src/crux.ts), yet two stored analyses wrote
+ *  « les données de terrain montrent que l'affichage du plus grand élément
+ *  visible de la page d'accueil dépasse le seuil attendu ». */
+const FIELD_DATA_PATTERNS: Record<ReportLanguage, RegExp> = {
+  fr: unicodeWords(
+    /\b(?:CrUX|Chrome\s+UX)\b|donn[ée]es\s+(?:\S+\s+){0,1}(?:de\s+terrain|r[ée]elles)|(?:visiteurs|utilisateurs|internautes)\s+r[ée]els\b/iu,
+  ),
+  en: unicodeWords(/\b(?:CrUX|Chrome\s+UX|field\s+data|real(?:-|\s+)(?:users?|visitors?))\b/iu),
+};
+
+const ONE_PAGE_PATTERNS: Record<ReportLanguage, RegExp> = {
+  fr: unicodeWords(/\bpage\s+d['’]accueil\b|\bcette\s+page\b/iu),
+  en: unicodeWords(/\bhome\s*page\b|\bthis\s+page\b|\blanding\s+page\b/iu),
+};
+
+/** A sentence that sets the page against the whole site is allowed:
+ *  « les données de terrain valent pour l'ensemble du site, pas seulement
+ *  pour la page d'accueil ». */
+const SITE_SCOPE_PATTERNS: Record<ReportLanguage, RegExp> = {
+  fr: unicodeWords(
+    /\b(?:ensemble\s+du\s+site|tout\s+le\s+site|site\s+entier|ensemble\s+des\s+pages|pas\s+seulement|pas\s+uniquement|non\s+seulement)\b/iu,
+  ),
+  en: unicodeWords(
+    /\b(?:whole\s+site|entire\s+site|across\s+the\s+site|site-wide|sitewide|all\s+pages|not\s+(?:only|just))\b/iu,
+  ),
+};
+
+/** The sentence attributes real-visitor field data to a single page. */
+export function tiesFieldDataToOnePage(sentence: string, language: ReportLanguage): boolean {
+  return (
+    FIELD_DATA_PATTERNS[language].test(sentence) &&
+    ONE_PAGE_PATTERNS[language].test(sentence) &&
+    !SITE_SCOPE_PATTERNS[language].test(sentence)
+  );
+}

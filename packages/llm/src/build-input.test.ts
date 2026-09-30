@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import type { AuditManifest, Finding } from '@odysseus/core';
+import { CRUX_LCP_POOR_RULE_ID, type AuditManifest, type Finding } from '@odysseus/core';
 import {
   buildFallbackSiteContext,
   buildStructureInput,
@@ -131,6 +131,20 @@ describe('buildStructureInput', () => {
     expect(input.findings[0]!.pageUrls).toEqual(manyUrls.slice(0, MAX_PAGE_URLS_FOR_LLM));
     // occurrences (the model's actual "how widespread" signal) is untouched.
     expect(input.findings[0]!.occurrences).toBe(findingWithManyUrls.occurrences);
+  });
+
+  it('gives a field-data finding no page, since it describes the whole origin', () => {
+    const finding = loadSmallSiteFindings()[0]!;
+    const input = buildStructureInput(
+      [
+        { ...finding, ruleId: CRUX_LCP_POOR_RULE_ID, pageUrls: ['https://client.example/'] },
+        { ...finding, pageUrls: ['https://client.example/'] },
+      ],
+      buildFallbackSiteContext(),
+    );
+
+    expect(input.findings[0]!.pageUrls).toEqual([]);
+    expect(input.findings[1]!.pageUrls).toEqual(['https://client.example/']);
   });
 
   it('bounds each site-controlled page URL before sending it to the model', () => {

@@ -300,6 +300,14 @@ above, and only for the guards named here. Each guard is classified:
   metric with a good rating (« est bonne », « n'étaye pas… ») unless the same
   sentence says what is wrong (« mais cinq pages dépassent le seuil »), and
   records `performance-contradiction-removed`.
+  Field data is described as the site's (plan 075 M5, 2026-09-30). CrUX is
+  fetched for the audited origin, and normalization attaches its findings to
+  the homepage only because every finding needs a page; the model input gives
+  those findings no page (`pageUrls: []`). The sanitizer drops a sentence that
+  ties field data (« données de terrain », « visiteurs réels », CrUX, "field
+  data", "real users") to one page (« page d'accueil », "homepage") unless the
+  same sentence sets it against the whole site, and records
+  `performance-contradiction-removed`.
 - **style** - provider placement, provider phrase, prose register. On the
   **final** attempt only, if every remaining violation is style, the response
   is accepted, each escaped violation is logged, and the escape is recorded.

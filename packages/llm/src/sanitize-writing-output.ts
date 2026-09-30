@@ -6,6 +6,7 @@ import {
   ratesSevereMetricGood,
   SUPPRESSED_ACTION_PATTERNS,
   SUPPRESSED_METRIC_PATTERNS,
+  tiesFieldDataToOnePage,
 } from './performance-evidence-guard.js';
 import { hasFindingCountViolation } from './finding-count-guard.js';
 import { hasExecutiveSummaryDigitViolation } from './executive-summary-digit-guard.js';
@@ -84,7 +85,10 @@ function sanitizeSentences(
 ): string {
   const kept: string[] = [];
   for (const sentence of sentences(text)) {
-    if (ratesSevereMetricGood(sentence, language, severeMetrics)) {
+    if (
+      ratesSevereMetricGood(sentence, language, severeMetrics) ||
+      tiesFieldDataToOnePage(sentence, language)
+    ) {
       warning(warnings, 'performance-contradiction-removed', field);
       continue;
     }

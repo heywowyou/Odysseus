@@ -746,6 +746,7 @@ Rescans needed before these audits' reports go out: atrium-hotel (M1), leprieure
   - Stored audits: the analyses of domaine-d-auriac and chateaudecodignat keep the sentence until regenerated (operator decision).
   - Target: a regenerated analysis states field data for the site.
   - Tests: writer input builder test for a CrUX finding; guard test with the two stored sentences.
+  - **Implemented 2026-09-30.** `toLlmFindingShape` gives the CrUX findings no page, and `tiesFieldDataToOnePage` (performance-evidence-guard.ts) lets the sanitizer drop a sentence that ties field data to the homepage or one page, unless it states the whole site, under `performance-contradiction-removed`. The finding itself still carries the homepage for the report and ranking. Tests: `build-input.test.ts`, `plan067-writing-contract.test.ts` (the two stored sentences, their English equivalent, and a kept site-wide sentence).
 - **M6. The Lighthouse failure note matches the coverage.**
   - Count only analysed pages whose Lighthouse pass failed; state the failure over those pages (« La mesure de performance n'a pas abouti sur {n} des {total} pages mesurées ») and keep « sur ce site » for an audit with no measured page. French first.
   - Stored audits: a re-render applies it.
