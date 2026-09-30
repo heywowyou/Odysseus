@@ -58,6 +58,7 @@ import { buildAuditDir, buildPageDir } from './paths.js';
 import { collectToolVersions } from './versions.js';
 import { buildManifest } from './manifest.js';
 import { readPageScanJson, writePageScanJson } from './page-scan-io.js';
+import { reconcileInventoryWithPageVerdicts } from './inventory-ledger-io.js';
 import { selectSiteRoleContact, type SiteRoleContact } from '../role-contact.js';
 
 export interface WriteAuditArtifactsInput {
@@ -814,6 +815,7 @@ export async function writeAuditArtifacts(
   });
 
   writeJsonAtomicSync(path.join(auditDir, 'manifest.json'), manifest);
+  reconcileInventoryWithPageVerdicts(auditDir, manifest.pages, input.finishedAt);
 
   return { auditId, auditDir, manifest, pages: normalizePages };
 }

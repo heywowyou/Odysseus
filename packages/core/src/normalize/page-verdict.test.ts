@@ -176,3 +176,27 @@ describe('a page that is the site catch-all (plan 075 M7)', () => {
     ).toEqual({ status: 'visited' });
   });
 });
+
+describe('a non-HTML answer (plan 075 M4)', () => {
+  it('is set aside when the raw answer is a feed', () => {
+    expect(
+      decideScannedPageStatus({
+        url: 'https://leprieuredeboulogne.com/feed',
+        renderDiff: content,
+        rawContentType: 'application/rss+xml; charset=UTF-8',
+      }),
+    ).toEqual({ status: 'skipped-non-html' });
+  });
+
+  it('stays content for HTML, XHTML or an unknown type', () => {
+    for (const rawContentType of ['text/html; charset=utf-8', 'application/xhtml+xml', undefined]) {
+      expect(
+        decideScannedPageStatus({
+          url: PAGE,
+          renderDiff: content,
+          ...(rawContentType !== undefined ? { rawContentType } : {}),
+        }).status,
+      ).toBe('visited');
+    }
+  });
+});

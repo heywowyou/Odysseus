@@ -15,9 +15,12 @@
  *     follow);
  *  2. blocked: the render did not obtain the site's own document, except
  *     that the site's own 404 or 410 template is a dead link (plan 075 K3);
- *  3. soft 404: a 200 page that tells the visitor it does not exist, or
+ *  3. not HTML: a 2xx answer served as a feed, a file or another non-HTML
+ *     type (a discovery-wave link reaches the scan without the crawl's own
+ *     content-type check, plan 075 M4);
+ *  4. soft 404: a 200 page that tells the visitor it does not exist, or
  *     that is the site's catch-all answer to a path that cannot exist;
- *  4. visited.
+ *  5. visited.
  */
 import type { ManifestPageEntry, PageAnalysisCoverage } from '../types/manifest.js';
 import type { RenderDiffResult } from '../types/findings.js';
@@ -41,6 +44,21 @@ export interface ScannedPageFacts {
   headings?: readonly { level: number; text: string }[];
   /** The URL Lighthouse's own navigation settled on. */
   lighthouseFinalUrl?: string;
+  /** The Content-Type of the raw (no-JavaScript) answer. */
+  rawContentType?: string;
+}
+
+/**
+ * Fallback for URLs whose extension doesn't reveal what they are; the link
+ * extension check already caught the common case (wp-content/uploads/*.jpg)
+ * before a navigation ever happens. A missing Content-Type is treated as
+ * HTML rather than skipped, since there's nothing here to justify dropping
+ * the page. Shared by the crawl and the page verdict.
+ */
+export function isNonHtmlContentType(contentType: string | undefined): boolean {
+  if (contentType === undefined) return false;
+  const type = contentType.toLowerCase();
+  return !type.includes('text/html') && !type.includes('application/xhtml+xml');
 }
 
 /** Site-wide facts a page's verdict is read against. */
@@ -54,11 +72,12 @@ export interface ScannedPageSiteFacts {
 export function scannedPageFactsOf(
   page: Pick<NormalizePageInput, 'url' | 'headMetadata' | 'lighthouse'> & {
     /** The scanner's render-diff result, which also records the landed URL. */
-    renderDiff?: RenderDiffResult & { renderedLandedUrl?: string };
+    renderDiff?: RenderDiffResult & { renderedLandedUrl?: string; rawContentType?: string };
   },
 ): ScannedPageFacts {
   const finalUrl = page.lighthouse !== undefined ? lighthouseFinalUrl(page.lighthouse) : undefined;
   const landedUrl = page.renderDiff?.renderedLandedUrl;
+  const rawContentType = page.renderDiff?.rawContentType;
   return {
     url: page.url,
     ...(page.renderDiff !== undefined ? { renderDiff: page.renderDiff } : {}),
@@ -66,6 +85,7 @@ export function scannedPageFactsOf(
     ...(page.headMetadata?.title !== undefined ? { title: page.headMetadata.title } : {}),
     ...(page.headMetadata?.headings !== undefined ? { headings: page.headMetadata.headings } : {}),
     ...(finalUrl !== undefined ? { lighthouseFinalUrl: finalUrl } : {}),
+    ...(rawContentType !== undefined ? { rawContentType } : {}),
   };
 }
 
@@ -73,6 +93,7 @@ export type ScannedPageVerdict =
   | { status: 'redirect-interstitial'; redirectTargetUrl?: string }
   | { status: 'http-error-status'; httpStatus: number }
   | { status: 'blocked' }
+  | { status: 'skipped-non-html' }
   | { status: 'soft-error-page' }
   | { status: 'visited' };
 
@@ -168,6 +189,7 @@ export function decideScannedPageStatus(
         }
       : { status: 'blocked' };
   }
+  if (isNonHtmlContentType(facts.rawContentType)) return { status: 'skipped-non-html' };
   if (isSoftErrorPage({ url: facts.url, title: facts.title, headings: facts.headings })) {
     return { status: 'soft-error-page' };
   }

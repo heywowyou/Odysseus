@@ -14,6 +14,7 @@ import {
   connectionRefusalCode,
   HOST_REFUSAL_STOP_THRESHOLD,
   isChallengeTitle,
+  isNonHtmlContentType,
 } from '@odysseus/core';
 import {
   getCrawlDelayMs,
@@ -372,18 +373,9 @@ export interface QueueItem {
  *  before reading its anchors again (issue #541). */
 const DOM_READ_RETRY_TIMEOUT_MS = 5_000;
 
-/**
- * Fallback for URLs whose extension doesn't reveal what they are;
- * links.ts's extension check already caught the common case (e.g.
- * wp-content/uploads/*.jpg) before a navigation ever happens. A missing
- * Content-Type is treated as HTML rather than skipped, since there's
- * nothing here to justify dropping the page.
- */
-export function isNonHtmlContentType(contentType: string | undefined): boolean {
-  if (contentType === undefined) return false;
-  const type = contentType.toLowerCase();
-  return !type.includes('text/html') && !type.includes('application/xhtml+xml');
-}
+/** The crawl and the page verdict classify an answer's content type with
+ *  one rule (plan 075 M4). */
+export { isNonHtmlContentType };
 
 /** The crawl loop's mutable in-memory structures, rebuilt wholesale from a
  *  frontier snapshot on resume. */

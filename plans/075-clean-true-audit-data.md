@@ -739,6 +739,7 @@ Rescans needed before these audits' reports go out: atrium-hotel (M1), leprieure
   - Stored audits: the HTTP-error disposition can be corrected on refresh from the manifest status; the feeds need a rescan of leprieuredeboulogne.
   - Target: prieuré has no `/feed` page, and its `html-has-lang` and `document-title` findings are gone; each audit's two HTTP-error counts agree.
   - Tests: a wave fixture serving RSS and a 404, and the stored disposition split.
+  - **Implemented 2026-09-30.** The render diff records the raw answer's `rawContentType`, and `decideScannedPageStatus` returns `skipped-non-html` for a 2xx non-HTML answer, with the crawl's own `isNonHtmlContentType` moved to core. write-audit then supersedes each `scanned` inventory disposition that the verdict contradicts (`http-error-status`, `non-html`), keeping the original. The evidence graph is built only at scan time, so the stored audits' count split and prieuré's feeds need a rescan. Tests: `render-diff.e2e.test.ts` (an RSS answer recorded and set aside), `page-verdict.test.ts`, `inventory-ledger-io.test.ts`.
 - **M5. Field data is described as the site's.**
   - The writer input marks a site-scoped finding as site-wide instead of giving it the homepage as its page, and the writer guard rejects a sentence that ties field data to one page. `docs/rules/llm-layer-rules.md` records it.
   - Stored audits: the analyses of domaine-d-auriac and chateaudecodignat keep the sentence until regenerated (operator decision).

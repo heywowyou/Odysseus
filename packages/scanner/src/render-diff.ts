@@ -35,6 +35,10 @@ import {
  *  URL to detect a redirect interstitial. */
 export interface RenderDiffOutcome extends RenderDiffResult {
   renderedLandedUrl: string;
+  /** The raw answer's Content-Type, so a page reached without the crawl's
+   *  own check (a discovery-wave link to a feed) is classified the same way
+   *  (plan 075 M4). */
+  rawContentType?: string;
 }
 
 export interface RenderDiffOptions {
@@ -207,6 +211,7 @@ export async function renderDiff(
   let rawTextLength: number;
   let rawDocument: RawDocumentSignals;
   let httpStatus: number;
+  let rawContentType: string | undefined;
   let renderedTextLength: number;
   let renderedHttpStatus: number | undefined;
   let renderedTitle: string | undefined;
@@ -221,6 +226,7 @@ export async function renderDiff(
       throw new Error(`render-diff: no HTTP response received for ${url}`);
     }
     httpStatus = rawResponse.status();
+    rawContentType = rawResponse.headers()['content-type'];
     const rawHtml = await rawPage.content();
     rawTextLength = extractTextFromHtml(rawHtml).length;
     rawDocument = analyzeRawDocument(rawHtml);
@@ -365,5 +371,6 @@ export async function renderDiff(
     ...(renderedInterstitialMarkers !== undefined ? { renderedInterstitialMarkers } : {}),
     rawDocument,
     renderedLandedUrl,
+    ...(rawContentType !== undefined ? { rawContentType } : {}),
   };
 }

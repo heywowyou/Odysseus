@@ -111,6 +111,17 @@ route. A scanned page whose raw document has a kept signature is
 `soft-error-page`. Audits scanned before the probe carry none and keep their
 verdicts.
 
+**A non-HTML answer** (plan 075 M4). The page verdict sets aside a scanned
+page whose raw answer's Content-Type is neither HTML nor XHTML
+(`skipped-non-html`), the crawl's own rule (`isNonHtmlContentType`, now in
+core). It matters for discovery-wave pages, which are scanned without the
+crawl's fetch: leprieuredeboulogne's `/feed` and `/en/feed` were analysed.
+The render diff records the type as `rawContentType`; scans stored before it
+keep their verdict. When a verdict finds an HTTP error or a non-HTML answer on
+a page the inventory ledger disposed `scanned`, write-audit supersedes that
+disposition, so the evidence graph's HTTP-error count and the coverage's
+agree.
+
 **Query-string copies** (plan 075 M3). A scanned page whose URL differs from
 an analysed page only by its query string is that page again when it
 declares the query-less URL as its only canonical, or when its raw document
