@@ -17,6 +17,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   readScanQueue: vi.fn(),
   reorderScanQueue: vi.fn(),
   getProspectLabels: vi.fn(async () => new Map()),
+  getAuditProspectLinks: vi.fn(async () => new Map()),
   listJobs: vi.fn(async () => []),
   findAuditsWithUnreadyReports: vi.fn(async () => new Set<string>()),
   getStoredPrimarySeverityRollups: vi.fn(async () => new Map()),
@@ -45,9 +46,11 @@ import {
   findAuditsWithUnreadyReports,
   findProspectsByDomain,
   getAudit,
+  getAuditProspectLinks,
   getLatestFullAuditEstimateSource,
   getJob,
   getProspectHub,
+  getProspectLabels,
   listJobs,
   readScanQueue,
   reorderScanQueue,
@@ -1097,5 +1100,53 @@ describe('GET /api/scans/:jobId declares the display outcome codes (plan 060 §5
     );
     const response = await get('/api/scans/job-1');
     expect(response.body).toMatchObject({ outcomeCode: 'needs-input', reportFailureStage: null });
+  });
+});
+
+describe('GET /api/scans names the prospect the audit is linked to', () => {
+  it('follows an audit attached after the scan, a detached audit, and the job for a scan with no audit yet', async () => {
+    vi.mocked(listJobs).mockResolvedValue([
+      { ...summaryRow({ jobId: 'attached-later', status: 'complete', auditId: 'a-attached' }) },
+      {
+        ...summaryRow({ jobId: 'detached', status: 'complete', auditId: 'a-detached' }),
+        prospectId: 'p-old',
+      },
+      { ...summaryRow({ jobId: 'no-audit-yet' }), prospectId: 'p-queued' },
+    ] as never);
+    vi.mocked(getAuditProspectLinks).mockResolvedValue(
+      new Map([
+        ['a-attached', 'p-contacted'],
+        ['a-detached', undefined],
+      ]),
+    );
+    vi.mocked(getProspectLabels).mockResolvedValue(
+      new Map([
+        ['p-contacted', { name: 'Hôtel Contacté', status: 'follow-up' as const }],
+        ['p-old', { name: 'Ancien', status: 'contacted' as const }],
+        ['p-queued', { name: 'En attente', status: 'new' as const }],
+      ]),
+    );
+
+    const response = await get('/api/scans');
+
+    expect(response.statusCode).toBe(200);
+    const rows = response.body as {
+      jobId: string;
+      prospectId?: string;
+      prospectName?: string;
+      prospectStatus?: string;
+    }[];
+    const byId = new Map(rows.map((row) => [row.jobId, row]));
+    expect(byId.get('attached-later')).toMatchObject({
+      prospectId: 'p-contacted',
+      prospectName: 'Hôtel Contacté',
+      prospectStatus: 'follow-up',
+    });
+    expect(byId.get('detached')?.prospectId).toBeUndefined();
+    expect(byId.get('detached')?.prospectStatus).toBeUndefined();
+    expect(byId.get('no-audit-yet')).toMatchObject({
+      prospectId: 'p-queued',
+      prospectStatus: 'new',
+    });
   });
 });

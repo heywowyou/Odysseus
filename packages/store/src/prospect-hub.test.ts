@@ -3,6 +3,7 @@ import { applyAutomaticProspectStatus, departmentFromPostcodeForTest } from './p
 import { randomUUID } from 'node:crypto';
 import {
   attachAuditToProspect,
+  getAuditProspectLinks,
   getAuditManualFields,
   replaceDetectedManualFields,
   saveLinkedAuditIdentity,
@@ -657,5 +658,23 @@ describe.skipIf(!mongoAvailable)('getProspectLabels', () => {
     });
     expect(labels.get(fresh.prospectId)).toEqual({ name: 'Labels New', status: 'new' });
     expect(labels.has('missing-prospect')).toBe(false);
+  });
+});
+
+describe.skipIf(!mongoAvailable)('getAuditProspectLinks', () => {
+  it('maps linked and detached audits and omits unknown IDs', async () => {
+    const linked = randomUUID();
+    const detached = randomUUID();
+    await createAuditModel(connection!).collection.insertMany([
+      { auditId: linked, prospectId: 'p-linked' },
+      { auditId: detached, prospectId: null },
+    ]);
+
+    const links = await getAuditProspectLinks(connection!, [linked, detached, 'missing-audit']);
+
+    expect(links.get(linked)).toBe('p-linked');
+    expect(links.has(detached)).toBe(true);
+    expect(links.get(detached)).toBeUndefined();
+    expect(links.has('missing-audit')).toBe(false);
   });
 });

@@ -78,6 +78,7 @@ export {
   getAuditBlockedPagesAcknowledgment,
   setAuditBlockedPagesAcknowledgment,
   clearAuditBlockedPagesAcknowledgment,
+  getAuditProspectLinks,
   listAuditStorageIdentities,
 } from './audits.js';
 export { ArchivedProspectAttachmentError } from './audits.js';

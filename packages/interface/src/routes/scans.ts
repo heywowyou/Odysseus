@@ -17,6 +17,7 @@ import {
   getAudit,
   getLatestFullAuditEstimateSource,
   getProspectHub,
+  getAuditProspectLinks,
   getProspectLabels,
   findAuditsWithUnreadyReports,
   getJob,
@@ -580,12 +581,21 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
 
     const auditIds = jobs.map((job) => job.auditId).filter((id): id is string => id !== undefined);
     const rollups = await getSeverityRollupsForPoll(connection, auditIds);
+    // A scan launched without a prospect and attached afterwards carries the
+    // link on its audit only, and a detached audit drops it there, so a row
+    // with a stored audit follows the audit's link; the job's own prospect
+    // covers scans that have no audit yet.
+    const auditLinks = await getAuditProspectLinks(connection, auditIds);
+    const rowProspectId = (job: (typeof jobs)[number]): string | undefined =>
+      job.auditId !== undefined && auditLinks.has(job.auditId)
+        ? auditLinks.get(job.auditId)
+        : job.prospectId;
     // The scan queue and the Audits table both name the linked hotel, and
     // the table shows its sales status, so every prospect-linked row pays
     // for the (single, batched) lookup.
     const prospectLabels = await getProspectLabels(
       connection,
-      jobs.map((job) => job.prospectId).filter((id): id is string => id !== undefined),
+      jobs.map(rowProspectId).filter((id): id is string => id !== undefined),
     );
 
     // Issue #389: a completed Full scan whose reports were later lost to a
@@ -603,12 +613,12 @@ export function registerScanRoutes(router: Router, connection: Connection, queue
         job.auditId !== undefined &&
         reportedAuditIds.includes(job.auditId) &&
         (unreadyReports.has(job.auditId) || reportProductionState(job.auditId).status === 'failed');
+      const prospectId = rowProspectId(job);
+      const prospect = prospectId === undefined ? undefined : prospectLabels.get(prospectId);
       return {
-        prospectId: job.prospectId,
-        prospectName:
-          job.prospectId === undefined ? undefined : prospectLabels.get(job.prospectId)?.name,
-        prospectStatus:
-          job.prospectId === undefined ? undefined : prospectLabels.get(job.prospectId)?.status,
+        prospectId,
+        prospectName: prospect?.name,
+        prospectStatus: prospect?.status,
         jobId: job.jobId,
         type: displayJobIntent(job.type, job.scanType),
         status: job.status,

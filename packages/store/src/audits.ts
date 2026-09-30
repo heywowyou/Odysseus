@@ -114,6 +114,21 @@ export async function listAuditStorageIdentities(
     .lean<{ siteUrl: string; startedAt: Date }[]>();
 }
 
+/** The prospect each stored audit is linked to, for lists of scan jobs. The
+ *  audit owns the link: attaching or detaching an audit changes it without
+ *  touching the job that produced the audit. Every found audit is a key, with
+ *  undefined for a detached one; unknown IDs are absent. */
+export async function getAuditProspectLinks(
+  connection: Connection,
+  auditIds: readonly string[],
+): Promise<Map<string, string | undefined>> {
+  if (auditIds.length === 0) return new Map();
+  const rows = await createAuditModel(connection)
+    .find({ auditId: { $in: [...new Set(auditIds)] } }, { auditId: 1, prospectId: 1, _id: 0 })
+    .lean<{ auditId: string; prospectId?: string | null }[]>();
+  return new Map(rows.map((row) => [row.auditId, row.prospectId ?? undefined]));
+}
+
 export class ArchivedProspectAttachmentError extends Error {
   constructor(readonly prospectId: string) {
     super('odysseus: an audit cannot be attached to an archived prospect');
