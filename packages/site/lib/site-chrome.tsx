@@ -15,6 +15,8 @@ const LABELS = {
     privacy: 'Prospection et données personnelles',
     optOut: 'Ne plus être contacté',
     accessibility: "Démarche d'accessibilité",
+    terms: 'Conditions générales de vente',
+    legal: 'Mentions légales',
     tagline:
       'Diagnostic technique de sites web avec préconisations\u00a0: accessibilité, référencement naturel, rendu JavaScript, performance et signaux techniques liés aux assistants IA.',
   },
@@ -29,6 +31,8 @@ const LABELS = {
     privacy: 'Outreach and personal data',
     optOut: 'Opt out',
     accessibility: 'Accessibility approach',
+    terms: 'Terms of sale',
+    legal: 'Legal notice',
     tagline:
       'Technical website diagnostic with recommendations: accessibility, search, JavaScript rendering, performance and technical signals for AI assistants.',
   },
@@ -86,6 +90,12 @@ function SiteFooter() {
           </a>
           <a className="navlink" href="/accessibilite">
             {t.accessibility}
+          </a>
+          <a className="navlink" href="/cgv">
+            {t.terms}
+          </a>
+          <a className="navlink" href="/mentions-legales">
+            {t.legal}
           </a>
         </nav>
       </div>

@@ -27,6 +27,8 @@ Odysseus analyse un site avec des outils de mesure automatisés (crawl, comparai
 - [Prospection et données personnelles](${BASE_URL}/confidentialite-prospection): origine des données utilisées pour la prospection commerciale et droits associés
 - [Ne plus être contacté](${BASE_URL}/desinscription): opposition à la prospection
 - [Démarche d'accessibilité](${BASE_URL}/accessibilite): ce qui a été vérifié sur ce site et comment signaler un problème
+- [Conditions générales de vente](${BASE_URL}/cgv): conditions applicables au diagnostic et à la nouvelle vérification, réservés aux professionnels
+- [Mentions légales](${BASE_URL}/mentions-legales): éditeur du site, identification et hébergeur
 
 ## Crawling
 

@@ -22,6 +22,8 @@ const privacy = prose(page('confidentialite-prospection'));
 const optOut = prose(page('desinscription'));
 const bot = prose(page('bot'));
 const offer = prose(page('offre'));
+const terms = prose(page('cgv'));
+const legal = prose(page('mentions-legales'));
 
 const rawSources = [
   'confidentialite-prospection',
@@ -29,6 +31,8 @@ const rawSources = [
   'bot',
   'offre',
   'exemple-audit',
+  'cgv',
+  'mentions-legales',
 ];
 
 function isBilingual(source: string): boolean {
@@ -191,12 +195,109 @@ describe('offer page', () => {
   });
 });
 
+describe('terms of sale page', () => {
+  it('is bilingual and says the French text is the binding one', () => {
+    expect(isBilingual(terms)).toBe(true);
+    expect(terms).toContain('Seule la version française');
+    expect(terms).toContain('only the French version is legally binding');
+  });
+
+  it('identifies the provider as a sole trader with its registration number', () => {
+    for (const fact of [
+      'Jules Fontaine',
+      'entrepreneur individuel (EI)',
+      '980&#160;766&#160;463',
+    ]) {
+      expect(terms).toContain(fact);
+    }
+    expect(terms).toContain('SIREN: 980 766 463');
+  });
+
+  it('is reserved to business clients', () => {
+    expect(terms).toContain('réservées aux professionnels');
+    expect(terms).toContain('businesses only');
+  });
+
+  // Article L. 441-10 of the code de commerce: the payment conditions must
+  // state the late-payment rate and the fixed recovery fee.
+  it('states the statutory late-payment terms', () => {
+    expect(terms).toContain('majoré de 10 points');
+    expect(terms).toContain('40&#160;€ par facture');
+    expect(terms).toContain('plus 10 percentage points');
+    expect(terms).toContain('EUR 40 per invoice');
+  });
+
+  it('repeats the approved diagnostic limit and gives no legal verdict', () => {
+    expect(terms).toContain('Ceci est un diagnostic technique, pas un audit RGAA.');
+    expect(terms).toContain('This is a technical diagnostic, not an RGAA audit.');
+    expect(terms).toContain('ne se prononce pas sur vos obligations juridiques');
+    expect(terms).toContain('does not determine your legal obligations');
+  });
+
+  // Article 48 of the code de procédure civile voids a jurisdiction clause
+  // unless every party contracted as a commerçant, which the operator is not.
+  it('names no court by place', () => {
+    expect(terms).not.toMatch(
+      /tribunal (?:de commerce|judiciaire) de|attribution de juridiction/iu,
+    );
+    expect(terms).not.toMatch(/courts? of [A-Z]/u);
+  });
+
+  // The franchise-en-base article moves from the CGI to the CIBS on
+  // 1 January 2027; quotes and invoices carry the mention in force.
+  it('cites no VAT exemption article that is about to be renumbered', () => {
+    expect(terms).not.toMatch(/293 B|CIBS/u);
+  });
+
+  it('acknowledges the small-business off-premises withdrawal right instead of excluding it', () => {
+    expect(terms).toContain('L.&#160;221-3');
+    expect(terms).toContain('fourteen-day withdrawal right');
+  });
+
+  it('describes what the model receives without claiming it sees nothing from the site', () => {
+    expect(terms).toContain('OpenAI');
+    expect(terms).toContain('courts extraits de code');
+    expect(terms).toContain('short code excerpts');
+    expect(terms).toContain('ne reçoit jamais le code HTML complet');
+  });
+});
+
+describe('legal notice page', () => {
+  it('is bilingual', () => {
+    expect(isBilingual(legal)).toBe(true);
+  });
+
+  // LCEN article 1-1: a natural person publishing professionally names
+  // themself, an address, the registration number, the publication director
+  // and the host with its address and phone.
+  it.each([
+    ['the publisher', ['Jules Fontaine', 'entrepreneur individuel (EI)']],
+    ['the registered address', ['71 ter, allée du Haurat, 33470 Gujan-Mestras']],
+    ['the registration number', ['980&#160;766&#160;463', 'SIREN: 980 766 463']],
+    ['the publication director', ['Directeur de la publication', 'Publication director']],
+    [
+      'the host',
+      ['Vercel Inc.', '440 N Barranca Avenue #4133, Covina, CA 91723', '+1 559 288 7060'],
+    ],
+  ])('states %s', (_name, required) => {
+    for (const fact of required) expect(legal).toContain(fact);
+  });
+
+  it('is linked from the site footer', () => {
+    const chrome = readFileSync(path.join(appDir, '..', 'lib', 'site-chrome.tsx'), 'utf8');
+    expect(chrome).toContain('href="/mentions-legales"');
+    expect(chrome).toContain('href="/cgv"');
+  });
+});
+
 describe('every compliance page', () => {
   it.each([
     ['privacy', privacy],
     ['opt-out', optOut],
     ['bot', bot],
     ['offer', offer],
+    ['terms', terms],
+    ['legal notice', legal],
   ])('%s names one contact address, the outreach one', (_name, source) => {
     expect(source).toContain('contact@odysseusaudit.fr');
     expect(source).not.toContain('contact@odysseusaudit.com');

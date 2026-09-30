@@ -64,3 +64,25 @@ describe('the price published on the public offer page', () => {
     expect([...distinct].sort()).toEqual(['990\u00a0€', '450\u00a0€'].sort());
   });
 });
+
+describe('the prices in the public terms of sale', () => {
+  // The terms of sale state the price list (article L. 441-1 of the code de
+  // commerce), so they move with the offer page. Literal text for the same
+  // package-isolation reason as above.
+  const termsPage = readFileSync(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../site/app/cgv/page.tsx'),
+    'utf8',
+  );
+  const rendered = termsPage.replaceAll('&#160;', '\u00a0');
+
+  it.each(['fr', 'en'] as const)('matches the %s rendering exactly', (language) => {
+    expect(rendered).toContain(formatFullAuditPrice(language));
+  });
+
+  // 40 EUR is the statutory recovery fee of article D. 441-5, not a price.
+  it('quotes only the two published figures and the statutory recovery fee', () => {
+    const figures = rendered.match(/[\d\u00a0\u202f,. ]*\d(?:\s?(?:€|EUR))/gu) ?? [];
+    const distinct = new Set(figures.map((figure) => figure.trim()));
+    expect([...distinct].sort()).toEqual(['990\u00a0€', '450\u00a0€', '40\u00a0€'].sort());
+  });
+});

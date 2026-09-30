@@ -84,6 +84,30 @@ export const PAGE_META: Record<
         'What we have checked on this site, what has not been checked yet, and how to report a problem.',
     },
   },
+  '/cgv': {
+    fr: {
+      title: 'Conditions générales de vente | Odysseus',
+      description:
+        'Les conditions générales de vente du diagnostic Odysseus et de la nouvelle vérification, réservés aux clients professionnels.',
+    },
+    en: {
+      title: 'General terms of sale | Odysseus',
+      description:
+        'The general terms of sale for the Odysseus diagnostic and the follow-up verification, for business clients only.',
+    },
+  },
+  '/mentions-legales': {
+    fr: {
+      title: 'Mentions légales | Odysseus',
+      description:
+        "L'éditeur du site Odysseus, son numéro d'identification, le directeur de la publication et l'hébergeur.",
+    },
+    en: {
+      title: 'Legal notice | Odysseus',
+      description:
+        'The publisher of the Odysseus site, its registration number, the publication director and the host.',
+    },
+  },
   '/exemple-audit': {
     fr: {
       title: 'Exemple de rapport de diagnostic | Odysseus',

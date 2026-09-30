@@ -216,3 +216,43 @@ rule avoids that perimeter.
 **Odysseus's own site accessibility.** odysseusaudit.com is under 10
 employees and under the turnover threshold, so it is exempt. It should
 still pass its own scanner, for the obvious reason.
+
+---
+
+## 8. Before the first sale
+
+Researched 2026-09-28, when the public terms of sale (`/cgv`,
+`packages/site/app/cgv/page.tsx`) were written. Legal facts below are
+`secondary` unless marked `primary`; none of this is lawyer-reviewed.
+
+**Registry state, read from the public Sirene record on 2026-09-28.** The
+business is registered as an entrepreneur individuel (SIREN 980 766 463,
+SIRET 980 766 463 00023) with APE code 74.20Z (photography) and the trade
+name "CULT OF AURORA". Sirene shows only the principal activity's code; the
+operator confirmed the Cult of Aurora clothing activity is also declared.
+Neither the audit activity nor the Odysseus name is declared. The terms therefore say the services are provided by Jules
+Fontaine EI, not "under the trade name Odysseus".
+
+| # | Item | Why | Status |
+|---|---|---|---|
+| 1 | On the guichet unique (INPI), add the web audit activity and declare "Odysseus" as an enseigne of the establishment | Decided 2026-09-28: "CULT OF AURORA" stays the trade name (it is the operator's clothing brand, run from the same micro-entreprise), Odysseus is added as an enseigne, and the audit activity becomes the principal one while it is the one billing (the APE code follows it; it is statistical and can be changed later by a free formality). The clothing activity is already declared (the public Sirene record shows only the principal activity's APE code, 74.20Z photography, which is no longer practised). Because goods and services mix, the VAT franchise needs total revenue at or below EUR 85,000 with services at or below EUR 37,500 (section 6). After registration, the terms of sale name the seller "Jules Fontaine EI, enseigne Odysseus" | filed 2026-09-28 (category 02080902, "A titre indépendant"), awaiting registration |
+| 2 | Legal notice page (mentions légales) | LCEN article 1-1 (`primary`): name, domicile, phone, registration number, publication director, host identity. LCEN article 19 adds address, email and phone for any electronic-commerce activity, B2B included. Written 2026-09-28 at `/mentions-legales` with the registered Sirene address (operator choice: no domiciliation) and Vercel as host. **Still missing: the operator's phone number** (operator deciding between a personal and a virtual number) | written; phone deferred by the operator on 2026-09-29 |
+| 3 | Professional liability insurance (RC Pro) | Section 7. Online insurers price intellectual-service RC Pro from about EUR 150 to 400 a year. Describe the activity accurately to the insurer: automated technical diagnostic, report with a non-verdict compliance information section | open |
+| 4 | Quote template | Must carry: "Jules Fontaine EI" (article R526-27 code de commerce, `primary`), SIRET, address, date, validity, client, site analysed, service, report language, price HT, VAT exemption mention, delivery time, payment terms, late-payment rate and the EUR 40 fee, no early-payment discount, a reference to the terms with the `/cgv` URL **and the terms attached as a PDF**, and a "Bon pour accord" signature line. Cass. com. 7 May 2025: a reference alone is not enough, the client must have had effective access before signing | open |
+| 5 | Decide the full-audit delivery lead time | Nothing in the repository fixes it. The terms defer it to the quote; the re-audit's 5 business days is the only published lead time | open, operator decision |
+| 6 | Invoice template and e-invoicing platform | Section 4: reception through a Plateforme Agréée since 1 September 2026. Invoices carry the same identity and payment mentions as the quote | check whether the platform was chosen |
+| 7 | VAT mention wording | "TVA non applicable, art. 293 B du CGI" until 31 December 2026. From 1 January 2027 the franchise moves to the CIBS (ordonnance 2026-671, reported as article L. 233-3), with the old wording tolerated until 30 June 2028. The public terms cite no article so they do not go stale | update templates in January 2027 |
+| 8 | Business bank account and Stripe account in the "Jules Fontaine EI" name | R526-27: a dedicated account must carry the EI denomination. The Stripe link amount is set by hand (trade-off 13): check it reads EUR 990 | check |
+| 9 | Prospecting privacy page recipients | `/confidentialite-prospection` lists Scaleway, Vercel and MongoDB Atlas only. Prospect scans run on the Hostinger VPS and full outreach scans are written through OpenAI before a preview is published (trade-off 95), so both are recipients under GDPR article 14 | open |
+| 10 | Off-premises contracts with very small businesses | Code de la consommation L221-3 (`primary` article, read via Légifrance search) extends the 14-day withdrawal right to a business of five employees or fewer contracting off-premises outside its main activity. Selling by email is a distance contract and is not concerned. If a quote is ever signed in person, hand over the statutory withdrawal information and form | rule, no action |
+| 11 | Lawyer review of the terms | The terms were written from primary texts and practitioner sources, not by a lawyer. Worth one review once revenue exists, together with the scope-section review in section 2 | optional |
+
+**Two choices baked into the terms, change them on the quote if needed:**
+payment is due in full on ordering and the report is delivered after
+payment, and a client may cancel for a full refund until the report is
+delivered.
+
+**No jurisdiction clause, deliberately.** Code de procédure civile article
+48 voids a territorial jurisdiction clause unless every party contracted as
+a commerçant. The operator is a non-commercial sole trader, so such a
+clause would be réputée non écrite.

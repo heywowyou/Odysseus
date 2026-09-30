@@ -148,8 +148,12 @@ export default function BotInfoPage() {
             </p>
 
             <p>
-              Mentions légales&#160;: entreprise individuelle en cours d&apos;immatriculation
-              (micro-entrepreneur, France). Numéro SIREN en attente d&apos;attribution.
+              Éditeur&#160;: Jules Fontaine, entrepreneur individuel (EI), micro-entrepreneur,
+              France. SIREN&#160;: 980&#160;766&#160;463. Voir les{' '}
+              <a className="underline" href="/mentions-legales">
+                mentions légales
+              </a>
+              .
             </p>
           </section>
         </div>
@@ -267,8 +271,12 @@ export default function BotInfoPage() {
             </p>
 
             <p>
-              Legal: sole proprietorship in the process of registration (micro-entrepreneur,
-              France). SIREN number pending assignment.
+              Publisher: Jules Fontaine, sole trader (entrepreneur individuel, EI),
+              micro-entrepreneur, France. SIREN: 980 766 463. See the{' '}
+              <a className="underline" href="/mentions-legales">
+                legal notice
+              </a>
+              .
             </p>
           </section>
         </div>
