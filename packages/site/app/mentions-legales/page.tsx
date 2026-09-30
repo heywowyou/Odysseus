@@ -22,8 +22,9 @@ export const metadata: Metadata = {
  * Publisher identification under article 1-1 of the LCEN and, for the
  * electronic-commerce activity, its article 19. Written 2026-09-28; the
  * checklist in docs/rules/operator-obligations.md section 8 tracks what is
- * still missing (the phone number LCEN article 1-1 asks for, and the
- * "enseigne Odysseus" wording once the registry shows it).
+ * still missing (the phone number LCEN article 1-1 asks for). Odysseus is an
+ * unregistered brand: the establishment's only trade name is CULT OF AURORA,
+ * so the publisher is named as the sole trader, never as "enseigne Odysseus".
  *
  * The address is the establishment address published in the Sirene register
  * (indice de répétition T, "ter"). The host details are Vercel's own, from its
@@ -87,6 +88,25 @@ export default function LegalNoticePage() {
               </a>
               .
             </p>
+
+            <p>
+              Comme tout hébergeur, Vercel enregistre des journaux techniques des requêtes adressées
+              à ce site, qui peuvent comporter l&apos;adresse IP et le navigateur du visiteur, et
+              les conserve pendant une durée limitée, au plus 30 jours. Lorsque vous utilisez le
+              formulaire de désinscription, votre adresse IP est en outre gardée en mémoire au plus
+              dix minutes pour limiter les envois abusifs, puis oubliée. Ces traitements reposent
+              sur notre intérêt légitime à assurer le fonctionnement et la sécurité du site. Vercel
+              étant établi aux États-Unis, ces données peuvent y être transférées dans le cadre des
+              garanties prévues par le règlement général sur la protection des données (RGPD).
+            </p>
+
+            <p>
+              Le choix de langue est enregistré uniquement dans votre navigateur et n&apos;est
+              transmis à personne. Pour exercer vos droits d&apos;accès, de rectification,
+              d&apos;effacement, de limitation ou d&apos;opposition, écrivez à
+              contact@odysseusaudit.fr. Vous pouvez également introduire une réclamation auprès de
+              la CNIL.
+            </p>
           </section>
         </div>
       </LanguageSection>
@@ -144,6 +164,23 @@ export default function LegalNoticePage() {
                 general terms of sale
               </a>
               .
+            </p>
+
+            <p>
+              Like any host, Vercel keeps technical logs of requests made to this site, which may
+              include the visitor&apos;s IP address and browser, for a limited period of at most 30
+              days. When you use the opt-out form, your IP address is also held in memory for at
+              most ten minutes to limit abusive submissions, then discarded. This processing is
+              based on our legitimate interest in keeping the site running and secure. As Vercel is
+              established in the United States, this data may be transferred there under the
+              safeguards provided for by the General Data Protection Regulation (GDPR).
+            </p>
+
+            <p>
+              Your language choice is stored only in your browser and is not sent to anyone. To
+              exercise your rights of access, rectification, erasure, restriction or objection,
+              email contact@odysseusaudit.fr. You may also lodge a complaint with the CNIL, the
+              French data protection authority.
             </p>
           </section>
         </div>

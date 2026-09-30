@@ -204,11 +204,18 @@ export default function ProspectingPrivacyPage() {
 
             <p>
               Ces données ne sont communiquées à aucun tiers pour son propre usage, et ne sont ni
-              vendues ni louées. Trois prestataires techniques interviennent&#160;: Scaleway, qui
-              héberge les aperçus publiés en France (région de Paris)&#160;; Vercel, qui héberge ce
-              site&#160;; et MongoDB Atlas, qui héberge la base de données également en France (AWS
-              Paris, eu-west-3). Les aperçus sont stockés dans un espace privé et ne sont
-              accessibles qu&apos;au moyen du lien qui vous a été envoyé.
+              vendues ni louées. Cinq prestataires techniques interviennent&#160;: Hostinger, qui
+              héberge le serveur réalisant les analyses et conservant leurs résultats&#160;;
+              Scaleway, qui héberge les aperçus publiés en France (région de Paris)&#160;; Vercel,
+              qui héberge ce site&#160;; MongoDB Atlas, qui héberge la base de données également en
+              France (AWS Paris, eu-west-3)&#160;; et OpenAI, qui fournit le modèle de langage
+              utilisé pour rédiger le rapport issu d&apos;une analyse complète. OpenAI reçoit les
+              résultats des outils de mesure, dont les adresses des pages, les éléments concernés et
+              de courts extraits de code, ainsi que des images des pages du rapport pour en
+              contrôler la mise en page. Il ne reçoit jamais le code HTML complet ni le contenu
+              intégral des pages. OpenAI étant établi aux États-Unis, ce transfert est encadré par
+              les garanties prévues par le RGPD. Les aperçus sont stockés dans un espace privé et ne
+              sont accessibles qu&apos;au moyen du lien qui vous a été envoyé.
             </p>
 
             <p>
@@ -398,10 +405,17 @@ export default function ProspectingPrivacyPage() {
 
             <p>
               This data is not disclosed to any third party for its own use and is neither sold nor
-              rented. Three technical providers are involved: Scaleway, which hosts published
-              previews in France (Paris region); Vercel, which hosts this site; and MongoDB Atlas,
-              which also hosts the database in France (AWS Paris, eu-west-3). Previews are stored in
-              a private space and can be accessed only through the link sent to you.
+              rented. Five technical providers are involved: Hostinger, which hosts the server that
+              runs the analyses and keeps their results; Scaleway, which hosts published previews in
+              France (Paris region); Vercel, which hosts this site; MongoDB Atlas, which also hosts
+              the database in France (AWS Paris, eu-west-3); and OpenAI, which provides the language
+              model used to write the report from a full analysis. OpenAI receives the results of
+              the measurement tools, including page addresses, the elements concerned and short code
+              excerpts, as well as images of the report pages so that their layout can be checked.
+              It never receives the complete HTML or the full content of the pages. As OpenAI is
+              established in the United States, this transfer is covered by the safeguards provided
+              for by the GDPR. Previews are stored in a private space and can be accessed only
+              through the link sent to you.
             </p>
 
             <p>

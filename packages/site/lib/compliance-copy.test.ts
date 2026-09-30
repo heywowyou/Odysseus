@@ -52,7 +52,7 @@ describe('prospecting privacy page', () => {
     ['the objection route', ['/desinscription', 'CNIL']],
     [
       'the processors and where they hold the data',
-      ['Scaleway', 'Vercel', 'MongoDB Atlas', 'eu-west-3', 'Paris'],
+      ['Hostinger', 'Scaleway', 'Vercel', 'MongoDB Atlas', 'OpenAI', 'eu-west-3', 'Paris'],
     ],
   ])('states %s', (_name, required) => {
     for (const fact of required) expect(privacy).toContain(fact);
@@ -281,6 +281,15 @@ describe('legal notice page', () => {
     ],
   ])('states %s', (_name, required) => {
     for (const fact of required) expect(legal).toContain(fact);
+  });
+
+  // Vercel's request logs and the opt-out limiter's in-memory address are the
+  // only visitor data the site itself handles.
+  it('tells visitors about host logs and the opt-out limiter', () => {
+    expect(legal).toContain('journaux techniques');
+    expect(legal).toContain('technical logs');
+    expect(legal).toContain('dix minutes');
+    expect(legal).toContain('ten minutes');
   });
 
   it('is linked from the site footer', () => {
