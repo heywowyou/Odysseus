@@ -1,6 +1,6 @@
 # Plan 075: Make the audit data clean and true before it reaches a report
 
-Status: IN PROGRESS (reopened 2026-09-24 and again 2026-09-28). Part K is deployed (`2d4afdd6`), the 28 latest audits were refreshed and four sites rescanned on 2026-09-29; sweep 11 found two blocking defects (Part L: L1, L5) and three backlog defects (issues #562 to #564), classified under the hunt's severity-based stop rule adopted on 2026-09-29. Closure needs Part L implemented, deployed and refreshed, the rescans listed in Part L, and two clean hunt sweeps. The earlier closure record stays below as history. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
+Status: IN PROGRESS (reopened 2026-09-24 and again 2026-09-28). Part L is deployed (`d971a983`, with #562 to #564), and the 38 latest audits were refreshed on it on 2026-09-30; sweep 12 found seven blocking defects (Part M: M1 to M7), classified under the hunt's severity-based stop rule adopted on 2026-09-29. Closure needs Part M implemented, deployed and refreshed, the rescans listed in Part M, and two clean hunt sweeps. The earlier closure record stays below as history. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
 
 ## Context
 
@@ -693,6 +693,68 @@ Rescans still needed before these audits' reports go out, for scan-time fixes th
 
 Minor, not slices: clos-sainte-marie is a one-page site whose sitemap route aliases (`/chambres`, `/tarifs`, `/contact`, `/activites`) serve the same document scrolled to a section, so « 6 pages analysées » and per-page counts describe one document six times; no rule reports duplicate content. grand-hotel-opera's Tarteaucitron « Personnaliser » button is a `color-contrast` finding on one page in the 2026-09-24 run and absent from the rescan (consent banner state differs between runs).
 
+### Part M: twelfth sweep, on the Part L deploy (2026-09-30)
+
+Production runs `d971a983` (normalization fingerprint `a327840febaa84dd`). All 38 latest audits were refreshed on it; atlantichotel, whistlerparis and grandhotelbellevue were rescanned, and ten sites are new to the hunt (atrium-hotel, bellesrives, chateaudecodignat, clarancehotel, closdesarts, coin-savoyard, hotel-langres, hotel-particulier, leplacidehotel, leprieuredeboulogne).
+
+Part L targets: L1 holds (aflatta's offer and voucher pages analysed, the four true error pages still soft 404s); L5 holds (regina-hotel 67 pages, clos-sainte-marie and lescriquets one target each), but see M2; #563 and #564 hold. aflatta's `focus-order-mismatch` remains because its rescan predates #562. atlantichotel has no NAP finding; whistlerparis and grandhotelbellevue carry `llms-txt-missing`.
+
+#### Evidence M
+
+| Defect | Measured |
+|---|---|
+| A slash-less fetch of a page the site serves only with its slash | Criteria 1, 2 and 3. The crawl fetches the page identity (`normalizePageUrl` strips the trailing slash, `links.ts:214`), and A4 learns the served spelling only from a same-identity redirect. atrium-hotel.fr answers every slash-less path with a 302 to `/` (live probe 2026-09-30: `/chambres-hotel-valence` 302 to `/`, `/chambres-hotel-valence/` 200), and every link on the site carries the slash. So 38 of its 39 inventoried pages are `redirect-interstitial` to the homepage, only the homepage is analysed, and the report states a serious `lcen-mentions-legales-missing` checked on `/` (the legal notice page was never read) and an `accessibility-statement-missing`. The only such site among the 38 audits. |
+| The page-language detector reads the Latin tokens of a non-Latin page | Criterion 1. leplacidehotel: the 10 `/ja/` pages carry a serious `html-lang-content-mismatch` « read as en ». Their titles and headings are Japanese (« お問い合わせ »); the few Latin tokens (FAQ, Instagram, PRM, « Étoiles ») are all the profile can score, and they score English. L5's seven-language profile has no non-Latin script. |
+| Query-string copies of analysed pages are analysed as pages | Criteria 1, 2 and 3. coin-savoyard: 31 of its 52 analysed pages declare a canonical pointing to another analysed page, 14 dated room pages (`?info[arrival_date]=…`) and 16 `booking/room?info[room_id]=…`; they carry 16 separate serious `hreflang-no-return-link` findings, each because the copy's hreflang points to the clean canonical URL, and the model's first theme (« Indications de langue réciproques ») rests on them. yonahotel: 11 copies with tracking or state parameters (`_gl`, `gclid`, `menu-booking`, `modal-upper`, `menu=open`) and no canonical, analysed beside their clean pages. One copy each on grandhoteldesalpes, closdesarts and bellevigne-hotels. |
+| Discovery-wave pages skip the crawl's answer classification | Criterion 1. leprieuredeboulogne: `/feed` and `/en/feed` (`application/rss+xml`) were admitted from a `hydrated-link` (referrer `/category/partenaires`) and scanned as pages; the crawl would have recorded them `skipped-non-html` (`crawl.ts:1305`), but `runDiscoveryWaves` never classifies the answer. The audit's serious `html-has-lang` and `document-title` exist only on these two feeds. The same gap splits the HTTP-error count: a wave page that answered 404 is `http-error-status` in the manifest but `scanned` in the inventory ledger, so prieuré's methodology states « 11 erreurs HTTP » and, a few lines later, « 7 pages ont répondu par une erreur HTTP » (domaine-d-auriac 148 against 140, yonahotel 3 against 0). The content type is not stored, so the feeds need a rescan. |
+| Origin-level field data restated as the homepage's | Criterion 2. CrUX is queried per origin (`crux.ts`), and `normalize-crux.ts` attaches the site-level finding to the homepage URL by design. The writer reads that URL as the scope: 2 of the 9 stored French analyses that cite field data say it describes the homepage, domaine-d-auriac (« les données de terrain montrent que l'affichage du plus grand élément visible de la page d'accueil dépasse le seuil attendu ») and chateaudecodignat (twice, in the synthesis and a theme). The data is the whole origin's 75th percentile; nothing measures the homepage alone. |
+| The Lighthouse failure note says the measurement failed on the site | Criterion 2. `summarizeLighthouseFailures` (`methodology.ts`) prints « La mesure de performance (Lighthouse) n'a pas abouti sur ce site pour cet audit » whenever any page carries a Lighthouse error, counts pages that are not analysed, and divides by the analysed total. It prints on 4 audits that measured most pages: domaine-d-auriac « 8/151 » with 66 measured and 0 analysed failures (all 8 are 404 pages), leprieuredeboulogne « 6/95 » with 42 measured and 2 failures, regina-hotel « 7/412 » with 112 measured, yonahotel « 28/214 » with 14 measured and 18 failures. The same page states « Lighthouse : 42 mesurées ». |
+| A site-wide soft-404 shell with no error title or heading is analysed as content | Criterion 3. yonahotel answers any unknown path with a 200 `noindex` page whose only heading is « Elsewhere starts Here » (live probe 2026-09-30: `/en/zz-not-a-page-check` returns it). 11 analysed pages are this shell: 3 from quote-wrapped hrefs (`/en/%22https:/www.yonahotel.com%22`), one from an address written as a path, and 7 stale paths (`/en/hotel/accueil`, `/en/terms-of-use`, `/fr/hotel/restaurant`). They add pages to `html-has-lang`, `document-title`, `no-h1` and Lighthouse insights. L1's detector needs an error title or heading, and this shell has neither. |
+
+Checked and clean or already known: the determinism diff of the four rescans against their previous runs (every difference is lab variance, CrUX availability, F4, `a2b99fac`, #497, or whistlerparis's `/en/book.html` now classified with its booking-redirect siblings; grand-hotel-opera's tab labels flip because the site animates the tab's opacity); hotel-langres's `keyboard-trap` (live: a jQuery datepicker holds Tab); broken links on codignat, prieuré and closdesarts (live 404s); closdesarts `hreflang-target-invalid` and security headers; codignat and hotel-particulier entity findings; chateaudecodignat's cover, severity totals, priority counts and WCAG table against its findings; its lab medians (the homepage inlines 14.6 MB of SVG, live); the prieuré legal-notice sentence; the older audits' `llms.txt` and legal-notice results against their later checker fixes.
+
+Rescans needed before these audits' reports go out: atrium-hotel (M1), leprieuredeboulogne (M4), coin-savoyard and yonahotel if M3 is scan-time, yonahotel (M7), aflatta (#562). leplacidehotel (M2) needs a refresh; domaine-d-auriac and chateaudecodignat (M5) need their analyses regenerated, a paid run the operator decides; M6 needs only a re-render.
+
+#### Slices
+
+- **M1. Fetch the spelling the site links to.**
+  - Page identity stays slash-free (issue #102). The crawl fetches the spelling the link or sitemap wrote; when a slash-less fetch lands off its identity and the slashed spelling was discovered or answers 200, the slashed spelling is fetched and recorded as the served spelling, never a redirect interstitial.
+  - Stored audits: scan-time; atrium-hotel needs a rescan.
+  - Target: an atrium-hotel rescan analyses its room, contact and legal pages, and its legal-notice finding is decided on its legal notice page.
+  - Tests: a crawl e2e fixture that redirects every slash-less path to `/` and serves the slashed spelling; the existing same-identity redirect case unchanged.
+- **M2. Non-Latin text is never scored against Latin profiles.**
+  - `html-lang-content-mismatch` skips a language group whose title and heading letters are mostly outside the Latin script; the hreflang-target check is unchanged.
+  - Stored audits: a refresh applies it.
+  - Target: leplacidehotel loses the `/ja/` finding; regina-hotel keeps its 67 `/br/` pages.
+  - Tests: the stored leplacide Japanese shape and the regina Portuguese shape.
+- **M3. A query-string copy of an analysed page is not a second page.**
+  - A page whose canonical names another analysed page and whose URL differs from it only by its query is set aside as a variant, disclosed in the coverage and never given findings. A URL whose only difference from a discovered page is a known tracking or UI-state parameter (`utm_*`, `gclid`, `fbclid`, `_gl`, and the state parameters measured here) takes that page's identity before enqueue.
+  - Stored audits: the canonical rule applies on refresh (the canonical is stored); the parameter rule is scan-time.
+  - Target: coin-savoyard keeps its clean pages and loses the 16 duplicated `hreflang-no-return-link` findings; yonahotel's 11 copies are gone on a rescan.
+  - Tests: the stored coin-savoyard shapes (dated room page, booking room), a genuine query-addressed page with no canonical, and the parameter list.
+- **M4. A discovery-wave answer is classified as the crawl's is.**
+  - The wave records a non-HTML content type as `skipped-non-html` and an HTTP error as `http-error-status`, in both the manifest and the inventory ledger, through the crawl's own classifier.
+  - Stored audits: the HTTP-error disposition can be corrected on refresh from the manifest status; the feeds need a rescan of leprieuredeboulogne.
+  - Target: prieuré has no `/feed` page, and its `html-has-lang` and `document-title` findings are gone; each audit's two HTTP-error counts agree.
+  - Tests: a wave fixture serving RSS and a 404, and the stored disposition split.
+- **M5. Field data is described as the site's.**
+  - The writer input marks a site-scoped finding as site-wide instead of giving it the homepage as its page, and the writer guard rejects a sentence that ties field data to one page. `docs/rules/llm-layer-rules.md` records it.
+  - Stored audits: the analyses of domaine-d-auriac and chateaudecodignat keep the sentence until regenerated (operator decision).
+  - Target: a regenerated analysis states field data for the site.
+  - Tests: writer input builder test for a CrUX finding; guard test with the two stored sentences.
+- **M6. The Lighthouse failure note matches the coverage.**
+  - Count only analysed pages whose Lighthouse pass failed; state the failure over those pages (« La mesure de performance n'a pas abouti sur {n} des {total} pages mesurées ») and keep « sur ce site » for an audit with no measured page. French first.
+  - Stored audits: a re-render applies it.
+  - Target: domaine-d-auriac prints no failure note; prieuré states 2 pages, regina-hotel 7, yonahotel 18.
+  - Tests: methodology render tests for none, some and all pages failed, and a 404 page carrying a Lighthouse error.
+- **M7. A site's catch-all answer is a soft 404.**
+  - At crawl start, fetch one path that cannot exist (one extra polite request) and keep the answer's fingerprint when it is 200; a page that matches it is `soft-error-page`.
+  - Stored audits: scan-time; yonahotel needs a rescan.
+  - Target: yonahotel analyses none of its 11 shells, and its real pages stay analysed.
+  - Tests: a crawl fixture with a 200 catch-all and a real page sharing its layout; a site that answers 404 records no fingerprint.
+
+Minor, not slices, and recorded in the ledger: chateaudecodignat's resumed run reused Lighthouse data for `/chambres-deluxe` after the replan stopped selecting it, so « agrégées sur 61 pages » stands beside « 60 mesurées »; grand-hotel-opera's jQuery UI tab labels (1.74:1) are a violation or `bgOverlap` depending on the site's opacity animation.
+
 ### D. Docs, fixtures, rollout
 
 - **Trade-offs.**
@@ -732,6 +794,7 @@ Minor, not slices: clos-sainte-marie is a one-page site whose sitemap route alia
 - Part J: generated ids and widget state classes no longer split a component, the writer never calls a lab metric good beside a critical finding for it, and a dialog holding focus makes the Tab walk inconclusive instead of a finding (J1 to J3).
 - Part K: the report states a check's clean result only over the pages it ran on, a probe that reports nothing cannot take the interactive checks down, a dead link is a broken link and never a blocked page, an error title alone never removes a content page, deliberate utility pages are not hidden public pages, and the legal-notice sentence never names a link the site does not have (K1 to K6).
 - Part L: a content page without a heading is never dropped for its title, and a declared language that contradicts the content is reported (L1 and L5).
+- Part M: a page served only with its slash is fetched with it, non-Latin text never reads as a Latin language, query-string copies and a site's catch-all answer are not analysed pages, discovery-wave answers are classified like crawled ones, field data is described as the site's, and the Lighthouse failure note matches the coverage (M1 to M7).
 - The requirement-to-proof ledger below is complete before the plan moves to DONE.
 
 ## Executable closure contract
@@ -808,6 +871,13 @@ The closure artifact is the requirement-to-proof ledger below. Every row names i
 | The legal-notice sentence matches the check | `methodology.ts` `renderMentionsLegalesCoverageNote` | Code, FR-first copy checked against `obligation-basis.md` | Resolved, fallback and merged `perPage` render tests | Operator reads the clos-sainte-marie methodology section |
 | An error title needs an error slug or heading | `soft-error-page.ts` | Code | Stored voucher shape and four true error shapes | aflatta rescan analyses its 15 pages |
 | A declared language matches the content | new rules or checklist line, `normalize.ts`, copy | Code, FR-first copy, trade-off 111 severities | Stored regina, clos-sainte-marie and lescriquets shapes; correct multilingual site | Harness: regina, clos-sainte-marie and lescriquets gain one finding each, no other audit |
+| A slash-only page is fetched with its slash | `crawl.ts`, `links.ts` | Code, normalization-rules §5a amendment | Slash-less-redirects-home crawl e2e; same-identity redirect case | atrium-hotel rescan analyses its room, contact and legal pages |
+| Non-Latin text is not scored as a Latin language | `normalize-content-language.ts` | Code | Stored leplacide Japanese and regina Portuguese shapes | Harness: leplacidehotel loses its `/ja/` finding, regina keeps 67 pages |
+| Query-string copies are not pages | `links.ts`, `write-audit.ts`, `renormalize-audit.ts`, coverage strings | Code, parameter list, trade-off 111 amendment | Stored coin-savoyard shapes, genuine query page, parameter list | Harness: coin-savoyard loses 16 duplicated `hreflang-no-return-link` findings |
+| Discovery-wave answers are classified | `scan-site.ts` `runDiscoveryWaves`, `inventory-ledger.ts` | Code | RSS and 404 wave fixture; stored disposition split | prieuré rescan has no feed page; each audit's two HTTP-error counts agree |
+| Field data is the site's | `llm` writer input, writer guard, `llm-layer-rules.md` | Code, guard pattern | Input builder test; guard test with the two stored sentences | Operator reads one regenerated performance sentence |
+| The Lighthouse failure note matches the coverage | `methodology.ts` `summarizeLighthouseFailures`, FR and EN copy | Code, FR-first copy | Render tests: none, some and all failed; a 404 page with a Lighthouse error | Sweep 13 reads the four methodology notes |
+| A catch-all answer is a soft 404 | `crawl.ts`, `soft-error-page.ts` | Code | 200 catch-all fixture; 404 site records no fingerprint | yonahotel rescan analyses none of its 11 shells |
 | Provenance consistent | `normalization-fingerprint.ts` | Fingerprint bump | `pnpm run check`, findings-provenance test | none |
 
 ## Verification

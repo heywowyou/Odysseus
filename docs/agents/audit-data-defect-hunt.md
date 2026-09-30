@@ -194,6 +194,11 @@ at that criterion's usual severity (serious for level A).
     replay. For each one, find the audits whose stored result the change
     would alter. A stored scan-time result that a later fix contradicts
     needs a rescan before its report goes out.
+18. **One fact stated twice.** For every fact a report states in more than
+    one place (analysed and measured pages, HTTP errors, occurrence totals,
+    failed checks), compare the statements with each other and with the
+    manifest. Two sentences built from different sources can each look
+    right and still disagree.
 
 ## Recording
 

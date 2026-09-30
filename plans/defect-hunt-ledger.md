@@ -7,51 +7,55 @@ Brief: `docs/agents/audit-data-defect-hunt.md`
 
 ## Where the hunt stands
 
-- **Stop rule: 0 of 2 (severity-based, adopted 2026-09-29).** The operator
-  replaced "any material defect resets the count" with blocking criteria
-  (brief, "Blocking, backlog or minor"): eleven sweeps never converged on the
-  old rule while the severity of what they found kept falling. The last
-  complete sweep (11) found 2 blocking defects (L1, L5) and 3 backlog
-  (#562 to #564). Two consecutive complete sweeps with no new blocking
-  defect are needed, the second with a fresh angle and, when any exist, new
-  sites.
-- **Data state.** Production runs `2d4afdd6` (Part K, fingerprint
-  `b8af13c49ae79f87`). The 28 latest audits were refreshed after the deploy,
-  and clos-sainte-marie, aflatta, labaignoirelacanau and grand-hotel-opera
-  were rescanned on it (operator approved). Part L (L1, L5) is recorded in
-  plan 075 and L2 to L4 are issues #562 to #564; none is implemented.
-- **Access.** Read-only scripts in the app container, as in sweeps 8 to 10.
-  Writes this sweep, approved by the operator on 2026-09-29: the findings
-  refresh, the four rescans, and a push of the Part K commits. The
-  dashboard API is reached with the operator credentials in the repository
-  `.env`, used only for that service. Live probes: one page each on aflatta
-  (twice) and clos-sainte-marie, and `/llms.txt` or `/robots.txt` on nine
-  already-audited sites.
-- **Next: sweep 12**, after Part L ships and the audits are refreshed (the
-  backlog issues need not ship first), and
-  after the rescans Part L lists (atlantichotel, whistlerparis,
-  grandhotelbellevue, aflatta). Start with the start list below, then every
-  angle on every latest full audit.
+- **Stop rule: 0 of 2 (severity-based, adopted 2026-09-29).** Sweep 12 found
+  7 blocking defects (Part M: M1 to M7) and no backlog defect, so the count
+  stays at 0. Four of the seven were found only on the ten sites new to the
+  hunt. Two consecutive complete sweeps with no new blocking defect are
+  needed, the second with a fresh angle and, when any exist, new sites.
+- **Data state.** Production runs `d971a983` (Part L with #562 to #564,
+  fingerprint `a327840febaa84dd`). The 38 latest audits were refreshed on it;
+  atlantichotel, whistlerparis and grandhotelbellevue were rescanned, and ten
+  sites were audited for the first time. Part M is recorded in plan 075; none
+  of it is implemented.
+- **Access.** Read-only scripts in the app container and read-only database
+  reads, as in sweeps 8 to 11. No production write this sweep. Live probes of
+  already-audited sites with the bot user agent: atrium-hotel (slash
+  spellings), yonahotel (room titles, three shells, one made-up path),
+  grand-hotel-opera (the facilities tabs under axe), whistlerparis (booking
+  pages), chateaudecodignat (homepage size), `/llms.txt` on haaitza,
+  lacoorniche and hoteldegarlande, hotel-langres (date field), and the broken
+  links on three sites.
+- **Stored products.** Do not send the reports of atrium-hotel (M1),
+  coin-savoyard (M3), leplacidehotel (M2) or leprieuredeboulogne (M4, M6);
+  domaine-d-auriac and chateaudecodignat carry the M5 sentence until their
+  analyses are regenerated. yonahotel's page count is inflated by about 10 %
+  (M3, M7).
+- **Next: sweep 13**, after Part M ships and the audits are refreshed, and
+  after the rescans Part M lists (atrium-hotel, leprieuredeboulogne,
+  yonahotel, coin-savoyard, aflatta). Start with the start list below, then
+  every angle on every latest full audit.
 
-## Sweep 12 start list
+## Sweep 13 start list
 
 Angle 13 (replay against closed slices) targets:
 
 | Slice | Audit | Expected on the refreshed findings |
 |---|---|---|
-| L1 | aflatta (rescan) | its 14 offer and voucher pages and `/panier` analysed; `title-announces-error` over 15 pages; the error pages of lacoorniche, haaitza, yonahotel and domaine-d-auriac still soft 404s |
-| #562 to #564 | aflatta, alexanderpark, bellevigne-hotels, clos-sainte-marie, lacoorniche | only if shipped: the targets named in each issue |
-| L5 | regina-hotel, clos-sainte-marie, lescriquets | one language finding each (67 `/br/` pages; `/?lang=en`; `/boutique`), none elsewhere |
-| K1 | domaine-d-auriac, regina-hotel (regenerated or new report) | the per-check sentence states the Tab walk not concluded, never « aucune anomalie » |
-| Rescans | atlantichotel, whistlerparis, grandhotelbellevue | no NAP finding from article text on atlantichotel; `llms-txt-missing` on whistlerparis and grandhotelbellevue |
+| M1 | atrium-hotel (rescan) | room, contact and legal pages analysed; the legal-notice finding decided on its legal notice page |
+| M2 | leplacidehotel, regina-hotel | no `html-lang-content-mismatch` on the `/ja/` pages; regina keeps its 67 `/br/` pages |
+| M3 | coin-savoyard, yonahotel (rescan) | the 31 canonical copies set aside and 16 duplicated `hreflang-no-return-link` findings gone; yonahotel's 11 parameter copies gone |
+| M4 | leprieuredeboulogne (rescan), domaine-d-auriac, yonahotel | no `/feed` page; the methodology's two HTTP-error counts agree |
+| M5 | any regenerated analysis citing CrUX | field data described as the site's, never the homepage's |
+| M6 | domaine-d-auriac, leprieuredeboulogne, regina-hotel, yonahotel (re-render) | no note on auriac; 2, 7 and 18 failed pages stated |
+| M7 | yonahotel (rescan) | none of the 11 « Elsewhere starts Here » shells analysed |
+| #562 | aflatta (rescan) | no `focus-order-mismatch` on `/chambres-et-suites` |
 | Ledger | every audit | start from `pnpm measure:audit-data-quality` alerts: each is explained in the notes or recorded |
 
 Other carried checks:
 
-- Angle 8: the French per-rule copy review is still partial. Sweep 11 read
-  five more labels (listed in its notes).
-- Angle 17 (new): list the scanner changes since each audit's scan date that
-  a refresh cannot replay.
+- Angle 8: the French per-rule copy review is still partial.
+- Angle 18 (new): every fact a report states twice (page counts, measured
+  pages, HTTP errors, occurrence totals) says the same thing both times.
 
 ## Sweeps
 
@@ -72,10 +76,14 @@ backlog.
 | 9 | 2026-09-28 | 21 latest full audits, replayed in place with the deployed `fa806424` core | 1 to 14 (12 not applicable; 8 partial); fresh angle became 15 | yes | 3 | Part J (J1 to J3) |
 | 10 | 2026-09-29 | 28 latest full audits (21 refreshed on `9ad924f7`, 8 sites new to the hunt) | 1 to 15 (12 not applicable; 8 partial); fresh angle became 16 | yes | 6 | Part K (K1 to K6) |
 | 11 | 2026-09-29 | 28 latest full audits (refreshed on `2d4afdd6`; 4 rescans) | 1 to 16 (8 partial); fresh angle became 17 | yes | 2 / 3 | Part L (L1, L5); #562 to #564 |
+| 12 | 2026-09-30 | 38 latest full audits (refreshed on `d971a983`; 3 rescans, 10 sites new) | 1 to 17 (8 partial); fresh angle became 18 | yes | 7 / 0 | Part M (M1 to M7) |
 
-Trend of new material defects per sweep: 25, 9, 8, 7, 4, 7, 7, 3, 3, 6, 5.
+Trend of new material defects per sweep: 25, 9, 8, 7, 4, 7, 7, 3, 3, 6, 5, 7.
 It has not converged by count; sweep 11's five are two blocking and three
-backlog, and none changes a grade or a legal statement. Sweeps that read sites no earlier sweep had seen find the
+backlog, and none changes a grade or a legal statement. Sweep 12's seven are
+all blocking; four were found only on the ten new sites, and three (M5, M6,
+M4's count split) are report sentences that no earlier sweep compared with
+each other. Sweeps that read sites no earlier sweep had seen find the
 most: sweep 8 (nine new sites) and sweep 10 (eight new sites, four of its six
 defects found only on them).
 
@@ -122,13 +130,23 @@ Settled or moot:
 | hotelmacchi's booking-engine button is two `color-contrast` findings, one under `widgets.secure-hotel-booking.com` (80) and one under an unresolved frame origin (4), same colour pair | sweep 10 | open; outside the grade |
 | lacoorniche's TheFork booking frame served the crawler a DataDome captcha (118 frame records); the report does not say the widget was not evaluated | sweep 10 | open |
 | The Hijiffy chat greeting in a same-origin `about:blank` frame counts as frame content (yonahotel 1, hotelcapucines 2 `color-contrast`) | sweep 10 | open |
-| yonahotel's quote-wrapped `https:` and `mailto:` links land on the site's catch-all page; 3 are analysed as content | sweep 10 | open |
+| yonahotel's quote-wrapped `https:` and `mailto:` links land on the site's catch-all page; 3 are analysed as content | sweep 10 | became part of M7 (11 shells) |
 | The evidence-quality verdict is `failed` on all 28 audits (`environment-unapproved` everywhere), so the dashboard verdict does not tell audits apart | sweep 10 | open, outside the data |
 | haaitza's live preview states « Critique 6 », one of them the false `noindex-on-public-page` (K5) | sweep 10 | kept by the standing decision on sent previews |
 | clos-sainte-marie is one document served under six URLs (sitemap route aliases), so its counts are one document six times; no rule reports duplicate content | sweep 11 | open, no slice |
-| grand-hotel-opera's Tarteaucitron button contrast appears on one page in one run and not in the next (consent banner state) | sweep 11 | open |
+| grand-hotel-opera's Tarteaucitron button contrast appears on one page in one run and not in the next (consent banner state); its jQuery UI tab labels (1.74:1) are a violation in one run and `bgOverlap` in the next, because the site animates the tab's opacity (live 0.62) | sweep 11 | open, widened in sweep 12 |
 | grand-hotel-opera's preview (emailed 2026-09-28) was built on the pre-rescan audit: « Sérieux 12 » against 10 now | sweep 11 | kept by the standing decision on sent previews |
 | domaine-d-auriac and yonahotel job rows still show the pre-K3 « Report issue »; no report was regenerated after the refresh | sweep 11 | open, operator action |
+| chateaudecodignat's resumed run reused Lighthouse data for `/chambres-deluxe` after the replan stopped selecting it: « agrégées sur 61 pages » beside « 60 mesurées », and that page is the worst page for TBT and FCP | sweep 12 | open |
+| `llms-txt-missing` is emitted on coin-savoyard although its check recorded a 403; the site answers 403 to every unknown path, so the absence is true | sweep 12 | open |
+| A job keeps `failedPhase: report-fr` and its error after the operator acknowledged the blocked pages and the report was produced | sweep 12 | open |
+| `measure-audit-data-quality.mjs` counts Cloudflare's `challenge-platform` script as a challenge marker (chateaudecodignat) | sweep 12 | open, tooling |
+| The legal-notice extractor returns null name and address on leprieuredeboulogne, though both are on the page; the report sentence (identifiers only) is accurate | sweep 12 | open |
+| closdesarts serves its menu PDFs from extensionless URLs (« Download is starting »); 8 are recorded as `error` | sweep 12 | open |
+| The critical lab CLS finding bundles a page at 0.102 (bellesrives `/br/seminarios`) | sweep 12 | open |
+| labaignoirelacanau's wave-only pages include Wix member profiles and shop products | sweep 12 | open |
+| chateaudecodignat's homepage inlines 14.6 MB of SVG (the largest drawings twice); the report says so only through the minor, generic `total-byte-weight`, while its lab FCP median is 15.6 s. Product gap for the operator: name the dominant payload in the performance priority | sweep 12 | open, operator question |
+| The prepare-prospects skill missed that atrium-hotel is a Best Western: the chain is in the site title, not the directory name | sweep 12 | open, tooling |
 | Titles of 61 to 65 characters flagged as « much longer than 60 » | sweep 4 | fixed by F13 |
 | villasfoch EN and ES pages carry French titles | sweep 5 | became F12, shipped |
 | chicago lab CLS doubt | sweep 4 | explained in sweep 5 as bimodal runs, covered by F9 |
@@ -487,3 +505,78 @@ rescans' French PDFs were read as text in the scratchpad.
   findings compare article numbers (fixed by F4). Both need rescans, not
   code. A language check of every page added L5: regina-hotel declares its
   Portuguese pages Breton.
+
+## Sweep 12 notes
+
+Audits: the 38 latest full audits with findings on the VPS, refreshed on
+`d971a983` before the sweep. Ten are new to the hunt (atrium-hotel,
+bellesrives, chateaudecodignat, clarancehotel, closdesarts, coin-savoyard,
+hotel-langres, hotel-particulier, leplacidehotel, leprieuredeboulogne); three
+are rescans (atlantichotel, whistlerparis, grandhotelbellevue), each compared
+with its previous run. Read in place with read-only scripts in the app
+container, and the database read the same way. chateaudecodignat's,
+bellesrives' and leprieuredeboulogne's French PDFs were read as text in the
+scratchpad.
+
+- Ledger alerts: the 7 carried ones are explained as before (held walks on
+  auriac, alpes, macchi, regina and villasfoch; lacoorniche `image-alt`;
+  grand-hotel-opera's old `structured-data`). New: atrium-hotel's keyboard
+  check evaluated 0 of 1 pages, explained by M1. chateaudecodignat's
+  challenge markers are Cloudflare's `challenge-platform` script (minor,
+  tooling).
+- Population: M1 (atrium-hotel, 1 of 39 pages analysed), M3 (coin-savoyard 31
+  canonical copies, yonahotel 11 parameter copies), M4 (prieuré feeds) and
+  M7 (yonahotel's 11 catch-all shells). No nested-trap page remains.
+- Acquisition: no new failure class. Every stored `bot-challenge` marker on
+  the new sites is a Cloudflare script on a page that rendered.
+- Per-rule: every critical and serious rule on the ten new sites sampled.
+  True: hotel-langres `keyboard-trap` (live), broken links on three sites
+  (live 404s), closdesarts `hreflang-target-invalid` and security headers,
+  leplacidehotel `jsonld-invalid`, bellesrives `text-missing-from-raw-html`,
+  the entity findings of codignat, hotel-particulier and lacoorniche `/en`,
+  prieuré's and coin-savoyard's legal-notice findings (coin-savoyard's link
+  redirects to `/fr`). yonahotel's `document-title` on its room pages is
+  true (live: no `<title>` in the head). New: M2.
+- Counting: `hreflang-target-invalid` stays per target (closdesarts 5, the
+  existing doubt); M3's copies split one hreflang defect into 16.
+- Absence: coin-savoyard answers 403 to every unknown path, so its sitemap
+  and `llms.txt` absences are true.
+- Measurements: bellesrives' lab figures plausible without CrUX;
+  chateaudecodignat's lab FCP median of 15.6 s is real (14.6 MB of inline
+  SVG, live). Its lab count mismatch comes from a resumed run (minor).
+- Attribution: Complianz is filed as a third party by the report's vendor
+  table, as decided; its colours are the site's configuration on all three
+  audits that show it.
+- Client surfaces: chateaudecodignat's cover, severity totals, category
+  totals, priority counts (287 occurrences over 5 findings) and WCAG table
+  match its findings; its « Seuil ou parcours non observé » card with an NN
+  headcount uses the approved generic line. New: M6, and M4's HTTP-error
+  count split.
+- Stored products: atrium-hotel, coin-savoyard, leplacidehotel and
+  leprieuredeboulogne have reports and no preview or draft; hold them.
+  The blocked-pages gate held on five audits, each acknowledged by the
+  operator.
+- Terminal state: a job keeps `failedPhase: report-fr` after the
+  acknowledgment and the report (minor).
+- Determinism: the three rescans and grand-hotel-opera against their
+  previous runs. Every difference is lab variance, CrUX, F4, `a2b99fac`,
+  #497, or whistlerparis's `/en/book.html` now classified with its
+  booking-redirect siblings (the old `visited` was the error). The one
+  unexplained flip, grand-hotel-opera's tab labels, is the site's opacity
+  animation (live probe; minor, merged with the Tarteaucitron item).
+- Replay against closed slices: L1, L5, #563 and #564 hold; aflatta's
+  `focus-order-mismatch` stays until it is rescanned (#562).
+- Model prose against facts: M5. The other obligation and count sentences
+  read on the new sites match.
+- Page state during interaction: only atrium-hotel's and villasfoch's walks
+  are confined to trailing overlays, and both are recorded inconclusive.
+- Same component, same verdict: Complianz on three audits, YouTube and
+  Hijiffy as in sweep 11.
+- Scan-time results older than their checker (angle 17): the nine audits
+  scanned before `a2b99fac` and `ec3c8837` were checked; haaitza,
+  lacoorniche and hoteldegarlande do serve an `llms.txt` (live), and
+  alexanderpark's legal-notice finding is the known K6 target.
+- Fresh angle, one fact stated twice in one report (now angle 18): the
+  methodology page states its measured-page and HTTP-error counts twice, in
+  different sentences built from different sources. It found M6 and the M4
+  count split, and the minor 60 against 61 on chateaudecodignat.
