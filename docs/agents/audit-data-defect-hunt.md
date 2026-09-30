@@ -7,8 +7,10 @@ The operator starts it with one line:
 > `docs/agents/audit-data-defect-hunt.md`.
 
 Since 2026-09-30 the hunt is **occasional**, not a gate. What stands between
-the data and a client is the `audit-finalizer` skill, which checks one audit's
-scan data before its preview or report goes out. A sweep runs:
+the data and a client is the `audit-finalizer` skill: a read-only quick check
+of each outreach preview (SEND or HOLD), and a full check of the scan data
+before a paid report goes out. The quick check's backlog rows in the ledger's
+Finalizer runs table are fixed in batches. A sweep runs:
 
 - after a batch of about ten sites new to the hunt;
 - after a large crawler or normalization change;

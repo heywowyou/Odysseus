@@ -1,32 +1,46 @@
 ---
 name: audit-finalizer
-description: "Explicit pre-send finalization of one audit, for an outreach preview or a paid client report: check the audit's scan data first (page population, serious findings, absence claims, facts stated twice), fix it or rescan the site once when it is wrong, then read the preview as the prospect would, or finalize the report PDF until clean and upload it. Never publishes, approves or sends."
-argument-hint: "<preview|report> <audit-id>"
-disable-model-invocation: true
+description: "Pre-send check of audits before they go out. Use when the operator asks to check or finalize the outreach preview or the paid report of one audit, a prospect, or a batch such as 'the last 10 audits'. preview (default): a read-only quick check, about ten minutes per audit, that confirms the preview's figures, its three priority cards and its regulatory block and returns SEND or HOLD, with non-blocking defects recorded for a batch fix. preview --fix and report: the full finalization that may fix source, deploy, refresh or rescan the site once, and for report finalizes and uploads the PDF. Never publishes, approves or sends."
+argument-hint: "<preview|preview --fix|report> <audit-id | prospect | last N>"
 ---
 
 # Audit finalizer
 
-Use this skill only when the operator explicitly asks to finalize one audit
-before it goes out:
+Use this skill when the operator asks to check an audit before it goes out.
+The operator may name it (`/audit-finalizer`) or ask in plain words ("check
+the previews of the last 10 audits", "finalize the report for this hotel").
+Ordinary words such as "audit" or "review" about something else do not start
+it.
 
-- `preview`, before a prospect's first email carries the outreach preview;
-- `report`, before a paid client report is delivered.
+It has three modes:
 
-Both targets start with the same **scan check** (Stage 1), because both are
-built from the same stored scan. The defect hunt's twelve sweeps showed why
-(plan 075, `plans/defect-hunt-ledger.md`): the tool converges on the sites it
-has already read, while each site it has not read before brings roughly one
-blocking defect per two sites, most of them in which pages were analysed. A
-sweep over every audit never finishes; one audit checked before it goes out
-does. Sweeps still run from time to time, after a batch of new sites or a
-large crawler change, but they no longer gate what is sent.
+- `preview` (the default for outreach): a **quick check**, read-only, about
+  ten minutes per audit, before a prospect's first email carries the outreach
+  preview. It answers one question: can this preview go out as it is? The
+  verdict is **SEND** or **HOLD**. It fixes nothing, deploys nothing and
+  rescans nothing; what it finds that does not block the send is recorded
+  for a batch fix.
+- `preview --fix`: the full finalization of one held preview (Stage 1, then
+  Stage 2P). Run it only when the operator asks, typically on a HOLD the
+  operator wants to send anyway after a fix.
+- `report`: the full finalization of a paid client report (Stage 1, then
+  Stage 2R), before delivery.
 
-The run **delivers** its result. It is not a bug-hunting pass that hands
-defects back to the operator. It does not stop at "fixed in source, pending
-deploy", and it never lets a preview or a report go out with a known defect.
+Why the preview is a quick check: outreach sends many previews, and a fix,
+deploy and rescan per email costs an hour or more. A preview is short and
+deterministic; only a few defects can mislead a prospect (see the send/hold
+rule). Everything else waits for the next batch fix, which deploys once and
+rescans the held audits together. The defect hunt's sweeps (plan 075,
+`plans/defect-hunt-ledger.md`) showed that each site new to the tool brings
+roughly one blocking defect per two sites; the quick check catches the ones
+that reach a preview, and the batch fixes them for every later site.
 
-The target state:
+The full modes **deliver** their result. They are not bug-hunting passes
+that hand defects back to the operator. They do not stop at "fixed in source,
+pending deploy", and they never let a preview or a report go out with a known
+defect.
+
+The target state of the full modes:
 
 > The scan data describes the site: the right pages analysed, the serious
 > findings true, the absence claims confirmed. The preview or report built
@@ -41,12 +55,28 @@ boundary as an automated diagnostic.
 
 ~~~text
 /audit-finalizer preview <audit-id>
+/audit-finalizer preview last 10
+/audit-finalizer preview --fix <audit-id>
 /audit-finalizer report <audit-id>
 ~~~
 
-Codex exposes the same skill as `$audit-finalizer`. Invoking it with a target
-and an audit id authorizes, for that audit and its site only, everything in
-**Authorized actions** below. It needs no further permission prompts.
+Codex exposes the same skill as `$audit-finalizer`. A plain-language request
+from the operator is the same invocation. The target may be an audit id, a
+prospect (resolve its qualifying Full scan), or a batch:
+
+- **last N**: from `GET /api/scans?limit=100`, keep the jobs with `type`
+  `full-audit`, `status` `complete`, an `auditId` and a `prospectId`; keep the
+  newest per prospect (a rescan supersedes the older audit); sort by
+  `finishedAt`, newest first; take N. Say in the result which audits were
+  picked.
+
+A batch runs the quick check on each audit in turn and ends with one summary
+table. `preview --fix` and `report` take one audit only.
+
+Invoking the quick check authorizes actions 1 and 2 below for the audits it
+names. Invoking `preview --fix` or `report` with an audit authorizes, for that
+audit and its site only, everything in **Authorized actions**. Neither needs
+further permission prompts.
 
 For `report`, default to the French report. Review English only when the
 operator says it is part of this delivery. Do not generate English merely
@@ -344,7 +374,9 @@ digests and every override `from` text are now different.
 
 ## Load the minimum authoritative context
 
-Before editing anything, read:
+The quick check needs only `docs/rules/outreach-rules.md` section 6bis, and
+`docs/rules/obligation-basis.md` when the regulatory block is present. The
+full modes read, before editing anything:
 
 - the host charter and docs/agents/documentation-map.md;
 - docs/rules/normalization-rules.md, for Stage 1;
@@ -359,7 +391,112 @@ Before editing anything, read:
 Do **not** read docs/report/audit-rehearsal-notes.md before the report's first
 blind pass.
 
-## Stage 1: scan check (both targets)
+## Preview quick check (`preview`)
+
+Read-only. Budget about ten minutes per audit; a doubt that takes longer to
+settle is itself a reason to HOLD, not to keep digging. Work under
+`reports/check-<site>-<audit-short-id>/` (gitignored, `0600`).
+
+### Q1. Resolve and fetch
+
+~~~bash
+node scripts/dashboard-request.mjs GET /api/audits/<audit-id>
+node scripts/fetch-client-report.mjs <audit-id> reports/<dir> fr preview
+~~~
+
+Note the site, the scan date, `findingsStale` and `outreach.hasLivePreview`.
+The `fr` bundle gives `manifest.json`, `findings.json` and the selected
+analysis to reconcile against. A fetch refusal is a HOLD with its reason:
+`report-not-ready` (regenerate the report in the dashboard, then check again),
+`coverage-incomplete` (the crawl did not complete), `no-audit` or
+`domain-mismatch` (not the prospect's qualifying scan). Stale findings are a
+HOLD: the preview would state figures a refresh changes.
+
+### Q2. Alerts
+
+~~~bash
+scripts/vps-app.sh node /app/scripts/measure-audit-data-quality.mjs /data/artifacts/<host>/<run>
+~~~
+
+Read `alerts` and `populationAlerts`. Only the alerts that move a figure the
+preview prints, or undermine a card, matter here: the homepage not analysed,
+most of the site redirecting to the homepage, pages that are copies of one
+document, a thin analysed share, a serious site-wide absence claim. Glance at
+the page statuses in `manifest.json`: the homepage and the pages a hotel
+client expects (rooms, booking, contact, legal notice) should be analysed.
+Other alerts are recorded, not chased.
+
+### Q3. Figures
+
+Check every figure the preview prints against its source:
+
+- inventoried, content-checked and performance-measured page counts against
+  the manifest's coverage;
+- distinct findings, affected pages, severity totals and category totals
+  against `findings.json`.
+
+### Q4. The three cards
+
+For each card, take its representative finding (the priority's rule with the
+most work) and read two samples: page, selector, snippet. Ask whether the
+hotel's web agency would confirm it. When in doubt, check one live page (the
+crawler's user agent, `robots.txt` respected). Note whether the card order is
+defensible for a hotel director; an odd order alone does not block.
+
+### Q5. Regulatory block and text
+
+The regulatory block matches the analysis's `obligationAssessment`, never
+says the business is bound, and prints no deadline, sanction or legal
+conclusion (`docs/rules/obligation-basis.md`). Then read the rasterized
+`preview.pdf` once, page by page, as the hotel's director: native formal
+French with vouvoiement, no em or en dash, no URL, selector, rule id or scan
+date, no broken layout, the price, the ask and the disclosures present.
+
+### Q6. Send or hold
+
+**HOLD** only when one of these holds:
+
+1. a card's finding is false, or does not hold on the live site;
+2. a printed figure disagrees with its source, or is materially wrong about
+   the site: the homepage missing from the analysed pages, most analysed
+   pages not being real pages, a count off by enough to change what a
+   careful reader believes (as a rule of thumb, more than 10 percent);
+3. the regulatory block or any sentence overstates a legal or commercial
+   claim;
+4. the preview could not be fetched, or findings are stale;
+5. a defect a prospect would see at once: broken layout, text in the wrong
+   language, a dash on the public preview, a contradiction between two
+   printed numbers.
+
+**SEND** otherwise. A true defect that does not meet those tests (a
+debatable card order, a figure off by one or two, a wrong count inside a
+finding the preview does not print, a missing finding, a minor finding that
+is doubtful) does not hold the email. Record it as backlog.
+
+The quick check never fixes, commits, deploys, refreshes, regenerates or
+rescans. On HOLD, the operator chooses: wait for the next batch fix, skip the
+prospect, or ask for `preview --fix` on that audit.
+
+### Q7. Record
+
+Append one row per checked audit to the **Finalizer runs** table of
+`plans/defect-hunt-ledger.md`: date, site and short audit id, `preview`,
+SEND or HOLD, defects found (blocking / backlog, one line each, with the hunt
+brief's classes), `-` for fixes and rescan. A defect already recorded in an
+earlier row is named with "seen before" so the batch fix sees how often it
+recurs. The rows are committed with the next batch fix; an uncommitted
+ledger row is never a reason to hold. File no issue from the quick check:
+the batch fix triages the backlog rows into fixes and issues.
+
+### Batch fix (outside this skill's runs)
+
+When the operator asks, or when holds accumulate, one session takes the
+backlog and HOLD rows of the Finalizer runs table, fixes the systemic ones in
+shared code with tests, commits, deploys once, refreshes or rescans the held
+audits (rescans queued together with the pacing rules of **Rescanning**),
+and runs the quick check on them again.
+
+## Stage 1: scan check (`preview --fix` and `report`)
 
 Start a ledger in the working directory under `reports/` and keep it to the
 end of the run: every alert and doubt, what settled it, and every defect with
@@ -460,7 +597,7 @@ issue with the defect hunt's evidence bar (`docs/agents/audit-data-defect-hunt.m
    rescan's own job ran the analysis and the French report; Stage 1 restarts
    from 1.1 on it. The old audit stays as it was.
 
-## Stage 2P: the outreach preview
+## Stage 2P: the outreach preview (`preview --fix`)
 
 The preview is the prospect's first sight of the work. It is deterministic:
 counts, severity and category totals, three priority cards from the reviewed
@@ -689,7 +826,10 @@ actions.
 
 ## Release gates
 
-Both targets require:
+These gates are the full modes'. The quick check's only gate is the send/hold
+rule (Q6).
+
+`preview --fix` and `report` both require:
 
 - [ ] Stage 1 complete, every alert explained or fixed, no open defect;
 - [ ] findings changed only through their producer;
@@ -725,9 +865,10 @@ READY-FOR-CLIENT also requires:
 
 ## Terminal statuses
 
-Use exactly one:
+The quick check ends each audit on **SEND** or **HOLD (<rule number>:
+<reason>)**. The full modes use exactly one of:
 
-- **PREVIEW-READY** (preview): the gate is satisfied; the operator publishes.
+- **PREVIEW-READY** (`preview --fix`): the gate is satisfied; the operator publishes.
 - **READY-FOR-CLIENT** (report): the gate is satisfied and the PDF is uploaded.
 - **BLOCKED-NEW-SCAN-REQUIRED**: the truth needs an acquisition this run
   cannot make (the rescan is spent, or the site blocks the crawler).
@@ -741,7 +882,7 @@ fix when blocked.
 
 ## Recording
 
-Append one row to the **Finalizer runs** table of
+The quick check records as Q7 says. The full modes append one row to the **Finalizer runs** table of
 `plans/defect-hunt-ledger.md`: date, audit (site and short id), target,
 status, defects found (blocking and backlog, with the hunt brief's classes),
 fixes and commits, and whether a rescan ran. No client data beyond the site
@@ -749,6 +890,17 @@ name. This table is how the next occasional sweep knows what the finalizer
 already caught.
 
 ## Final response
+
+Quick check, one line per audit, then one line per HOLD or backlog defect:
+
+~~~text
+PREVIEW CHECK: <n> audits, <s> SEND, <h> HOLD
+| Site | Audit | Verdict | Blocking | Backlog |
+| <site> | <short id> | SEND | - | <one line each, or -> |
+| <site> | <short id> | HOLD (2) | <what, with the evidence> | ... |
+~~~
+
+Full modes:
 
 ~~~text
 FINALIZATION: PREVIEW-READY | READY-FOR-CLIENT | <blocked status>

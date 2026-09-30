@@ -125,7 +125,6 @@ const explicitOnlySkills = [
   '.agents/skills/dashboard-ux-audit/SKILL.md',
   '.agents/skills/public-website-audit/SKILL.md',
   '.agents/skills/scan-report-audit/SKILL.md',
-  '.agents/skills/audit-finalizer/SKILL.md',
   '.agents/skills/impeccable/SKILL.md',
 ];
 for (const skillPath of explicitOnlySkills) {
@@ -139,6 +138,24 @@ for (const skillPath of explicitOnlySkills) {
   const frontmatter = frontmatterMatch?.[1] ?? '';
   if (!/^disable-model-invocation:\s*true\s*$/m.test(frontmatter)) {
     errors.push(`${skillPath} changes the normal workflow and must remain explicit-only.`);
+  }
+}
+
+// The audit finalizer is model-invocable so the operator can ask for a batch
+// ("the last 10 previews") in plain words (trade-off 127, revised). Its
+// description must keep it to the operator's request and its read-only
+// default, so a model does not start its writing modes on its own.
+const finalizerPath = resolve(repoRoot, '.agents/skills/audit-finalizer/SKILL.md');
+if (!existsSync(finalizerPath)) {
+  errors.push('Missing skill: .agents/skills/audit-finalizer/SKILL.md');
+} else {
+  const finalizerFrontmatter =
+    readFileSync(finalizerPath, 'utf8').match(/^---\n([\s\S]*?)\n---(?:\n|$)/)?.[1] ?? '';
+  const description = finalizerFrontmatter.match(/^description:\s*(.*)$/m)?.[1] ?? '';
+  if (!/when the operator asks/i.test(description) || !/read-only/i.test(description)) {
+    errors.push(
+      ".agents/skills/audit-finalizer/SKILL.md must describe itself as started on the operator's request, with a read-only default.",
+    );
   }
 }
 

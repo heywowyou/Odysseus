@@ -125,9 +125,11 @@ document explicitly promotes their content.
 - `docs/agents/audit-data-defect-hunt.md`: explicit-only brief for an
   occasional read-only search of every stored audit, after a batch of new
   sites or a large crawler change.
-- `.agents/skills/audit-finalizer/SKILL.md`: explicit pre-send finalization of
-  one audit: its scan data first, then its outreach preview or its paid report
-  against the exact PDF and stored lineage.
+- `.agents/skills/audit-finalizer/SKILL.md`: pre-send check of audits, on the
+  operator's request: a read-only quick check of the outreach preview (SEND or
+  HOLD, one audit or a batch), or the full finalization of one audit's scan
+  data and then its preview (`--fix`) or its paid report against the exact PDF
+  and stored lineage.
 - `.agents/skills/*`: optional specialist workflows. Workflow-changing modes
   are explicit-only.
 

@@ -6434,3 +6434,23 @@ web); sweeping only new sites without a per-audit check (a blocking defect
 can still reach a client between sweeps); a fully automatic gate that blocks
 publication on any alert (an alert is a place to look, and a site can
 legitimately serve one page under several addresses).
+
+**Revised the same day (operator decision, 2026-09-30): the preview check is
+quick and read-only.** The first full preview run (grandhoteldesalpes) found
+three real systemic defects and spent an hour on fixes, a deploy and a
+rescan before one email could go out. That does not scale to daily outreach.
+`/audit-finalizer preview` is now a read-only check of about ten minutes that
+confirms the preview's figures, its three cards and its regulatory block and
+answers SEND or HOLD. It holds only for a false card, a figure that disagrees
+with its source or is materially wrong about the site, a legal overstatement,
+a stale or unfetchable preview, or a defect a prospect sees at once.
+Everything else is recorded in the ledger's Finalizer runs table and fixed in
+batches: one deploy, then the held audits refreshed or rescanned together.
+The full flow survives as `preview --fix` and `report`. The skill is
+model-invocable so the operator can ask for a batch ("the last 10") in plain
+words.
+
+Accepted: a preview can go out with a known non-blocking defect, such as a
+debatable card order or a figure off by one. Rejected: fixing each defect
+before its email (an hour per prospect), and sending without any check (a
+false card is the first thing a prospect reads).

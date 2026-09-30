@@ -153,10 +153,13 @@ were deleted (outreach state, not audit data).
 
 ## Finalizer runs
 
-One row per `audit-finalizer` run (`.agents/skills/audit-finalizer/SKILL.md`).
+One row per `audit-finalizer` run (`.agents/skills/audit-finalizer/SKILL.md`),
+and one per audit for a batch quick check. Backlog and HOLD rows are the
+input of the next batch fix.
 
 | Date | Audit | Target | Status | Defects (blocking / backlog) | Fixes | Rescan |
 |---|---|---|---|---|---|---|
+| 2026-09-30 | grandhoteldesalpes 390e56b9 | preview (full run, stopped by the operator) | SEND under the quick-check rule (the old preview stands) | Blocking: none under Q6. Backlog: card order led by a moderate heading priority because the ranking summed severity over findings (ranking); the homepage's Lighthouse run landed on /en/ because Chromium on Linux ignores --lang, so 20 pages counted as speed-measured against 19 valid runs (acquisition); the measure's replay dropped the sitemap redirect input (tooling); the sitemap redirect count includes 39 client-side language moves (acquisition, #573) | 3c21c60d, 1b2b986a, 1690f38e, deployed as build 1690f38e | Launched 995685a4, cancelled by the operator |
 
 ## Sweep 4 notes
 
