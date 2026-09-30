@@ -541,6 +541,91 @@ describe('enforceSeverityReachOrdering', () => {
     expect(result.map((t) => t.priorityRank)).toEqual([1, 2]);
   });
 
+  it('does not let a rule split into more findings outrank more severe work on the same pages', () => {
+    const pages = firstManifestPageUrls(10);
+    // One heading-order defect, split by normalization into one moderate
+    // finding per skipped level pair, against two serious contrast findings.
+    const headingFindings = [0, 1, 2, 3, 4].map((index) =>
+      makeFinding({
+        findingId: `f-heading-${index}`,
+        ruleId: 'heading-hierarchy-skip',
+        severity: 'moderate',
+        pageUrls: pages,
+        occurrences: 10,
+      }),
+    );
+    const contrastFindings = [0, 1].map((index) =>
+      makeFinding({
+        findingId: `f-contrast-${index}`,
+        ruleId: 'color-contrast',
+        severity: 'serious',
+        pageUrls: pages,
+        occurrences: 10,
+      }),
+    );
+    const themes: StructureThemeWithKey[] = [
+      theme(
+        't-heading',
+        headingFindings.map((finding) => finding.findingId),
+        { priorityRank: 1, effort: 'medium', impact: 'medium' },
+      ),
+      theme(
+        't-contrast',
+        contrastFindings.map((finding) => finding.findingId),
+        { priorityRank: 2, effort: 'medium', impact: 'medium' },
+      ),
+    ];
+
+    const result = enforceSeverityReachOrdering(themes, [...headingFindings, ...contrastFindings]);
+
+    // Serious on 10 pages (30) against moderate on the same 10 pages (20),
+    // however many findings each rule was split into.
+    expect(result.map((t) => t.themeKey)).toEqual(['t-contrast', 't-heading']);
+  });
+
+  it('weighs each page by the worst finding the theme has there', () => {
+    const findings: Finding[] = [
+      makeFinding({
+        findingId: 'f-critical-one-page',
+        ruleId: 'label',
+        severity: 'critical',
+        pageUrls: firstManifestPageUrls(1),
+        occurrences: 1,
+      }),
+      makeFinding({
+        findingId: 'f-moderate-wide',
+        ruleId: 'placeholder-only-label',
+        severity: 'moderate',
+        pageUrls: firstManifestPageUrls(6),
+        occurrences: 6,
+      }),
+      makeFinding({
+        findingId: 'f-serious-wide',
+        ruleId: 'color-contrast',
+        severity: 'serious',
+        pageUrls: firstManifestPageUrls(5),
+        occurrences: 5,
+      }),
+    ];
+    const themes: StructureThemeWithKey[] = [
+      // 4 on one page + 2 on the five others = 14, not 4 x 6 = 24.
+      theme('t-forms', ['f-critical-one-page', 'f-moderate-wide'], {
+        priorityRank: 1,
+        effort: 'medium',
+        impact: 'medium',
+      }),
+      theme('t-contrast', ['f-serious-wide'], {
+        priorityRank: 2,
+        effort: 'medium',
+        impact: 'medium',
+      }),
+    ];
+
+    const result = enforceSeverityReachOrdering(themes, findings);
+
+    expect(result.map((t) => t.themeKey)).toEqual(['t-contrast', 't-forms']);
+  });
+
   it('falls back to the impact/effort ratio when severity and reach tie', () => {
     const pages = firstManifestPageUrls(3);
     const findings: Finding[] = [

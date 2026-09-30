@@ -280,44 +280,36 @@ export function enforceQuickWinFloor(
   return renumberRanks(reordered);
 }
 
-/** Per-theme severity pressure: the sum of SEVERITY_ORDER weights
- *  (critical 4, serious 3, moderate 2, minor 1 - the same weights
- *  computeBrokennessScore uses) across the theme's distinct findings,
- *  i.e. 4x the critical count + 3x the serious count + 2x the moderate
- *  count + the minor count. Deliberately findings, not occurrences:
- *  occurrences conflate pages with DOM nodes (docs/rules/
- *  normalization-rules.md section 3), while severity pressure is meant
- *  to measure how much harm this theme's rule family causes, with reach
- *  measured separately below so the two signals stay readable apart. */
-function severityPressure(
+/** Per-theme severity x reach: for each distinct audited page the theme's
+ *  findings appear on, the SEVERITY_ORDER weight (critical 4, serious 3,
+ *  moderate 2, minor 1 - the same weights computeBrokennessScore uses) of
+ *  the worst finding on that page, summed over those pages. The page count
+ *  is the reach; the per-page worst severity is the harm there.
+ *
+ *  It used to be the sum of the weights over the theme's distinct findings,
+ *  multiplied by its page count. That measured how finely normalization
+ *  split a rule, not how much harm the theme causes: a heading-order theme
+ *  whose skips split into seven moderate findings by level pair (weight 14)
+ *  outranked a contrast theme of four serious findings (weight 12) on the
+ *  same 37 pages, and a hotel's first priority became a moderate one.
+ *  Deliberately findings, not occurrences: occurrences conflate pages with
+ *  DOM nodes (docs/rules/normalization-rules.md section 3); volume has its
+ *  own bounded rule, applyOccurrenceWeighting. A theme whose findings
+ *  resolve to nothing scores 0 and falls through to the tiebreaks. */
+function severityReach(
   theme: StructureThemeWithKey,
   findingsById: ReadonlyMap<string, Finding>,
 ): number {
-  return themeFindings(theme, findingsById).reduce(
-    (sum, finding) => sum + SEVERITY_ORDER[finding.severity],
-    0,
-  );
-}
-
-/** Distinct audited pages the theme's findings actually appear on, the
- *  numerator of its reach share. The denominator (crawled pages) is the
- *  same for every theme in a run, so ordering by
- *  severityPressure x distinctPageCount is ordering by severity x reach
- *  share without ever dividing - integer weights, exact comparisons, no
- *  float equality anywhere in the sort. Themes carry no reach data of
- *  their own (structure-schema.ts), so this is derived from the one
- *  thing they do carry: findingIds, resolved against the findings'
- *  pageUrls. A theme whose findings resolve to nothing scores 0 and
- *  falls through to the tiebreaks. */
-function themePageCount(
-  theme: StructureThemeWithKey,
-  findingsById: ReadonlyMap<string, Finding>,
-): number {
-  const pages = new Set<string>();
+  const worstByPage = new Map<string, number>();
   for (const finding of themeFindings(theme, findingsById)) {
-    for (const url of finding.pageUrls) pages.add(url);
+    const weight = SEVERITY_ORDER[finding.severity];
+    for (const url of finding.pageUrls) {
+      worstByPage.set(url, Math.max(worstByPage.get(url) ?? 0, weight));
+    }
   }
-  return pages.size;
+  let total = 0;
+  for (const weight of worstByPage.values()) total += weight;
+  return total;
 }
 
 /** Issue #295 [Villas Foch, Haaitza]: the definitive full re-sort that
@@ -334,8 +326,8 @@ function themePageCount(
  *
  *  Sort keys, in order:
  *
- *  1. severityPressure x themePageCount, descending - severity x reach
- *     first, per the issue. This is report-feedback-la-corniche.md item
+ *  1. severityReach, descending - severity x reach first, per the
+ *     issue. This is report-feedback-la-corniche.md item
  *     0.8's real lesson generalized: that regression (image-alt, 25
  *     Critique findings on all 18 pages, buried at rank 8 of 12) was
  *     diagnosed as an effort-ratio failure, but the deeper defect is that
@@ -367,7 +359,7 @@ export function enforceSeverityReachOrdering(
 
   const keyed = themes.map((theme) => ({
     theme,
-    weight: severityPressure(theme, findingsById) * themePageCount(theme, findingsById),
+    weight: severityReach(theme, findingsById),
   }));
 
   keyed.sort((a, b) => {

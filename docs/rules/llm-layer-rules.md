@@ -144,6 +144,15 @@ including why occurrence weighting has no exact formula and is expected
 to need tuning against more real reports, in `docs/archive/report-v2-refactor.md`
 part 4.2 (A5, A6).
 
+The primary order, `enforceSeverityReachOrdering` (issue #295), sorts themes
+by severity x reach: over the distinct pages a theme's findings appear on,
+the weight of the worst finding on each page, summed. It counts pages, not
+findings, so a rule that normalization splits into several findings (heading
+skips by level pair, contrast by colour pair) weighs no more than one finding
+on the same pages. The earlier sum over findings let seven moderate
+heading-skip findings outrank four serious contrast findings on the same 37
+pages and open a preview on a moderate priority.
+
 **A theme is one remediation job (issue #297).** The structure prompt used
 to ask only for "roughly 8 to 15 themes a business owner can act on",
 which a real Haaitza report read as a size target: a theme about link and
