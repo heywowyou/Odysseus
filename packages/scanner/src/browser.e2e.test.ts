@@ -22,6 +22,20 @@ describe('launchBrowser', () => {
     expect(body.webSocketDebuggerUrl).toBeDefined();
   }, 30_000);
 
+  it('presents French to a tab opened over the debug port, outside any Playwright context', async () => {
+    const launched = await launchBrowser();
+    browser = launched.browser;
+    const { chromium } = await import('playwright');
+    const cdp = await chromium.connectOverCDP(`http://127.0.0.1:${launched.debugPort}`);
+    try {
+      const page = await cdp.contexts()[0]!.newPage();
+      await page.setContent('<p>x</p>');
+      expect(await page.evaluate(() => navigator.language)).toMatch(/^fr\b/);
+    } finally {
+      await cdp.close().catch(() => undefined);
+    }
+  }, 30_000);
+
   it('closes cleanly', async () => {
     const launched = await launchBrowser();
     browser = launched.browser;

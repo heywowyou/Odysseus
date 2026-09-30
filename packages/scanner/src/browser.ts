@@ -1,5 +1,5 @@
 import { createServer } from 'node:net';
-import { AUDIT_BROWSER_LOCALE } from './audit-locale.js';
+import { AUDIT_BROWSER_LANGUAGE_ENV, AUDIT_BROWSER_LOCALE } from './audit-locale.js';
 import { chromium, type Browser } from 'playwright';
 import { buildSanitizedBrowserEnv } from './browser-isolation-preflight.js';
 import { startEgressProxy, type EgressProxy } from './egress-proxy.js';
@@ -109,7 +109,8 @@ export async function launchBrowser(options: LaunchBrowserOptions = {}): Promise
       const launchArgs = [
         `--remote-debugging-port=${debugPort}`,
         // Lighthouse opens its own tab over the debugging port, outside any
-        // Playwright context, so its `navigator.language` comes from here.
+        // Playwright context, so its `navigator.language` comes from here on
+        // Windows and macOS, and from AUDIT_BROWSER_LANGUAGE_ENV on Linux.
         `--lang=${AUDIT_BROWSER_LOCALE}`,
         ...(proxy?.chromiumArgs ?? []),
         ...(options.extraArgs ?? []),
@@ -123,7 +124,7 @@ export async function launchBrowser(options: LaunchBrowserOptions = {}): Promise
         // credential-shaped, and page JavaScript cannot read the process
         // environment in any case; this removes the reason to rely on that
         // (plan 059 section 3.10).
-        env: buildSanitizedBrowserEnv(process.env),
+        env: { ...buildSanitizedBrowserEnv(process.env), ...AUDIT_BROWSER_LANGUAGE_ENV },
       });
       if (proxy !== undefined) {
         browser.on('disconnected', () => void proxy.close());
