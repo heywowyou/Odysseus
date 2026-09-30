@@ -14,13 +14,17 @@
  * could not conclude, and per axe rule, how many raw detections became no
  * finding. The top-level `alerts` list gathers the thin ones, so a check
  * that silently stopped evaluating, or a filter that started eating real
- * detections, shows up on the next run instead of the next sweep.
+ * detections, shows up on the next run instead of the next sweep. The
+ * page-population alerts (lib/audit-population-alerts.mjs) join them: the
+ * shapes of a wrong analysed-page population the sweeps found by hand. Point
+ * argv[2] at one audit directory to measure that audit alone.
  */
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { buildEvaluationLedger } from './lib/audit-evaluation-ledger.mjs';
+import { buildPopulationAlerts } from './lib/audit-population-alerts.mjs';
 
 const artifactsRoot = path.resolve(
   process.argv[2] ?? process.env.ODYSSEUS_ARTIFACTS_ROOT ?? '/data/artifacts',
@@ -370,6 +374,7 @@ async function main() {
       before,
       after,
       evaluation: evaluationAfter ?? evaluationBefore,
+      populationAlerts: buildPopulationAlerts({ manifest, scans: pages, findings: storedFindings }),
       invariants: {
         occurrenceDelta: after === null ? null : after.occurrences - before.occurrences,
         occurrencesPreserved: after === null ? null : after.occurrences === before.occurrences,
@@ -382,7 +387,9 @@ async function main() {
   }
 
   const alerts = audits.flatMap((audit) =>
-    audit.evaluation.alerts.map((alert) => `${audit.audit}: ${alert}`),
+    [...audit.populationAlerts, ...audit.evaluation.alerts].map(
+      (alert) => `${audit.audit}: ${alert}`,
+    ),
   );
   console.log(JSON.stringify({ artifactsRoot, alerts, audits }, null, 2));
 }
