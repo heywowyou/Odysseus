@@ -59,6 +59,22 @@ const MIN_SCORE = 30;
 const MIN_MARGIN = 2;
 /** A declared language needs this many pages before its text is judged. */
 const MIN_PAGES = 3;
+/** The profile only knows languages written in the Latin script. Text with a
+ *  real share of letters in another script cannot be read by it: its few Latin
+ *  tokens (brand names, « FAQ », « Instagram ») would decide the verdict
+ *  (plan 075 M2, leplacidehotel's Japanese pages read as English). One kanji
+ *  carries what several Latin letters spell, so the bar sits well above half:
+ *  measured on the stored audits, leplacidehotel's `ja` group is 43 % Latin
+ *  and regina-hotel's `zh` group 19 %, while every Latin-script group is
+ *  100 %. */
+const MIN_LATIN_LETTER_SHARE = 0.8;
+
+/** Pure: the share of a text's letters that are Latin script. */
+export function latinLetterShare(text: string): number {
+  const letters = text.match(/\p{L}/gu)?.length ?? 0;
+  if (letters === 0) return 0;
+  return (text.match(/\p{Script=Latin}/gu)?.length ?? 0) / letters;
+}
 
 export interface TextLanguageScore {
   language: string;
@@ -121,6 +137,7 @@ export function extractContentLanguageCandidates(
         [page.title ?? '', ...page.headings.map((heading) => heading.text)].join(' . '),
       )
       .join(' . ');
+    if (latinLetterShare(text) < MIN_LATIN_LETTER_SHARE) continue;
     const detected = scoreTextLanguage(text);
     if (detected.language === declared || detected.language === mainLanguage) continue;
     if (detected.score < MIN_SCORE) continue;

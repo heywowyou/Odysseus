@@ -728,6 +728,7 @@ Rescans needed before these audits' reports go out: atrium-hotel (M1), leprieure
   - Stored audits: a refresh applies it.
   - Target: leplacidehotel loses the `/ja/` finding; regina-hotel keeps its 67 `/br/` pages.
   - Tests: the stored leplacide Japanese shape and the regina Portuguese shape.
+  - **Implemented 2026-09-30.** `html-lang-content-mismatch` skips a declared-language group whose title and heading letters are less than 80 % Latin script. Measured on the stored audits: leplacidehotel's `ja` group 43 %, regina-hotel's `zh` group 19 %, every Latin-script group 100 %. A refresh applies it. Tests: `normalize-content-language.test.ts` (a Japanese shape that scores as English is left alone, regina's Portuguese still reported).
 - **M3. A query-string copy of an analysed page is not a second page.**
   - A page whose canonical names another analysed page and whose URL differs from it only by its query is set aside as a variant, disclosed in the coverage and never given findings. A URL whose only difference from a discovered page is a known tracking or UI-state parameter (`utm_*`, `gclid`, `fbclid`, `_gl`, and the state parameters measured here) takes that page's identity before enqueue.
   - Stored audits: the canonical rule applies on refresh (the canonical is stored); the parameter rule is scan-time.

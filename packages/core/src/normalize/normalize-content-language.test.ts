@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   extractContentLanguageCandidates,
   HTML_LANG_CONTENT_MISMATCH_RULE_ID,
+  latinLetterShare,
   scoreTextLanguage,
   type ContentLanguagePageInput,
 } from './normalize-content-language.js';
@@ -93,5 +94,53 @@ describe('html-lang-content-mismatch (plan 075 L5)', () => {
     ).toEqual([]);
     const mixed = page('/br/mixed.html', 'br', 'Hotel Regina', ['Paris', 'Louvre', 'Tuileries']);
     expect(extractContentLanguageCandidates([...FRENCH, mixed, mixed, mixed])).toEqual([]);
+  });
+
+  // leplacidehotel (2026-09-29): Japanese pages whose few Latin tokens scored
+  // as English.
+  it('never reads a group written mostly in another script', () => {
+    const japanese = [
+      page('/ja/contact', 'ja', 'お問い合わせ｜パリ6区のホテル｜The Garden Hotel', [
+        '連絡先&アクセス',
+        'お問い合わせ',
+        'アクセスとルート',
+        'Follow us on Instagram!',
+      ]),
+      page('/ja/faq', 'ja', 'よくある質問｜The Garden Hotel', [
+        'FAQ',
+        'ホテルに関するよくある質問',
+        'お役立ち情報',
+        'Is there a PRM room in the hotel?',
+      ]),
+      page('/ja/offers', 'ja', 'オファー＆ニュース｜The Garden Hotel', [
+        'オファーとニュース',
+        'パリ6区の中心部にある魅力的なホテル',
+        'The best of the Left Bank for you and your family',
+      ]),
+      page('/ja/breakfast', 'ja', '朝食｜The Garden Hotel', [
+        '朝食のご案内',
+        '毎朝のビュッフェ',
+        'サン・ジェルマン・デ・プレ地区の散策',
+        'Fresh bread and pastries every morning',
+      ]),
+      page('/ja/spa', 'ja', 'スパ｜The Garden Hotel', [
+        'スパとウェルネス',
+        'ホテルの中庭',
+        'パリの休日',
+      ]),
+      page('/ja/rooms', 'ja', '客室｜The Garden Hotel', [
+        '客室とスイート',
+        'Our rooms with a view of the garden and the city',
+        'お部屋の設備',
+      ]),
+    ];
+    const text = japanese
+      .map((entry) => [entry.title, ...entry.headings.map((heading) => heading.text)].join(' . '))
+      .join(' . ');
+    expect(scoreTextLanguage(text).language).toBe('en');
+    expect(latinLetterShare(text)).toBeLessThan(0.8);
+
+    expect(extractContentLanguageCandidates([...FRENCH, ...japanese])).toEqual([]);
+    expect(extractContentLanguageCandidates([...FRENCH, ...PORTUGUESE_AS_BRETON])).toHaveLength(3);
   });
 });
