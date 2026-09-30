@@ -1,10 +1,19 @@
 # Audit data defect hunt
 
-A standing brief for an agent that searches stored audit data for defects
-until the search stops finding any. The operator starts it with one line:
+A standing brief for an agent that searches every stored audit for defects.
+The operator starts it with one line:
 
-> Run the audit data defect hunt in `docs/agents/audit-data-defect-hunt.md`
-> until its stop rule is met.
+> Run one sweep of the audit data defect hunt in
+> `docs/agents/audit-data-defect-hunt.md`.
+
+Since 2026-09-30 the hunt is **occasional**, not a gate. What stands between
+the data and a client is the `audit-finalizer` skill, which checks one audit's
+scan data before its preview or report goes out. A sweep runs:
+
+- after a batch of about ten sites new to the hunt;
+- after a large crawler or normalization change;
+- when a finalizer run finds a blocking defect that looks systemic and wants
+  to know how many stored audits share it.
 
 Origin: on 2026-09-22 three passes over the 12 stored full audits each found
 new material defects. The third pass found the worst one: homepages that were
@@ -18,8 +27,7 @@ a real defect that is missing, one defect counted several times, a page that
 should or should not have been analysed, a measurement that does not describe
 the page, and client-facing wording that states more than the evidence shows.
 Record each blocking defect as an actionable slice in the active data-quality
-plan and each backlog defect as a GitHub issue. Stop only when the stop rule
-below is met.
+plan and each backlog defect as a GitHub issue.
 
 This is a search and planning task. Do not fix product code during the hunt:
 Luna or another implementer works from the plan, often in the same working
@@ -74,7 +82,7 @@ audit that has findings. Hold each finding to the evidence bar:
   page or element. Where the stored data cannot settle a question, use a live
   probe (within the boundaries above) or a reading of the code at file:line.
 - **Classified.** Every finding is blocking, backlog or minor (next
-  section). Only blocking defects count toward the stop rule.
+  section). Blocking defects become plan slices; backlog ones become issues.
 - **New.** It is not already in the known-defect list. A known defect that
   turns out broader than recorded is a new finding only when its fix has to
   change. A defect introduced by an earlier sweep's fix is new.
@@ -237,18 +245,25 @@ After each sweep:
 - Commit only the plan and ledger files, without pushing. Use a plain
   imperative subject and no model credit.
 
-## Stop rule
+## When a sweep ends
 
-Stop when **two consecutive complete sweeps** find no new blocking defect, and
-the second of the two covered at least one new angle (angle 10). Backlog
-and minor defects found in those sweeps do not reset the count. They are
-filed and recorded as usual.
+A run is **one complete sweep**. Its blocking defects become a part of the
+active plan and its backlog defects become issues, as above; the run then ends.
+It does not repeat until a sweep comes back empty.
 
-Both sweeps must read audits the hunt has not seen before when such audits
-exist, because new sites are where most defects have come from. A sweep
-that finds no new site to read says so in its notes.
+The old rule (stop after two consecutive sweeps with no new blocking defect)
+was retired on 2026-09-30 after twelve sweeps. New blocking defects per sweep
+ran 25, 9, 8, 7, 4, 7, 7, 3, 3, 6, 5, 7: the audits the hunt had already read
+converged, but each batch of sites it had not read brought about one blocking
+defect per two sites, mostly in the page population. On the open web that tail
+does not end, so a zero-defect stop never comes. The per-audit check in the
+finalizer does end, and it runs where the harm would happen.
 
-Also stop, and report, when:
+A sweep still reads audits the hunt has not seen before when such audits
+exist, because new sites are where most defects come from. A sweep that
+finds no new site to read says so in its notes.
+
+Also end a sweep early, and report, when:
 
 - the data can no longer answer the open questions (for example, when every
   remaining doubt needs a new full audit), or
@@ -262,8 +277,8 @@ context resumes from it.
 
 Keep it short and plain, outcome first:
 
-- how many sweeps ran, and the new blocking and backlog defects per sweep
-  (the blocking trend is the evidence that the search converged);
+- the new blocking and backlog defects of this sweep, and how many were found
+  only on sites new to the hunt;
 - the worst defects found in this run, one line each;
 - operator questions added, each with its recommendation;
 - what the data could not settle, and the smallest external action that would
@@ -280,7 +295,7 @@ Brief: docs/agents/audit-data-defect-hunt.md
 
 ## Where the hunt stands
 
-- Stop rule: N of 2, and why.
+- Mode: occasional sweeps, and what should trigger the next one.
 - Data state: what is deployed and refreshed.
 - Next sweep: which audits, and where to start.
 
@@ -299,10 +314,15 @@ Brief: docs/agents/audit-data-defect-hunt.md
 | Doubt | Since | Angle | Smallest action that settles it |
 |---|---|---|---|
 
-## Minor items (not counted toward the stop rule)
+## Minor items
 
 | Item | Found | Status |
 |---|---|---|
+
+## Finalizer runs
+
+| Date | Audit | Target | Status | Defects (blocking / backlog) | Fixes | Rescan |
+|---|---|---|---|---|---|---|
 
 ## Sweep N notes
 

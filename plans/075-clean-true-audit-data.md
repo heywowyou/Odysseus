@@ -1,6 +1,6 @@
 # Plan 075: Make the audit data clean and true before it reaches a report
 
-Status: IN PROGRESS (reopened 2026-09-24 and again 2026-09-28). Part L is deployed (`d971a983`, with #562 to #564), and the 38 latest audits were refreshed on it on 2026-09-30; sweep 12 found seven blocking defects (Part M: M1 to M7), classified under the hunt's severity-based stop rule adopted on 2026-09-29. Closure needs Part M implemented, deployed and refreshed, the rescans listed in Part M, and two clean hunt sweeps. The earlier closure record stays below as history. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
+Status: IN PROGRESS (reopened 2026-09-24 and again 2026-09-28). Part M is deployed (`0b03686f`); on 2026-09-30 the 34 latest audits were refreshed and regenerated on it and the four sites Part M names were rescanned. The two-sweep stop rule is retired (Part N, operator decision 2026-09-30): the per-audit `audit-finalizer` check gates what goes out, and hunt sweeps run occasionally. Closure needs the Part M rescans read against their targets and Part N's remaining slices (N2, N3). The earlier closure record stays below as history. Priority P1. Effort XL. Depends on: none (builds on trade-offs 3, 24, 30, 64, 109, 110 and issue #301/#302 work).
 
 ## Context
 
@@ -762,6 +762,30 @@ Rescans needed before these audits' reports go out: atrium-hotel (M1), leprieure
 
 Minor, not slices, and recorded in the ledger: chateaudecodignat's resumed run reused Lighthouse data for `/chambres-deluxe` after the replan stopped selecting it, so « agrégées sur 61 pages » stands beside « 60 mesurées »; grand-hotel-opera's jQuery UI tab labels (1.74:1) are a violation or `bgOverlap` depending on the site's opacity animation.
 
+### Part N: check each audit before it goes out, instead of sweeping to zero (operator decision, 2026-09-30)
+
+Twelve sweeps never converged by count (25, 9, 8, 7, 4, 7, 7, 3, 3, 6, 5, 7 new defects). The audits the hunt had already read converged: sweep 11 found two blocking defects on them. Each batch of sites the hunt had not read brought about one blocking defect per two sites (sweep 10: 4 of its 6 on 8 new sites; sweep 12: 4 of its 7 on 10 new sites), mostly in the analysed page population. That tail does not end on the open web, so the stop rule could not be met while new sites keep arriving, and no sweep-12 defect changed a grade or a legal statement.
+
+Decision: the gate moves from the whole data set to the one audit about to go out. The `client-report-finalizer` skill becomes `audit-finalizer`, with two targets (`preview` before a first outreach email, `report` before a paid delivery) and a shared Stage 1 that checks that audit's scan data and may rescan its site once. Hunt sweeps run occasionally (after about ten new sites, a large crawler change, or a systemic finalizer finding), and the kinds of defect the sweeps kept finding become automatic alerts, so the check starts where the data looks wrong.
+
+#### Slices
+
+- **N1. Page-population alerts.**
+  - `scripts/lib/audit-population-alerts.mjs`, wired into `measure-audit-data-quality.mjs`, which now also runs on one audit directory: the homepage or the page it redirects to not analysed; five pages or more and 30 % or more of the inventory redirecting to the homepage; three analysed pages or more sharing one raw document and rendered title; three query-string pages or more; an analysed feed or file; under 20 % of an inventory of ten pages or more analysed; a serious site-wide absence claim (`lcen-mentions-legales-missing`, `accessibility-statement-missing`).
+  - Target, measured on the 38 latest audits before the Part M rescans: atrium-hotel (redirects to the homepage, 1 of 39 analysed), leprieuredeboulogne (two feeds), yonahotel (a 10-page shell, 12 query pages), coin-savoyard (three copies of `/fr/chambres`) are flagged; the archive pages of labaignoirelacanau and lacoorniche, and a typed homepage that redirects to an analysed `/fr/`, are not.
+  - Tests: `audit-population-alerts.test.mjs`.
+  - **Implemented 2026-09-30** (`11f28d5b`).
+- **N2. Alerts on every audit, visible where the operator works.**
+  - Move the alert computation into a pure function in `core` (population and evaluation alerts from the manifest, the page scans' raw-document facts and the findings), call it at the end of the audit stage and on refresh, and store the result on the audit row. The dashboard's audit page shows the alerts to the operator; they never reach a report or a preview. The measure script calls the same function.
+  - Stored audits: a refresh computes them.
+  - Target: the four audits N1 names show their alerts on the dashboard after a refresh; an audit with none shows none.
+  - Tests: core unit tests over the N1 shapes; audit-stage and refresh tests that the row carries them; a dashboard component test.
+- **N3. One fact stated twice, checked automatically.**
+  - An alert when two sources of one fact disagree for an audit: the manifest's page statuses against the inventory ledger's dispositions (HTTP errors, non-HTML answers, redirects), and the analysed and measured page counts against the pass coverage. M4 and M6 were this shape; sweep 12 found them by reading reports side by side.
+  - Stored audits: a refresh computes it; audits scanned before M4 are expected to alert until rescanned.
+  - Target: leprieuredeboulogne's pre-M4 run alerts on its HTTP-error counts; its rescan does not.
+  - Tests: unit tests with paraphrased manifests and ledgers.
+
 ### D. Docs, fixtures, rollout
 
 - **Trade-offs.**
@@ -886,6 +910,10 @@ The closure artifact is the requirement-to-proof ledger below. Every row names i
 | The Lighthouse failure note matches the coverage | `methodology.ts` `summarizeLighthouseFailures`, FR and EN copy | Code, FR-first copy | Render tests: none, some and all failed; a 404 page with a Lighthouse error | Sweep 13 reads the four methodology notes |
 | A catch-all answer is a soft 404 | `crawl.ts`, `soft-error-page.ts` | Code | 200 catch-all fixture; 404 site records no fingerprint | yonahotel rescan analyses none of its 11 shells |
 | Provenance consistent | `normalization-fingerprint.ts` | Fingerprint bump | `pnpm run check`, findings-provenance test | none |
+| Per-audit gate replaces the sweep stop rule | `.agents/skills/audit-finalizer/SKILL.md`, `docs/agents/audit-data-defect-hunt.md` | Skill, brief, ledger's finalizer runs table | `pnpm run docs:check` | Operator runs the first `/audit-finalizer preview` |
+| Page-population alerts (N1) | `scripts/lib/audit-population-alerts.mjs` | Measure script output | `audit-population-alerts.test.mjs` | Alerts read on the 38 VPS audits (Part N target) |
+| Alerts stored and shown per audit (N2) | core alert function, audit stage, refresh, dashboard audit page | Audit row field | Core, stage and component tests | Operator sees the four N1 audits flagged |
+| Facts stated twice alert (N3) | core alert function | Audit row field | Unit tests | leprieuredeboulogne before and after its rescan |
 
 ## Verification
 

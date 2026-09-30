@@ -7,35 +7,29 @@ Brief: `docs/agents/audit-data-defect-hunt.md`
 
 ## Where the hunt stands
 
-- **Stop rule: 0 of 2 (severity-based, adopted 2026-09-29).** Sweep 12 found
-  7 blocking defects (Part M: M1 to M7) and no backlog defect, so the count
-  stays at 0. Four of the seven were found only on the ten sites new to the
-  hunt. Two consecutive complete sweeps with no new blocking defect are
-  needed, the second with a fresh angle and, when any exist, new sites.
-- **Data state.** Production runs `d971a983` (Part L with #562 to #564,
-  fingerprint `a327840febaa84dd`). The 38 latest audits were refreshed on it;
-  atlantichotel, whistlerparis and grandhotelbellevue were rescanned, and ten
-  sites were audited for the first time. Part M is recorded in plan 075; none
-  of it is implemented.
-- **Access.** Read-only scripts in the app container and read-only database
-  reads, as in sweeps 8 to 11. No production write this sweep. Live probes of
-  already-audited sites with the bot user agent: atrium-hotel (slash
-  spellings), yonahotel (room titles, three shells, one made-up path),
-  grand-hotel-opera (the facilities tabs under axe), whistlerparis (booking
-  pages), chateaudecodignat (homepage size), `/llms.txt` on haaitza,
-  lacoorniche and hoteldegarlande, hotel-langres (date field), and the broken
-  links on three sites.
-- **Stored products.** Do not send the reports of atrium-hotel (M1),
-  coin-savoyard (M3), leplacidehotel (M2) or leprieuredeboulogne (M4, M6);
-  domaine-d-auriac and chateaudecodignat carry the M5 sentence until their
-  analyses are regenerated. yonahotel's page count is inflated by about 10 %
-  (M3, M7).
-- **Next: sweep 13**, after Part M ships and the audits are refreshed, and
-  after the rescans Part M lists (atrium-hotel, leprieuredeboulogne,
-  yonahotel, coin-savoyard, aflatta). Start with the start list below, then
-  every angle on every latest full audit.
+- **Mode: occasional sweeps (operator decision, 2026-09-30).** The two-sweep
+  stop rule is retired: twelve sweeps never converged by count, because each
+  batch of new sites brings about one blocking defect per two sites (see the
+  trend below). What gates a preview or a report is now the `audit-finalizer`
+  skill, whose Stage 1 checks that one audit's scan data before it goes out,
+  starting from the data-quality measure's page-population alerts
+  (`scripts/lib/audit-population-alerts.mjs`). The next sweep runs after a
+  batch of about ten new sites, after a large crawler change, or when a
+  finalizer run finds a systemic blocking defect.
+- **Data state.** Production runs `0b03686f` (Part M, fingerprint
+  `4b655a31fc2aea1e`). On 2026-09-30 the 34 latest audits not being rescanned
+  were refreshed on it and their analyses and French reports regenerated
+  (domaine-d-auriac and chateaudecodignat included, for M5); atrium-hotel,
+  leprieuredeboulogne, yonahotel and aflatta were rescanned with default
+  pacing (no pushback on any earlier run, no `Crawl-delay`).
+- **Access.** As in sweeps 8 to 12.
+- **Stored products.** Each audit goes through `/audit-finalizer preview` or
+  `/audit-finalizer report` before it goes out; the finalizer runs table
+  below records them.
+- **Next sweep** (not scheduled): start with the start list below, which also
+  serves the first finalizer runs of these audits.
 
-## Sweep 13 start list
+## Next sweep start list
 
 Angle 13 (replay against closed slices) targets:
 
@@ -79,7 +73,7 @@ backlog.
 | 12 | 2026-09-30 | 38 latest full audits (refreshed on `d971a983`; 3 rescans, 10 sites new) | 1 to 17 (8 partial); fresh angle became 18 | yes | 7 / 0 | Part M (M1 to M7) |
 
 Trend of new material defects per sweep: 25, 9, 8, 7, 4, 7, 7, 3, 3, 6, 5, 7.
-It has not converged by count; sweep 11's five are two blocking and three
+It never converged by count, which retired the stop rule on 2026-09-30; sweep 11's five are two blocking and three
 backlog, and none changes a grade or a legal statement. Sweep 12's seven are
 all blocking; four were found only on the ten new sites, and three (M5, M6,
 M4's count split) are report sentences that no earlier sweep compared with
@@ -97,6 +91,7 @@ history. They cannot be checked again.
 |---|---|---|---|
 | Cause of the Lighthouse IndexedDB storage warning (E5). Plan 075's closure ledger expects the probe result to be recorded, and it never was. | sweep 2 | 6 | One Lighthouse probe of an already-audited page, with and without storage reset |
 | French copy has never had a full per-rule review against the writing style and obligation basis. Sweep 8 read every stored French analysis for legal and absolute wording only (I3); sweep 9 read three rules' labels and remediations. | sweep 4 | 8 | Read the remaining deterministic FR strings rule by rule; sweep 10 read eleven more and one regenerated analysis (heurope) |
+| atlantichotel analyses `/`, `/index.html` and `/index.php` as three pages with one raw document and title (the first run of the population alerts, 2026-09-30). Plan 075 keeps `/index.html` aliases on purpose because they can be real pages; here they are the homepage three times. | 2026-09-30 | 1 | Settle it in atlantichotel's finalizer run: if the aliases repeat the homepage's findings, set aside an alias that serves the homepage's raw document, as M3 does for query copies |
 | Why chicago's lab CLS runs are bimodal (whole-`body` shifts in some runs only). The finding side is covered by F9. | sweep 4 | 6 | One Lighthouse probe of the chicago homepage |
 
 Settled or moot:
@@ -112,7 +107,7 @@ Settled or moot:
   sweep 7. The five sent previews were read from the database and the preview
   bucket, and none shows a false claim.
 
-## Minor items (not counted toward the stop rule)
+## Minor items
 
 | Item | Found | Status |
 |---|---|---|
@@ -153,6 +148,14 @@ Settled or moot:
 
 Outside the hunt: outreach threads left in `e1-drafted` after their drafts
 were deleted (outreach state, not audit data).
+
+
+## Finalizer runs
+
+One row per `audit-finalizer` run (`.agents/skills/audit-finalizer/SKILL.md`).
+
+| Date | Audit | Target | Status | Defects (blocking / backlog) | Fixes | Rescan |
+|---|---|---|---|---|---|---|
 
 ## Sweep 4 notes
 

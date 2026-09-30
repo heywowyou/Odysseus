@@ -6403,3 +6403,34 @@ router's CSRF guard requires an exact `application/json` content type, so
 the PDF travels base64); making the finalized report its own document kind
 (it is a report of the same audit, and approval must keep working on
 whatever row is current).
+
+### 127. Each audit is checked before it goes out; the data hunt no longer sweeps to zero (operator decision, 2026-09-30)
+
+Twelve sweeps of the audit data defect hunt found 25, 9, 8, 7, 4, 7, 7, 3,
+3, 6, 5 and 7 new defects. The audits already read converged, but each batch
+of sites the hunt had not seen brought about one blocking defect per two
+sites, most of them in which pages were analysed: a site served only with a
+trailing slash, a catch-all page answering 200, booking dates turned into
+pages. Every hotel site is built differently, so that tail does not end, and
+the rule "stop after two sweeps with no blocking defect" could never be met
+while new prospects keep arriving.
+
+The gate therefore moves to the audit about to go out. The
+`audit-finalizer` skill (formerly the client report finalizer) checks one
+audit's scan data first (page population, serious findings, absence claims,
+facts stated twice, scan age against scan-time fixes) and may rescan that
+site once; then it reads the outreach preview as the prospect would, or
+finalizes the paid report. The kinds of defect the sweeps kept finding by
+hand become automatic alerts (plan 075 Part N), so the check starts where the
+data looks wrong. Sweeps still run, occasionally: after about ten new sites,
+a large crawler change, or a systemic finalizer finding.
+
+What this accepts: an audit that never goes out is never checked, and a
+defect can sit in stored data until an audit carrying it is finalized. That
+is where the harm would happen, and the check there is finite.
+
+Rejected: sweeping until a sweep finds nothing (never ends on the open
+web); sweeping only new sites without a per-audit check (a blocking defect
+can still reach a client between sweeps); a fully automatic gate that blocks
+publication on any alert (an alert is a place to look, and a site can
+legitimately serve one page under several addresses).
