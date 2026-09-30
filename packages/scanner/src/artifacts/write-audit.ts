@@ -28,6 +28,7 @@ import type { Browser } from 'playwright';
 import {
   attributableCoreWebVitals,
   unstableLabMetricsOf,
+  catchAllTextSignatures,
   decideScannedPageStatus,
   extractLighthouseExcludedCategoryScores,
   markInconclusiveChecks,
@@ -37,6 +38,7 @@ import {
   type AuditManifest,
   type AuditManifestSiteSignals,
   type AuditPacingRecoveryEvent,
+  type CatchAllProbe,
   type CruxFieldDataResult,
   type ManifestKind,
   type ManifestPageEntry,
@@ -72,6 +74,7 @@ export interface WriteAuditArtifactsInput {
       retryAfterMs?: number;
     }[];
     pacingRecoveryEvents?: readonly AuditPacingRecoveryEvent[];
+    catchAllProbes?: readonly CatchAllProbe[];
   };
   browser: Browser;
   startedAt: Date;
@@ -567,6 +570,15 @@ export async function writeAuditArtifacts(
   let axeCoreVersion: string | null = null;
   let lighthouseVersion: string | null = null;
 
+  // Plan 075 M7: the site's catch-all answer, read against the homepage's
+  // raw document so a single-page application's shared shell never counts.
+  const homepageUrl = input.siteResult.crawl.homepageUrl ?? input.siteResult.crawl.startUrl;
+  const homepageScan = scanByUrl.get(homepageUrl) ?? readPageScanJson(pagesDir, homepageUrl);
+  const catchAllSignatures = catchAllTextSignatures(
+    input.siteResult.catchAllProbes,
+    homepageScan?.renderDiff?.rawDocument?.textSignature,
+  );
+
   function pushCrawlOnlyEntry(crawledPage: CrawlResult['pages'][number]): void {
     manifestPages.push({
       url: crawledPage.url,
@@ -650,7 +662,9 @@ export async function writeAuditArtifacts(
     // Lighthouse landing, the title and headings), by the same core module a
     // refresh uses. Any status but `visited` keeps the page out of the
     // content-checked population: it never gets analysisCoverage.
-    const verdict = decideScannedPageStatus(scannedPageFactsOf(scanJson));
+    const verdict = decideScannedPageStatus(scannedPageFactsOf(scanJson), {
+      catchAllTextSignatures: catchAllSignatures,
+    });
     const pageStatus = verdict.status;
     const redirectTargetUrl =
       verdict.status === 'redirect-interstitial' ? verdict.redirectTargetUrl : undefined;
@@ -766,6 +780,9 @@ export async function writeAuditArtifacts(
       : {}),
     ...(input.siteResult.pacingRecoveryEvents !== undefined
       ? { pacingRecoveryEvents: [...input.siteResult.pacingRecoveryEvents] }
+      : {}),
+    ...(input.siteResult.catchAllProbes !== undefined
+      ? { catchAllProbes: input.siteResult.catchAllProbes }
       : {}),
     siteSignals: buildSiteSignals(resolvedSiteResult),
     privacySecurityCoverage: buildPrivacySecurityCoverage(

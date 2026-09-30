@@ -9,6 +9,7 @@
  * so treat it as stable once milestones 5/6 start depending on it.
  */
 
+import type { CatchAllProbe } from '../normalize/catch-all.js';
 import type { FINDINGS_SCHEMA_VERSION, RawDocumentSignals } from './findings.js';
 import type { SiteSignals } from './compliance.js';
 import type { TranslationCluster } from '../normalize/translation-clusters.js';
@@ -576,6 +577,10 @@ export interface AuditManifest {
     sitemapCoverage?: SitemapCoverageSummary;
     /** Eligible sitemap identities retained for offline public-evidence tests. */
     sitemapUrls?: string[];
+    /** Plan 075 M7: the answers to paths that cannot exist, one under the
+     *  root and one under each language prefix. Absent on audits scanned
+     *  before the probe existed, which keep their pages' verdicts. */
+    catchAllProbes?: CatchAllProbe[];
   };
   /** Host pushback observed during acquisition, kept for operator coverage
    *  feedback and absent on historical manifests. */

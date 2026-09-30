@@ -138,3 +138,41 @@ describe('applyScannedPageVerdict', () => {
     expect(visited.redirectTargetUrl).toBeUndefined();
   });
 });
+
+// yonahotel.com, 2026-09-30: any unknown /en/ path answers 200 with one
+// `noindex` document headed « Elsewhere starts Here », no error title.
+describe('a page that is the site catch-all (plan 075 M7)', () => {
+  const shell = buildRenderDiffResult({
+    pageUrl: PAGE,
+    httpStatus: 200,
+    renderedHttpStatus: 200,
+    rawTextLength: 937,
+    renderedTextLength: 937,
+    renderedInterstitialMarkers: [],
+    rawDocument: {
+      markupLength: 240361,
+      visibleTextLength: 937,
+      textSignature: '73a58f695ec9d7de',
+      interstitialMarkers: [],
+    },
+  });
+  const facts: ScannedPageFacts = {
+    url: 'https://hotel.example/en/terms-of-use',
+    renderDiff: shell,
+    title: null,
+    headings: [{ level: 2, text: 'Elsewhere starts Here' }],
+  };
+
+  it('is a soft 404 when its raw document matches a catch-all answer', () => {
+    expect(
+      decideScannedPageStatus(facts, { catchAllTextSignatures: new Set(['73a58f695ec9d7de']) }),
+    ).toEqual({ status: 'soft-error-page' });
+  });
+
+  it('stays content without a probe or with another signature', () => {
+    expect(decideScannedPageStatus(facts)).toEqual({ status: 'visited' });
+    expect(
+      decideScannedPageStatus(facts, { catchAllTextSignatures: new Set(['fb72410266aad108']) }),
+    ).toEqual({ status: 'visited' });
+  });
+});

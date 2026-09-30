@@ -6,6 +6,7 @@ import {
   normalizeBuildId,
 } from '@odysseus/core';
 import type {
+  CatchAllProbe,
   AuditPacingRecoveryEvent,
   AuditPushbackEvent,
   PrivacySecurityCoverage,
@@ -77,6 +78,7 @@ export interface BuildManifestInput {
   translationClusters?: TranslationCluster[];
   pushbackEvents?: AuditPushbackEvent[];
   pacingRecoveryEvents?: AuditPacingRecoveryEvent[];
+  catchAllProbes?: readonly CatchAllProbe[];
 }
 
 export function buildManifest(input: BuildManifestInput): AuditManifest {
@@ -109,6 +111,9 @@ export function buildManifest(input: BuildManifestInput): AuditManifest {
         ? { sitemapCoverage: input.crawl.sitemapCoverage }
         : {}),
       ...(input.crawl.sitemapUrls !== undefined ? { sitemapUrls: input.crawl.sitemapUrls } : {}),
+      ...(input.catchAllProbes !== undefined && input.catchAllProbes.length > 0
+        ? { catchAllProbes: [...input.catchAllProbes] }
+        : {}),
     },
     ...(input.pushbackEvents !== undefined ? { pushbackEvents: input.pushbackEvents } : {}),
     ...(input.pacingRecoveryEvents !== undefined

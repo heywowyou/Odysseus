@@ -5,6 +5,7 @@ import {
   assertSufficientCrawlCoverage,
   HostStoppedAnsweringError,
   type AuditConfigSnapshot,
+  type CatchAllProbe,
   type CruxFieldDataResult,
   type PageAnalysisCoverage,
   type SitemapMode,
@@ -30,6 +31,12 @@ import {
 import type { RedirectHostCache } from './checks/transactional-flow.js';
 import type { SitemapCheckResult } from './checks/sitemap.js';
 import { checkLlmsTxt, type LlmsTxtCheckResult } from './checks/llms-txt.js';
+import {
+  catchAllProbePrefixes,
+  catchAllProbeUrl,
+  newCatchAllProbeToken,
+  probeCatchAll,
+} from './checks/catch-all-probe.js';
 import {
   checkSecurityHeaders,
   type SecurityHeadersCheckResult,
@@ -409,6 +416,8 @@ export interface SiteScanResult {
   networkSafetyDispositions?: readonly NetworkSafetyDisposition[];
   /** Scope-bound private Plan 059 inventory after all content work succeeds. */
   inventoryLedger?: InventoryLedgerSnapshot;
+  /** Plan 075 M7: the site's answers to paths that cannot exist. */
+  catchAllProbes?: readonly CatchAllProbe[];
   /** Plan 059: whether CrUX answered, had no public data, or failed. Only set
    *  when a CrUX key is configured; the legacy `cruxFieldData` payload cannot
    *  tell the last two apart. */
@@ -2782,6 +2791,36 @@ export async function scanSite(
   });
   const llmsTxtCheckForScan = homepageWasVisited ? llmsTxtCheck : undefined;
 
+  // Plan 075 M7: how the site answers a path that cannot exist, under the
+  // root and each language prefix. Only under the full-audit robots runtime,
+  // so every probe is a path robots.txt allows; a refused probe is skipped.
+  const catchAllProbes: CatchAllProbe[] = [];
+  if (robotsPolicyRuntime !== undefined) {
+    const token = newCatchAllProbeToken();
+    const probeUrls = catchAllProbePrefixes(
+      crawl.pages.filter((page) => page.status === 'visited').map((page) => page.url),
+    ).map((prefix) => catchAllProbeUrl(siteOrigin, prefix, token));
+    await robotsPolicyRuntime.refresh(probeUrls);
+    for (const url of probeUrls) {
+      try {
+        robotsPolicyRuntime.assertAllowed(url);
+        await assertSafeDirectTarget(url);
+      } catch {
+        continue;
+      }
+      catchAllProbes.push(
+        await scheduler.schedule(() =>
+          probeCatchAll(url, pageTimeoutMs, options.userAgent ?? getCrawlerUserAgent(), {
+            ...(options.networkPolicy !== undefined
+              ? { networkPolicy: options.networkPolicy }
+              : {}),
+            ...(onNetworkSafetyBlocked !== undefined ? { onNetworkSafetyBlocked } : {}),
+          }),
+        ),
+      );
+    }
+  }
+
   // Security response headers are a site-level fetch, same shape as
   // llms.txt/sitemap above: near-always identical across every page on a
   // site, so one request here (attached only to the homepage's scan.json
@@ -3004,6 +3043,7 @@ export async function scanSite(
       ...(cruxAcquisitionStatus !== undefined ? { cruxAcquisitionStatus } : {}),
       ...(networkSafetyDispositions.length > 0 ? { networkSafetyDispositions } : {}),
       ...(finalInventory !== undefined ? { inventoryLedger: finalInventory } : {}),
+      ...(catchAllProbes.length > 0 ? { catchAllProbes } : {}),
       ...(pushbackEvents.length > 0 ? { pushbackEvents: [...pushbackEvents] } : {}),
       ...(pacingRecoveryEvents.length > 0
         ? { pacingRecoveryEvents: [...pacingRecoveryEvents] }
@@ -3062,6 +3102,7 @@ export async function scanSite(
     ...(cruxFieldData !== undefined ? { cruxFieldData } : {}),
     ...(networkSafetyDispositions.length > 0 ? { networkSafetyDispositions } : {}),
     ...(finalInventory !== undefined ? { inventoryLedger: finalInventory } : {}),
+    ...(catchAllProbes.length > 0 ? { catchAllProbes } : {}),
     ...(pushbackEvents.length > 0 ? { pushbackEvents: [...pushbackEvents] } : {}),
     ...(pacingRecoveryEvents.length > 0 ? { pacingRecoveryEvents: [...pacingRecoveryEvents] } : {}),
   };

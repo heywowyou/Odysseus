@@ -73,7 +73,8 @@ cannot silently start emitting findings after an upgrade.
 (issue #302). Two statuses mean the page was scanned but what was scanned
 does not belong to that URL: `soft-error-page`, a 200 serving an error
 template (detected from the URL's last path segment, the first h1, or the
-title together with the first heading), and `redirect-interstitial`
+title together with the first heading, or because its raw document is the
+site's catch-all answer, below), and `redirect-interstitial`
 (issue #85). Both were already kept out of the analysed-page list by never
 receiving `analysisCoverage`; normalization now also skips their
 candidates, so an error template's defects are not counted against the
@@ -95,6 +96,20 @@ a page the verdict keeps out of the content population is stored as
 module lives under `core/src/normalize`, changing a status rule moves the
 normalization fingerprint and marks every stored audit stale until it is
 refreshed.
+
+**A site's catch-all answer** (plan 075 M7). Some sites answer every unknown
+path with 200 and one error document that neither its title nor its heading
+calls an error (yonahotel.com, « Elsewhere starts Here »). After the crawl,
+a full audit requests one path that cannot exist
+(`/odysseus-missing-page-<token>`) under the root and under each language
+prefix its visited pages use, at most 8, each through robots.txt, the
+network policy and the host scheduler. `crawl.catchAllProbes` stores the
+answers. `catchAllTextSignatures` keeps the raw text signature of each 2xx
+answer served at the probed path, and drops one equal to the homepage's raw
+signature, since a single-page application serves one shell for every
+route. A scanned page whose raw document has a kept signature is
+`soft-error-page`. Audits scanned before the probe carry none and keep their
+verdicts.
 
 **Render diff:** emits nothing at all for a page whose no-JavaScript
 fetch did not receive the page (issue #301). `unusableRawFetches` in

@@ -15,7 +15,8 @@
  *     follow);
  *  2. blocked: the render did not obtain the site's own document, except
  *     that the site's own 404 or 410 template is a dead link (plan 075 K3);
- *  3. soft 404: a 200 page that tells the visitor it does not exist;
+ *  3. soft 404: a 200 page that tells the visitor it does not exist, or
+ *     that is the site's catch-all answer to a path that cannot exist;
  *  4. visited.
  */
 import type { ManifestPageEntry, PageAnalysisCoverage } from '../types/manifest.js';
@@ -40,6 +41,12 @@ export interface ScannedPageFacts {
   headings?: readonly { level: number; text: string }[];
   /** The URL Lighthouse's own navigation settled on. */
   lighthouseFinalUrl?: string;
+}
+
+/** Site-wide facts a page's verdict is read against. */
+export interface ScannedPageSiteFacts {
+  /** Raw text signatures of the site's catch-all answer (plan 075 M7). */
+  catchAllTextSignatures?: ReadonlySet<string>;
 }
 
 /** The facts of a stored scan.json, as both the scan-time and refresh paths
@@ -136,7 +143,10 @@ export function isSoftErrorPage(page: SoftErrorPageInput): boolean {
   return firstHeading !== undefined && announcesMissingPage(firstHeading.text);
 }
 
-export function decideScannedPageStatus(facts: ScannedPageFacts): ScannedPageVerdict {
+export function decideScannedPageStatus(
+  facts: ScannedPageFacts,
+  site: ScannedPageSiteFacts = {},
+): ScannedPageVerdict {
   const landedUrl = facts.renderedLandedUrl;
   if (landedUrl !== undefined && isRedirectInterstitial(facts.url, landedUrl)) {
     return { status: 'redirect-interstitial', redirectTargetUrl: landedUrl };
@@ -159,6 +169,10 @@ export function decideScannedPageStatus(facts: ScannedPageFacts): ScannedPageVer
       : { status: 'blocked' };
   }
   if (isSoftErrorPage({ url: facts.url, title: facts.title, headings: facts.headings })) {
+    return { status: 'soft-error-page' };
+  }
+  const rawSignature = facts.renderDiff?.rawDocument?.textSignature;
+  if (rawSignature !== undefined && site.catchAllTextSignatures?.has(rawSignature) === true) {
     return { status: 'soft-error-page' };
   }
   return { status: 'visited' };

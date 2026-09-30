@@ -17,6 +17,7 @@ import {
   buildFindingsProvenance,
   applyScannedPageVerdict,
   attributableCoreWebVitals,
+  catchAllTextSignatures,
   decideScannedPageStatus,
   unstableLabMetricsOf,
   markInconclusiveChecks,
@@ -157,10 +158,19 @@ export async function renormalizeAudit(
   // redirects, which read the stored landing pages' alternates.
   const scanForUrl = new Map(pages.map((page) => [page.url, page]));
   const deadLinkUrls = new Set<string>();
+  // Plan 075 M7: an audit scanned before the catch-all probe has none, and
+  // its pages keep the verdict the other rules give them.
+  const catchAllSignatures = catchAllTextSignatures(
+    manifest.crawl.catchAllProbes,
+    scanForUrl.get(manifest.crawl.homepageUrl ?? manifest.crawl.startUrl)?.renderDiff?.rawDocument
+      ?.textSignature,
+  );
   const verdictPages = manifest.pages.map((entry) => {
     const scan = scanForUrl.get(entry.url);
     if (scan === undefined) return entry;
-    const verdict = decideScannedPageStatus(scannedPageFactsOf(scan));
+    const verdict = decideScannedPageStatus(scannedPageFactsOf(scan), {
+      catchAllTextSignatures: catchAllSignatures,
+    });
     if (verdict.status === 'http-error-status') deadLinkUrls.add(entry.url);
     return applyScannedPageVerdict(entry, verdict);
   });

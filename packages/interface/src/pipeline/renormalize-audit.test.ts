@@ -269,6 +269,51 @@ describe('renormalizeAudit page verdict', () => {
     expect(stored?.setAsideAnalysisCoverage).toBeUndefined();
   });
 
+  // Plan 075 M7, yonahotel.com: a stale path lands on the site's catch-all.
+  it("sets aside a page whose raw document is the site's catch-all answer", async () => {
+    const fixture = JSON.parse(await fs.readFile(FIXTURE_MANIFEST, 'utf8')) as AuditManifest;
+    const home = fixture.pages[0]!;
+    const stale = new URL('/en/hotel/accueil', home.url).toString();
+    const probeUrl = new URL('/en/odysseus-missing-page-3f9a2c', home.url).toString();
+    const raw = (textSignature: string) => ({
+      markupLength: 240_000,
+      visibleTextLength: 937,
+      textSignature,
+      interstitialMarkers: [],
+    });
+    const manifest: AuditManifest = {
+      ...fixture,
+      crawl: {
+        ...fixture.crawl,
+        catchAllProbes: [
+          {
+            url: probeUrl,
+            landedUrl: probeUrl,
+            httpStatus: 200,
+            textSignature: '73a58f695ec9d7de',
+          },
+        ],
+      },
+      pages: [home, { ...home, url: stale, pageDir: 'pages/stale', depth: 1 }],
+    };
+    await fs.writeFile(path.join(auditDir, 'manifest.json'), JSON.stringify(manifest));
+    await writePage('home', {
+      url: home.url,
+      renderDiff: { ...renderedAt(home.url, 'Accueil'), rawDocument: raw('6f5577b8add3399e') },
+    });
+    await writePage('stale', {
+      url: stale,
+      renderDiff: { ...renderedAt(stale, ''), rawDocument: raw('73a58f695ec9d7de') },
+    });
+
+    const result = await renormalizeAudit(auditDir, undefined);
+
+    expect(result.manifest.pages.find((page) => page.url === stale)?.status).toBe(
+      'soft-error-page',
+    );
+    expect(result.manifest.pages.find((page) => page.url === home.url)?.status).toBe('visited');
+  });
+
   it('keeps the stored crawl-time status of a page without a scan.json', async () => {
     const fixture = JSON.parse(await fs.readFile(FIXTURE_MANIFEST, 'utf8')) as AuditManifest;
     const home = fixture.pages[0]!;

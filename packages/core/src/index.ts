@@ -37,6 +37,7 @@ export * from './normalize/inconclusive-checks.js';
 export * from './normalize/dead-link-pages.js';
 export * from './normalize/page-verdict.js';
 export * from './normalize/error-title.js';
+export * from './normalize/catch-all.js';
 export * from './normalize/findings-provenance.js';
 export * from './normalize/normalize-cookie-consent.js';
 export { classifyCookie } from './normalize/classify-cookie.js';
