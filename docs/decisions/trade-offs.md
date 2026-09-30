@@ -322,7 +322,11 @@ default cap instead; that decision is the operator's.
     first-contact job the low flat price was originally covering, so the
     paid tier no longer needs to be priced as an entry point; market-rate
     credibility is the goal instead. The Stripe payment link amount is
-    updated separately by hand, not by code or by this change. Current-
+    updated separately by hand, not by code or by this change (amended
+    2026-09-30: no Stripe account or card payment link ever existed; clients
+    pay by bank transfer to the account on the Shine invoice, so there is no
+    hand-kept amount; see `docs/rules/operator-obligations.md` section 8,
+    item 8). Current-
     price mentions in `docs/product/odysseus-project-brief.md` were updated to
     EUR 1,600 HT along with the canonical source; only the "why the
     prices are not being raised" reasoning in `docs/rules/offer-positioning.md`
@@ -5128,8 +5132,14 @@ explicitly dated to the price it was computed at and is left standing with
 that qualifier rather than recomputed, since the ratios it argues from do not
 depend on the figure.
 
-The Stripe payment link amount is updated by hand outside the repository, the
-same as in trade-off 13.
+No payment link carries the amount (amended 2026-09-30). Clients pay by bank
+transfer against the Shine invoice, whose amount comes from the invoice line,
+so a price change moves nothing outside the repository except the quote and
+invoice lines in Shine. Card payment was dropped rather than set up: Shine's
+invoice card payment only accepts invoices under EUR 500, and a separate Stripe
+account would add a second account, 1.5 to 2.8 % plus EUR 0.25 per payment and
+a hand-kept link amount for a convenience B2B clients paying EUR 990 rarely
+need (`docs/rules/operator-obligations.md` section 8, item 8).
 
 ### 97. A style-guard violation may ship on the last writing attempt; a substantive one never may (issue #407, 2026-09-17)
 

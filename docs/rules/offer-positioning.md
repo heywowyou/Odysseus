@@ -73,7 +73,8 @@ has to agree about it: the outreach preview renders it, and plan 010's prose
 validator (in `llm`, which can only see `core`) has to recognise it in order to
 reject any other figure. The formatter normalizes the French thousands
 separator to U+00A0, so the rendered bytes do not change with the host's ICU
-version. The Stripe link amount is still updated by hand (trade-off 13).
+version. No payment link carries the amount: clients pay by bank transfer
+against the Shine invoice (trade-off 96).
 
 **A price change revokes and reissues every live preview, amended
 2026-09-19 by Plan 069.** Preview HTML embeds the amount at publication time,

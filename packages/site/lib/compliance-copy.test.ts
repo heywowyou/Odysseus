@@ -243,6 +243,15 @@ describe('terms of sale page', () => {
     expect(terms).toContain('does not determine your legal obligations');
   });
 
+  // Operator decision 2026-09-30: bank transfer only. Shine's invoice card
+  // payment stops at EUR 500 and no separate card processor is kept, so the
+  // terms must not offer a payment method that does not exist.
+  it('offers bank transfer as the only payment method', () => {
+    expect(terms).toContain('par virement bancaire sur le compte indiqué sur la facture');
+    expect(terms).toContain('by bank transfer to the account shown on the invoice');
+    expect(terms).not.toMatch(/carte bancaire|lien de paiement|by card|payment link|Stripe/iu);
+  });
+
   // Article 48 of the code de procédure civile voids a jurisdiction clause
   // unless every party contracted as a commerçant, which the operator is not.
   it('names no court by place', () => {

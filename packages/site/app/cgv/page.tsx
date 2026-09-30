@@ -290,8 +290,8 @@ export default function TermsOfSalePage() {
 
             <p>
               Sauf stipulation contraire du devis, le prix est payable en totalité à la commande,
-              par virement bancaire ou par carte bancaire au moyen d&apos;un lien de paiement
-              sécurisé. Le rapport est remis après réception du paiement.
+              par virement bancaire sur le compte indiqué sur la facture. Le rapport est remis après
+              réception du paiement.
             </p>
 
             <p>
@@ -710,8 +710,8 @@ export default function TermsOfSalePage() {
 
             <p>
               Unless the quote states otherwise, the full price is payable on ordering, by bank
-              transfer or by card through a secure payment link. The report is delivered once
-              payment has been received.
+              transfer to the account shown on the invoice. The report is delivered once payment has
+              been received.
             </p>
 
             <p>
