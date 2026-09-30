@@ -213,6 +213,15 @@ describe('terms of sale page', () => {
     expect(terms).toContain('SIREN: 980 766 463');
   });
 
+  // Operator decision 2026-09-30: one five-business-day lead time for both
+  // services, published on the offer page too.
+  it('promises the same five-business-day lead time as the offer page', () => {
+    expect(terms).toContain('sont remis sous cinq jours ouvrés');
+    expect(terms).toContain('delivered within five business days');
+    expect(offer).toContain('sous cinq jours ouvrés après votre paiement');
+    expect(offer).toContain('within five business days of payment');
+  });
+
   it('is reserved to business clients', () => {
     expect(terms).toContain('réservées aux professionnels');
     expect(terms).toContain('businesses only');

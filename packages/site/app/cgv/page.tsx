@@ -359,13 +359,13 @@ export default function TermsOfSalePage() {
             <h2 id="remise-cgv">9. Remise du rapport et délais</h2>
 
             <p>
-              Le rapport est transmis par voie électronique. Le délai de remise du diagnostic est
-              indiqué dans le devis. La nouvelle vérification est remise sous cinq jours ouvrés. Ces
-              délais courent à compter de la réception du paiement.
+              Le rapport est transmis par voie électronique. Sauf délai différent indiqué dans le
+              devis, le diagnostic comme la nouvelle vérification sont remis sous cinq jours ouvrés.
+              Ce délai court à compter de la réception du paiement.
             </p>
 
             <p>
-              Si le délai est dépassé de plus de quinze jours pour une raison qui ne tient ni au
+              Si ce délai est dépassé de plus de quinze jours pour une raison qui ne tient ni au
               client ni à un cas de force majeure, le client peut annuler la commande par écrit et
               obtenir le remboursement intégral des sommes versées.
             </p>
@@ -777,9 +777,9 @@ export default function TermsOfSalePage() {
             <h2 id="remise-cgv-en">9. Report delivery and lead times</h2>
 
             <p>
-              The report is delivered electronically. The delivery time for the diagnostic is stated
-              in the quote. The follow-up verification is delivered within five business days. These
-              lead times run from receipt of payment.
+              The report is delivered electronically. Unless the quote states a different lead time,
+              both the diagnostic and the follow-up verification are delivered within five business
+              days. This lead time runs from receipt of payment.
             </p>
 
             <p>

@@ -36,7 +36,7 @@ const NEXT_STEPS_FR: readonly Step[] = [
   },
   {
     title: 'Remise du rapport',
-    text: 'Le rapport complet vous est remis au format PDF, en français ou en anglais, avec les priorités et les préconisations.',
+    text: 'Le rapport complet vous est remis au format PDF sous cinq jours ouvrés après votre paiement, en français ou en anglais, avec les priorités et les préconisations.',
   },
 ];
 
@@ -51,7 +51,7 @@ const NEXT_STEPS_EN: readonly Step[] = [
   },
   {
     title: 'Report delivery',
-    text: 'The complete report is delivered as a PDF, in French or English, with priorities and recommendations.',
+    text: 'The complete report is delivered as a PDF within five business days of payment, in French or English, with priorities and recommendations.',
   },
 ];
 

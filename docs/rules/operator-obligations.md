@@ -238,9 +238,9 @@ Fontaine EI, not "under the trade name Odysseus".
 | 1 | On the guichet unique (INPI), add the web audit activity | Done: filed 2026-09-28 (category 02080902, "A titre indépendant", libérale/BNC) and confirmed by the operator 2026-09-30. No enseigne was added: the establishment carries one trade name and it stays "CULT OF AURORA" (the operator's clothing brand, run from the same micro-entreprise). Odysseus is therefore an unregistered brand name: client documents name the seller "Jules Fontaine EI" and say the Odysseus services are provided by him, never "enseigne Odysseus" or "trade name Odysseus". Because goods (clothing) and services mix in one micro-entreprise, the VAT franchise needs total revenue at or below EUR 85,000 with services at or below EUR 37,500 (section 6) | done |
 | 2 | Legal notice page (mentions légales) | LCEN article 1-1 (`primary`): name, domicile, phone, registration number, publication director, host identity. LCEN article 19 adds address, email and phone for any electronic-commerce activity, B2B included. Written 2026-09-28 at `/mentions-legales` with the registered Sirene address (operator choice: no domiciliation) and Vercel as host. **Still missing: the operator's phone number** (operator deciding between a personal and a virtual number) | written; phone deferred by the operator on 2026-09-29 |
 | 3 | Professional liability insurance (RC Pro) | Section 7. Online insurers price intellectual-service RC Pro from about EUR 150 to 400 a year. Describe the activity accurately to the insurer: automated technical diagnostic, report with a non-verdict compliance information section | open |
-| 4 | Quote template | Must carry: "Jules Fontaine EI" (article R526-27 code de commerce, `primary`), SIRET, address, date, validity, client, site analysed, service, report language, price HT, VAT exemption mention, delivery time, payment terms, late-payment rate and the EUR 40 fee, no early-payment discount, a reference to the terms with the `/cgv` URL **and the terms attached as a PDF**, and a "Bon pour accord" signature line. Cass. com. 7 May 2025: a reference alone is not enough, the client must have had effective access before signing | open |
-| 5 | Decide the full-audit delivery lead time | Nothing in the repository fixes it. The terms defer it to the quote; the re-audit's 5 business days is the only published lead time | open, operator decision |
-| 6 | Invoice template and e-invoicing platform | Section 4: reception through a Plateforme Agréée since 1 September 2026. Invoices carry the same identity and payment mentions as the quote | check whether the platform was chosen |
+| 4 | Quote template | Must carry: "Jules Fontaine EI" (article R526-27 code de commerce, `primary`), SIRET, address, date, validity, client, site analysed, service, report language, price HT, VAT exemption mention, delivery time, payment terms, late-payment rate and the EUR 40 fee, no early-payment discount, a reference to the terms with the `/cgv` URL **and the terms attached as a PDF**, and a "Bon pour accord" signature line. Cass. com. 7 May 2025: a reference alone is not enough, the client must have had effective access before signing | see "Quote and invoice texts" below; set up in Shine by the operator |
+| 5 | Decide the full-audit delivery lead time | Nothing in the repository fixes it. The terms defer it to the quote; the re-audit's 5 business days is the only published lead time | decided 2026-09-30: five business days from payment for both services, published on `/offre` and in the terms |
+| 6 | Invoice template and e-invoicing platform | Section 4: reception through a Plateforme Agréée since 1 September 2026. Invoices carry the same identity and payment mentions as the quote | Shine Facture, the business account's invoicing module, is a Plateforme Agréée (since 21 May 2026): activate it in Shine |
 | 7 | VAT mention wording | "TVA non applicable, art. 293 B du CGI" until 31 December 2026. From 1 January 2027 the franchise moves to the CIBS (ordonnance 2026-671, reported as article L. 233-3), with the old wording tolerated until 30 June 2028. The public terms cite no article so they do not go stale | update templates in January 2027 |
 | 8 | Business bank account and Stripe account in the "Jules Fontaine EI" name | R526-27: a dedicated account must carry the EI denomination. The Stripe link amount is set by hand (trade-off 13): check it reads EUR 990 | check |
 | 9 | Prospecting privacy page recipients | `/confidentialite-prospection` lists Scaleway, Vercel and MongoDB Atlas only. Prospect scans run on the Hostinger VPS and full outreach scans are written through OpenAI before a preview is published (trade-off 95), so both are recipients under GDPR article 14 | done 2026-09-30: both named, with what OpenAI receives; visitor data (Vercel request logs, the opt-out limiter's in-memory address) is disclosed on the legal notice |
@@ -256,3 +256,51 @@ delivered.
 48 voids a territorial jurisdiction clause unless every party contracted as
 a commerçant. The operator is a non-commercial sole trader, so such a
 clause would be réputée non écrite.
+
+### Quote and invoice texts
+
+Quotes and invoices are issued from Shine Facture (decided 2026-09-30).
+These texts are what the operator pastes into it; the reasons are in the
+table above.
+
+- **Issuer name:** "Jules Fontaine EI". The trade name CULT OF AURORA may
+  also print; that is lawful, but an Odysseus quote should not carry the
+  clothing brand's logo.
+- **VAT:** franchise en base, so the document reads "TVA non applicable, art.
+  293 B du CGI" until 31 December 2026 (row 7 for 2027).
+- **Line:** "Diagnostic technique Odysseus du site [domaine]", quantity 1,
+  unit price 990 EUR HT. Re-audit line: "Nouvelle vérification Odysseus du
+  site [domaine]", 450 EUR HT. The detailed description:
+
+  > Analyse automatisée de l'ensemble des pages accessibles du site
+  > [domaine] : contrôles automatisables liés aux WCAG 2.2 niveau AA et à la
+  > norme EN 301 549, comparaison du HTML initial et du rendu JavaScript,
+  > signaux techniques liés aux assistants IA, en-têtes de sécurité, mesures
+  > de performance sur une sélection de pages. Rapport PDF en [français /
+  > anglais] avec priorités et préconisations, remis sous cinq jours ouvrés
+  > après réception du paiement. Ceci est un diagnostic technique, pas un
+  > audit RGAA : il ne produit pas de taux de conformité officiel et ne peut
+  > pas servir de base à une déclaration d'accessibilité.
+
+- **Validity:** 30 days from the quote date.
+- **Payment terms:** payable in full on acceptance, by bank transfer or card
+  payment link; no early-payment discount.
+- **Late-payment rate:** the ECB refinancing rate plus 10 points. For the
+  second half of 2026 that is 12.40 % (ECB rate 2.40 % since June 2026);
+  the rate resets each 1 January and 1 July.
+- **Custom mention (conditions):**
+
+  > Paiement à réception du devis signé. Aucun escompte pour paiement
+  > anticipé. En cas de retard de paiement : pénalités au taux de la BCE
+  > majoré de 10 points (12,40 % au second semestre 2026) et indemnité
+  > forfaitaire pour frais de recouvrement de 40 € (art. L. 441-10 et
+  > D. 441-5 du code de commerce). Prestation soumise aux conditions
+  > générales de vente jointes à ce devis et consultables sur
+  > https://www.odysseusaudit.com/cgv. Bon pour accord (date, nom,
+  > signature) :
+
+- **Attachment:** the terms as a PDF (browser print of `/cgv`), attached
+  to the quote email every time. A link alone is not enough (Cass. com.
+  7 May 2025).
+- **Acceptance:** a signed quote or an email that expressly accepts it.
+
