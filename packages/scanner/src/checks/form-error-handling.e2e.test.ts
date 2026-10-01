@@ -81,7 +81,7 @@ describe('checkFormErrorHandling against real pages', () => {
     }
   }
 
-  it('detects a visual-only error: border changes on submit but no aria association', async () => {
+  it('records a native validation error, which the browser itself announces', async () => {
     const html = `<body>
       <style>input:invalid { border: 2px solid red; }</style>
       <form id="newsletter">
@@ -93,9 +93,35 @@ describe('checkFormErrorHandling against real pages', () => {
     const result = await checkHtml(html);
 
     expect(result.forms).toHaveLength(1);
+    const field = result.forms[0]?.fields[0];
+    expect(field?.visuallyChanged).toBe(true);
+    expect(field?.nativelyInvalid).toBe(true);
+  });
+
+  it('detects a visual-only error: a script paints the border in a novalidate form', async () => {
+    const html = `<body>
+      <style>.error { border: 2px solid red; }</style>
+      <form id="newsletter" novalidate>
+        <input type="email" name="email" required />
+        <button type="submit">Subscribe</button>
+      </form>
+      <script>
+        document.getElementById('newsletter').addEventListener('submit', (event) => {
+          event.preventDefault();
+          for (const input of event.target.querySelectorAll('[required]')) {
+            if (input.value === '') input.classList.add('error');
+          }
+        });
+      </script>
+    </body>`;
+
+    const result = await checkHtml(html);
+
+    expect(result.forms).toHaveLength(1);
     expect(result.forms[0]?.fields).toHaveLength(1);
     const field = result.forms[0]?.fields[0];
     expect(field?.visuallyChanged).toBe(true);
+    expect(field?.nativelyInvalid).toBe(false);
     expect(field?.ariaInvalidTrue).toBe(false);
     expect(field?.hasAssociatedErrorText).toBe(false);
     expect(field?.hasAlertRegionInForm).toBe(false);

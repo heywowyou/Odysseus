@@ -5833,6 +5833,20 @@ the audit ids to `LIGHTHOUSE_EXCLUDED_AUDITS` unconditionally (would erase the
 findings of every stored audit on re-normalization, since those scans lack the
 new facts).
 
+**Amended 2026-10-01: script controls are not uncrawlable links.** Lighthouse
+exempts an `<a>` from `crawlable-anchors` only when it carries a `role`. Hotel
+sites write their cookie-settings openers, menu toggles, filters and panel
+openers as `<a href="javascript:void(0)">` without one, and on four outreach
+previews such a footer control became the priority "links search engines
+cannot read" with no page behind it. An anchor with no destination (no href,
+an empty one, or `javascript:void(0)`) whose opening tag declares a control
+(`type="button"`, `aria-controls`/`aria-expanded`/`aria-haspopup`, a
+`*toggle*` attribute, `pointer-events:none` or `cursor:default`, or a
+button, toggle, close, "nolink" or consent-manager class) is now exempt like
+a role-bearing one. An href that names a destination is still judged. This is
+a deliberate departure from Lighthouse parity: the check describes links a
+crawler misses, and a control has nothing to miss.
+
 ### 111. Clean audit data is a prerequisite for client-facing certainty (2026-09-22)
 
 Plan 075 closes the population boundary exposed by the WAF/challenge and
@@ -6454,3 +6468,16 @@ Accepted: a preview can go out with a known non-blocking defect, such as a
 debatable card order or a figure off by one. Rejected: fixing each defect
 before its email (an hour per prospect), and sending without any check (a
 false card is the first thing a prospect reads).
+
+**First batch fix, 2026-10-01.** The nine holds of the first two quick-check
+batches came from four shared defects, fixed in shared code: script controls
+counted as uncrawlable links (trade-off 110, amended), a native validation
+error counted as unannounced, the narrow-screen wording of the reflow card on
+sites that serve phones a separate mobile version (the card and the report
+labels now describe zoom, which is what the 320 CSS pixel check measures), and
+the regulatory block shown to a business our registry facts place out of
+scope (the block is now left out when the assessment is `out_of_scope`). The
+analysis schema also dropped the registry snapshot, sector and signal
+resolutions on save, so every preview said no registry data had been found;
+they are now stored. `scripts/preview-quick-check.mjs` runs the mechanical
+part of a quick check.

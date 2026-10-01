@@ -75,6 +75,12 @@ export interface FormFieldCheckResult {
    *  since a single alert region commonly covers a whole form rather
    *  than one field. */
   hasAlertRegionInForm: boolean;
+  /** The field fails the browser's own constraint validation (required,
+   *  type, pattern) in a form that does not opt out with novalidate. The
+   *  browser then blocks the submission, shows its own message and exposes
+   *  the field as invalid to assistive technology, so the error is
+   *  announced without any ARIA of the site's own. */
+  nativelyInvalid: boolean;
 }
 
 export interface FormCheckResult {
@@ -142,6 +148,7 @@ export async function checkFormErrorHandling(
             ariaInvalidTrue: boolean;
             hasAssociatedErrorText: boolean;
             hasAlertRegionInForm: boolean;
+            nativelyInvalid: boolean;
           }>;
         }> = [];
 
@@ -200,6 +207,12 @@ export async function checkFormErrorHandling(
             const visuallyChanged = after !== beforeStyles[i];
 
             const ariaInvalidTrue = el.getAttribute('aria-invalid') === 'true';
+            const constrained = el as HTMLInputElement;
+            const nativelyInvalid =
+              form instanceof HTMLFormElement &&
+              !form.noValidate &&
+              constrained.willValidate === true &&
+              constrained.validity?.valid === false;
             const describedBy = el.getAttribute('aria-describedby');
             const hasAssociatedErrorText = describedBy
               ? describedBy.split(/\s+/).some((id) => {
@@ -219,6 +232,7 @@ export async function checkFormErrorHandling(
               ariaInvalidTrue,
               hasAssociatedErrorText,
               hasAlertRegionInForm,
+              nativelyInvalid,
             };
           });
 

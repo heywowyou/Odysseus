@@ -108,6 +108,46 @@ describe('isUncrawlableAnchor', () => {
     );
   });
 
+  it('passes a script control written as a link, from the markup that declares it', () => {
+    const controls = [
+      '<a class="footer_link tarteaucitronOpenPanel ">',
+      '<a onclick="openAxeptioCookies()" class="openAxeptioCookies" data-slug="menu-item-3">',
+      '<a class="nav-link link-filter active" data-slug="all" type="button">',
+      '<a data-sdkbs-toggle="offcanvas" data-sdkbs-target="#room" aria-controls="offcanvasRight">',
+      '<a href="javascript:void(0);" onclick="event.preventDefault();" fspanel-toggle="5124">',
+      '<a class="cm-btn cm-btn-sm cm-btn-success" href="javascript:void(0);">',
+      '<a aria-label="Hotel" class="nav-link react nolink" target="" href="javascript:void(0);">',
+      '<a id="" href="javascript:void(0);" style="cursor:default;" class="bigtarget-init">',
+      '<a style="pointer-events: none;" href="javascript:void(0)">',
+    ];
+    for (const snippet of controls) {
+      const rawHref = /href="([^"]*)"/.exec(snippet)?.[1] ?? null;
+      const control = anchor({
+        snippet,
+        rawHref,
+        href: '',
+        id: '',
+        hasEventListener: true,
+        hasHrefAssociatedAttribute: true,
+      });
+      expect(isUncrawlableAnchor(control, PAGE_URL), snippet).toBe(false);
+    }
+  });
+
+  it('still fails a javascript: link the markup does not declare a control', () => {
+    const snippet = '<a id="" class="" href="javascript:void(0);" target="_self">';
+    expect(
+      isUncrawlableAnchor(anchor({ snippet, rawHref: 'javascript:void(0);', id: '' }), PAGE_URL),
+    ).toBe(true);
+  });
+
+  it('still judges an invalid destination on a button-styled link', () => {
+    const snippet = '<a class="btn btn-primary" href="http://tel:+33466254091">';
+    expect(
+      isUncrawlableAnchor(anchor({ snippet, rawHref: 'http://tel:+33466254091' }), PAGE_URL),
+    ).toBe(true);
+  });
+
   it('fails an href that is not a valid address', () => {
     expect(isUncrawlableAnchor(anchor({ rawHref: 'http://' }), PAGE_URL)).toBe(true);
   });
@@ -148,7 +188,7 @@ describe('crawlable-anchors identity on capped snippets', () => {
   // The shape of a real hotel booking button: a different SEO aria-label on
   // each page moves the 200-character cap through the next attribute's name.
   function bookingButton(label: string): AnchorFactInput {
-    const tag = `<a aria-label="${label}" id="" class="book-btn " target="" href="javascript:void(0);" onclick="event.preventDefault();" fspanel-toggle="4301" fspanel-ctx-type="booking" fspanel-ctx-code="4301">`;
+    const tag = `<a aria-label="${label}" id="" class="book-link " target="" href="javascript:void(0);" onclick="event.preventDefault();" data-ctx-type="booking" data-ctx-code="4301" data-ctx-lang="fr">`;
     return anchor({ rawHref: 'javascript:void(0);', snippet: tag.slice(0, 200) });
   }
 
@@ -161,19 +201,22 @@ describe('crawlable-anchors identity on capped snippets', () => {
       ].map((label) => extractLinkCandidates([bookingButton(label)], PAGE_URL)[0]?.dedupeIdentity),
     );
     expect(identities.size).toBe(1);
+    expect([...identities][0]).toBeDefined();
   });
 
   it('keeps two kinds of link apart', () => {
     const booking = extractLinkCandidates([bookingButton('hotel')], PAGE_URL)[0];
-    const consent = extractLinkCandidates(
+    const menu = extractLinkCandidates(
       [
         anchor({
           rawHref: 'javascript:void(0);',
-          snippet: '<a class="cm-btn" href="javascript:void(0);">',
+          snippet: '<a class="menu-item" href="javascript:void(0);">',
         }),
       ],
       PAGE_URL,
     )[0];
-    expect(booking?.dedupeIdentity).not.toBe(consent?.dedupeIdentity);
+    expect(booking?.dedupeIdentity).toBeDefined();
+    expect(menu?.dedupeIdentity).toBeDefined();
+    expect(booking?.dedupeIdentity).not.toBe(menu?.dedupeIdentity);
   });
 });

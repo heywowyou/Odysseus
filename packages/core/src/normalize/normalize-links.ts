@@ -179,9 +179,40 @@ export function hasNonDescriptiveLinkText(anchor: AnchorFactInput): boolean {
 
 const JAVASCRIPT_VOID_PATTERN = /javascript:void(\(|)0(\)|)/;
 
+/** Markup that declares an `<a>` a script control rather than a link: what
+ *  `role="button"` says, written another way. Lighthouse exempts only the
+ *  role, so a cookie-settings opener, a menu toggle or a filter written as
+ *  `<a href="javascript:void(0)" class="btn">` counted as a link search
+ *  engines cannot follow, and on four hotel previews that footer control
+ *  became a "links search engines cannot read" priority with no page
+ *  behind it. Read from the opening tag, so a stored scan is judged too. */
+const CONTROL_ATTRIBUTE_PATTERN =
+  /\s(?:type\s*=\s*["']?button|aria-(?:controls|expanded|haspopup)\s*=|[\w:-]*toggle[\w:-]*\s*=)/i;
+const CONTROL_STYLE_PATTERN =
+  /\sstyle\s*=\s*["'][^"']*(?:pointer-events\s*:\s*none|cursor\s*:\s*default)/i;
+const CONTROL_CLASS_PATTERN =
+  /(?:^|[\s_-])(?:btn|button|nolink|toggle|close|tarteaucitron\w*|openaxeptio\w*|axeptio\w*|cmplz\w*|klaro\w*|cm-btn|didomi\w*|ot-sdk\w*|cky\w*|cookie\w*)(?:$|[\s_-])/i;
+
+function declaresScriptControl(snippet: string): boolean {
+  const openingTag = snippet.slice(0, snippet.indexOf('>') + 1 || undefined);
+  if (CONTROL_ATTRIBUTE_PATTERN.test(openingTag) || CONTROL_STYLE_PATTERN.test(openingTag)) {
+    return true;
+  }
+  const classes = /\sclass\s*=\s*["']([^"']*)/i.exec(openingTag)?.[1] ?? '';
+  return classes.split(/\s+/).some((name) => CONTROL_CLASS_PATTERN.test(name));
+}
+
 export function isUncrawlableAnchor(anchor: AnchorFactInput, pageUrl: string): boolean {
   const rawHref = (anchor.rawHref ?? '').replace(/\s/g, '');
   if (anchor.role.trim().length > 0) return false;
+  // A control with no destination is not a link a crawler misses. An href
+  // that names a destination is still judged, whatever the markup says.
+  if (
+    (anchor.rawHref === null || anchor.href === '' || JAVASCRIPT_VOID_PATTERN.test(rawHref)) &&
+    declaresScriptControl(anchor.snippet)
+  ) {
+    return false;
+  }
   if (rawHref.startsWith('mailto:')) return false;
   // `<a id="...">` used as a jump target, not as a link.
   if (rawHref === '' && anchor.id) return false;

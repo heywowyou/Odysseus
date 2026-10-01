@@ -58,6 +58,20 @@ describe('form-error-not-associated', () => {
     ).toEqual([]);
   });
 
+  it('does not fire when the browser announces its own validation error', () => {
+    const candidates = extractFormErrorHandlingCandidates(
+      inputWithFields([baseField({ nativelyInvalid: true })]),
+    );
+    expect(candidates).toEqual([]);
+  });
+
+  it('still fires on a scan that did not record native validity', () => {
+    const candidates = extractFormErrorHandlingCandidates(
+      inputWithFields([baseField({ nativelyInvalid: false })]),
+    );
+    expect(candidates).toHaveLength(1);
+  });
+
   it('does not fire when nothing visibly changed - no evidence an error was shown at all', () => {
     expect(
       extractFormErrorHandlingCandidates(inputWithFields([baseField({ visuallyChanged: false })])),

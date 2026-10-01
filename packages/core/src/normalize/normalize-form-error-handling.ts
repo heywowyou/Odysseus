@@ -26,6 +26,10 @@ export interface FormFieldCheckInput {
   ariaInvalidTrue: boolean;
   hasAssociatedErrorText: boolean;
   hasAlertRegionInForm: boolean;
+  /** Fails the browser's own constraint validation in a form without
+   *  novalidate, so the browser announces the error itself. Absent on
+   *  scans made before it was recorded. */
+  nativelyInvalid?: boolean;
 }
 
 export interface FormCheckInput {
@@ -45,8 +49,14 @@ export function extractFormErrorHandlingCandidates(
 
   for (const form of input.forms) {
     for (const field of form.fields) {
+      // A native validation error is exposed and announced by the browser
+      // itself: a newsletter field marked required showed a red border, and
+      // the finding said screen readers were never told, which was false.
       const isProgrammaticallyAssociated =
-        field.ariaInvalidTrue || field.hasAssociatedErrorText || field.hasAlertRegionInForm;
+        field.ariaInvalidTrue ||
+        field.hasAssociatedErrorText ||
+        field.hasAlertRegionInForm ||
+        field.nativelyInvalid === true;
       if (!field.visuallyChanged || isProgrammaticallyAssociated) continue;
 
       candidates.push({
