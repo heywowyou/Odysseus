@@ -47,7 +47,7 @@ export const RULE_TRANSLATIONS_FR: Readonly<Record<string, RuleTranslation>> =
     // a real report leaked English titles, which is how the milestone 8.6
     // rules got here (A5).
     'reflow-horizontal-scroll': {
-      label: 'La page impose un défilement horizontal sur écran étroit',
+      label: "La page impose un défilement horizontal lorsque l'affichage est agrandi",
       gloss:
         'À la largeur de 320 pixels prévue par le critère WCAG 1.4.10, le contenu déborde et oblige à faire défiler la page dans les deux sens.',
     },

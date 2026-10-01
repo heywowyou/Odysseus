@@ -669,8 +669,11 @@ export const OUTREACH_PROOF_CARD_COPY: Readonly<Record<string, OutreachProofCard
     en: 'An address passes through several successive redirects before arriving.',
   },
   'reflow-horizontal-scroll': {
-    fr: 'Sur un écran étroit, la page oblige à faire défiler le contenu dans les deux sens.',
-    en: 'On a narrow screen the page forces content to scroll in both directions.',
+    // Zoom, not a phone: the check measures the 320 CSS pixel width a
+    // desktop browser reaches at 400 % zoom, and a site that serves phones
+    // a separate mobile version can overflow there and nowhere on a phone.
+    fr: "Lorsque le visiteur agrandit l'affichage, la page oblige à faire défiler le contenu dans les deux sens.",
+    en: 'When a visitor zooms in, the page forces content to scroll in both directions.',
   },
   'robots-blocks-indexing': {
     fr: "Un réglage du site interdit aux moteurs de recherche de lire la page d'accueil.",

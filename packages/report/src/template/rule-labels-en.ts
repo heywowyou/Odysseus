@@ -10,7 +10,7 @@
  * English title fails the build.
  */
 export const RULE_LABELS_EN: Readonly<Record<string, string>> = {
-  'reflow-horizontal-scroll': 'The page forces horizontal scrolling on narrow screens',
+  'reflow-horizontal-scroll': 'The page forces horizontal scrolling when the display is zoomed in',
   'accessibility-statement-missing': 'No accessibility statement was found',
   'nap-phone-mismatch': 'The phone number in the structured data does not appear on the page',
   'nap-postal-code-mismatch': 'The postal code in the structured data does not appear on the page',
