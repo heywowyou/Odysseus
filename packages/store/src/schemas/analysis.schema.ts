@@ -149,6 +149,24 @@ const obligationAssessmentSchemaMongo = new Schema(
         { _id: false },
       ),
     },
+    // The three fields obligation-stage.ts splices on after assessObligations.
+    // A strict schema without them dropped every one on save, so a stored
+    // analysis lost the registry facts the outreach preview and the report
+    // print, and each preview said no registry data had been found.
+    siteSignalResolutions: { type: Schema.Types.Mixed },
+    sector: { type: String, enum: ['general', 'hospitality'] },
+    registrySnapshot: {
+      type: new Schema(
+        {
+          denomination: { type: String, required: true },
+          effectifBandLabel: { type: String, default: null },
+          retrievedAt: { type: Date, required: true },
+          source: { type: String, required: true },
+          turnoverEur: { type: Number },
+        },
+        { _id: false },
+      ),
+    },
   },
   { _id: false },
 );

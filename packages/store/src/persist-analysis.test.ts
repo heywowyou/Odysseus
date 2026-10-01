@@ -1,5 +1,10 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { FINDINGS_SCHEMA_VERSION, NORMALIZATION_FINGERPRINT, type LlmOutput } from '@odysseus/core';
+import {
+  FINDINGS_SCHEMA_VERSION,
+  NORMALIZATION_FINGERPRINT,
+  type LlmOutput,
+  type ObligationAssessment,
+} from '@odysseus/core';
 import type { AnalysisDocumentFields } from './schemas/analysis.schema.js';
 import { persistAnalysis } from './persist-analysis.js';
 import { createAnalysisModel } from './schemas/analysis.schema.js';
@@ -104,6 +109,47 @@ describe.skipIf(!mongoAvailable)('persistAnalysis', () => {
 
     expect(stored).not.toBeNull();
     expect(stored?.obligationAssessment).toBeUndefined();
+  });
+
+  it('keeps the registry facts, sector and signal resolutions spliced onto the assessment', async () => {
+    const obligationAssessment = {
+      status: 'in_scope',
+      basis: [{ regimeId: 'eaa-loi-2023-171', facts: [{ kind: 'transactional-flow' }] }],
+      sirenSource: 'extracted',
+      sector: 'hospitality',
+      siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'detected' } },
+      registrySnapshot: {
+        denomination: 'HOTEL EXEMPLE SAS',
+        effectifBandLabel: '20 à 49 salariés',
+        retrievedAt: new Date('2026-09-30T00:00:00.000Z'),
+        source: 'sirene-stock',
+        turnoverEur: 3200000,
+      },
+    } as unknown as ObligationAssessment;
+    await persistAnalysis(connection!, {
+      ...buildFields(
+        '00000000-0000-4000-8000-000000000006',
+        'persist-analysis-test-5',
+        'fr',
+        new Date('2026-08-02T00:00:00.000Z'),
+      ),
+      obligationAssessment,
+    });
+
+    const AnalysisModel = createAnalysisModel(connection!);
+    const stored = await AnalysisModel.findOne({ auditId: 'persist-analysis-test-5' }).lean();
+
+    expect(stored?.obligationAssessment).toMatchObject({
+      sector: 'hospitality',
+      siteSignalResolutions: { hasTransactionalFlow: { value: true, source: 'detected' } },
+      registrySnapshot: {
+        denomination: 'HOTEL EXEMPLE SAS',
+        effectifBandLabel: '20 à 49 salariés',
+        retrievedAt: new Date('2026-09-30T00:00:00.000Z'),
+        source: 'sirene-stock',
+        turnoverEur: 3200000,
+      },
+    });
   });
 
   it('round-trips the exact writing site context when one was supplied', async () => {
