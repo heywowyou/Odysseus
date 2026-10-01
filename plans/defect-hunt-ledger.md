@@ -181,6 +181,30 @@ input of the next batch fix.
 | 2026-09-30 | Hôtel Macchi 939e3eea | preview quick check | SEND | Blocking: -. Backlog: operator SIREN resolves to a closed establishment (obligation undetermined); keyboard walks 0/42 evaluated; card 2 moderate (pre-fix ranking) | - | - |
 | 2026-09-30 | Hôtel Régina 1d377ee1 | preview quick check | SEND | Blocking: -. Backlog: book.html in 7 languages and a published test page (page-test-namastay, 4 languages) analysed as separate pages; registry sentence understated (schema) | - | - |
 | 2026-09-30 | Hôtel le 37 Bis 44c2c823 | preview quick check | HOLD (1) | Blocking: card 1 crawlable-anchors: consent buttons, "nolink" menu parents and panel toggles (javascript:void(0)), no page behind them. Backlog: /fr/book, /fr/book.html, /en/book.html copies analysed separately; registry sentence understated (schema) | - | - |
+| 2026-10-01 | Auberge du Bon Laboureur 2df53312 | preview quick check | SEND | Blocking: -. Backlog: 3 language copies each of 3 pages (zh, de) analysed (5%) | - | - |
+| 2026-10-01 | Domaine Ribiera 184f204d | preview quick check | SEND | Blocking: - (earlier HOLD (3): block shown to an out-of-scope business; fixed by the omission, b5135f68). Backlog: legal-notice absence alert, not on a card | - | - |
+| 2026-10-01 | Hôtel Le Castel d'Alti c00a0e1b | preview quick check | SEND | Blocking: -. Backlog: 13 of 114 analysed pages are booking-engine offer pages with query strings; 45 soft-error pages | - | - |
+| 2026-10-01 | Maison Lameloise f18335d7 | preview quick check | SEND | Blocking: -. Backlog: card 1 contrast sample is the tarteaucitron banner (first-party configuration) | - | - |
+| 2026-10-01 | Hôtel Le Christina c472e0ee | preview quick check | SEND | Blocking: -. Backlog: 3-5 employees with unknown turnover resolves in_scope (no exemption without turnover evidence); block stays neutral; keyboard walks 0/33 evaluated; 14 RoomTypeCode query pages analysed | - | - |
+| 2026-10-01 | Villa Motel 944c09fd | preview quick check | SEND | Blocking: -. Backlog: registry name LES MARMOTTES differs from the brand; confirmed active hotel company in Stenay | - | - |
+| 2026-10-01 | Hôtel Le Relais du Louvre 2ab871dc | preview quick check | SEND | Blocking: -. Backlog: keyboard walks 1/315 evaluated | - | - |
+| 2026-10-01 | Hôtel Napoléon 992d2729 | preview quick check | SEND | Blocking: -. Backlog: FECIT confirmed on the legal notice | - | - |
+| 2026-10-01 | Hôtel Le Kaila 28e942e3 | preview quick check | SEND | Blocking: -. Backlog: 8 language copies of 2 pages analysed (5%) | - | - |
+| 2026-10-01 | Hôtel Le Mouillage e2d7416c | preview quick check | SEND | Blocking: - (earlier HOLD (3): block shown to an out-of-scope business; fixed by the omission). Backlog: - | - | - |
+| 2026-10-01 | Hôtel A Flatta f05b08ad | preview quick check | SEND | Blocking: -. Backlog: 0 employees with unknown turnover resolves likely_in_scope; block neutral | - | - |
+| 2026-10-01 | Hôtel Le Prieuré de Boulogne 0309ce97 | preview quick check | SEND | Blocking: -. Backlog: legal-notice absence alert, not on a card | - | - |
+| 2026-10-01 | Atrium Hôtel 28f7e2c0 | preview quick check | SEND | Blocking: - (earlier HOLD (1) crawlable-anchors on the cookie-panel opener; fixed by the script-control exclusion). Backlog: keyboard walks 0/38 evaluated | - | - |
+| 2026-10-01 | Hôtel Le Clos des Arts b5882b49 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-01 | Château de Codignat 6edfec5c | preview quick check | SEND | Blocking: - (earlier HOLD (3); fixed by the omission). Backlog: quick check expected content-completed only; the preview counts completed plus partial (checker fixed) | - | - |
+| 2026-10-01 | L'Hôtel Particulier 332b720b | preview quick check | SEND | Blocking: - (earlier HOLD (3); fixed by the omission). Backlog: card 1 shows the theme's dominant moderate placeholder rule while the theme also holds a critical unnamed select on 86 pages | - | - |
+| 2026-10-01 | Hôtel Belles Rives 9ec96630 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-01 | Hôtel Le Coin Savoyard 864786c2 | preview quick check | SEND | Blocking: -. Backlog: 2 copy pages of 24 (chambres.fr, ?id=); legal-notice absence alert, not on a card | - | - |
+| 2026-10-01 | Hôtel Le Placide 2d17eb74 | preview quick check | SEND | Blocking: - (earlier HOLD (1) crawlable-anchors; fixed by the script-control exclusion). Backlog: - | - | - |
+| 2026-10-01 | Clarance Hôtel 6c52ca1f | preview quick check | SEND | Blocking: - (earlier HOLD (1) crawlable-anchors; fixed by the script-control exclusion). Backlog: card 3 contrast sample is the consent banner's buttons | - | - |
+| 2026-10-01 | Hôtel La Baignoire f2db07c4 | preview quick check | SEND | Blocking: - (earlier HOLD (1) reflow wording; fixed by the zoom wording). Backlog: 1-2 employees with unknown turnover resolves in_scope; block neutral | - | - |
+| 2026-10-01 | Hôtel Clos Sainte Marie d2038dbf | preview quick check | SEND | Blocking: - (earlier HOLD (3); fixed by the omission). Backlog: card 2 hreflang: ?lang=en renders French, verified live | - | - |
+| 2026-10-01 | Hôtel Capucines 9e4e1744 | preview quick check | SEND | Blocking: - (rescan of 4b8beedf; earlier HOLD (1) form-error on a natively validated field; fixed by recording native validity). Backlog: - | - | - |
+| 2026-10-01 | Hôtel le 37 Bis 44c2c823 | preview quick check | SEND | Blocking: - (earlier HOLD (1) crawlable-anchors; fixed by the script-control exclusion). Backlog: 3 copies of the booking page analysed (4%) | - | - |
 
 ## Sweep 4 notes
 

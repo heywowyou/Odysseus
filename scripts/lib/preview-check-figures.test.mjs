@@ -7,7 +7,7 @@ import {
 
 const coverageSummary = {
   inventoriedUrlCount: 39,
-  content: { completed: 38 },
+  content: { completed: 37, partial: 1 },
   passes: { lighthouse: { completed: 7 } },
 };
 
@@ -39,7 +39,7 @@ const previewText = `Principaux résultats
 À traiter en premier`;
 
 describe('preview figure reconciliation', () => {
-  it('computes the figures over the primary population', () => {
+  it('computes the figures over the primary population, partial content checks included', () => {
     expect(expectedPreviewFigures({ coverageSummary, primaryFindings })).toEqual({
       inventoried: 39,
       contentChecked: 38,

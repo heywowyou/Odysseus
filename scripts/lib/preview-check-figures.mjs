@@ -22,7 +22,12 @@ export function expectedPreviewFigures({ coverageSummary, primaryFindings }) {
   }
   return {
     inventoried: coverageSummary?.inventoriedUrlCount ?? null,
-    contentChecked: coverageSummary?.content?.completed ?? null,
+    // A page whose content checks partly ran still counts, as in core's
+    // outreach-preview-summary and the report's statistics.
+    contentChecked:
+      coverageSummary?.content === undefined
+        ? null
+        : coverageSummary.content.completed + coverageSummary.content.partial,
     performanceMeasured: coverageSummary?.passes?.lighthouse?.completed ?? null,
     findings: primaryFindings.length,
     affectedPages: pages.size,
