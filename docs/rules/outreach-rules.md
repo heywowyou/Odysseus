@@ -240,7 +240,10 @@ The selected French analysis is an **ordering authority, not a prose source**.
 V3 runs the paid report's exact `buildRenderedPriorities()` logic and uses the
 first three rendered priorities. Each public card then resolves its title from
 the existing operator-reviewed bilingual proof-card catalog through that
-priority's deterministic representative finding. Theme titles, executive
+priority's deterministic representative finding. The card's severity label is
+the priority's most severe counted finding in its own category, not the
+representative's: the example is the rule carrying the most work and can be
+milder than the card's worst finding, which is what ranked it. Theme titles, executive
 summary, business-impact prose, recommended actions, notes and model risk never
 enter the preview.
 

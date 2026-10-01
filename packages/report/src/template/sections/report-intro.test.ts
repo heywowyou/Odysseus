@@ -89,6 +89,7 @@ function buildPriority(
     evidence: {
       representativeFinding: findings[0]!,
       representativeLabel: 'label',
+      topSeverity: findings[0]!.severity,
       representativePageUrl: findings[0]!.pageUrls[0],
       uniquePageCount: findings[0]!.pageUrls.length,
       occurrenceCount: findings[0]!.occurrences,

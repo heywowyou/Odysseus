@@ -6,6 +6,7 @@ import {
   type Finding,
   type ManifestPageEntry,
   type ReportLanguage,
+  type Severity,
   type StoredTheme,
 } from '@odysseus/core';
 import { buildMissingPercentIndex, classifyDiversion } from '@odysseus/llm';
@@ -69,6 +70,15 @@ export interface PriorityEvidence {
    *  the finding the sentence actually quotes, so the two can never
    *  disagree. */
   representativePageUrl: string | undefined;
+  /** The most severe finding the card counts in its own category. The
+   *  example is the rule carrying the work, which can be milder than the
+   *  rest of the card: L'Hôtel Particulier's form-field card quoted a
+   *  moderate placeholder-only label while it also held a critical unnamed
+   *  select on all 86 pages, and the outreach preview printed "Modéré" on a
+   *  card the structure ranked first for its critical finding. A surface
+   *  that labels the whole card uses this, never the example's own
+   *  severity. */
+  topSeverity: Severity;
   /** Exact count of distinct pages across the whole priority's finding
    *  set, confined to the visited scope (see buildPriorityEvidence). */
   uniquePageCount: number;
@@ -318,8 +328,16 @@ function buildPriorityEvidence(
         .filter((url) => scopePageUrls.has(url)),
     ),
   ].sort();
+  // The same category narrowing as the example (issue #84), over the
+  // findings the card counts, so a performance metric cannot raise an
+  // accessibility card's label.
+  const countedPool = representativePool.filter((finding) => inScope.includes(finding));
+  const topSeverity = (countedPool.length > 0 ? countedPool : [representative])
+    .map((finding) => finding.severity)
+    .reduce((top, severity) => (SEVERITY_ORDER[severity] > SEVERITY_ORDER[top] ? severity : top));
   return {
     representativeFinding: representative,
+    topSeverity,
     representativeLabel: resolveFindingDisplayLabel(
       language,
       representative.ruleId,

@@ -135,7 +135,7 @@ function checkOne(auditId) {
   priorities.forEach((priority, index) => {
     const finding = priority.evidence.representativeFinding;
     lines.push(
-      `card ${index + 1}: ${priority.theme?.title ?? ''} | ${finding.findingId} ${finding.ruleId} ${finding.severity} (${finding.source}) | ${priority.evidence.uniquePageCount} pages`,
+      `card ${index + 1}: ${priority.theme?.title ?? ''} | label ${priority.evidence.topSeverity} | ${finding.findingId} ${finding.ruleId} ${finding.severity} (${finding.source}) | ${priority.evidence.uniquePageCount} pages`,
     );
     lines.push(`    ${finding.description.slice(0, 220)}`);
     const elements = finding.elements ?? [];

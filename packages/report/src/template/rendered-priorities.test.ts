@@ -827,3 +827,70 @@ describe('issue #297: the example represents the priority, not its worst outlier
     expect(priorities[0]!.evidence.representativeFinding.ruleId).toBe('target-size');
   });
 });
+
+describe('the card label carries the most severe finding the card counts', () => {
+  const visited = {
+    pages: [
+      { url: 'https://example.com/', status: 'visited' },
+      { url: 'https://example.com/a', status: 'visited' },
+    ],
+  } as never;
+
+  it('labels a card critical when its example is a milder rule carrying more occurrences', () => {
+    const findings = [
+      buildFinding({
+        findingId: 'f001',
+        ruleId: 'placeholder-only-label',
+        source: 'custom',
+        severity: 'moderate',
+        occurrences: 40,
+        pageUrls: ['https://example.com/', 'https://example.com/a'],
+      }),
+      buildFinding({
+        findingId: 'f002',
+        ruleId: 'select-name',
+        severity: 'critical',
+        occurrences: 2,
+        pageUrls: ['https://example.com/', 'https://example.com/a'],
+      }),
+    ];
+
+    const [priority] = buildRenderedPriorities(
+      [buildTheme(['f001', 'f002'])],
+      findings,
+      visited,
+      'fr',
+    );
+
+    expect(priority!.evidence.representativeFinding.ruleId).toBe('placeholder-only-label');
+    expect(priority!.evidence.topSeverity).toBe('critical');
+  });
+
+  it('ignores a more severe finding from another category and one outside the counted pages', () => {
+    const findings = [
+      buildFinding({ findingId: 'f001', ruleId: 'link-name', severity: 'serious', occurrences: 9 }),
+      buildFinding({
+        findingId: 'f002',
+        ruleId: 'cumulative-layout-shift',
+        source: 'lighthouse',
+        category: 'performance',
+        severity: 'critical',
+      }),
+      buildFinding({
+        findingId: 'f003',
+        ruleId: 'button-name',
+        severity: 'critical',
+        pageUrls: ['https://example.com/never-scanned'],
+      }),
+    ];
+
+    const [priority] = buildRenderedPriorities(
+      [buildTheme(['f001', 'f002', 'f003'])],
+      findings,
+      visited,
+      'fr',
+    );
+
+    expect(priority!.evidence.topSeverity).toBe('serious');
+  });
+});

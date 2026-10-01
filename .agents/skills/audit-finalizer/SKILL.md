@@ -448,7 +448,9 @@ For each card, take its representative finding (the priority's rule with the
 most work) and read two samples: page, selector, snippet. Ask whether the
 hotel's web agency would confirm it. When in doubt, check one live page (the
 crawler's user agent, `robots.txt` respected). Note whether the card order is
-defensible for a hotel director; an odd order alone does not block.
+defensible for a hotel director; an odd order alone does not block. The
+card's severity label is the card's worst counted finding (the script prints it
+as `label`), so a critical label over a milder example is expected.
 
 ### Q5. Regulatory block and text
 

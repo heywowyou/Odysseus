@@ -263,7 +263,7 @@ export function buildOutreachPreviewSummaryV3(options: {
       rank: (index + 1) as 1 | 2 | 3,
       title: copy,
       category: priority.theme.category,
-      severity: representative.severity,
+      severity: priority.evidence.topSeverity,
       affectedPageCount: priority.evidence.uniquePageCount,
     };
   });
