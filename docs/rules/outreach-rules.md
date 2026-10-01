@@ -275,7 +275,9 @@ What v3 shows, and nothing more:
 - non-zero category totals over the same distinct findings, largest first;
 - exactly three ranked priority cards in the same order as the first three
   paid-report priorities, using reviewed public-safe copy;
-- the deterministic regulatory facts block when the sources permit it;
+- the deterministic regulatory facts block when the sources permit it, left
+  out when the audit's obligation assessment is `out_of_scope` (the registry
+  facts place the business below the size thresholds);
 - the code-owned EUR 990 HT price, with the ask being to reply and request the
   diagnostic, not a checkout link;
 - the article 14 disclosures: identity, actual data origins, purpose, opt-out,

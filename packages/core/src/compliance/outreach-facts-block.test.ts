@@ -33,6 +33,25 @@ describe('buildOutreachFactsBlock', () => {
     expect(block).toEqual({ state: 'omitted' });
   });
 
+  it('omits the block when the assessment places the business below the size thresholds', () => {
+    // A regulatory section shown to a business our own registry facts place
+    // out of scope reads as exposure it does not have.
+    const block = buildOutreachFactsBlock({
+      assessment: assessment({
+        status: 'out_of_scope',
+        basis: [
+          {
+            regimeId: EAA_REGIME_ID,
+            facts: [{ kind: 'sme-exemption', effectifCode: '01', turnoverEur: 250000 }],
+          },
+        ],
+      } as Partial<ObligationAssessment>),
+      language: 'fr',
+      capabilities: CAPABLE,
+    });
+    expect(block).toEqual({ state: 'omitted' });
+  });
+
   it('renders the criterion and says plainly that no registry data was found', () => {
     const block = buildOutreachFactsBlock({
       assessment: undefined,
@@ -132,7 +151,9 @@ describe('buildOutreachFactsBlock', () => {
     `);
   });
 
-  it.each(['in_scope', 'likely_in_scope', 'out_of_scope', 'undetermined'] as const)(
+  // out_of_scope leaves the block out entirely (tested above); every status
+  // that renders it tells the reader the same thing.
+  it.each(['in_scope', 'likely_in_scope', 'undetermined'] as const)(
     'never states a verdict, whatever %s the assessment reached',
     (status) => {
       for (const language of ['fr', 'en'] as const) {

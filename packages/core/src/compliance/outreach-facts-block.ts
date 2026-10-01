@@ -14,6 +14,11 @@
  * where a lookup actually produced some. A recommendation to confirm scope with
  * a lawyer.
  *
+ * **When it is left out.** When the assessment is `out_of_scope`: our own
+ * registry facts place the business below the size thresholds, and a
+ * regulatory section in a cold preview would then suggest an exposure the
+ * evidence rules out (trade-off 127, revised 2026-10-01).
+ *
  * **What it may never say.** That this business is bound. A deadline. A
  * sanction amount - `Regime.sanctionCeiling` exists and is deliberately never
  * read here. A population statistic. Case law, which
@@ -128,6 +133,7 @@ export function buildOutreachFactsBlock(options: {
   omitAbsentRegistry?: boolean;
 }): OutreachFactsBlock {
   if (!options.capabilities.argumentB) return { state: 'omitted' };
+  if (options.assessment?.status === 'out_of_scope') return { state: 'omitted' };
 
   const copy: Copy = COPY[options.language];
   const basis = primaryBasis(options.assessment);
