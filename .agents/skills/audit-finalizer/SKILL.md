@@ -397,6 +397,13 @@ Read-only. Budget about ten minutes per audit; a doubt that takes longer to
 settle is itself a reason to HOLD, not to keep digging. Work under
 `reports/check-<site>-<audit-short-id>/` (gitignored, `0600`).
 
+`scripts/preview-quick-check.mjs <audit-id> ...` (or `--uncontacted`, every
+prospect still `new` or `audited`) runs the mechanical part of Q1 to Q4: it
+fetches, runs the measure, reconciles every printed figure and prints each
+card's representative finding with samples and the regulatory block, into
+`reports/check-*/quick-check.txt`. Run `pnpm build` first. The judgment below
+stays yours.
+
 ### Q1. Resolve and fetch
 
 ~~~bash
