@@ -727,11 +727,16 @@ Full detail in the five companion docs listed at the top of this brief.
 - Outreach-preview-to-full-audit conversion rate, as the first read on whether the free-preview-to-paid-audit funnel actually converts (superseded 2026-08-16, replaces the screening-to-full-audit upgrade metric, which assumed a paid screening step that no longer exists).
 - Time per audit falling measurably as the pipeline is built.
 
-**Not working, reassess:**
+**Not working, reassess** (revised 2026-10-01: the "no paid audit after 60 days of consistent outreach" calendar rule is replaced by the volume checkpoints below, for the reasons in the note after this list):
 
-- No paid audit after 60 days of consistent outreach with real evidence attached.
+- Checkpoints count **matured first touches**: prospects who replied, or whose sequence closed without a reply (14 days after touch 3, so about 25 days after touch 1 at the default spacing in `docs/rules/outreach-rules.md`). A prospect contacted in the last few weeks is not yet evidence either way. A reply that arrives after the sequence closes still counts, credited to that prospect's first touch.
+- **About 100 matured first touches:** fewer than two or three replies of any kind, or no positive reply, means changing the targeting or the message (segment, evidence chosen, subject, opening lines), not sending more.
+- **About 300 matured first touches:** replies but no paid audit means the loss happens after the reply (proof, the preview, follow-up handling, price). Work on that before adding volume.
+- **About 500 matured first touches with no paid audit and reply quality still weak:** stop and rethink the offer, not only the campaign.
 - Consistent pushback that the deliverable is not worth the price, after testing lower tiers.
 - Milestone 7 running substantially past the scope written in section 7.1. Under the revised build-first sequence, this is the specific measurable form of the overbuilding risk. The response is to ship against the original scope, not to extend it.
+
+**Why volume, not a calendar deadline.** At the planning rates in `docs/product/outreach-strategy-recommendations.md` section 1 (0.2 to 1 percent of contacted prospects buying, assumptions rather than measurements), even odds of a first sale take about 70 to 350 first touches. A 60-day window, less a few weeks between the winning email and payment, leaves about seven weeks of sending that can still convert: about 170 first touches at four new prospects a day. At the standard 0.5 percent rate that window ends with no sale about 43 percent of the time even when the offer works. Prospecting mail is also answered late. It is not client mail, so it waits in inboxes until the recipient has time, and a cohort's replies keep arriving after its sequence ends. Calendar time measures sending pace, not evidence.
 
 ---
 
