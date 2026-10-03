@@ -6495,6 +6495,8 @@ part of a quick check.
 placeholders counted as uncrawlable links (trade-off 110, amended again), a
 site moved to a new domain behind a permanent redirect (the prospect's
 website corrected, then rescanned) and a start URL that answered an empty
-200 document (rescanned from the site root). Two analyses had no registry
+200 document while the site served its slashed spelling (the crawler now
+fetches the slashed spelling a redirect or the start URL wrote when the bare
+one answers an empty body, as it already did when the bare one redirected). Two analyses had no registry
 facts because the registry API was unreachable at scan time; the
 regeneration that follows a fingerprint change looks them up again.

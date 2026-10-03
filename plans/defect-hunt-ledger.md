@@ -205,6 +205,31 @@ input of the next batch fix.
 | 2026-10-01 | Hôtel Clos Sainte Marie d2038dbf | preview quick check | SEND | Blocking: - (earlier HOLD (3); fixed by the omission). Backlog: card 2 hreflang: ?lang=en renders French, verified live | - | - |
 | 2026-10-01 | Hôtel Capucines 9e4e1744 | preview quick check | SEND | Blocking: - (rescan of 4b8beedf; earlier HOLD (1) form-error on a natively validated field; fixed by recording native validity). Backlog: - | - | - |
 | 2026-10-01 | Hôtel le 37 Bis 44c2c823 | preview quick check | SEND | Blocking: - (earlier HOLD (1) crawlable-anchors; fixed by the script-control exclusion). Backlog: 3 copies of the booking page analysed (4%) | - | - |
+| 2026-10-03 | Hôtel La Signoria f0364380 | preview quick check | SEND | Blocking: -. Backlog: contrast samples partly on the consent widget; 4 tracking-query pages of 359 | - | - |
+| 2026-10-03 | Hôtel Côté Sud Léman 71cf1cb9 | preview quick check | SEND | Blocking: -. Backlog: legal-notice absence alert, not on a card | - | - |
+| 2026-10-03 | Hôtel Club Port la Galère 171b1e63 | preview quick check | SEND | Blocking: -. Backlog: out of scope, block omitted | - | - |
+| 2026-10-03 | Domaine du Colombier 35a19d8c | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-03 | Big Sky Hôtel & Spa 2a4c2324 | preview quick check | SEND | Blocking: -. Backlog: card 1 ARIA list is the Mapbox attribution control; 2 copy pages of 102 | - | - |
+| 2026-10-03 | Le Petit Beaumarchais 3371de59 | preview quick check | SEND | Blocking: - (earlier HOLD (1): crawlable-anchors on the CMS's hidden admin loader and read-more expanders; fixed by the hidden-anchor exemption). Backlog: canonical card verified live (x-default page canonicalises to /en/, /en to the root) | - | - |
+| 2026-10-03 | Hôtel Le Yaca 52cf3ec2 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-03 | Hôtel Le Burgundy 96bd58b2 | preview quick check | SEND | Blocking: - (earlier HOLD (1): same hidden CMS anchors; fixed). Backlog: 45 inventoried URLs answer HTTP errors | - | - |
+| 2026-10-03 | Hôtel Le Pré Fillet f57766ba | preview quick check | SEND | Blocking: -. Backlog: 14 RoomTypeCode pages are distinct room pages (verified live) | - | - |
+| 2026-10-03 | Hôtel Le Maquis eda8acde | preview quick check | SEND | Blocking: -. Backlog: registry unreachable at scan time; the regeneration looked it up again (20 to 49 employees) | - | - |
+| 2026-10-03 | Hôtel L'Abbaye 21f28d20 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-03 | Hôtel Henri IV 6527421e | preview quick check | SEND | Blocking: -. Backlog: out of scope, block omitted; 27 ?langue=en pages are the English version | - | - |
+| 2026-10-03 | Hôtel Atlas db556905 | preview quick check | SEND | Blocking: - (earlier HOLD (5): block printed "un effectif de Effectif non renseigné"; fixed in the facts block). Backlog: phone mismatch verified live; 4 language copy pages of 32 | - | - |
+| 2026-10-03 | Hôtel Capucines 9e4e1744 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-03 | Auberge du Bon Laboureur 2df53312 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-03 | Domaine Ribiera 184f204d | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-03 | Hôtel Le Castel d'Alti c00a0e1b | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-03 | Maison Lameloise f18335d7 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-03 | Hôtel Le Christina c472e0ee | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-03 | Villa Motel 944c09fd | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-03 | Hôtel Le Relais du Louvre 2ab871dc | preview quick check | SEND | Blocking: -. Backlog: card 3 label critical over a moderate placeholder example (theme's worst finding) | - | - |
+| 2026-10-03 | Hôtel Napoléon 992d2729 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-03 | Hôtel Le Prieuré de Boulogne 0309ce97 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-03 | Le Card Hôtel a6e7554e | preview quick check | SEND | Blocking: - (earlier scan stopped at one page: lecardhotel.fr 301 to lecardhotel.com; website corrected, rescanned). Backlog: 19 inventoried URLs answer HTTP errors | - | - |
+| 2026-10-03 | Hôtel de la Couronne 81f22dfd | preview quick check | SEND | Blocking: - (earlier scans analysed one blank page: /fr answers an empty 200 while the site serves /fr/; crawler fixed, rescanned). Backlog: 1-2 employees, turnover unknown, block neutral | - | - |
 
 ## Sweep 4 notes
 
