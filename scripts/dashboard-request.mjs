@@ -1,15 +1,16 @@
 // One authenticated request to the operator dashboard API, for the
 // audit-finalizer skill and other operator workflows. Usage (from the
 // repository root):
-//   node scripts/dashboard-request.mjs <GET|POST|PATCH> <path> [json-body]
+//   node scripts/dashboard-request.mjs <GET|POST|PATCH|DELETE> <path> [json-body]
 //
 // Logs in with ODYSSEUS_DASHBOARD_PASSWORD from the repository .env, which it
 // only reads, sends the request, prints the HTTP status and the response body,
 // then logs out. The session cookie stays in memory and no secret is printed.
-// A POST or PATCH is a production write: the caller decides it is wanted (a
-// rescan of an audited site, a report regeneration, a prospect correction
-// such as a website that moved to another domain); this script adds no guard
-// of its own beyond refusing any other method.
+// A POST, PATCH or DELETE is a production write: the caller decides it is
+// wanted (a rescan of an audited site, a report regeneration, a prospect
+// correction such as a website that moved to another domain, removing a scan
+// a rescan superseded); this script adds no guard of its own beyond refusing
+// any other method. A DELETE sends no body.
 import { readFileSync } from 'node:fs';
 import { request } from 'node:https';
 import { parseEnv } from 'node:util';
@@ -18,8 +19,11 @@ const DASHBOARD_URL = 'https://app.odysseusaudit.com';
 
 const [method, path, body = '{}'] = process.argv.slice(2);
 const WRITE_METHODS = new Set(['POST', 'PATCH']);
-if ((method !== 'GET' && !WRITE_METHODS.has(method)) || !path?.startsWith('/api/')) {
-  console.error('usage: dashboard-request.mjs <GET|POST|PATCH> </api/...> [json-body]');
+if (
+  (method !== 'GET' && method !== 'DELETE' && !WRITE_METHODS.has(method)) ||
+  !path?.startsWith('/api/')
+) {
+  console.error('usage: dashboard-request.mjs <GET|POST|PATCH|DELETE> </api/...> [json-body]');
   process.exit(2);
 }
 if (WRITE_METHODS.has(method)) {
