@@ -185,13 +185,18 @@ const JAVASCRIPT_VOID_PATTERN = /javascript:void(\(|)0(\)|)/;
  *  `<a href="javascript:void(0)" class="btn">` counted as a link search
  *  engines cannot follow, and on four hotel previews that footer control
  *  became a "links search engines cannot read" priority with no page
- *  behind it. Read from the opening tag, so a stored scan is judged too. */
+ *  behind it. A hidden anchor with no destination is the same non-link:
+ *  nobody sees it and nothing can follow it. A hotel CMS writes a
+ *  `display:none` admin loader, empty editable-link placeholders and "read
+ *  more" expanders on every page, and on two more previews they became the
+ *  same false priority. Read from the opening tag, so a stored scan is
+ *  judged too. */
 const CONTROL_ATTRIBUTE_PATTERN =
-  /\s(?:type\s*=\s*["']?button|aria-(?:controls|expanded|haspopup)\s*=|[\w:-]*toggle[\w:-]*\s*=)/i;
+  /\s(?:type\s*=\s*["']?button|aria-(?:controls|expanded|haspopup)\s*=|[\w:-]*toggle[\w:-]*\s*=|hidden(?=[\s>=/]))/i;
 const CONTROL_STYLE_PATTERN =
-  /\sstyle\s*=\s*["'][^"']*(?:pointer-events\s*:\s*none|cursor\s*:\s*default)/i;
+  /\sstyle\s*=\s*["'][^"']*(?:pointer-events\s*:\s*none|cursor\s*:\s*default|display\s*:\s*none|visibility\s*:\s*hidden)/i;
 const CONTROL_CLASS_PATTERN =
-  /(?:^|[\s_-])(?:btn|button|nolink|toggle|close|tarteaucitron\w*|openaxeptio\w*|axeptio\w*|cmplz\w*|klaro\w*|cm-btn|didomi\w*|ot-sdk\w*|cky\w*|cookie\w*)(?:$|[\s_-])/i;
+  /(?:^|[\s_-])(?:btn|button|nolink|toggle|close|read-?more|tarteaucitron\w*|openaxeptio\w*|axeptio\w*|cmplz\w*|klaro\w*|cm-btn|didomi\w*|ot-sdk\w*|cky\w*|cookie\w*)(?:$|[\s_-])/i;
 
 function declaresScriptControl(snippet: string): boolean {
   const openingTag = snippet.slice(0, snippet.indexOf('>') + 1 || undefined);

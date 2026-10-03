@@ -5847,6 +5847,15 @@ a role-bearing one. An href that names a destination is still judged. This is
 a deliberate departure from Lighthouse parity: the check describes links a
 crawler misses, and a control has nothing to miss.
 
+**Amended 2026-10-03: hidden placeholders and "read more" expanders.** A
+hotel CMS writes on every page a `display:none` admin loader
+(`javascript:void(0)`), empty editable-link placeholders and "read more"
+expanders with no destination; on two previews they were the whole
+"links search engines cannot read" card. An anchor with no destination whose
+opening tag hides it (`display:none`, `visibility:hidden`, the `hidden`
+attribute) or carries a `read-more`/`readmore` class is now exempt the same
+way. A hidden anchor that names a destination is still judged.
+
 ### 111. Clean audit data is a prerequisite for client-facing certainty (2026-09-22)
 
 Plan 075 closes the population boundary exposed by the WAF/challenge and
@@ -6481,3 +6490,11 @@ analysis schema also dropped the registry snapshot, sector and signal
 resolutions on save, so every preview said no registry data had been found;
 they are now stored. `scripts/preview-quick-check.mjs` runs the mechanical
 part of a quick check.
+
+**Second batch fix, 2026-10-03.** The next batch's holds came from hidden CMS
+placeholders counted as uncrawlable links (trade-off 110, amended again), a
+site moved to a new domain behind a permanent redirect (the prospect's
+website corrected, then rescanned) and a start URL that answered an empty
+200 document (rescanned from the site root). Two analyses had no registry
+facts because the registry API was unreachable at scan time; the
+regeneration that follows a fingerprint change looks them up again.

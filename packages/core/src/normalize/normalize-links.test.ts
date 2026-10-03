@@ -119,6 +119,11 @@ describe('isUncrawlableAnchor', () => {
       '<a aria-label="Hotel" class="nav-link react nolink" target="" href="javascript:void(0);">',
       '<a id="" href="javascript:void(0);" style="cursor:default;" class="bigtarget-init">',
       '<a style="pointer-events: none;" href="javascript:void(0)">',
+      '<a href="javascript:void(0)" title="novaadmin" onclick="novacmsadm.loadjsadm();" class="novaadmin" style="display:none">',
+      '<a editablelink="yes" novaref="5599389" novatype="txt" style="display: none;">',
+      '<a class="icon" novaref="5505800" novatype="txt" style="visibility:hidden">',
+      '<a href="javascript:void(0)" class="read-more showoncmsload">',
+      '<a href="javascript:void(0)" hidden>',
     ];
     for (const snippet of controls) {
       const rawHref = /href="([^"]*)"/.exec(snippet)?.[1] ?? null;
@@ -139,6 +144,21 @@ describe('isUncrawlableAnchor', () => {
     expect(
       isUncrawlableAnchor(anchor({ snippet, rawHref: 'javascript:void(0);', id: '' }), PAGE_URL),
     ).toBe(true);
+  });
+
+  it('still fails a visible link with no destination whose markup only mentions hiding', () => {
+    for (const snippet of [
+      '<a href="javascript:void(0)" aria-hidden="true" class="more-info">',
+      '<a href="javascript:void(0)" data-hidden="1">',
+    ]) {
+      const visible = anchor({ snippet, rawHref: 'javascript:void(0)', href: '', id: '' });
+      expect(isUncrawlableAnchor(visible, PAGE_URL), snippet).toBe(true);
+    }
+  });
+
+  it('still judges a hidden link that names a destination', () => {
+    const snippet = '<a href="http://" style="display:none">';
+    expect(isUncrawlableAnchor(anchor({ snippet, rawHref: 'http://' }), PAGE_URL)).toBe(true);
   });
 
   it('still judges an invalid destination on a button-styled link', () => {
