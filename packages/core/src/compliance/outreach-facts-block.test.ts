@@ -71,6 +71,35 @@ describe('buildOutreachFactsBlock', () => {
     `);
   });
 
+  it.each(['fr', 'en'] as const)(
+    'says the register publishes no headcount, in %s, when its code is the unreported one',
+    (language) => {
+      const block = buildOutreachFactsBlock({
+        assessment: assessment({
+          basis: [
+            {
+              regimeId: EAA_REGIME_ID,
+              facts: [
+                { kind: 'effectif-band', code: 'NN', label: 'Effectif non renseigné' },
+                { kind: 'transactional-flow-inconclusive' },
+              ],
+            },
+          ],
+          registrySnapshot: snapshot('Effectif non renseigné'),
+        } as Partial<ObligationAssessment>),
+        language,
+        capabilities: CAPABLE,
+      });
+      if (block.state !== 'rendered') throw new Error('expected a rendered block');
+      expect(block.paragraphs.join(' ')).not.toContain('Effectif non renseigné');
+      expect(block.paragraphs[1]).toBe(
+        language === 'fr'
+          ? "Le registre public identifie HOTEL EXEMPLE SAS, mais ne publie pas de tranche d'effectif exploitable pour cette analyse."
+          : 'The public register identifies HOTEL EXEMPLE SAS, but does not publish a usable headcount band for this analysis.',
+      );
+    },
+  );
+
   it('leaves the no-registry sentence out when the caller asks for it', () => {
     const block = buildOutreachFactsBlock({
       assessment: undefined,

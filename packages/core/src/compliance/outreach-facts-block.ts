@@ -143,12 +143,17 @@ export function buildOutreachFactsBlock(options: {
   if (!regime) return { state: 'omitted' };
 
   const snapshot = options.assessment?.registrySnapshot;
+  // The registry's NN code means it publishes no headcount, but the snapshot
+  // keeps INSEE's label for it ("Effectif non renseigné"), and quoting that
+  // as a band printed "indiquent un effectif de Effectif non renseigné".
+  const bandUnreported =
+    basis?.facts.some((fact) => fact.kind === 'effectif-band' && fact.code === 'NN') === true;
   const registryParagraphs =
     snapshot === undefined
       ? options.omitAbsentRegistry === true
         ? []
         : [copy.registryAbsent]
-      : snapshot.effectifBandLabel === null
+      : bandUnreported || snapshot.effectifBandLabel === null
         ? [copy.registryBandUnavailable(snapshot.denomination)]
         : [copy.registry(snapshot.denomination, snapshot.effectifBandLabel)];
 
