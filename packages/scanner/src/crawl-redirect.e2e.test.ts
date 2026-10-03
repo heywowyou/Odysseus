@@ -244,3 +244,77 @@ describe('a page served only with its trailing slash', () => {
     expect(offer?.redirectTargetUrl).toBe(`${origin}/`);
   }, 30_000);
 });
+
+// A site whose root redirects to its slashed language home and answers the
+// bare spelling with an empty document (couronne-hotel-jougne.fr: / 302 to
+// /fr/, /fr 200 with an empty body): fetching the slash-free identity made
+// the whole audit one blank page.
+describe('a language home whose bare spelling serves an empty document', () => {
+  const PORT = 5196;
+  const origin = `http://localhost:${PORT}`;
+  let server: Server;
+  let ownBrowser: Browser;
+
+  beforeAll(async () => {
+    server = http.createServer((req, res) => {
+      const url = req.url ?? '/';
+      if (url === '/') {
+        res.writeHead(302, { Location: `${origin}/fr/` });
+        res.end();
+        return;
+      }
+      if (url === '/fr/') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(
+          '<html lang="fr"><head><title>Accueil</title></head><body><h1>Hôtel</h1>' +
+            '<a href="/fr/chambres/">Chambres</a></body></html>',
+        );
+        return;
+      }
+      if (url === '/fr/chambres/') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(
+          '<html lang="fr"><head><title>Chambres</title></head><body><h1>Chambres</h1></body></html>',
+        );
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end('');
+    });
+    await listen(server, PORT);
+    ({ browser: ownBrowser } = await launchBrowser());
+  }, 30_000);
+
+  afterAll(async () => {
+    await ownBrowser?.close();
+    await close(server);
+  });
+
+  it('follows the redirect to the slashed spelling and crawls the real site from it', async () => {
+    const result = await crawlSite(`${origin}/`, {
+      browser: ownBrowser,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+    });
+
+    const home = result.pages.find((page) => page.url === `${origin}/fr`);
+    expect(home?.status).toBe('visited');
+    expect(home?.servedUrl).toBe(`${origin}/fr/`);
+    const rooms = result.pages.find((page) => page.url === `${origin}/fr/chambres`);
+    expect(rooms?.status).toBe('visited');
+  }, 30_000);
+
+  it('keeps an empty bare page that no link wrote with a slash', async () => {
+    const result = await crawlSite(`${origin}/vide`, {
+      browser: ownBrowser,
+      maxPages: 1,
+      maxDepth: 0,
+      delayMs: 0,
+    });
+
+    const empty = result.pages.find((page) => page.url === `${origin}/vide`);
+    expect(empty?.status).toBe('visited');
+    expect(empty?.servedUrl).toBeUndefined();
+  }, 30_000);
+});

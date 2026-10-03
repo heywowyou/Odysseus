@@ -487,6 +487,9 @@ function safeHostname(url: string): string | null {
   }
 }
 
+/** A document whose body holds nothing at all: no element, no text. */
+const EMPTY_BODY_PATTERN = /<body[^>]*>\s*<\/body>/i;
+
 function writtenWithSlash(observedHref: string, documentBase: string): boolean {
   try {
     return isWrittenWithTrailingSlash(new URL(observedHref, documentBase).href);
@@ -714,7 +717,13 @@ export async function crawlSite(
   const linkDiscoveredFrom = restored?.linkDiscoveredFrom ?? new Map<string, string>();
   const enqueued = restored?.enqueued ?? new Set<string>([startUrlIdentity]);
   const queue: QueueItem[] = restored?.queue ?? [
-    { url: startUrlIdentity, depth: 0, discoveryMethod: 'link', isHomepage: true },
+    {
+      url: startUrlIdentity,
+      depth: 0,
+      discoveryMethod: 'link',
+      isHomepage: true,
+      ...(isWrittenWithTrailingSlash(start.toString()) ? { writtenWithSlash: true as const } : {}),
+    },
   ];
   let homepageUrlIdentity = restored?.homepageUrlIdentity ?? startUrlIdentity;
   // Plan 021 Step 6: one guard per crawlSite call, never shared across
@@ -1185,6 +1194,7 @@ export async function crawlSite(
                 responseClassification,
                 documentClassification,
                 auditedDocumentWall,
+                emptyBody: EMPTY_BODY_PATTERN.test(html),
                 markers:
                   auditedDocumentWall && isChallengeTitle(title)
                     ? [...markers, 'challenge-title']
@@ -1224,11 +1234,21 @@ export async function crawlSite(
 
             // A site can serve a page only under the slashed spelling its
             // links use and send the bare spelling to its homepage
-            // (atrium-hotel.fr: /chambres 302 to /, /chambres/ 200). Fetch the
-            // written spelling once; when it answers as the page itself, it is
-            // the served spelling and the page is not a redirect.
+            // (atrium-hotel.fr: /chambres 302 to /, /chambres/ 200), or answer
+            // it with an empty document (couronne-hotel-jougne.fr: / 302 to
+            // /fr/, /fr 200 with an empty body, so the whole audit was one
+            // blank page). Fetch the written spelling once; when it answers
+            // as the page itself, it is the served spelling and the page is
+            // not a redirect.
             const slashed = slashedSpelling(item.url);
-            if (isSameSiteRedirect && item.writtenWithSlash === true && slashed !== undefined) {
+            const bareSpellingFailed =
+              isSameSiteRedirect ||
+              (!isOffSite &&
+                observed.emptyBody &&
+                httpStatus !== undefined &&
+                httpStatus >= 200 &&
+                httpStatus < 300);
+            if (bareSpellingFailed && item.writtenWithSlash === true && slashed !== undefined) {
               const retried = await navigateAfterLoadTimeout(slashed).catch(() => null);
               const retriedStatus = retried?.status();
               if (
@@ -1299,6 +1319,9 @@ export async function crawlSite(
                   discoveredFrom: item.url,
                   discoveryMethod: 'link',
                   ...(item.isHomepage === true ? { isHomepage: true } : {}),
+                  ...(isWrittenWithTrailingSlash(landedUrl)
+                    ? { writtenWithSlash: true as const }
+                    : {}),
                 });
               }
               if (item.isHomepage === true && landedIdentity !== undefined) {
