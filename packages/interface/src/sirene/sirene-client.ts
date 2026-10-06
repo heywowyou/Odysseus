@@ -111,16 +111,40 @@ function errorDetail(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export async function fetchSireneProfile(siren: string): Promise<SireneLookupResult> {
-  const url = `${SIRENE_SEARCH_URL}?q=${encodeURIComponent(siren)}&per_page=1`;
+/** Waits before each retry of a failed lookup. The registry API rate-limits
+ *  bursts and has short outages; a single attempt left three of about forty
+ *  hotel analyses in one week without registry facts while the API answered
+ *  normally minutes later, and the stored "undetermined" outlives the
+ *  outage. */
+const RETRY_DELAYS_MS = [1_000, 4_000];
 
-  let response: Response;
-  try {
-    response = await fetch(url);
-  } catch (error) {
-    return { status: 'api-unreachable', siren, detail: errorDetail(error) };
+function retryable(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
+export async function fetchSireneProfile(
+  siren: string,
+  options: { retryDelaysMs?: readonly number[] } = {},
+): Promise<SireneLookupResult> {
+  const url = `${SIRENE_SEARCH_URL}?q=${encodeURIComponent(siren)}&per_page=1`;
+  const delays = options.retryDelaysMs ?? RETRY_DELAYS_MS;
+
+  let response: Response | undefined;
+  let failure = '';
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, delays[attempt - 1]));
+    try {
+      response = await fetch(url);
+    } catch (error) {
+      response = undefined;
+      failure = errorDetail(error);
+      continue;
+    }
+    if (response.ok || !retryable(response.status)) break;
+    failure = `HTTP ${response.status}`;
   }
 
+  if (response === undefined) return { status: 'api-unreachable', siren, detail: failure };
   if (!response.ok) {
     return { status: 'api-unreachable', siren, detail: `HTTP ${response.status}` };
   }

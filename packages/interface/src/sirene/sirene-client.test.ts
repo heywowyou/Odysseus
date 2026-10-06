@@ -186,19 +186,44 @@ describe('fetchSireneProfile', () => {
     });
   });
 
-  it('returns api-unreachable when the fetch itself throws', async () => {
-    vi.mocked(global.fetch).mockRejectedValueOnce(new Error('network down'));
-    const result = await fetchSireneProfile('732829320');
+  const NO_WAIT = { retryDelaysMs: [0, 0] };
+
+  it('returns api-unreachable when every attempt throws', async () => {
+    vi.mocked(global.fetch).mockRejectedValue(new Error('network down'));
+    const result = await fetchSireneProfile('732829320', NO_WAIT);
     expect(result).toEqual({
       status: 'api-unreachable',
       siren: '732829320',
       detail: 'network down',
     });
+    expect(global.fetch).toHaveBeenCalledTimes(3);
   });
 
-  it('returns api-unreachable for a non-2xx HTTP response', async () => {
-    vi.mocked(global.fetch).mockResolvedValueOnce(jsonResponse({}, false, 503));
-    const result = await fetchSireneProfile('732829320');
+  it('returns api-unreachable when every attempt answers a server error', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(jsonResponse({}, false, 503));
+    const result = await fetchSireneProfile('732829320', NO_WAIT);
     expect(result).toEqual({ status: 'api-unreachable', siren: '732829320', detail: 'HTTP 503' });
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('retries a rate-limited or failed attempt and returns the answer that follows', async () => {
+    vi.mocked(global.fetch)
+      .mockResolvedValueOnce(jsonResponse({}, false, 429))
+      .mockRejectedValueOnce(new Error('socket hang up'))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          results: [{ siren: '381225325', nom_complet: 'HOTEL LE LAC', etat_administratif: 'A' }],
+        }),
+      );
+    const result = await fetchSireneProfile('381225325', NO_WAIT);
+    expect(result.status).toBe('found');
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not retry a client error other than rate limiting', async () => {
+    vi.mocked(global.fetch).mockResolvedValue(jsonResponse({}, false, 400));
+    const result = await fetchSireneProfile('732829320', NO_WAIT);
+    expect(result).toEqual({ status: 'api-unreachable', siren: '732829320', detail: 'HTTP 400' });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 });
