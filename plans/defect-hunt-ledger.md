@@ -230,6 +230,20 @@ input of the next batch fix.
 | 2026-10-03 | Hôtel Le Prieuré de Boulogne 0309ce97 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
 | 2026-10-03 | Le Card Hôtel a6e7554e | preview quick check | SEND | Blocking: - (earlier scan stopped at one page: lecardhotel.fr 301 to lecardhotel.com; website corrected, rescanned). Backlog: 19 inventoried URLs answer HTTP errors | - | - |
 | 2026-10-03 | Hôtel de la Couronne 81f22dfd | preview quick check | SEND | Blocking: - (earlier scans analysed one blank page: /fr answers an empty 200 while the site serves /fr/; crawler fixed, rescanned). Backlog: 1-2 employees, turnover unknown, block neutral | - | - |
+| 2026-10-06 | L'Embarcadère e86bb299 | preview quick check | SEND | Blocking: -. Backlog: 11 inventoried URLs answer HTTP errors | - | - |
+| 2026-10-06 | Hôtel Le Vert Bois a5f9e4dd | preview quick check | SEND | Blocking: -. Backlog: 16 inventoried URLs answer HTTP errors | - | - |
+| 2026-10-06 | Hôtel Les Rives Sauvages 18b09d4c | preview quick check | SEND | Blocking: - (registry API unreachable at scan time; a fresh writing run looked it up again). Backlog: - | - | - |
+| 2026-10-06 | Hôtel Le Valois 0ed7c58d | preview quick check | SEND | Blocking: -. Backlog: out of scope, block omitted; 34 inventoried URLs answer HTTP errors | - | - |
+| 2026-10-06 | Hôtel Le 16 | 150 fdb88451 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-06 | Hôtel L'Ormaie 3a43ecc5 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-06 | Hôtel America 3cf49c94 | preview quick check | SEND | Blocking: -. Backlog: one-page site plus /legal, so 2 analysed pages is the real population; the legal-notice absence finding (report only, not on a card) is false since /legal exists | - | - |
+| 2026-10-06 | Maison Souquet e576d494 | preview quick check | SEND | Blocking: -. Backlog: 18 query-variant pages set aside | - | - |
+| 2026-10-06 | Hôtel de Montaulbain a47d0027 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-06 | Hôtel Les Hirondelles e3e94bf9 | preview quick check | SEND | Blocking: -. Backlog: 123 query-variant pages set aside; keyboard walks 1/126 evaluated | - | - |
+| 2026-10-06 | Royal Hainaut Spa & Resort Hôtel 84928b03 | preview quick check | SEND | Blocking: - (report blocked by 4 blocked pages, all malformed relative links the server refuses with 403; accepted as a disclosed limit). Backlog: - | - | - |
+| 2026-10-06 | Maison Doucet d73235bb | preview quick check | SEND | Blocking: - (report blocked by 11 pages the site blocked during the scan and serves normally now; accepted as a disclosed limit). Backlog: a rescan could recover the 11 gallery, video and table-booking pages | - | - |
+| 2026-10-06 | La Bastide Bourrelly 333151cb | preview quick check | SEND | Blocking: - (report blocked by the 2 recruitment pages; accepted as a disclosed limit). Backlog: - | - | - |
+| 2026-10-06 | Hôtel de Toiras f0f2dcd5 | preview quick check | SEND | Blocking: - (report blocked by 36 pages that answer 403 to every visitor; accepted as a disclosed limit). Backlog: 45 pages ended in error | - | - |
 
 ## Sweep 4 notes
 
