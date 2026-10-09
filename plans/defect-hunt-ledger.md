@@ -244,6 +244,22 @@ input of the next batch fix.
 | 2026-10-06 | Maison Doucet d73235bb | preview quick check | SEND | Blocking: - (report blocked by 11 pages the site blocked during the scan and serves normally now; accepted as a disclosed limit). Backlog: a rescan could recover the 11 gallery, video and table-booking pages | - | - |
 | 2026-10-06 | La Bastide Bourrelly 333151cb | preview quick check | SEND | Blocking: - (report blocked by the 2 recruitment pages; accepted as a disclosed limit). Backlog: - | - | - |
 | 2026-10-06 | Hôtel de Toiras f0f2dcd5 | preview quick check | SEND | Blocking: - (report blocked by 36 pages that answer 403 to every visitor; accepted as a disclosed limit). Backlog: 45 pages ended in error | - | - |
+| 2026-10-09 | Hôtel Habituel 38a3755c | preview quick check | SEND | Blocking: -. Backlog: out of scope, block omitted | - | - |
+| 2026-10-09 | Hôtel L'Orée du Bois 255f8dd7 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-09 | Hôtel La Mare aux Oiseaux 1a14b182 | preview quick check | SEND | Blocking: -. Backlog: two of three cards are performance | - | - |
+| 2026-10-09 | Hôtel Legend 3a0596b5 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-09 | Hôtel Les Peupliers 909c78f0 | preview quick check | SEND | Blocking: - (preview printed one finding fewer than its audit: the site-wide robots.txt finding sat on the redirecting start URL; site-level findings now anchor on the resolved homepage, regenerated). Backlog: - | - | - |
+| 2026-10-09 | Motel L'Enclos 82d5d857 | preview quick check | SEND | Blocking: -. Backlog: - | - | - |
+| 2026-10-09 | Sporting House Hôtel d60020b2 | preview quick check | SEND | Blocking: -. Backlog: out of scope, block omitted | - | - |
+| 2026-10-09 | Petit Hôtel Confidentiel 412a5e66 | preview quick check | SEND | Blocking: - (report blocked by 4 pages that answer normally now; accepted as a disclosed limit). Backlog: out of scope, block omitted | - | - |
+| 2026-10-09 | Hôtel Jardins Secrets 2cd26f47 | preview quick check | SEND | Blocking: - (report blocked by 2 pages that answer normally now; accepted as a disclosed limit). Backlog: 40 of 77 analysed pages are PDF viewer pages for press articles, real site pages with the same template defects | - | - |
+| 2026-10-09 | Château de Valmer 7a7580f8 | preview quick check | SEND | Blocking: - (report blocked by 2 slow pages that answer normally now; accepted as a disclosed limit). Backlog: 21 pages ended in error | - | - |
+| 2026-10-09 | Maison Doucet d73235bb | preview quick check | SEND | Blocking: -. Rechecked after regeneration. Backlog: a rescan could recover the 11 blocked pages | - | - |
+| 2026-10-09 | La Bastide Bourrelly 333151cb | preview quick check | SEND | Blocking: -. Rechecked after regeneration. Backlog: - | - | - |
+| 2026-10-09 | L'Embarcadère e86bb299 | preview quick check | SEND | Blocking: -. Rechecked after regeneration. Backlog: 11 inventoried URLs answer HTTP errors | - | - |
+| 2026-10-09 | Hôtel de Toiras f0f2dcd5 | preview quick check | SEND | Blocking: -. Rechecked after regeneration. Backlog: 45 pages ended in error | - | - |
+| 2026-10-09 | Hôtel Le Vert Bois a5f9e4dd | preview quick check | SEND | Blocking: -. Rechecked after regeneration; the earlier published preview predates it and is republished at drafting. Backlog: 16 inventoried URLs answer HTTP errors | - | - |
+| 2026-10-09 | Hôtel Les Rives Sauvages 18b09d4c | preview quick check | SEND | Blocking: -. Rechecked after regeneration. Backlog: - | - | - |
 
 ## Sweep 4 notes
 
