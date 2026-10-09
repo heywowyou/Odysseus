@@ -164,6 +164,10 @@ export function extractCrawlCandidates(
       ? page.url === input.startUrl
       : (normalizeUrlIdentity(page.url) ?? page.url) === homepageIdentity,
   );
+  // Site-level findings (robots.txt, crawl-wide link patterns) anchor on the
+  // homepage the crawl resolved, not on a start URL that only redirected
+  // there: an interstitial is not a page the report or preview can show.
+  const siteUrl = homepage?.url ?? input.startUrl;
   if (homepage?.status === 'skipped-robots') {
     candidates.push({
       source: 'custom',
@@ -174,7 +178,7 @@ export function extractCrawlCandidates(
       title: "robots.txt blocks the site's own homepage",
       description:
         "This site's robots.txt disallows crawling the homepage itself. Search engines that respect robots.txt cannot index anything, since the homepage is where discovery starts for a site with no other known entry point.",
-      pageUrl: input.startUrl,
+      pageUrl: siteUrl,
       element: null,
       rawEvidenceForPage: {},
     });
@@ -190,7 +194,7 @@ export function extractCrawlCandidates(
       wcagCriteria: [],
       title: 'robots.txt rule blocks a large part of the site',
       description: `The robots.txt rule "Disallow: ${match.pattern}" blocks at least ${match.matchedPageCount} pages this audit found during the crawl from being indexed. If this is not deliberate, review whether the pattern is broader than intended.`,
-      pageUrl: input.startUrl,
+      pageUrl: siteUrl,
       element: null,
       rawEvidenceForPage: { pattern: match.pattern, matchedPageCount: match.matchedPageCount },
     });
@@ -205,9 +209,9 @@ export function extractCrawlCandidates(
       wcagCriteria: [],
       title: 'robots.txt blocks AI crawlers from crawling this site',
       description: `This site's robots.txt disallows an AI crawler (matched by the rule "Disallow: ${block.disallowPattern}") from the site root. If this is deliberate, no action is needed; if not, AI assistants cannot read and cite the site.`,
-      pageUrl: input.startUrl,
+      pageUrl: siteUrl,
       element: {
-        pageUrl: input.startUrl,
+        pageUrl: siteUrl,
         // Synthetic, not a DOM selector - same "a real, derived
         // identifier, never a sentinel" reasoning broken-internal-link's
         // own element comment gives, needed here so distinct agents stay
@@ -231,7 +235,7 @@ export function extractCrawlCandidates(
       wcagCriteria: [],
       title: 'Relative links create self-nesting URL loops',
       description: `Some relative links repeat a directory segment already present in the current path, creating URLs such as /fr/fr/page instead of the intended page. The crawler omitted ${nesting.omittedUrlCount} loop URL${nesting.omittedUrlCount === 1 ? '' : 's'} before enqueueing it.`,
-      pageUrl: input.startUrl,
+      pageUrl: siteUrl,
       element: null,
       rawEvidenceForPage: {
         omittedUrlCount: nesting.omittedUrlCount,

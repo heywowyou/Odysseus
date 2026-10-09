@@ -6500,3 +6500,12 @@ fetches the slashed spelling a redirect or the start URL wrote when the bare
 one answers an empty body, as it already did when the bare one redirected). Two analyses had no registry
 facts because the registry API was unreachable at scan time; the
 regeneration that follows a fingerprint change looks them up again.
+
+**Third batch fix, 2026-10-09.** One preview printed one finding fewer than
+its audit: the site-wide robots.txt finding was anchored on the start URL,
+which only redirected to the homepage, and the preview leaves out any finding
+whose page is not a page it can show. Site-level findings (robots.txt, AI
+crawler blocks, self-nesting relative links) now anchor on the homepage the
+crawl resolved, falling back to the start URL only when no homepage was
+recorded. Three audits whose blocked pages answered normally when checked
+again were accepted under trade-off 122.

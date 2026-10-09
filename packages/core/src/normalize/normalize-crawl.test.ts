@@ -276,6 +276,21 @@ describe('robots-disallow-broad', () => {
     const broad = candidates.filter((c) => c.ruleId === ROBOTS_DISALLOW_BROAD_RULE_ID);
     expect(broad).toHaveLength(2);
   });
+
+  it('anchors on the resolved homepage when the start URL only redirected there', () => {
+    const candidates = extractCrawlCandidates({
+      startUrl: 'https://example.com/fr',
+      homepageUrl: START_URL,
+      pages: [
+        { url: 'https://example.com/fr', status: 'redirect-interstitial', httpStatus: 301 },
+        { url: START_URL, status: 'visited', httpStatus: 200 },
+      ],
+      robotsDisallowMatches: [{ pattern: '/blog/', matchedPageCount: 5 }],
+      aiCrawlerBlocks: [{ agent: 'GPTBot', disallowPattern: '/' }],
+    });
+    expect(candidates.map((c) => c.pageUrl)).toEqual([START_URL, START_URL]);
+    expect(candidates[1]?.element?.pageUrl).toBe(START_URL);
+  });
 });
 
 describe('ai-crawler-blocked', () => {
