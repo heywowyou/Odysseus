@@ -107,7 +107,11 @@ Kept deliberately small, and none of it changes what the prospect receives:
    the same counts. Since issue #561 the daily retention sweep also stores
    those counts per day and campaign in `outreach_funnel_snapshots`, with no
    TTL, and `odysseus outreach-funnel --history` reads them, so no manual
-   export is needed before the first threads expire on 2026-12-23. The
+   export is needed before the first threads expire on 2026-12-23. Since
+   Plan 078 the same command, the snapshot and the dashboard's `Campagne`
+   page also count delivered and matured first emails, decline reasons and
+   three stored segments (stars, group status, accessibility among the
+   preview cards). The
    per-group tables for H1, H2,
    H3 and H5 still need the operator's D1 and D2 rulings before they can be
    grouped.

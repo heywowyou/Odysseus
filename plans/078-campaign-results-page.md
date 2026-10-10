@@ -1,6 +1,6 @@
 # Plan 078: Campaign results page
 
-- **Execution status:** TODO
+- **Execution status:** IMPLEMENTED 2026-10-10: every slice is committed and its mechanical proofs pass; the post-deploy backfill, the production read and the manual accessibility record remain (see Execution record).
 - **Priority:** P1
 - **Effort:** L
 - **Depends on:** issue #533 (campaign funnel and campaign version), issue #561 (daily funnel snapshot), Plan 047 (durable prospect hub), Plan 069 (v3 preview and its frozen `priorityCardCategories`).
@@ -222,3 +222,50 @@ Change any of these before execution starts; each is one line in the decision it
 2. A reason is required on `reply-negative` and `lost` (decision 3). Alternative: optional everywhere.
 3. Rates need a denominator of 20 (decision 5).
 4. The pace window is 14 days (decision 6).
+
+## Execution record (2026-10-10)
+
+Commits on `main`: slice 0 `e7d7b244`, slice 1 `edccf207`, slice 2 `673f4c7c`, slice 3 `abe06c68`, slice 4 `c83371b5`, slice 5 with this record.
+
+### Answers the slices owed
+
+- **Slice 0, the `record-outcome` À traiter row.** Before the fix it cleared only when the prospect became `won`, `lost` or `opted-out`, the terminal statuses `deriveProspectWork` drops. A reply recorded as positive, not now, a call or a quote kept the row open for ever. It now clears as soon as an outcome is recorded (regression test in `packages/store/src/outreach-outcomes.test.ts`).
+- **Slice 1, the `closed-other` row.** Production code closes a thread for three reasons, held in `OUTREACH_CLOSED_REASONS` and typed onto their writers. `operator-confirmed-send` is `merged` when the operator-confirmed touch is the first email, and `matured-silent` when only a follow-up went out elsewhere. `opted-out` and `prospect-deleted` are `matured-silent`. Any other reason stays `closed-other`: delivered, not matured, its own entry on the page. A thread with no first email is `prepared` whatever closed it.
+
+### Departures from the text above, recorded in trade-off 129
+
+1. `classifyOutreachMaturity(thread)` takes no `now`: the mapping reads state, reason, touches and outcome only.
+2. Decision 6's formula counted touch 3 from touch 1. The follow-up scheduler counts it from touch 2, so the earliest maturity is the last touch sent plus the remaining spacing (29 days after a first email at the default spacing, not 25). The function is `earliestOutreachMaturityDate`.
+3. Checkpoints are projected on the server (`reportOutreachCampaigns`) and sent as rows, because the dashboard reads no workspace package at runtime. `campaign-model.ts` turns them into display rows.
+4. The page's `Réponses` is the `matured-replied` bucket (objections and `lost` included, split beside the count). The funnel's older `replied` is unchanged.
+5. The maturity strip reuses the existing `CoverageBar`, so `DESIGN.md` gains no new pattern.
+6. The outcome request carries a key made when the choice is made, scoped to the prospect in the store.
+
+### Requirement-to-proof ledger
+
+| Requirement | Proof (all passing 2026-10-10) |
+| --- | --- |
+| Outcome reaches thread and funnel | `packages/store/src/outreach-outcomes.test.ts`: records `won`, funnel returns `won: 1`; same key twice writes one row and one event |
+| Backfill writes only missing pointers | same file: one thread already pointed, one not, one never recorded; dry run writes nothing; second run writes nothing |
+| Maturity mapping is total | `packages/core/src/prospecting/outreach-maturity.test.ts`: every state, `Record` types that fail compilation on a new state or reason, one case per closing reason, unknown reason in `closed-other` |
+| Delivered excludes bounced and merged | same file, and `packages/store/src/outreach-campaign-report.test.ts` (16 sent, 14 delivered) |
+| Late reply changes the split, not the matured count | `outreach-maturity.test.ts` |
+| Reason required, optional or refused | `packages/interface/src/routes/prospect-hub.test.ts`, "decline reason (plan 078)"; `prospect-hub-detail.test.tsx` for the control |
+| Small-denominator rule | `packages/interface/src/dashboard/routes/campaign-model.test.ts` at 19 and 20 |
+| Unavailable is not zero | `campaign-render.test.ts`, failed fetch: four tiles read `Indisponible` |
+| Projection labels and floor | `outreach-maturity.test.ts` (`projectOutreachCheckpoints`); `campaign-render.test.ts` for the two wordings |
+| Counts only | `outreach-campaign-report.test.ts`: API payload and stored snapshot carry no identifier key or value |
+| Fixed read count | same file: the same four collection reads for 5 and 500 threads |
+| Old snapshot rows stay readable | same file (row without `results` loads, checkpoint day comes from the first row that has them); `packages/cli/src/commands/outreach-funnel.test.ts` prints `n/a`, never zero |
+| Segments from stored facets only | `outreach-campaign-report.test.ts`: missing prospect, facets and preview count under `unknown` |
+| Accessibility, automated | `packages/interface/src/dashboard/accessibility.test.ts`, Campaign in FR and EN |
+| Page shows the required blocks | `campaign-render.test.ts`, fixture typed against the store's report |
+
+Browser check on the development build with the fixture campaign, 2026-10-10: no horizontal page scroll at 320 and 640 CSS pixels (the segment table scrolls inside its panel); the facet control takes focus by Tab, moves by arrow keys and selects by Space or Enter; the strip's four counts are written in its legend.
+
+### Still open, each needing a person or production
+
+1. Deploy, then run `node /app/scripts/backfill-outreach-outcomes.mjs` (dry run) and `--apply` inside the app container.
+2. Read `/campagne` against the production campaign.
+3. The named manual accessibility record: screen-reader pass of the strip legend and the tables, 200 percent zoom on the production page.
+4. Operator ruling on the touch 3 spacing: day +11 from the first email (rules, brief) or 11 days after touch 2 (scheduler).

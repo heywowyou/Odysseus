@@ -22,6 +22,17 @@ the directory`. `Résultats` is the `view=results` mode of Prospects. The
 suppression lookup and Tools remain footer utilities. They are deliberately
 not primary destinations.
 
+`Campagne` / `Campaign` (`/campagne`, Plan 078) is the campaign results page:
+delivered and matured first emails, replies, sales, where prospects stand, the
+brief's three checkpoints, decline reasons and three segment tables, as counts
+only. It is read-only and is not a primary destination either: the operator
+reads it now and then, it holds no work, and a fourth sidebar entry would put a
+report on the same footing as the queue. It is reached from `Voir la campagne`
+/ `View campaign` on the À traiter campaign card and on the Results view. The
+À traiter card keeps four counts per campaign (delivered, matured, replies,
+sales). With several campaigns the page shows one at a time, chosen in the URL
+(`?campagne=`).
+
 Tools (`/outils`) also carries the one system-status block: the artifacts
 disk's fill level (warning from 75%, alarm from 90%) and the last retention
 run (plan 077). There is no Settings page; a new system or health signal goes
@@ -71,7 +82,10 @@ Results shows campaign-level counts for every result status above the table,
 one status badge per row, and one inline outcome control. It does not add a
 second status mutation control. Recording an outcome is the normal transition
 path; manual status correction is available only from the prospect page's
-secondary actions.
+secondary actions. The outcome control is the same component on the prospect
+page: choosing a refusal (`reply-negative`) or `lost` reveals the closed list
+of decline reasons and records nothing until one is chosen; a "not now" reply
+may carry one; no other outcome does (Plan 078).
 
 Directory initially shows search, stars, department, and `Filtres (n)`. Both
 pages use the same pure URL-state model and shared filter bar. Advanced filters

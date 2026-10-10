@@ -6542,3 +6542,71 @@ as `docs/product/outreach-strategy-recommendations.md` section 3 advises.
 Trade-off 121 already accepts that about 100 sends give a direction at most,
 and a reminder that does not say what it is about costs replies in the
 meantime.
+
+### 129. A campaign is counted in matured first emails, from thread state alone (Plan 078, 2026-10-10)
+
+The brief's checkpoints are written in matured first touches (a prospect who
+replied, or whose sequence closed without a reply), but the funnel only
+counted emails sent and replies. `classifyOutreachMaturity` in `core` now puts
+every thread in exactly one of eight buckets, and the campaign page, the
+`outreach-funnel` command and the daily snapshot print those counts.
+
+**The mapping.** A thread with no first email is `prepared`, whatever happened
+to it since. A recorded outcome other than `no-reply` makes it
+`matured-replied`, whatever its state, because a reply arrives after the
+sequence closed as often as during it. Otherwise the state decides: sent
+states are `in-sequence`, `e3-sent` is `reply-window`, `replied` and
+`opted-out` are `matured-replied`, `sequence-complete` is `matured-silent`,
+`bounced` is `undelivered`. Delivered first emails, the denominator of every
+rate, are every bucket but `prepared`, `undelivered` and `merged`.
+
+**Closed threads.** Production code closes a thread for three reasons, held as
+a typed list the writers use (`OUTREACH_CLOSED_REASONS`):
+
+- `operator-confirmed-send`: `merged` when the first email is the one the
+  operator confirmed by hand, since it went out inside another prospect's
+  message and its recipient is counted on that thread. When only a follow-up
+  went out elsewhere, the first email was the thread's own: it stays delivered
+  and counts as `matured-silent`. The plan's table did not separate the two.
+- `opted-out` (another prospect of the same domain objected) and
+  `prospect-deleted`: `matured-silent`. The objection is counted once, on the
+  thread that received it.
+- any other reason: `closed-other`, delivered but not matured, shown as its
+  own entry. Reasons are never printed: the field can hold operator text.
+
+**Two reply counts.** The funnel's older `replied` (a reply the sync saw, or
+an outcome of reply, call, quote or win) is kept unchanged so stored days stay
+comparable. The page's `Réponses` is `matured-replied`, which also counts
+objections and `lost`, with the positive replies and the objections printed
+beside it.
+
+**Small denominators.** A percentage is printed only on a denominator of at
+least 20; below that the two counts are shown (`1 / 11`). The only rates are
+replies over matured first emails and matured over delivered. Rejected: a
+percentage with a warning, which is still read as a rate.
+
+**Checkpoint dates.** A checkpoint the threads already sent will reach is
+dated, `au plus tôt`, from each thread's last touch and its own spacing
+snapshot. A checkpoint that needs emails not sent yet is an `estimation` from
+the first emails delivered over the last 14 days, and is not shown before 7
+days of sending or without a recent send. The earliest maturity is counted as
+the follow-up scheduler counts: each follow-up is due a number of days after
+the touch before it, so a first email matures 4 + 11 + 14 = 29 days later at
+the default spacing, not the 25 days the brief and
+`docs/rules/outreach-rules.md` section 6 state (touch 3 "no earlier than day
++11"). The page follows the scheduler; which of the two is intended is an
+open operator question.
+
+**Decline reasons.** A refusal or a lost prospect cannot be recorded without
+a reason from the closed list, extended by `misread-offer` and
+`wrong-recipient`. Rejected: an optional reason, which leaves the question
+"why did they say no" unanswered for exactly the prospects who answered.
+
+**Recorded outcomes reach the thread.** Before this plan an outcome changed
+the prospect status and its event only; no `outreach_outcomes` row was written
+and no thread pointed at one, so the funnel's outcomes and wins stayed at
+zero. `scripts/backfill-outreach-outcomes.mjs` repairs earlier threads from
+their prospect's latest recorded outcome event.
+
+The page reports and does not conclude: no badge says a campaign works or
+fails, and no count links to a prospect.
