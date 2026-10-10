@@ -512,7 +512,13 @@ describe('prospect hub routes', () => {
       outcome: 'reply-positive',
     });
     expect(outcome.statusCode).toBe(200);
-    expect(recordProspectOutcome).toHaveBeenCalledWith(fakeConnection, 'p-1', 'reply-positive');
+    expect(recordProspectOutcome).toHaveBeenCalledWith(
+      fakeConnection,
+      'p-1',
+      'reply-positive',
+      'operator',
+      {},
+    );
 
     const deleted = await handle('/api/prospects/p-1', 'DELETE');
     expect(deleted.statusCode).toBe(200);
@@ -709,6 +715,81 @@ describe('prospect hub routes', () => {
     expect(recordProspectOutcome).not.toHaveBeenCalled();
   });
 
+  describe('decline reason (plan 078)', () => {
+    const record = async (body: Record<string, unknown>) => {
+      vi.mocked(findOutreachThreadByProspect).mockResolvedValueOnce({
+        touches: [{ touch: 1 }],
+      } as never);
+      return handle('/api/prospects/p-1/outcome', 'POST', body);
+    };
+
+    it.each(['reply-negative', 'lost'])('refuses %s without a reason', async (outcome) => {
+      const response = await record({ outcome });
+      expect(response.statusCode).toBe(400);
+      expect(recordProspectOutcome).not.toHaveBeenCalled();
+    });
+
+    it.each(['reply-negative', 'lost'])('records %s with its reason', async (outcome) => {
+      const response = await record({ outcome, lostReason: 'misread-offer' });
+      expect(response.statusCode).toBe(200);
+      expect(recordProspectOutcome).toHaveBeenCalledWith(
+        fakeConnection,
+        'p-1',
+        outcome,
+        'operator',
+        { lostReason: 'misread-offer' },
+      );
+    });
+
+    it.each(['won', 'reply-positive', 'no-reply', 'call', 'quoted', 'opt-out'])(
+      'refuses a reason on %s',
+      async (outcome) => {
+        const response = await record({ outcome, lostReason: 'budget' });
+        expect(response.statusCode).toBe(400);
+        expect(recordProspectOutcome).not.toHaveBeenCalled();
+      },
+    );
+
+    it('records a not-now reply with and without a reason', async () => {
+      expect((await record({ outcome: 'reply-not-now' })).statusCode).toBe(200);
+      expect(recordProspectOutcome).toHaveBeenLastCalledWith(
+        fakeConnection,
+        'p-1',
+        'reply-not-now',
+        'operator',
+        {},
+      );
+      const withReason = await record({ outcome: 'reply-not-now', lostReason: 'timing' });
+      expect(withReason.statusCode).toBe(200);
+      expect(recordProspectOutcome).toHaveBeenLastCalledWith(
+        fakeConnection,
+        'p-1',
+        'reply-not-now',
+        'operator',
+        { lostReason: 'timing' },
+      );
+    });
+
+    it('refuses a reason outside the closed list', async () => {
+      const response = await record({ outcome: 'lost', lostReason: 'too expensive for us' });
+      expect(response.statusCode).toBe(400);
+      expect(recordProspectOutcome).not.toHaveBeenCalled();
+    });
+
+    it('passes the request key on, and refuses a malformed one', async () => {
+      const key = '0b1f6f0e-6c1e-4f0a-9d53-2f9d1c7a4e11';
+      expect((await record({ outcome: 'call', idempotencyKey: key })).statusCode).toBe(200);
+      expect(recordProspectOutcome).toHaveBeenLastCalledWith(
+        fakeConnection,
+        'p-1',
+        'call',
+        'operator',
+        { idempotencyKey: key },
+      );
+      expect((await record({ outcome: 'call', idempotencyKey: 'a b' })).statusCode).toBe(400);
+    });
+  });
+
   it('withdraws drafts, previews and the thread when an opt-out is recorded', async () => {
     vi.mocked(recordProspectOutcome).mockResolvedValue({
       prospectId: 'p-1',
@@ -853,7 +934,10 @@ describe('prospect hub routes', () => {
     refusal.name = 'AutomaticStatusTransitionError';
     vi.mocked(recordProspectOutcome).mockRejectedValueOnce(refusal);
 
-    const response = await handle('/api/prospects/p-1/outcome', 'POST', { outcome: 'lost' });
+    const response = await handle('/api/prospects/p-1/outcome', 'POST', {
+      outcome: 'lost',
+      lostReason: 'budget',
+    });
 
     expect(response.statusCode).toBe(409);
     expect(response.body).toEqual({ error: refusal.message });

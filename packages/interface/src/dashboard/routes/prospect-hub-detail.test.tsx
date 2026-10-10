@@ -196,6 +196,47 @@ describe('prospect page characterization (issue #532)', () => {
     });
   });
 
+  it('asks why before recording a refusal, and lets a not-now reply go without a reason', async () => {
+    const { container } = await renderPage();
+    const outcome = container.querySelector('select[aria-label="Enregistrer un résultat"]');
+    const reason = (): Element | null =>
+      container.querySelector('select[aria-label="Motif du refus"]');
+    expect(reason()).toBeNull();
+
+    await choose(outcome, 'reply-negative');
+    expect(sent('POST', '/api/prospects/prospect-1/outcome')).toBeUndefined();
+    expect((button(container, 'Enregistrer') as HTMLButtonElement).disabled).toBe(true);
+    await choose(reason(), 'misread-offer');
+    await click(button(container, 'Enregistrer'));
+    expect(sent('POST', '/api/prospects/prospect-1/outcome')).toMatchObject({
+      body: { outcome: 'reply-negative', lostReason: 'misread-offer' },
+    });
+    expect(reason()).toBeNull();
+
+    calls = [];
+    await choose(outcome, 'reply-not-now');
+    expect((button(container, 'Enregistrer') as HTMLButtonElement).disabled).toBe(false);
+    await click(button(container, 'Enregistrer'));
+    expect(sent('POST', '/api/prospects/prospect-1/outcome')?.body).toMatchObject({
+      outcome: 'reply-not-now',
+    });
+    expect(sent('POST', '/api/prospects/prospect-1/outcome')?.body).not.toHaveProperty(
+      'lostReason',
+    );
+
+    // A lost prospect needs its reason first, then the usual confirmation.
+    calls = [];
+    await choose(outcome, 'lost');
+    await choose(reason(), 'budget');
+    await click(button(container, 'Enregistrer'));
+    expect(sent('POST', '/api/prospects/prospect-1/outcome')).toBeUndefined();
+    const dialog = document.body.querySelector('[role="alertdialog"], [role="dialog"]');
+    await click(button(dialog!, 'Perdu'));
+    expect(sent('POST', '/api/prospects/prospect-1/outcome')).toMatchObject({
+      body: { outcome: 'lost', lostReason: 'budget' },
+    });
+  });
+
   it('launches a scan and archives through the impact dialog', async () => {
     const { container } = await renderPage();
     await click(button(container, 'Archiver le prospect'));

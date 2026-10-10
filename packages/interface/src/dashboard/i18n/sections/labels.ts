@@ -1,3 +1,18 @@
+/** Core's closed OUTREACH_LOST_REASONS, duplicated by value because the
+ *  dashboard reads no workspace package; outcome-select.test.ts holds the
+ *  two lists equal. */
+export const LOST_REASONS = [
+  'existing-provider',
+  'misread-offer',
+  'not-a-priority',
+  'budget',
+  'timing',
+  'wrong-recipient',
+  'scope-mismatch',
+  'other',
+] as const;
+export type LostReason = (typeof LOST_REASONS)[number];
+
 export interface LabelsStrings {
   identity: Record<'resolved' | 'needs-review' | 'ambiguous' | 'unmatched', string>;
   group: Record<'independent' | 'group-member' | 'vendor-hosted' | 'unknown', string>;
@@ -43,10 +58,15 @@ export interface LabelsStrings {
     | 'lost',
     string
   >;
-  lostReason: Record<
-    'budget' | 'timing' | 'not-a-priority' | 'existing-provider' | 'scope-mismatch' | 'other',
-    string
-  >;
+  lostReason: Record<LostReason, string>;
+  /** Plan 078: the control that asks why a prospect declined. */
+  lostReasonControl: {
+    label: string;
+    placeholder: string;
+    /** First option when the reason is optional. */
+    none: string;
+    submit: string;
+  };
   /** The two halves of a prospect score, named where they are shown. The
    *  store's own field names (`brokenness`, `ability`) used to reach the
    *  operator untranslated in the version-difference table. */
@@ -140,12 +160,20 @@ export const labels = {
       lost: 'Perdu',
     },
     lostReason: {
-      budget: 'Budget',
-      timing: 'Moment',
+      'existing-provider': 'A déjà un prestataire',
+      'misread-offer': 'A compris une autre offre',
       'not-a-priority': 'Pas une priorité',
-      'existing-provider': 'Fournisseur existant',
+      budget: 'Budget',
+      timing: 'Pas le moment',
+      'wrong-recipient': 'Mauvais destinataire',
       'scope-mismatch': 'Hors périmètre',
       other: 'Autre',
+    },
+    lostReasonControl: {
+      label: 'Motif du refus',
+      placeholder: 'Choisir un motif…',
+      none: 'Sans motif',
+      submit: 'Enregistrer',
     },
     scoreSide: {
       brokenness: 'Problèmes constatés',
@@ -270,12 +298,20 @@ export const labels = {
       lost: 'Lost',
     },
     lostReason: {
+      'existing-provider': 'Already has a provider',
+      'misread-offer': 'Misread the offer',
+      'not-a-priority': 'Not a priority',
       budget: 'Budget',
       timing: 'Timing',
-      'not-a-priority': 'Not a priority',
-      'existing-provider': 'Existing provider',
+      'wrong-recipient': 'Wrong recipient',
       'scope-mismatch': 'Scope mismatch',
       other: 'Other',
+    },
+    lostReasonControl: {
+      label: 'Reason for declining',
+      placeholder: 'Choose a reason…',
+      none: 'No reason',
+      submit: 'Record',
     },
     scoreSide: {
       brokenness: 'Problems found',

@@ -13,13 +13,18 @@ export const OUTREACH_OUTCOMES = [
 
 export type OutreachOutcome = (typeof OUTREACH_OUTCOMES)[number];
 
-/** Closed sales-loss vocabulary. Detail that does not fit remains outside the
- * aggregate rather than becoming free text in an operational event. */
+/** Closed vocabulary for why a prospect declined. Detail that does not fit
+ * remains outside the aggregate rather than becoming free text in an
+ * operational event. One reason per outcome: when two apply, the one that
+ * says most about the message (a hotel that declines a service it believes
+ * it was offered is `misread-offer`, not `existing-provider`). */
 export const OUTREACH_LOST_REASONS = [
+  'existing-provider',
+  'misread-offer',
+  'not-a-priority',
   'budget',
   'timing',
-  'not-a-priority',
-  'existing-provider',
+  'wrong-recipient',
   'scope-mismatch',
   'other',
 ] as const;
@@ -52,6 +57,15 @@ export function isOutreachPositiveOutcome(outcome: OutreachOutcome): boolean {
 
 export function isOutreachLostReason(value: string): value is OutreachLostReason {
   return (OUTREACH_LOST_REASONS as readonly string[]).includes(value);
+}
+
+/** Whether an outcome carries a decline reason: a refusal must say why, a
+ *  "not now" may, and no other outcome is a refusal. */
+export function outreachLostReasonRule(
+  outcome: OutreachOutcome,
+): 'required' | 'optional' | 'refused' {
+  if (outcome === 'reply-negative' || outcome === 'lost') return 'required';
+  return outcome === 'reply-not-now' ? 'optional' : 'refused';
 }
 
 /** Issue #533: the campaign a thread belongs to, stamped when it opens so a

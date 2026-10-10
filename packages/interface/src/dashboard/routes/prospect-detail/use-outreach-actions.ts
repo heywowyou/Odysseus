@@ -10,6 +10,7 @@ import {
   outcomeNotice,
   outreachResultNotice,
 } from '../prospect-hub-detail-model';
+import { outcomeRequestBody, type OutcomeChoice } from '../outcome-select';
 import { TERMINAL_STATUSES } from './types';
 import type { ProspectDetailShared } from './shared';
 
@@ -24,7 +25,7 @@ export function useOutreachActions(shared: ProspectDetailShared) {
     setOutreachNotice,
     livePreviewUrl,
   } = shared;
-  const [pendingOutcome, setPendingOutcome] = useState<string | null>(null);
+  const [pendingOutcome, setPendingOutcome] = useState<OutcomeChoice | null>(null);
   const [pendingTerminalStatus, setPendingTerminalStatus] = useState<string | null>(null);
 
   const publishPreview = async (): Promise<void> => {
@@ -102,7 +103,7 @@ export function useOutreachActions(shared: ProspectDetailShared) {
     }
   };
 
-  const recordOutcome = async (outcome: string): Promise<void> => {
+  const recordOutcome = async (choice: OutcomeChoice): Promise<void> => {
     setOutreachBusy('outcome');
     setOutreachNotice(null);
     try {
@@ -112,8 +113,8 @@ export function useOutreachActions(shared: ProspectDetailShared) {
           previews: number;
           mailboxDraftsNotRemoved?: number;
         };
-      }>(`/api/prospects/${prospect.prospectId}/outcome`, 'POST', { outcome });
-      setOutreachNotice(outcomeNotice(copy, outcome, result));
+      }>(`/api/prospects/${prospect.prospectId}/outcome`, 'POST', outcomeRequestBody(choice));
+      setOutreachNotice(outcomeNotice(copy, choice.outcome, result));
     } catch (error) {
       setOutreachNotice(outcomeFailureNotice(copy, error));
     } finally {
@@ -122,9 +123,9 @@ export function useOutreachActions(shared: ProspectDetailShared) {
     }
   };
 
-  const requestOutcome = (outcome: string): void => {
-    if (['opt-out', 'won', 'lost'].includes(outcome)) setPendingOutcome(outcome);
-    else void recordOutcome(outcome);
+  const requestOutcome = (choice: OutcomeChoice): void => {
+    if (['opt-out', 'won', 'lost'].includes(choice.outcome)) setPendingOutcome(choice);
+    else void recordOutcome(choice);
   };
 
   const requestStatusChange = (status: string): void => {

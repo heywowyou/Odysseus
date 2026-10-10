@@ -10,7 +10,6 @@ import { Card } from '../components/ui/card';
 import { Spinner } from '../components/ui/spinner';
 import { EmptyState } from '../components/ui/empty-state';
 import { Input } from '../components/ui/input';
-import { Select } from '../components/ui/select';
 import { SegmentedControl } from '../components/ui/segmented';
 import {
   Table,
@@ -30,6 +29,7 @@ import {
   type ProspectHubListResponse,
   type ProspectHubRow,
 } from './prospect-hub-model';
+import { OutcomeSelect, outcomeRequestBody, type OutcomeChoice } from './outcome-select';
 import { ProspectFilterBar } from './prospect-filter-bar';
 import { QueueScansDialog } from './queue-scans-dialog';
 import {
@@ -81,7 +81,7 @@ export function ProspectHubListPage(): JSX.Element {
   const [creating, setCreating] = useState(false);
   const [pendingOutcome, setPendingOutcome] = useState<{
     row: ProspectHubRow;
-    outcome: string;
+    choice: OutcomeChoice;
   } | null>(null);
   // Issue #375: prospects picked for a batch scan, kept in the order they
   // were ticked, which is the order the review dialog proposes.
@@ -163,20 +163,22 @@ export function ProspectHubListPage(): JSX.Element {
       setCreating(false);
     }
   };
-  const recordOutcome = async (row: ProspectHubRow, outcome: string): Promise<void> => {
+  const recordOutcome = async (row: ProspectHubRow, choice: OutcomeChoice): Promise<void> => {
     try {
-      await sendJson(`/api/prospects/${encodeURIComponent(row.prospectId)}/outcome`, 'POST', {
-        outcome,
-      });
+      await sendJson(
+        `/api/prospects/${encodeURIComponent(row.prospectId)}/outcome`,
+        'POST',
+        outcomeRequestBody(choice),
+      );
       setListNotice(null);
       response.refresh();
     } catch {
       setListNotice(detailCopy.actionFailed);
     }
   };
-  const requestOutcome = (row: ProspectHubRow, outcome: string): void => {
-    if (['opt-out', 'won', 'lost'].includes(outcome)) setPendingOutcome({ row, outcome });
-    else void recordOutcome(row, outcome);
+  const requestOutcome = (row: ProspectHubRow, choice: OutcomeChoice): void => {
+    if (['opt-out', 'won', 'lost'].includes(choice.outcome)) setPendingOutcome({ row, choice });
+    else void recordOutcome(row, choice);
   };
   return (
     <div className={`${PAGE_WIDTH.surface} px-5 py-8`}>
@@ -436,21 +438,13 @@ export function ProspectHubListPage(): JSX.Element {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Select
-                          value=""
-                          onChange={(event) => {
-                            if (event.target.value) requestOutcome(row, event.target.value);
-                          }}
-                          aria-label={resultsCopy.outcomeAria.replace('{name}', row.name)}
-                        >
-                          <option value="">{resultsCopy.outcomePlaceholder}</option>
-                          {OUTCOMES.map((outcome) => (
-                            <option key={outcome} value={outcome}>
-                              {resultsCopy.outcomeLabels[outcome] ??
-                                strings.common.vocabularyFallback}
-                            </option>
-                          ))}
-                        </Select>
+                        <OutcomeSelect
+                          outcomes={OUTCOMES}
+                          outcomeLabels={resultsCopy.outcomeLabels}
+                          placeholder={resultsCopy.outcomePlaceholder}
+                          ariaLabel={resultsCopy.outcomeAria.replace('{name}', row.name)}
+                          onChoose={(choice) => requestOutcome(row, choice)}
+                        />
                       </TableCell>
                       <TableCell>
                         {row.websites[0]?.registrableDomain ?? resultsCopy.unknownSite}
@@ -531,9 +525,11 @@ export function ProspectHubListPage(): JSX.Element {
           }}
           title={detailCopy.confirmSensitiveOutcomeTitle}
           description={detailCopy.confirmSensitiveOutcomeDescription}
-          confirmLabel={detailCopy.outcomeLabels[pendingOutcome.outcome] ?? detailCopy.outcome}
+          confirmLabel={
+            detailCopy.outcomeLabels[pendingOutcome.choice.outcome] ?? detailCopy.outcome
+          }
           cancelLabel={strings.common.cancel}
-          onConfirm={() => recordOutcome(pendingOutcome.row, pendingOutcome.outcome)}
+          onConfirm={() => recordOutcome(pendingOutcome.row, pendingOutcome.choice)}
         />
       ) : null}
     </div>

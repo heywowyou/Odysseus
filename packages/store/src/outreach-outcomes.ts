@@ -59,7 +59,12 @@ export async function recordOutreachThreadOutcome(
   try {
     await Outcomes.create({
       outcomeId,
-      idempotencyKey: input.idempotencyKey ?? outcomeId,
+      // Scoped to the prospect, so a key reused on another prospect is a
+      // different request.
+      idempotencyKey:
+        input.idempotencyKey === undefined
+          ? outcomeId
+          : `${input.prospectId}:${input.idempotencyKey}`,
       threadId: thread.threadId,
       prospectId: input.prospectId,
       outcome: input.outcome,

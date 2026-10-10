@@ -16,7 +16,12 @@
  */
 
 import type { Connection } from 'mongoose';
-import { primaryWebsite, type Prospect, type ProspectStatus } from '@odysseus/core';
+import {
+  primaryWebsite,
+  type OutreachLostReason,
+  type Prospect,
+  type ProspectStatus,
+} from '@odysseus/core';
 import {
   archiveProspect,
   closeOutreachThreadsForDomain,
@@ -97,10 +102,15 @@ export async function optOutProspect(
   connection: Connection,
   prospectId: string,
   adapters: ProspectLifecycleAdapters,
-  options: { actor: string; suppression?: ProspectStatusSuppressionOptions['suppression'] },
+  options: {
+    actor: string;
+    suppression?: ProspectStatusSuppressionOptions['suppression'];
+    idempotencyKey?: string;
+  },
 ): Promise<OptOutOutcome> {
   const prospect = await recordProspectOutcome(connection, prospectId, 'opt-out', options.actor, {
     ...(options.suppression !== undefined ? { suppression: options.suppression } : {}),
+    ...(options.idempotencyKey !== undefined ? { idempotencyKey: options.idempotencyKey } : {}),
   });
   if (prospect === null) return { kind: 'not-found' };
   try {
@@ -207,14 +217,25 @@ export type RecordOutcomeOutcome =
   | { kind: 'refused'; refusal: 'status-transition'; message: string }
   | Exclude<OptOutOutcome, { kind: 'not-found' }>;
 
+export interface RecordProspectOutcomeActionOptions {
+  /** Why the prospect declined; the route decides which outcomes carry one. */
+  lostReason?: OutreachLostReason;
+  /** Repeated by a retried request, which then records nothing twice. */
+  idempotencyKey?: string;
+}
+
 export async function recordProspectOutcomeAction(
   connection: Connection,
   prospectId: string,
   outcome: ProspectOutcome,
   adapters: ProspectLifecycleAdapters,
+  options: RecordProspectOutcomeActionOptions = {},
 ): Promise<RecordOutcomeOutcome> {
   if (outcome === 'opt-out') {
-    return optOutProspect(connection, prospectId, adapters, { actor: 'operator' });
+    return optOutProspect(connection, prospectId, adapters, {
+      actor: 'operator',
+      ...(options.idempotencyKey === undefined ? {} : { idempotencyKey: options.idempotencyKey }),
+    });
   }
   if (REPLY_OUTCOMES.has(outcome)) {
     const thread = await findOutreachThreadByProspect(connection, prospectId);
@@ -223,7 +244,13 @@ export async function recordProspectOutcomeAction(
     }
   }
   try {
-    const prospect = await recordProspectOutcome(connection, prospectId, outcome);
+    const prospect = await recordProspectOutcome(
+      connection,
+      prospectId,
+      outcome,
+      'operator',
+      options,
+    );
     return prospect === null ? { kind: 'not-found' } : { kind: 'recorded', prospect };
   } catch (error) {
     if (error instanceof Error && error.name === 'AutomaticStatusTransitionError') {

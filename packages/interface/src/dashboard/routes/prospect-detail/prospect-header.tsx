@@ -113,7 +113,7 @@ export function ProspectHeader(props: {
           }}
           title={copy.confirmSensitiveOutcomeTitle}
           description={copy.confirmSensitiveOutcomeDescription}
-          confirmLabel={copy.outcomeLabels[pendingOutcome] ?? copy.outcome}
+          confirmLabel={copy.outcomeLabels[pendingOutcome.outcome] ?? copy.outcome}
           cancelLabel={strings.common.cancel}
           onConfirm={() => recordOutcome(pendingOutcome)}
         />

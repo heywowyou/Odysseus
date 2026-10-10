@@ -44,6 +44,8 @@ import {
 import type { ProspectPatch } from '@odysseus/store';
 import {
   emailDomain,
+  isOutreachLostReason,
+  outreachLostReasonRule,
   prospectSchema,
   type ProspectStatus,
   type ProspectWebsiteKind,
@@ -916,11 +918,42 @@ export function registerProspectHubRoutes(
       sendError(res, 400, 'outcome is invalid');
       return;
     }
+    // Plan 078: a refusal says why, from the closed list; a "not now" may;
+    // no other outcome carries a reason.
+    const lostReason = body?.['lostReason'];
+    if (
+      lostReason !== undefined &&
+      (typeof lostReason !== 'string' || !isOutreachLostReason(lostReason))
+    ) {
+      sendError(res, 400, 'lostReason is invalid');
+      return;
+    }
+    const reasonRule = outreachLostReasonRule(requested as ProspectOutcome);
+    if (reasonRule === 'required' && lostReason === undefined) {
+      sendError(res, 400, 'lostReason is required for this outcome');
+      return;
+    }
+    if (reasonRule === 'refused' && lostReason !== undefined) {
+      sendError(res, 400, 'lostReason is not accepted for this outcome');
+      return;
+    }
+    const idempotencyKey = body?.['idempotencyKey'];
+    if (
+      idempotencyKey !== undefined &&
+      (typeof idempotencyKey !== 'string' || !/^[\w-]{8,64}$/u.test(idempotencyKey))
+    ) {
+      sendError(res, 400, 'idempotencyKey is invalid');
+      return;
+    }
     const outcome = await recordProspectOutcomeAction(
       connection,
       params['prospectId']!,
       requested as ProspectOutcome,
       outreachAdapters(),
+      {
+        ...(lostReason === undefined ? {} : { lostReason }),
+        ...(idempotencyKey === undefined ? {} : { idempotencyKey }),
+      },
     );
     if (outcome.kind === 'recorded') {
       sendJson(res, 200, outcome.prospect);

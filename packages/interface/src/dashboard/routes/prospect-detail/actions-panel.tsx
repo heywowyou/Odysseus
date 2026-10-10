@@ -7,6 +7,7 @@ import { Badge } from '../../components/ui/badge';
 import { Card } from '../../components/ui/card';
 import { Select } from '../../components/ui/select';
 import { Button } from '../../components/ui/button';
+import { OutcomeSelect } from '../outcome-select';
 import { label, STATUSES, OUTCOMES } from './types';
 import type { ProspectDetailShared } from './shared';
 import type { OutreachActions } from './use-outreach-actions';
@@ -143,21 +144,14 @@ export function ActionsPanel(props: {
             </div>
           </div>
           <div id="outcome" className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
-            <Select
-              value=""
+            <OutcomeSelect
+              outcomes={OUTCOMES}
+              outcomeLabels={copy.outcomeLabels}
+              placeholder={copy.outcome}
+              ariaLabel={copy.outcome}
               disabled={outreachBusy !== null}
-              onChange={(event) => {
-                if (event.target.value) requestOutcome(event.target.value);
-              }}
-              aria-label={copy.outcome}
-            >
-              <option value="">{copy.outcome}</option>
-              {OUTCOMES.map((outcome) => (
-                <option key={outcome} value={outcome}>
-                  {label(outcome, copy.outcomeLabels)}
-                </option>
-              ))}
-            </Select>
+              onChoose={requestOutcome}
+            />
           </div>
           <details className="border-t border-line pt-4">
             <summary className="cursor-pointer text-sm font-medium text-ink">
