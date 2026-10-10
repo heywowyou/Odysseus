@@ -1,4 +1,6 @@
-/** Operator-approved outreach sequence, locked 2026-09-14. */
+/** Operator-approved outreach sequence, locked 2026-09-14. Amended 2026-10-10
+ *  (trade-off 128): the reminder names what the analysis covers, and the
+ *  accessibility category reads as digital accessibility. */
 
 import type { OutreachPreviewSeverity, OutreachProofCard, ReportLanguage } from '@odysseus/core';
 import { frenchOfHotel } from './hotel-name.js';
@@ -69,7 +71,7 @@ const FR: EmailTemplate = {
   fallbackAnalysis: 'Analyse de votre site',
   joinList: joinWith('et'),
   categoryLabel: {
-    accessibility: "l'accessibilité",
+    accessibility: "l'accessibilité numérique",
     seo: 'le référencement dans les moteurs de recherche',
     performance: 'les performances du site',
     geo: "la visibilité dans les assistants d'IA",
@@ -98,7 +100,7 @@ const FR: EmailTemplate = {
     "L'audit complet de votre site est disponible à l'achat. Il détaille les constats relevés, les pages concernées et les corrections à apporter.",
   question: `Souhaitez-vous que je vous transmette les modalités de l'audit complet${NBSP}?`,
   reminderIntro: (of) =>
-    `Je me permets de revenir vers vous au sujet de mon précédent message concernant l'analyse du site ${of}.`,
+    `Je me permets de revenir vers vous au sujet de mon précédent message concernant notre analyse du site ${of}, qui porte sur son accessibilité numérique, son référencement et ses performances.`,
   reminderQuestion: `Avez-vous eu l'occasion de consulter l'aperçu${NBSP}?`,
   reminderCommercial:
     "Si vous souhaitez agir sur ces constats, l'audit complet de votre site est disponible à l'achat. Il indique, pour chacun, les pages concernées et les corrections à apporter.",
@@ -120,7 +122,7 @@ const EN: EmailTemplate = {
   fallbackAnalysis: 'Website analysis',
   joinList: joinWith('and'),
   categoryLabel: {
-    accessibility: 'accessibility',
+    accessibility: 'digital accessibility',
     seo: 'search-engine visibility',
     performance: 'website performance',
     geo: 'visibility in AI assistants',
@@ -150,7 +152,7 @@ const EN: EmailTemplate = {
     'The full audit of your website is available for purchase. It details the findings identified, the pages concerned and the corrections to apply.',
   question: 'Would you like me to send you the details for the full audit?',
   reminderIntro: (of) =>
-    `I am following up on my previous message about the analysis of the website ${of}.`,
+    `I am following up on my previous message about our analysis of the website ${of}, which covers its digital accessibility, search-engine visibility and performance.`,
   reminderQuestion: 'Have you had a chance to review the preview?',
   reminderCommercial:
     'If you would like to act on these findings, the full audit of your website is available for purchase. For each finding, it identifies the pages concerned and the corrections to apply.',

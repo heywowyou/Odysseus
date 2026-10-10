@@ -6509,3 +6509,36 @@ crawler blocks, self-nesting relative links) now anchor on the homepage the
 crawl resolved, falling back to the start URL only when no homepage was
 recorded. Three audits whose blocked pages answered normally when checked
 again were accepted under trade-off 122.
+
+### 128. The reminder names what the analysis covers, and the signature leads with accessibility (operator decision, 2026-10-10)
+
+The first reply of the campaign, received 2026-10-05 after the reminder,
+declined a web analytics service the hotel already buys elsewhere. The
+reminder never named its subject: it spoke of « l'analyse du site », and the
+signature listed accessibility fourth of five after SEO and GEO.
+
+Three wording changes, approved by the operator on 2026-10-10:
+
+- Touch 2 opens with « notre analyse du site …, qui porte sur son
+  accessibilité numérique, son référencement et ses performances ». It states
+  what every analysis covers, so it names no new finding and reads no
+  per-prospect data.
+- The accessibility category label in Touch 1 is « l'accessibilité
+  numérique », so a hotelier does not read it as access to the building.
+- The signature line is « Audits techniques de sites web : accessibilité
+  numérique, référencement et performance ».
+
+The subject line, Touch 3 and the legal bridge are unchanged.
+
+Limits, stated so later readings stay honest. One reply is one observation,
+not a measured effect. The templates are global: a thread opened before this
+change receives the new reminder when its follow-up is drafted, so the
+campaign version separates threads opened after the change, not every email
+sent after it. The operator sets a new `ODYSSEUS_OUTREACH_CAMPAIGN_VERSION`
+at the deployment that carries this wording.
+
+Rejected alternative: holding the wording until 100 matured first touches,
+as `docs/product/outreach-strategy-recommendations.md` section 3 advises.
+Trade-off 121 already accepts that about 100 sends give a direction at most,
+and a reminder that does not say what it is about costs replies in the
+meantime.

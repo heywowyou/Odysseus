@@ -65,7 +65,7 @@ function assertKeepsFrenchSignature(body: string): void {
     'Cordialement,\n\n' +
       'Jules Fontaine\n' +
       'Fondateur, Odysseus\n' +
-      'Audits techniques de sites web : SEO, GEO, performance, accessibilité et sécurité\n' +
+      'Audits techniques de sites web : accessibilité numérique, référencement et performance\n' +
       'odysseusaudit.com · contact@odysseusaudit.fr',
   );
 }
@@ -81,7 +81,7 @@ describe('assembleOutreachDraft - touch 1', () => {
       "Nous avons récemment analysé le site web de l'Hôtel des Tilleuls.",
     );
     expect(result.body).toContain(
-      "Notre analyse a relevé 47 constats distincts sur 23 pages de votre site, dont 8 critiques et 14 sérieux. Les principaux problèmes concernent notamment l'accessibilité, le référencement dans les moteurs de recherche et les performances du site.",
+      "Notre analyse a relevé 47 constats distincts sur 23 pages de votre site, dont 8 critiques et 14 sérieux. Les principaux problèmes concernent notamment l'accessibilité numérique, le référencement dans les moteurs de recherche et les performances du site.",
     );
     expect(result.body).toContain(
       "Ces constats ont un impact direct sur l'expérience de vos clients et peuvent également relever du cadre légal applicable en matière d'accessibilité.",
@@ -239,7 +239,7 @@ describe('assembleOutreachDraft - touch 1', () => {
       `style="color:#6b6b6b;text-decoration:underline">Ne plus être contacté</a> · <a href="${PRIVACY_URL}" style="color:#6b6b6b;text-decoration:underline"`,
     );
     expect(result.htmlBody).toContain(
-      '<span style="font-weight:600">Jules Fontaine</span><br><span style="color:#5f6368">Fondateur, Odysseus<br>Audits techniques de sites web : SEO, GEO, performance, accessibilité et sécurité<br>odysseusaudit.com · contact@odysseusaudit.fr</span>',
+      '<span style="font-weight:600">Jules Fontaine</span><br><span style="color:#5f6368">Fondateur, Odysseus<br>Audits techniques de sites web : accessibilité numérique, référencement et performance<br>odysseusaudit.com · contact@odysseusaudit.fr</span>',
     );
     expect(result.htmlBody).not.toMatch(/<img|<script|<link|<button|src=|url\(/iu);
   });
@@ -260,7 +260,7 @@ describe('assembleOutreachDraft - touch 2', () => {
 
     expect(result.subject).toBe("Re: Analyse du site de l'Hôtel des Tilleuls");
     expect(result.body).toContain(
-      "Je me permets de revenir vers vous au sujet de mon précédent message concernant l'analyse du site de l'Hôtel des Tilleuls.",
+      "Je me permets de revenir vers vous au sujet de mon précédent message concernant notre analyse du site de l'Hôtel des Tilleuls, qui porte sur son accessibilité numérique, son référencement et ses performances.",
     );
     expect(result.body).toContain("Avez-vous eu l'occasion de consulter l'aperçu\u00a0?");
     expect(result.body).toContain(

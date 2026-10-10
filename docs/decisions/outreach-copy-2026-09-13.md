@@ -1,5 +1,9 @@
 # Outreach copy — 2026-09-13 operator approval
 
+> **Amended 2026-10-10 (trade-off 128).** The Touch 2 opening sentence, the
+> accessibility category label and the signature's third line below are
+> superseded by the wording recorded in that trade-off. The rest stands.
+
 The operator approved a new three-touch hotel outreach sequence on 2026-09-13. This decision supersedes the sentence-level copy rotation described by trade-off 83 where the two conflict.
 
 ## Touch 1

@@ -40,7 +40,7 @@ const FR: OutreachDraftCopy = {
   signature: [
     OUTREACH_CONTACT.name,
     `Fondateur, ${OUTREACH_CONTACT.organisation}`,
-    'Audits techniques de sites web : SEO, GEO, performance, accessibilité et sécurité',
+    'Audits techniques de sites web : accessibilité numérique, référencement et performance',
     `${WEBSITE} · ${OUTREACH_CONTACT.address}`,
   ],
   linkSeparator: '\u00a0: ',
@@ -73,7 +73,7 @@ const EN: OutreachDraftCopy = {
   signature: [
     OUTREACH_CONTACT.name,
     `Founder, ${OUTREACH_CONTACT.organisation}`,
-    'Technical website audits: SEO, GEO, performance, accessibility and security',
+    'Technical website audits: digital accessibility, search visibility and performance',
     `${WEBSITE} · ${OUTREACH_CONTACT.address}`,
   ],
   linkSeparator: ': ',

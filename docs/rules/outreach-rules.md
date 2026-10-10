@@ -201,7 +201,7 @@ regeneration cannot silently make the email describe a different story.
 | Touch | Content | Source |
 |---|---|---|
 | 1 | Prospect-specific full-scan aggregates, conditional impact/legal bridge, and the published report-aligned preview | Full scan + selected report lineage |
-| 2 | A short reminder focused on acting on the findings; names no new finding | approved template |
+| 2 | A short reminder that names what the analysis covers (digital accessibility, search visibility, performance) and focuses on acting on the findings; names no new finding (trade-off 128) | approved template |
 | 3 | Criteria and this company's available registry data, followed by a commercial paragraph explicitly separated from the legal question | deterministic facts block + approved template |
 
 Touch 2 no longer carries a second observation, so it is no longer gated on

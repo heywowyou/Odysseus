@@ -23,7 +23,7 @@ describe('outreachDraftCopy - locked French frame', () => {
     expect(outreachDraftCopy('fr').signature).toEqual([
       OUTREACH_CONTACT.name,
       `Fondateur, ${OUTREACH_CONTACT.organisation}`,
-      'Audits techniques de sites web : SEO, GEO, performance, accessibilité et sécurité',
+      'Audits techniques de sites web : accessibilité numérique, référencement et performance',
       `odysseusaudit.com · ${OUTREACH_CONTACT.address}`,
     ]);
   });
