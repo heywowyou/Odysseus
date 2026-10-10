@@ -51,7 +51,7 @@ vi.mock('@odysseus/store', async (importOriginal) => ({
   })),
   markAuditSlimmed: vi.fn(),
   countActiveAndAuditedProspects: vi.fn(),
-  aggregateOutreachFunnel: vi.fn(),
+  reportOutreachCampaigns: vi.fn(),
   loadProspectWork: vi.fn(),
   markOutreachDraftDeletionPending: vi.fn(),
   markOutreachDraftDeleted: vi.fn(),
@@ -137,7 +137,7 @@ import {
   loadProspectWork,
   listProspects,
   countActiveAndAuditedProspects,
-  aggregateOutreachFunnel,
+  reportOutreachCampaigns,
   markOutreachDraftDeletionPending,
   markOutreachDraftDeleted,
   revokeOutreachPreview,
@@ -392,7 +392,7 @@ describe('prospect hub routes', () => {
         outcomes: {},
       },
     ];
-    vi.mocked(aggregateOutreachFunnel).mockResolvedValue(campaigns as never);
+    vi.mocked(reportOutreachCampaigns).mockResolvedValue(campaigns as never);
 
     const response = await handle('/api/outreach/funnel');
 

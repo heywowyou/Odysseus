@@ -17,7 +17,7 @@ import {
   listOutreachDrafts,
   listDirectory,
   loadProspectWork,
-  aggregateOutreachFunnel,
+  reportOutreachCampaigns,
   countActiveAndAuditedProspects,
   listProspectTodo,
   PROSPECT_TODO_KINDS,
@@ -248,11 +248,12 @@ export function registerProspectHubRoutes(
     };
   }
 
-  // Issue #533: the outreach funnel per campaign, counts only, for the To do
-  // page's campaign tile. Read-only; the retention sweep keeps a daily copy
-  // of the same numbers that outlives the threads (issue #561).
+  // Issue #533 and plan 078: the outreach funnel per campaign with its
+  // maturity counts, segments and checkpoints, for the campaign page and the
+  // To do page's campaign card. Counts and days only. Read-only; the
+  // retention sweep keeps a daily copy that outlives the threads (issue #561).
   router.get('/api/outreach/funnel', async ({ res }) => {
-    sendJson(res, 200, { campaigns: await aggregateOutreachFunnel(connection) });
+    sendJson(res, 200, { campaigns: await reportOutreachCampaigns(connection) });
   });
 
   router.get('/api/prospect-hub/todo', async ({ res }) => {

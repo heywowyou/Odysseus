@@ -284,7 +284,12 @@ export {
   aggregateOutreachFunnel,
   listOutreachFunnelSnapshots,
   recordOutreachFunnelSnapshot,
+  reportOutreachCampaigns,
+  type OutreachCampaignFunnel,
+  type OutreachCampaignReport,
+  type OutreachCheckpointStatus,
 } from './outreach-funnel.js';
+export type { OutreachFunnelSnapshotDocument } from './schemas/outreach-funnel-snapshot.schema.js';
 export {
   backfillOutreachThreadOutcomes,
   recordOutreachThreadOutcome,

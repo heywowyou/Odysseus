@@ -358,3 +358,82 @@ export const auditDetailSchema = z
     evidence: auditEvidenceQualitySchema.optional(),
   })
   .passthrough();
+
+const outreachSegmentCountsSchema = z.object({
+  delivered: z.number(),
+  matured: z.number(),
+  replies: z.number(),
+  positiveReplies: z.number(),
+});
+
+const touchCountsSchema = z.object({ 1: z.number(), 2: z.number(), 3: z.number() });
+
+const outreachCheckpointSchema = z.discriminatedUnion('kind', [
+  z.object({
+    checkpoint: z.number(),
+    kind: z.literal('reached'),
+    // Absent until a daily snapshot shows the checkpoint reached.
+    reachedOn: z
+      .object({ day: z.string(), replies: z.number(), positiveReplies: z.number() })
+      .optional(),
+  }),
+  z.object({ checkpoint: z.number(), kind: z.literal('dated'), day: z.string() }),
+  z.object({
+    checkpoint: z.number(),
+    kind: z.literal('estimated'),
+    day: z.string(),
+    firstTouchesPerDay: z.number(),
+  }),
+  z.object({ checkpoint: z.number(), kind: z.literal('no-estimate') }),
+]);
+
+/**
+ * GET /api/outreach/funnel (issue #533, plan 078): one entry per campaign,
+ * counts and days only. Nothing here can identify a prospect, and the
+ * schema has no field that could carry one.
+ */
+export const outreachCampaignSchema = z.object({
+  campaignVersion: z.string(),
+  threads: z.number(),
+  firstTouchSent: z.number(),
+  replied: z.number(),
+  bounced: z.number(),
+  optedOut: z.number(),
+  won: z.number(),
+  repliesAfterTouch: touchCountsSchema,
+  outcomes: z.record(z.string(), z.number()),
+  results: z.object({
+    maturity: z.object({
+      prepared: z.number(),
+      'in-sequence': z.number(),
+      'reply-window': z.number(),
+      'matured-replied': z.number(),
+      'matured-silent': z.number(),
+      undelivered: z.number(),
+      merged: z.number(),
+      'closed-other': z.number(),
+    }),
+    delivered: z.number(),
+    matured: z.number(),
+    positiveReplies: z.number(),
+    objections: z.number(),
+    repliesByLastTouch: touchCountsSchema,
+    declineReasons: z.record(z.string(), z.number()),
+    segments: z.object({
+      stars: z.record(z.string(), outreachSegmentCountsSchema),
+      groupStatus: z.record(z.string(), outreachSegmentCountsSchema),
+      accessibilityCard: z.record(z.string(), outreachSegmentCountsSchema),
+    }),
+  }),
+  projection: z.object({
+    firstSendDay: z.string().optional(),
+    recentFirstTouchSends: z.number(),
+    pendingMaturity: z.array(z.object({ day: z.string(), threads: z.number() })),
+    sequenceDays: z.number(),
+  }),
+  checkpoints: z.array(outreachCheckpointSchema),
+});
+
+export const outreachFunnelPageSchema = z.object({
+  campaigns: z.array(outreachCampaignSchema),
+});

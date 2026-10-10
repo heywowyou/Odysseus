@@ -2,6 +2,8 @@ import type { z } from 'zod';
 import type { AttentionKind, AttentionSeverity } from '../../operator/contract';
 import type {
   jobStatusSchema,
+  outreachCampaignSchema,
+  outreachFunnelPageSchema,
   scanJobDetailSchema,
   scanOutcomeCodeSchema,
   scanQueueSchema,
@@ -133,20 +135,12 @@ export type ScanUrlResult = z.infer<typeof scanUrlResultSchema>;
  *  URL list rather than one site. */
 export type ScanJobDetail = z.infer<typeof scanJobDetailSchema>;
 
-/** GET /api/outreach/funnel (issue #533): counts per campaign, nothing that
- *  identifies a prospect. */
-export interface OutreachCampaignFunnel {
-  campaignVersion: string;
-  threads: number;
-  firstTouchSent: number;
-  replied: number;
-  bounced: number;
-  optedOut: number;
-  won: number;
-  repliesAfterTouch: { 1: number; 2: number; 3: number };
-  outcomes: Record<string, number>;
-}
+/** GET /api/outreach/funnel (issue #533, plan 078): counts per campaign,
+ *  nothing that identifies a prospect. */
+export type OutreachCampaignFunnel = z.infer<typeof outreachCampaignSchema>;
+export type OutreachCheckpoint = OutreachCampaignFunnel['checkpoints'][number];
+export type OutreachSegmentCounts = z.infer<
+  typeof outreachCampaignSchema
+>['results']['segments']['stars'][string];
 
-export interface OutreachFunnelPage {
-  campaigns: OutreachCampaignFunnel[];
-}
+export type OutreachFunnelPage = z.infer<typeof outreachFunnelPageSchema>;
