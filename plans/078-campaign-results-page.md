@@ -225,7 +225,7 @@ Change any of these before execution starts; each is one line in the decision it
 
 ## Execution record (2026-10-10)
 
-Commits on `main`: slice 0 `e7d7b244`, slice 1 `edccf207`, slice 2 `673f4c7c`, slice 3 `abe06c68`, slice 4 `c83371b5`, slice 5 with this record.
+Commits on `main`: slice 0 `110f565c`, slice 1 `2b173309`, slice 2 `c992e093`, slice 3 `53b6a1d8`, slice 4 `566ddfd0`, slice 5 `65d74c62`, and `998635be` for what the full suite found (`/campagne` missing from the server's route prefixes, unused exports).
 
 ### Answers the slices owed
 
