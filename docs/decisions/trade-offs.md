@@ -6615,3 +6615,20 @@ fails, and no count links to a prospect.
 sidebar, `Résultats de campagne`, in the Campagne group. Plan 078 had kept it
 out of the sidebar so the three work destinations stayed three; the operator
 found two links too hard to find for a page read every few days.
+
+### 130. A follow-up is due from midnight of its day, French time (operator decision, 2026-10-10)
+
+A follow-up used to become due exactly four (or eleven) times 24 hours after
+the previous email, so rows entered To do through the day at whatever hour
+each earlier email had left. The operator found that messy. `followUpDueAt`
+now counts calendar days in `Europe/Paris` and returns midnight of the day
+the spacing lands on; the due list, To do and the follow-up guard share it,
+as before.
+
+Accepted: the real gap can be up to a day shorter than the spacing (an email
+sent at 23:00 has its follow-up due 3 days and 1 hour later). The rule was
+always a number of days, not of hours. Rejected: 08:00, which hides the day's
+work from an operator who starts earlier; and UTC midnight, which is 01:00 or
+02:00 in France and moves with the clocks. The reply window after touch 3 is
+unchanged: the daily sweep closes it, so its hour never showed.
+

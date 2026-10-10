@@ -68,6 +68,7 @@ export * from './prospecting/hotel-chain-portals.js';
 export * from './prospecting/redirect-target.js';
 export * from './prospecting/outreach-thread-state.js';
 export * from './prospecting/outreach-outcome.js';
+export * from './prospecting/outreach-due-day.js';
 export * from './prospecting/outreach-maturity.js';
 export * from './prospecting/outreach-campaign-results.js';
 export * from './prospecting/classify-mailbox-thread.js';

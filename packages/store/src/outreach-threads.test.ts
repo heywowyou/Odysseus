@@ -75,9 +75,10 @@ describe.skipIf(!available)('outreach follow-up timing', () => {
   });
 
   describe('listThreadsDueForFollowUp', () => {
-    it('is due exactly at the spacing boundary and not a millisecond before', async () => {
+    it('is due from midnight in Paris of the fourth day, and not a millisecond before', async () => {
       const threadId = await threadIn('e1-sent', [firstSent]);
-      const boundary = new Date(firstSent.getTime() + spacing.touch2AfterDays * DAY_MS);
+      // Sent 1 September at 11:30 in Paris: due 5 September at 00:00 there.
+      const boundary = new Date('2026-09-04T22:00:00.000Z');
 
       const before = await listThreadsDueForFollowUp(connection!, {
         now: new Date(boundary.getTime() - 1),
@@ -88,10 +89,20 @@ describe.skipIf(!available)('outreach follow-up timing', () => {
       expect(at.map((thread) => thread.threadId)).toEqual([threadId]);
     });
 
+    it('makes every follow-up of a day due together, whatever hour each email left', async () => {
+      const morning = await threadIn('e1-sent', [new Date('2026-09-01T05:10:00.000Z')]);
+      const evening = await threadIn('e1-sent', [new Date('2026-09-01T19:45:00.000Z')]);
+      const due = await listThreadsDueForFollowUp(connection!, {
+        now: new Date('2026-09-04T22:00:00.000Z'),
+      });
+      expect(due.map((thread) => thread.threadId).sort()).toEqual([morning, evening].sort());
+    });
+
     it('spaces the third touch from the second touch with its own gap', async () => {
       const secondSent = new Date(firstSent.getTime() + 5 * DAY_MS);
       const threadId = await threadIn('e2-sent', [firstSent, secondSent]);
-      const boundary = new Date(secondSent.getTime() + spacing.touch3AfterDays * DAY_MS);
+      // Second email on 6 September, seven days of spacing: 13 September, 00:00 in Paris.
+      const boundary = new Date('2026-09-12T22:00:00.000Z');
 
       expect(
         await listThreadsDueForFollowUp(connection!, { now: new Date(boundary.getTime() - 1) }),

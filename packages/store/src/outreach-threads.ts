@@ -24,6 +24,7 @@ import type { Connection } from 'mongoose';
 import {
   canTransitionOutreachThread,
   normalizeDomainForHash,
+  outreachDueDayStart,
   type OutreachClosedReason,
   type OutreachThreadState,
 } from '@odysseus/core';
@@ -388,10 +389,12 @@ export async function getLatestOutreachSyncAt(connection: Connection): Promise<D
 
 /**
  * When the next follow-up of a thread in `e1-sent` or `e2-sent` becomes due:
- * the previous touch's confirmed `sentAt` plus the thread's own spacing
- * snapshot. Undefined in any other state, or before that touch's send is
- * recorded. The one formula the due list, the To-do list and the follow-up
- * guard share (issue #479).
+ * midnight, Paris time, of the day the thread's own spacing snapshot lands on
+ * after the previous touch's confirmed `sentAt`. Counted in calendar days,
+ * so a day's follow-ups are all due when the day starts rather than each at
+ * the hour its previous email was sent. Undefined in any other state, or
+ * before that touch's send is recorded. The one formula the due list, the
+ * To-do list and the follow-up guard share (issue #479).
  */
 export function followUpDueAt(
   thread: Pick<OutreachThreadDocument, 'state' | 'touches' | 'spacing'>,
@@ -402,7 +405,7 @@ export function followUpDueAt(
   if (sent === undefined) return undefined;
   const afterDays =
     lastTouch === 1 ? thread.spacing.touch2AfterDays : thread.spacing.touch3AfterDays;
-  return new Date(new Date(sent.sentAt).getTime() + afterDays * DAY_MS);
+  return outreachDueDayStart(new Date(sent.sentAt), afterDays);
 }
 
 export interface ListThreadsDueForFollowUpOptions {

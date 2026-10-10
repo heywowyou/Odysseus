@@ -354,7 +354,10 @@ thread): touch 2 no earlier than 4 days after touch 1 is confirmed sent,
 touch 3 no earlier than 11 days after touch 2 is confirmed sent, so day +15
 at the earliest (operator ruling, 2026-10-10: the scheduler has always
 counted each follow-up from the touch before it, and this text used to read
-"day +11" as if counted from touch 1). A thread with no reply 14 days after
+"day +11" as if counted from touch 1). The days are calendar days in French
+time and a follow-up is due from midnight of its day (operator decision,
+2026-10-10), so everything due on a day is in To do when the day starts
+instead of appearing at the hour each earlier email was sent. A thread with no reply 14 days after
 touch 3 is confirmed sent moves to `sequence-complete` and is
 suppressed; no fourth touch exists.
 
