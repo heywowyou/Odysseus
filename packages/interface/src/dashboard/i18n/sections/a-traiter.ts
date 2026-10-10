@@ -25,16 +25,15 @@ export interface ATraiterStrings {
   syncMailboxDone: string;
   syncMailboxNotConfigured: string;
   syncMailboxFailed: string;
-  /** Issue #533: the current campaign's funnel, counts only. */
+  /** Issue #533, plan 078: each campaign in four counts; the campaign page
+   *  holds the rest. */
   funnel: {
     heading: string;
     campaign: string;
-    firstTouchSent: string;
-    replied: string;
-    bounced: string;
-    optedOut: string;
+    delivered: string;
+    matured: string;
+    replies: string;
     won: string;
-    note: string;
   };
   overview: {
     heading: string;
@@ -103,12 +102,10 @@ export const aTraiter = {
     funnel: {
       heading: 'Résultats de la campagne',
       campaign: 'Campagne {campaign}',
-      firstTouchSent: 'Premiers emails envoyés',
-      replied: 'Réponses',
-      bounced: 'Rebonds',
-      optedOut: 'Désinscriptions',
-      won: 'Gagnés',
-      note: 'Compteurs seuls. Les fils expirent après 90 jours ; un relevé quotidien des compteurs est conservé (« odysseus outreach-funnel --history »).',
+      delivered: 'Premiers emails délivrés',
+      matured: 'Arrivés à maturité',
+      replies: 'Réponses',
+      won: 'Ventes',
     },
     overview: {
       heading: 'Vue de campagne',
@@ -182,12 +179,10 @@ export const aTraiter = {
     funnel: {
       heading: 'Campaign results',
       campaign: 'Campaign {campaign}',
-      firstTouchSent: 'First emails sent',
-      replied: 'Replies',
-      bounced: 'Bounces',
-      optedOut: 'Opt-outs',
-      won: 'Won',
-      note: 'Counts only. Threads expire after 90 days; a daily record of the counts is kept ("odysseus outreach-funnel --history").',
+      delivered: 'First emails delivered',
+      matured: 'Matured',
+      replies: 'Replies',
+      won: 'Sales',
     },
     overview: {
       heading: 'Campaign overview',

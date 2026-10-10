@@ -19,6 +19,7 @@ import { hub } from './sections/hub';
 import { evidence } from './sections/evidence';
 import { preview } from './sections/preview';
 import { aTraiter } from './sections/a-traiter';
+import { campaign } from './sections/campaign';
 import { drafts } from './sections/drafts';
 import { suppressions } from './sections/suppressions';
 import { login } from './sections/login';
@@ -47,6 +48,7 @@ export const en: DashboardStrings = {
   evidence: evidence.en,
   preview: preview.en,
   aTraiter: aTraiter.en,
+  campaign: campaign.en,
   drafts: drafts.en,
   suppressions: suppressions.en,
   login: login.en,

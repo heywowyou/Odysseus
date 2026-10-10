@@ -9,6 +9,8 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { axe } from 'vitest-axe';
 import { I18nProvider } from './i18n/provider';
+import { CampaignPage } from './routes/campaign';
+import { CAMPAIGN_FIXTURE } from './routes/campaign-fixture';
 import { DirectoryPage } from './routes/directory';
 import { NewScanPage } from './routes/new-scan';
 import { ProspectHubDetailPage } from './routes/prospect-hub-detail';
@@ -71,6 +73,9 @@ function stubRoutes(): void {
         });
       }
       if (url.includes('/api/prospects/prospect-1')) return jsonResponse(prospect);
+      if (url.includes('/api/outreach/funnel')) {
+        return jsonResponse({ campaigns: [CAMPAIGN_FIXTURE] });
+      }
       if (url.includes('/api/directory')) {
         return jsonResponse({ rows: [], total: 0, page: 1, pageSize: 50 });
       }
@@ -176,6 +181,29 @@ describe('prospect dashboard accessibility contract', () => {
       language,
     );
     await expectNoAxeViolations(container);
+    root.unmount();
+  });
+
+  it.each(['fr', 'en'] as const)('Campaign is axe-clean in %s', async (language) => {
+    stubRoutes();
+    const { container, root } = await renderPage(
+      createElement(CampaignPage),
+      '/campagne',
+      'campagne',
+      language,
+    );
+    const copy = (language === 'fr' ? fr : en).campaign;
+    // The loaded page, not its skeleton: all four cards are on screen.
+    expect([...container.querySelectorAll('h2')].map((heading) => heading.textContent)).toEqual([
+      copy.standing.heading,
+      copy.checkpoints.heading,
+      copy.replies.heading,
+      copy.segments.heading,
+    ]);
+    await expectNoAxeViolations(container);
+    // Every bar has a text equivalent, and every table names its headers.
+    expect(container.querySelectorAll('[role="progressbar"][aria-label]')).toHaveLength(3);
+    expect(container.querySelectorAll('table th:not([scope])')).toHaveLength(0);
     root.unmount();
   });
 

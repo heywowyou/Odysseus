@@ -188,6 +188,11 @@ export function ProspectHubListPage(): JSX.Element {
         description={pageCopy.description}
         actions={
           <div className="flex flex-wrap gap-2">
+            {resultsView ? (
+              <Link to="/campagne" className={buttonStyles('secondary')}>
+                {strings.campaign.viewCampaign}
+              </Link>
+            ) : null}
             <Button variant="secondary" onClick={() => setNewProspectOpen((open) => !open)}>
               {copy.newAction}
             </Button>

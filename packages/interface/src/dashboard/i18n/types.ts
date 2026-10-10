@@ -25,6 +25,7 @@ import type { HubStrings } from './sections/hub';
 import type { EvidenceStrings } from './sections/evidence';
 import type { PreviewStrings } from './sections/preview';
 import type { ATraiterStrings } from './sections/a-traiter';
+import type { CampaignStrings } from './sections/campaign';
 import type { DraftsStrings } from './sections/drafts';
 import type { SuppressionsStrings } from './sections/suppressions';
 import type { LoginStrings } from './sections/login';
@@ -77,6 +78,8 @@ export interface DashboardStrings {
   /** The a-traiter page, the dashboard's landing page and the operator's
    *  prospect-only inbox. */
   aTraiter: ATraiterStrings;
+  /** Plan 078: the campaign results page. */
+  campaign: CampaignStrings;
   /** Plan 040 slice 4: the drafts queue page retired into /a-traiter, so
    *  what remains here is the never-send note the inbox carries and the
    *  review dialog the hub's Emails section renders. */

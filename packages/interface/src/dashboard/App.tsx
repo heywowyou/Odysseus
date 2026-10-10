@@ -3,6 +3,7 @@ import { AppShell } from './app/shell';
 import { AuditDetailPage } from './routes/audit-detail';
 import { AuditsPage } from './routes/audits';
 import { ATraiterPage } from './routes/a-traiter';
+import { CampaignPage } from './routes/campaign';
 import { LoginPage } from './routes/login';
 import { NewScanPage } from './routes/new-scan';
 import { ProspectHubListPage } from './routes/prospect-hub-list';
@@ -31,6 +32,9 @@ export function App() {
         {/* Plan 048 consolidates the prospect workspace. Legacy outreach
             URLs remain safe redirects for bookmarks and old notes. */}
         <Route path="a-traiter" element={<ATraiterPage />} />
+        {/* Plan 078: the campaign results page, reached from To do and from
+            the Results view. Deliberately not a sidebar destination. */}
+        <Route path="campagne" element={<CampaignPage />} />
         <Route path="resultats" element={<Navigate to="/prospects?view=results" replace />} />
         <Route path="ne-pas-contacter" element={<SuppressionsPage />} />
         {/* Plan 040 slice 8: links to standalone claude.ai tools kept

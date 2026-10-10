@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router';
 import { PAGE_WIDTH, PageHeader } from '../components/page-header';
 import { Badge } from '../components/ui/badge';
 import type { BadgeTone } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
+import { Button, buttonStyles } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { EmptyState } from '../components/ui/empty-state';
 import { Select } from '../components/ui/select';
@@ -267,28 +267,37 @@ export function ATraiterPage(): JSX.Element {
         </Card>
       ) : null}
       {campaigns.length > 0 ? (
-        <Card title={strings.aTraiter.funnel.heading} className="mb-4">
+        <Card
+          title={strings.aTraiter.funnel.heading}
+          className="mb-4"
+          actions={
+            <Link to="/campagne" className={buttonStyles('secondary', 'sm')}>
+              {strings.campaign.viewCampaign}
+            </Link>
+          }
+        >
           {campaigns.map((campaign) => (
-            <div key={campaign.campaignVersion} className="mb-4">
+            <div key={campaign.campaignVersion} className="mb-4 last:mb-0">
               <p className="mb-2 text-xs text-ink-muted">
                 {strings.aTraiter.funnel.campaign.replace('{campaign}', campaign.campaignVersion)}
               </p>
-              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <OverviewMetric
-                  label={strings.aTraiter.funnel.firstTouchSent}
-                  value={campaign.firstTouchSent}
+                  label={strings.aTraiter.funnel.delivered}
+                  value={campaign.results.delivered}
                 />
-                <OverviewMetric label={strings.aTraiter.funnel.replied} value={campaign.replied} />
-                <OverviewMetric label={strings.aTraiter.funnel.bounced} value={campaign.bounced} />
                 <OverviewMetric
-                  label={strings.aTraiter.funnel.optedOut}
-                  value={campaign.optedOut}
+                  label={strings.aTraiter.funnel.matured}
+                  value={campaign.results.matured}
+                />
+                <OverviewMetric
+                  label={strings.aTraiter.funnel.replies}
+                  value={campaign.results.maturity['matured-replied']}
                 />
                 <OverviewMetric label={strings.aTraiter.funnel.won} value={campaign.won} />
               </div>
             </div>
           ))}
-          <p className="text-xs text-ink-muted">{strings.aTraiter.funnel.note}</p>
         </Card>
       ) : null}
       <p
