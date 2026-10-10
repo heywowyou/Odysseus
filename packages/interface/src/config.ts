@@ -176,8 +176,9 @@ export function getBenchmarkSireneStockIndexCachePath(): string {
 }
 
 /** Milestone 9c plan 012: the canonical touch spacing, per
- *  `docs/rules/outreach-rules.md` section 6 (E1 day 0, E2 no earlier than day
- *  +4, E3 no earlier than day +11) and the 14-day reply window before a
+ *  `docs/rules/outreach-rules.md` section 6 (E1 day 0, E2 no earlier than 4
+ *  days after E1, E3 no earlier than 11 days after E2: each follow-up is
+ *  counted from the touch before it) and the 14-day reply window before a
  *  completed sequence is closed. Written onto each thread as a snapshot when
  *  it opens (`OutreachThreadSpacing`), never read live at due-date check time,
  *  so a later change to these defaults cannot retroactively redate a thread

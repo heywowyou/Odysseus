@@ -350,8 +350,11 @@ is a setting, not a constant in a prompt. Canonical defaults, added with
 milestone 9c plan 012 (`ODYSSEUS_OUTREACH_TOUCH2_DAYS` /
 `_TOUCH3_DAYS` / `_REPLY_WINDOW_DAYS`, snapshotted onto each thread at
 open so a later setting change never retroactively redates a live
-thread): touch 2 no earlier than day +4 after touch 1 is confirmed sent,
-touch 3 no earlier than day +11. A thread with no reply 14 days after
+thread): touch 2 no earlier than 4 days after touch 1 is confirmed sent,
+touch 3 no earlier than 11 days after touch 2 is confirmed sent, so day +15
+at the earliest (operator ruling, 2026-10-10: the scheduler has always
+counted each follow-up from the touch before it, and this text used to read
+"day +11" as if counted from touch 1). A thread with no reply 14 days after
 touch 3 is confirmed sent moves to `sequence-complete` and is
 suppressed; no fourth touch exists.
 

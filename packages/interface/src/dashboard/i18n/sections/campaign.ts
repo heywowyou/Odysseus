@@ -1,7 +1,6 @@
 /** Plan 078: the campaign results page. Counts the operator can stand
  *  behind; the page reports and never concludes. French is the source. */
 export interface CampaignStrings {
-  title: string;
   /** Tokens: {campaign}, {date}. */
   description: string;
   descriptionNoSend: string;
@@ -99,7 +98,6 @@ export interface CampaignStrings {
 
 export const campaign = {
   fr: {
-    title: 'Campagne',
     description: 'Campagne {campaign} · premier envoi le {date}',
     descriptionNoSend: 'Campagne {campaign} · aucun premier email envoyé',
     campaignSwitchAria: 'Campagne affichée',
@@ -211,7 +209,6 @@ export const campaign = {
     },
   },
   en: {
-    title: 'Campaign',
     description: 'Campaign {campaign} · first send on {date}',
     descriptionNoSend: 'Campaign {campaign} · no first email sent',
     campaignSwitchAria: 'Campaign shown',

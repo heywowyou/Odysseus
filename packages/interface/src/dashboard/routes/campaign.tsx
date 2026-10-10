@@ -109,7 +109,7 @@ export function CampaignPage(): JSX.Element {
   return (
     <article className={COLUMN}>
       <PageHeader
-        title={copy.title}
+        title={strings.nav.campaign}
         description={description}
         meta={
           campaigns.length > 1 && selected !== undefined ? (

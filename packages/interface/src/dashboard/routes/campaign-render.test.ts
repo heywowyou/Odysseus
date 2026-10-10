@@ -64,7 +64,7 @@ describe('campaign page (plan 078)', () => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-10T09:00:00.000Z') });
     const { container, root } = await render(ok({ campaigns: [CAMPAIGN_FIXTURE] }));
 
-    expect(container.querySelector('h1')?.textContent).toBe('Campagne');
+    expect(container.querySelector('h1')?.textContent).toBe('Résultats de campagne');
     expect(container.textContent).toContain(
       'Campagne first-100-2026-09 · premier envoi le 24 sept. 2026',
     );

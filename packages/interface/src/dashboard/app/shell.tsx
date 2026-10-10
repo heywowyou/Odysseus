@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ListChecks, Mail, Menu, ShieldCheck, Wrench, X } from 'lucide-react';
+import { ChartColumn, ListChecks, Mail, Menu, ShieldCheck, Wrench, X } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { Brand } from './brand';
 import { BuildRevision } from './build-revision';
@@ -48,9 +48,10 @@ export function AppShell() {
     refreshTodo();
   }, [pathname, refreshTodo]);
 
-  /* The shell exposes only the three operational destinations. Directory and
-     results are modes inside Prospects, while old URLs remain handled by the
-     route table for bookmark safety. */
+  /* The shell exposes the three operational destinations and, since the
+     operator's decision of 2026-10-10, the campaign results page. Directory
+     and results are modes inside Prospects, while old URLs remain handled by
+     the route table for bookmark safety. */
   const navGroups = [
     {
       label: strings.shell.groupMeasure,
@@ -69,6 +70,7 @@ export function AppShell() {
           badge: inboxCount > 0 ? inboxCount : undefined,
         },
         { to: '/prospects', label: strings.nav.prospects, icon: Mail, end: false },
+        { to: '/campagne', label: strings.nav.campaign, icon: ChartColumn, end: false },
       ],
     },
   ];

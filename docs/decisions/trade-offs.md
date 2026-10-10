@@ -6592,10 +6592,10 @@ the first emails delivered over the last 14 days, and is not shown before 7
 days of sending or without a recent send. The earliest maturity is counted as
 the follow-up scheduler counts: each follow-up is due a number of days after
 the touch before it, so a first email matures 4 + 11 + 14 = 29 days later at
-the default spacing, not the 25 days the brief and
-`docs/rules/outreach-rules.md` section 6 state (touch 3 "no earlier than day
-+11"). The page follows the scheduler; which of the two is intended is an
-open operator question.
+the default spacing. The brief and `docs/rules/outreach-rules.md` used to say
+25 days and "touch 3 no earlier than day +11"; the operator ruled on
+2026-10-10 that the scheduler is right, and both texts were corrected. Nothing
+about what is sent, or when, changed.
 
 **Decline reasons.** A refusal or a lost prospect cannot be recorded without
 a reason from the closed list, extended by `misread-offer` and
@@ -6610,3 +6610,8 @@ their prospect's latest recorded outcome event.
 
 The page reports and does not conclude: no badge says a campaign works or
 fails, and no count links to a prospect.
+
+*Amended 2026-10-10, operator decision:* the page is a fourth entry of the
+sidebar, `Résultats de campagne`, in the Campagne group. Plan 078 had kept it
+out of the sidebar so the three work destinations stayed three; the operator
+found two links too hard to find for a page read every few days.

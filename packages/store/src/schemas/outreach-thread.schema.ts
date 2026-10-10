@@ -87,9 +87,10 @@ export interface OutreachThreadReviewFlag {
   detectedAt: Date;
 }
 
-/** Written once at open, from configuration at that moment. Defaults are the
- *  canonical day +4 / day +11 / 14-day reply window recorded in
- *  `docs/rules/outreach-rules.md` section 6. */
+/** Written once at open, from configuration at that moment. Each follow-up is
+ *  counted from the touch before it: touch 2 after touch 1, touch 3 after
+ *  touch 2. Defaults are the canonical 4 days / 11 days / 14-day reply window
+ *  recorded in `docs/rules/outreach-rules.md` section 6. */
 export interface OutreachThreadSpacing {
   touch2AfterDays: number;
   touch3AfterDays: number;

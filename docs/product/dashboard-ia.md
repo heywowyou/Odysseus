@@ -7,7 +7,7 @@
 
 ## Product shape
 
-Odysseus has three operational destinations:
+Odysseus has three operational destinations and one results page:
 
 1. `À traiter` / `To do` (`/a-traiter`) is the landing page and complete work
    queue. Its rows are derived from the shared prospect-work module and its
@@ -15,6 +15,8 @@ Odysseus has three operational destinations:
 2. `Prospects` (`/prospects`) is the portfolio, discovery entry point, and
    results surface.
 3. `Audits` (`/audits`) is scan history and technical/report work.
+4. `Résultats de campagne` / `Campaign results` (`/campagne`, Plan 078) reports
+   one campaign as counts. It holds no work and changes nothing.
 
 `Annuaire` (`/annuaire`) remains a distinct searchable Atout France catalogue,
 but is reached from Prospects through `Ajouter depuis l'annuaire` / `Add from
@@ -22,16 +24,15 @@ the directory`. `Résultats` is the `view=results` mode of Prospects. The
 suppression lookup and Tools remain footer utilities. They are deliberately
 not primary destinations.
 
-`Campagne` / `Campaign` (`/campagne`, Plan 078) is the campaign results page:
-delivered and matured first emails, replies, sales, where prospects stand, the
-brief's three checkpoints, decline reasons and three segment tables, as counts
-only. It is read-only and is not a primary destination either: the operator
-reads it now and then, it holds no work, and a fourth sidebar entry would put a
-report on the same footing as the queue. It is reached from `Voir la campagne`
-/ `View campaign` on the À traiter campaign card and on the Results view. The
-À traiter card keeps four counts per campaign (delivered, matured, replies,
-sales). With several campaigns the page shows one at a time, chosen in the URL
-(`?campagne=`).
+The campaign results page shows delivered and matured first emails, replies,
+sales, where prospects stand, the brief's three checkpoints, decline reasons
+and three segment tables, as counts only. It sits in the sidebar's Campagne
+group below Prospects (operator decision, 2026-10-10: Plan 078 first kept it
+out of the sidebar, reachable only from two links, and the operator found it
+too hard to reach). `Voir la campagne` / `View campaign` on the À traiter
+campaign card and on the Results view still open it. The À traiter card keeps
+four counts per campaign (delivered, matured, replies, sales). With several
+campaigns the page shows one at a time, chosen in the URL (`?campagne=`).
 
 Tools (`/outils`) also carries the one system-status block: the artifacts
 disk's fill level (warning from 75%, alarm from 90%) and the last retention

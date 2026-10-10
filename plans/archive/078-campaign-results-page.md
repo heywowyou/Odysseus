@@ -1,6 +1,6 @@
 # Plan 078: Campaign results page
 
-- **Execution status:** IMPLEMENTED 2026-10-10: every slice is committed and its mechanical proofs pass; the post-deploy backfill, the production read and the manual accessibility record remain (see Execution record).
+- **Execution status:** DONE 2026-10-10: deployed, backfilled, read against production and accepted by the operator (closure evidence at the end).
 - **Priority:** P1
 - **Effort:** L
 - **Depends on:** issue #533 (campaign funnel and campaign version), issue #561 (daily funnel snapshot), Plan 047 (durable prospect hub), Plan 069 (v3 preview and its frozen `priorityCardCategories`).
@@ -263,9 +263,12 @@ Commits on `main`: slice 0 `110f565c`, slice 1 `2b173309`, slice 2 `c992e093`, s
 
 Browser check on the development build with the fixture campaign, 2026-10-10: no horizontal page scroll at 320 and 640 CSS pixels (the segment table scrolls inside its panel); the facet control takes focus by Tab, moves by arrow keys and selects by Space or Enter; the strip's four counts are written in its legend.
 
-### Still open, each needing a person or production
+### Closure
 
-1. Deploy, then run `node /app/scripts/backfill-outreach-outcomes.mjs` (dry run) and `--apply` inside the app container.
-2. Read `/campagne` against the production campaign.
-3. The named manual accessibility record: screen-reader pass of the strip legend and the tables, 200 percent zoom on the production page.
-4. Operator ruling on the touch 3 spacing: day +11 from the first email (rules, brief) or 11 days after touch 2 (scheduler).
+Closure evidence: (2026-10-10) every row of the ledger above maps to a passing test; `pnpm run check` and the full unit suite (6,457 tests) passed before the push; production runs build `775c8406` and later.
+
+- **Backfill.** `scripts/backfill-outreach-outcomes.mjs` on production: dry run found 79 threads without an outcome, 1 with a recorded outcome event; `--apply` wrote 1 row; a second dry run found 0 left.
+- **Production read.** `/campagne` for `first-100-2026-09` after the backfill: 77 delivered, 1 matured, 1 reply (a refusal after the first follow-up, reason not given since it predates this plan), 0 sales, 71 in sequence, 5 in the reply window, 1 merged; checkpoints estimated for 13 November, 22 December and 31 January. The operator confirmed the numbers match the campaign.
+- **Manual acceptance record, operator, 2026-10-10, production page:** the decline-reason control reveals the reason list and records nothing until a reason is chosen; nothing is cut off and the page does not scroll sideways at 200 percent zoom; a screen reader reads the strip legend and the tables correctly. Keyboard walk and 320 CSS pixel reflow: the browser check recorded above.
+- **Touch 3 spacing, operator ruling:** the scheduler is right (touch 3 is due 11 days after touch 2). The brief, `docs/rules/outreach-rules.md` and two code comments were corrected; nothing sent changes.
+- **Decision 1 revisited, operator decision:** the page is in the sidebar's Campagne group as `Résultats de campagne` / `Campaign results`, which is also its title. The two entry links stay. `docs/product/dashboard-ia.md` and trade-off 129 record it.

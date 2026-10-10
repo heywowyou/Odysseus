@@ -11,11 +11,11 @@ import { en } from './i18n/en';
 import { fr } from './i18n/fr';
 
 /**
- * Plan 060 §16, "Primary IA stays three destinations": the shell's primary
- * navigation renders exactly À traiter, Prospects and Audits — no fourth
- * primary destination, and directory/results stay modes inside Prospects.
- * Asserted against what actually renders (the shell's <nav> anchors), not
- * against the route table.
+ * Plan 060 §16, amended 2026-10-10: the shell's primary navigation renders
+ * exactly À traiter, Prospects, Audits and the campaign results page the
+ * operator asked to have there. Directory and results stay modes inside
+ * Prospects. Asserted against what actually renders (the shell's <nav>
+ * anchors), not against the route table.
  */
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -81,7 +81,7 @@ describe('primary information architecture (plan 060 §7)', () => {
   });
 
   it.each(['fr', 'en'] as const)(
-    'renders exactly the three destinations in the primary nav, in %s',
+    'renders exactly the four destinations in the primary nav, in %s',
     async (language) => {
       stubTodo();
       const { container, root } = await renderShell(language);
@@ -90,25 +90,33 @@ describe('primary information architecture (plan 060 §7)', () => {
       expect(nav, 'the shell must render its primary navigation').not.toBeNull();
 
       const links = [...nav!.querySelectorAll('a')];
-      expect(links, 'no fourth primary destination may appear').toHaveLength(3);
-      expect(links.map((link) => link.getAttribute('href')).sort()).toEqual(
-        ['/a-traiter', '/audits', '/prospects'].sort(),
-      );
-      // Each destination carries its operator label from the nav copy, and
-      // the labels themselves are the three destination names.
+      expect(links, 'no fifth primary destination may appear').toHaveLength(4);
+      expect(links.map((link) => link.getAttribute('href'))).toEqual([
+        '/audits',
+        '/a-traiter',
+        '/prospects',
+        '/campagne',
+      ]);
+      // Each destination carries its operator label from the nav copy.
       const expectedLabels: Record<string, string> = {
         '/audits': strings.nav.audits,
         '/prospects': strings.nav.prospects,
         '/a-traiter': strings.nav.outreach,
+        '/campagne': strings.nav.campaign,
       };
       for (const link of links) {
         expect(link.textContent?.trim()).toBe(expectedLabels[link.getAttribute('href') ?? '']);
       }
-      expect([strings.nav.audits, strings.nav.outreach, strings.nav.prospects]).toEqual([
-        'Audits',
-        language === 'fr' ? 'À traiter' : 'To do',
-        'Prospects',
-      ]);
+      expect([
+        strings.nav.audits,
+        strings.nav.outreach,
+        strings.nav.prospects,
+        strings.nav.campaign,
+      ]).toEqual(
+        language === 'fr'
+          ? ['Audits', 'À traiter', 'Prospects', 'Résultats de campagne']
+          : ['Audits', 'To do', 'Prospects', 'Campaign results'],
+      );
       await act(async () => {
         root.unmount();
       });
