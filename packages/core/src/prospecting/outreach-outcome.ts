@@ -30,6 +30,26 @@ export function isOutreachOutcome(value: string): value is OutreachOutcome {
   return (OUTREACH_OUTCOMES as readonly string[]).includes(value);
 }
 
+/** Every outcome but `no-reply` records that the prospect answered, an
+ *  objection included. */
+export function isOutreachReplyOutcome(outcome: OutreachOutcome): boolean {
+  return outcome !== 'no-reply';
+}
+
+/** Outcomes that say the prospect showed interest. A later stage (a call, a
+ *  quote, a sale) replaces `reply-positive` as the thread's current outcome,
+ *  so each one still counts as a positive reply. */
+export const OUTREACH_POSITIVE_OUTCOMES: readonly OutreachOutcome[] = [
+  'reply-positive',
+  'call',
+  'quoted',
+  'won',
+];
+
+export function isOutreachPositiveOutcome(outcome: OutreachOutcome): boolean {
+  return OUTREACH_POSITIVE_OUTCOMES.includes(outcome);
+}
+
 export function isOutreachLostReason(value: string): value is OutreachLostReason {
   return (OUTREACH_LOST_REASONS as readonly string[]).includes(value);
 }

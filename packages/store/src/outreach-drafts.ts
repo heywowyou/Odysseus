@@ -29,7 +29,11 @@ import {
   type OutreachDraftDocument,
   type OutreachDraftReviewOutcome,
 } from './schemas/outreach-draft.schema.js';
-import { draftedOutreachTouch, type OutreachThreadState } from '@odysseus/core';
+import {
+  draftedOutreachTouch,
+  type OutreachClosedReason,
+  type OutreachThreadState,
+} from '@odysseus/core';
 import { advanceProspectStatus, appendProspectEvent } from './prospect-hub.js';
 import {
   findOutreachThreadByProspect,
@@ -40,7 +44,7 @@ import {
 export type { OutreachDraftReviewOutcome };
 
 /** Thread state reason for a send the operator confirmed by hand. */
-const OPERATOR_CONFIRMED_SEND = 'operator-confirmed-send';
+const OPERATOR_CONFIRMED_SEND: OutreachClosedReason = 'operator-confirmed-send';
 
 /** Operational retention, per docs/rules/prospect-qualification.md section 7. */
 const OUTREACH_DRAFT_RETENTION_DAYS = 90;

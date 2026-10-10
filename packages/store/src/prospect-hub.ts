@@ -3,6 +3,7 @@ import type { Connection } from 'mongoose';
 import type { Prospect } from '@odysseus/core';
 import type {
   DirectoryEntry,
+  OutreachClosedReason,
   OutreachLostReason,
   ProspectEvent,
   ProspectStatus,
@@ -1408,12 +1409,14 @@ export async function withdrawProspectOutreach(
     .lean<{ threadId: string }[]>();
   let threadClosed = false;
   for (const thread of threads) {
+    const closedReason: OutreachClosedReason = 'prospect-deleted';
     const result = await transitionOutreachThread(connection, {
       threadId: thread.threadId,
       from: ACTIVE_OUTREACH_THREAD_STATES,
-      to: reason === 'opted-out' ? 'opted-out' : 'closed',
       at: now,
-      reason,
+      ...(reason === 'opted-out'
+        ? { to: 'opted-out', reason }
+        : { to: 'closed', reason: closedReason }),
     });
     threadClosed ||= result.changed;
   }

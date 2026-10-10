@@ -24,6 +24,7 @@ import type { Connection } from 'mongoose';
 import {
   canTransitionOutreachThread,
   normalizeDomainForHash,
+  type OutreachClosedReason,
   type OutreachThreadState,
 } from '@odysseus/core';
 import {
@@ -351,7 +352,7 @@ export interface CloseOutreachThreadsResult {
 export async function closeOutreachThreadsForDomain(
   connection: Connection,
   domain: string,
-  reason: string,
+  reason: OutreachClosedReason,
 ): Promise<CloseOutreachThreadsResult> {
   const ThreadModel = createOutreachThreadModel(connection);
   const now = new Date();
