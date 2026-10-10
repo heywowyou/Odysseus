@@ -3,6 +3,7 @@ import type { Connection } from 'mongoose';
 import type { Prospect } from '@odysseus/core';
 import type {
   DirectoryEntry,
+  OutreachLostReason,
   ProspectEvent,
   ProspectStatus,
   ProspectWebsiteKind,
@@ -10,6 +11,7 @@ import type {
 import {
   ACTIVE_OUTREACH_THREAD_STATES,
   hasHotelChainBrandName,
+  isOutreachOutcome,
   normalizeDeclaredWebsite,
   websiteKindForResolution,
   emailDomain,
@@ -48,6 +50,7 @@ import { createOutreachPreviewModel } from './schemas/outreach-preview.schema.js
 import { createOutreachThreadModel } from './schemas/outreach-thread.schema.js';
 import { createReferenceAuditLinkModel } from './schemas/reference-audit-link.schema.js';
 import { transitionOutreachThread } from './outreach-threads.js';
+import { recordOutreachThreadOutcome } from './outreach-outcomes.js';
 import { deleteAuditCascade, type AuditCascadeCounts } from './delete-audit.js';
 import { addSuppressionEntry } from './suppression.js';
 import {
@@ -1427,12 +1430,24 @@ export async function withdrawProspectOutreach(
   };
 }
 
+export interface RecordProspectOutcomeOptions extends ProspectStatusSuppressionOptions {
+  /** Why the prospect declined; the caller decides which outcomes carry one. */
+  lostReason?: OutreachLostReason;
+  /** A retried request repeats its key and then records nothing twice. */
+  idempotencyKey?: string;
+}
+
+/**
+ * Records the operator's outcome for a prospect: its status, the outcome row
+ * of its outreach thread with the thread's pointer to it, and the prospect
+ * event. A prospect with no thread keeps only the status and the event.
+ */
 export async function recordProspectOutcome(
   connection: Connection,
   prospectId: string,
   outcome: string,
   actor = 'operator',
-  options: ProspectStatusSuppressionOptions = {},
+  options: RecordProspectOutcomeOptions = {},
 ): Promise<ProspectHubDocument | null> {
   const status: Exclude<ProspectStatus, 'new'> | undefined = {
     'reply-positive': 'replied',
@@ -1451,9 +1466,25 @@ export async function recordProspectOutcome(
       ? current
       : await applyAutomaticProspectStatus(connection, prospectId, status, actor, options);
   if (prospect === null) return null;
+  if (isOutreachOutcome(outcome)) {
+    const recorded = await recordOutreachThreadOutcome(connection, {
+      prospectId,
+      outcome,
+      ...(options.lostReason === undefined ? {} : { lostReason: options.lostReason }),
+      actor,
+      at: new Date(),
+      ...(options.idempotencyKey === undefined ? {} : { idempotencyKey: options.idempotencyKey }),
+    });
+    if (recorded === 'already-recorded') return prospect;
+  }
   await recordEvent(
     connection,
-    event(prospectId, outcome === 'opt-out' ? 'opted-out' : 'outcome-recorded', { outcome }, actor),
+    event(
+      prospectId,
+      outcome === 'opt-out' ? 'opted-out' : 'outcome-recorded',
+      { outcome, ...(options.lostReason === undefined ? {} : { lostReason: options.lostReason }) },
+      actor,
+    ),
   );
   return prospect;
 }

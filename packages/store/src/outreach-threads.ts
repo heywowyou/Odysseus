@@ -46,7 +46,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Issue #553 (trade-off 125): a thread expires 90 days after its last
  *  activity, not after it was opened, so a sequence still running is never
  *  deleted mid-way. Every write that records activity sets it again. */
-function threadExpiry(at: Date): Date {
+export function threadExpiry(at: Date): Date {
   return new Date(at.getTime() + OUTREACH_THREAD_RETENTION_DAYS * DAY_MS);
 }
 

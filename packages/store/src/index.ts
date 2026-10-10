@@ -285,4 +285,11 @@ export {
   listOutreachFunnelSnapshots,
   recordOutreachFunnelSnapshot,
 } from './outreach-funnel.js';
+export {
+  backfillOutreachThreadOutcomes,
+  recordOutreachThreadOutcome,
+  type OutreachOutcomeBackfillResult,
+  type RecordOutreachThreadOutcomeInput,
+  type RecordOutreachThreadOutcomeResult,
+} from './outreach-outcomes.js';
 export { listProspectExpiryRows, type ProspectExpiryRow } from './prospect-expiry.js';
