@@ -260,6 +260,23 @@ input of the next batch fix.
 | 2026-10-09 | Hôtel de Toiras f0f2dcd5 | preview quick check | SEND | Blocking: -. Rechecked after regeneration. Backlog: 45 pages ended in error | - | - |
 | 2026-10-09 | Hôtel Le Vert Bois a5f9e4dd | preview quick check | SEND | Blocking: -. Rechecked after regeneration; the earlier published preview predates it and is republished at drafting. Backlog: 16 inventoried URLs answer HTTP errors | - | - |
 | 2026-10-09 | Hôtel Les Rives Sauvages 18b09d4c | preview quick check | SEND | Blocking: -. Rechecked after regeneration. Backlog: - | - | - |
+| 2026-10-10 | Oz'Inn Hôtel & Spa 13244856 | preview quick check | SEND | Blocking: -. Backlog: 95 of 140 analysed pages are ?lang= translations (kept as hreflang alternates); keyboard walks 3/140 evaluated | - | - |
+| 2026-10-10 | Hôtel Bowmann 0efa15b3 | preview quick check | SEND | Blocking: -. Backlog: about 350 of 752 analysed pages are empty untranslated article and collection shells in it/es/de/pt (200, self-canonical, listed as hreflang alternates), so the counts are true but no finding names the empty translations | - | - |
+| 2026-10-10 | Hôtel Mylos 98183093 | preview quick check | SEND | Blocking: -. Backlog: in scope from a 3 to 5 employee band with no turnover (documented conservative rule; client text stays at criteria to verify) | - | - |
+| 2026-10-10 | Hôtel Don César 4d3d7f89 | preview quick check | SEND | Blocking: -. Backlog: two of three cards are performance | - | - |
+| 2026-10-10 | Hôtel Lutetia 379d2b09 | preview quick check | SEND | Blocking: - (report blocked by 2 room pages that answer normally now; accepted as a disclosed limit). Backlog: weak lead card (zoom disabled) | - | - |
+| 2026-10-10 | Hôtel Le Belvédère 589c149f | preview quick check | SEND | Blocking: - (report blocked by 2 pages that answer normally now; accepted as a disclosed limit). Backlog: - | - | - |
+| 2026-10-10 | Hôtel Argi Eder 467d4b84 | preview quick check | SEND | Blocking: - (earlier scan stopped at the homepage: argi-eder.com 301 to argi-eder.fr; website corrected, rescanned). Backlog: - | - | - |
+| 2026-10-10 | Château de Valmer 7a7580f8 | preview quick check | SEND | Blocking: -. Rechecked, unchanged since 9 October. Backlog: as recorded 9 October | - | - |
+| 2026-10-10 | Hôtel Habituel 38a3755c | preview quick check | SEND | Blocking: -. Rechecked, unchanged since 9 October. Backlog: as recorded 9 October | - | - |
+| 2026-10-10 | Hôtel Jardins Secrets 2cd26f47 | preview quick check | SEND | Blocking: -. Rechecked, unchanged since 9 October. Backlog: as recorded 9 October | - | - |
+| 2026-10-10 | Hôtel L'Orée du Bois 255f8dd7 | preview quick check | SEND | Blocking: -. Rechecked, unchanged since 9 October. Backlog: as recorded 9 October | - | - |
+| 2026-10-10 | Petit Hôtel Confidentiel 412a5e66 | preview quick check | SEND | Blocking: -. Rechecked, unchanged since 9 October. Backlog: as recorded 9 October | - | - |
+| 2026-10-10 | Hôtel La Mare aux Oiseaux 1a14b182 | preview quick check | SEND | Blocking: -. Rechecked, unchanged since 9 October. Backlog: as recorded 9 October | - | - |
+| 2026-10-10 | Hôtel Legend 3a0596b5 | preview quick check | SEND | Blocking: -. Rechecked, unchanged since 9 October. Backlog: as recorded 9 October | - | - |
+| 2026-10-10 | Hôtel Les Peupliers 909c78f0 | preview quick check | SEND | Blocking: -. Rechecked, unchanged since 9 October. Backlog: as recorded 9 October | - | - |
+| 2026-10-10 | Motel L'Enclos 82d5d857 | preview quick check | SEND | Blocking: -. Rechecked, unchanged since 9 October. Backlog: as recorded 9 October | - | - |
+| 2026-10-10 | Plessis Grand Hôtel ccc48b79 | preview quick check | SEND | Blocking: - (earlier scan stopped at the homepage: grandhotel-plessis92.com 301 to plessisgrandhotel.com; website corrected, rescanned). Backlog: the site rate-limited the crawl (429), so the scan took about 3 hours | - | - |
 
 ## Sweep 4 notes
 
