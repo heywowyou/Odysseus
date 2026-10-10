@@ -281,20 +281,14 @@ export type {
   RetentionRunFailure,
 } from './schemas/retention-run.schema.js';
 export {
-  aggregateOutreachFunnel,
   listOutreachFunnelSnapshots,
   recordOutreachFunnelSnapshot,
   reportOutreachCampaigns,
-  type OutreachCampaignFunnel,
   type OutreachCampaignReport,
-  type OutreachCheckpointStatus,
 } from './outreach-funnel.js';
 export type { OutreachFunnelSnapshotDocument } from './schemas/outreach-funnel-snapshot.schema.js';
-export {
-  backfillOutreachThreadOutcomes,
-  recordOutreachThreadOutcome,
-  type OutreachOutcomeBackfillResult,
-  type RecordOutreachThreadOutcomeInput,
-  type RecordOutreachThreadOutcomeResult,
-} from './outreach-outcomes.js';
+// Loaded from the built package by scripts/backfill-outreach-outcomes.mjs,
+// inside the production container.
+// fallow-ignore-next-line unused-export
+export { backfillOutreachThreadOutcomes } from './outreach-outcomes.js';
 export { listProspectExpiryRows, type ProspectExpiryRow } from './prospect-expiry.js';

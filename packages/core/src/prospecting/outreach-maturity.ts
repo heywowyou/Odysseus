@@ -169,7 +169,7 @@ export function earliestOutreachMaturityDate(thread: OutreachMaturityThread): Da
     const record = thread.touches.find((candidate) => candidate.touch === touch);
     return record === undefined ? undefined : new Date(record.sentAt).getTime();
   };
-  const { touch2AfterDays, touch3AfterDays, replyWindowDays } = thread.spacing;
+  const { touch3AfterDays, replyWindowDays } = thread.spacing;
   const third = sentAt(3);
   if (third !== undefined) return new Date(third + replyWindowDays * DAY_MS);
   const second = sentAt(2);

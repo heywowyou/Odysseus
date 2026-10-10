@@ -320,8 +320,18 @@ describe.skipIf(!available)('campaign results (plan 078)', () => {
 });
 
 describe.skipIf(!available)('campaign report reads (plan 078)', () => {
-  /** Collection reads Mongoose issues while `run` executes. */
+  /** Collection operations Mongoose issues while `run` executes. Index
+   *  builds are finished first: they run in the background after a model's
+   *  first use and are not part of the aggregate. */
   async function countReads(run: () => Promise<unknown>): Promise<string[]> {
+    await Promise.all(
+      [
+        createOutreachThreadModel(connection!),
+        createOutreachOutcomeModel(connection!),
+        createOutreachPreviewModel(connection!),
+        createProspectHubModel(connection!),
+      ].map((model) => model.init()),
+    );
     const reads: string[] = [];
     mongoose.set('debug', (collection: string, method: string) => {
       reads.push(`${collection}.${method}`);

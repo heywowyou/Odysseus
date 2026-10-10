@@ -14,6 +14,7 @@ export const APP_ROUTE_PREFIXES = [
   'prospects',
   'outreach',
   'a-traiter',
+  'campagne',
   'resultats',
   'ne-pas-contacter',
   'outils',

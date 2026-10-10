@@ -18,8 +18,10 @@
 
 // The container's built packages, loaded dynamically: this path exists only
 // inside the production image, so a static import would not resolve here.
-const { backfillOutreachThreadOutcomes, connectToMongo, disconnectFromMongo } =
-  await import('/app/packages/store/dist/index.js');
+const app = '/app/packages';
+const { backfillOutreachThreadOutcomes, connectToMongo, disconnectFromMongo } = await import(
+  `${app}/store/dist/index.js`
+);
 
 const apply = process.argv.slice(2).includes('--apply');
 const connection = await connectToMongo();
