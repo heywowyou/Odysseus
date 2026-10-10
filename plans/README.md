@@ -15,6 +15,7 @@ Earlier indexes are kept as history, not as binding decisions:
 | Plan | Title | Priority | Effort | Depends on | Status |
 | --- | --- | --- | --- | --- | --- |
 | [075](075-clean-true-audit-data.md) | Make the audit data clean and true before it reaches a report | P1 | XL | none | IN PROGRESS: Part M deployed (`0b03686f`) and the latest audits refreshed, regenerated and rescanned 2026-09-30; the per-audit finalizer replaces the sweep stop rule (Part N, trade-off 127), N2 and N3 remain. |
+| [078](078-campaign-results-page.md) | Campaign results page: matured first touches, decline reasons, segments, checkpoints | P1 | L | #533, #561, 047, 069 | TODO: written 2026-10-10; slice 0 fixes recorded outcomes never reaching the funnel. |
 
 Verified findings waiting to be planned are GitHub issues.
 
