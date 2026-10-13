@@ -139,6 +139,53 @@ describe('isUncrawlableAnchor', () => {
     }
   });
 
+  // Seen across one batch of hotel audits: a date picker's arrows on 95
+  // pages, a spa booking opener on every page, a booking widget's tabs and
+  // toolbar, gallery filters. Each is a control with no page behind it.
+  it('passes more controls with no destination, from an id, a data attribute or a name', () => {
+    const controls = [
+      '<a class="ui-datepicker-next ui-corner-all" data-handler="next" data-event="click" title="Suivant">',
+      '<a href="javascript:void(0);" id="modalPlanityButton" onclick="siteOpenPlanity();">',
+      '<a data-tracking-label="sp_toolbar_open" href="javascript:void(0);" class="smartpreview__toolbar-open">',
+      '<a class="smartpreview__tabs-title active" data-target="#tab-prices">',
+      '<a data-filter-value="">',
+    ];
+    for (const snippet of controls) {
+      const rawHref = /href="([^"]*)"/.exec(snippet)?.[1] ?? null;
+      const control = anchor({
+        snippet,
+        rawHref,
+        href: '',
+        id: /\sid="([^"]*)"/.exec(snippet)?.[1] ?? '',
+        text: 'Suivant',
+        hasEventListener: true,
+      });
+      expect(isUncrawlableAnchor(control, PAGE_URL), snippet).toBe(false);
+    }
+  });
+
+  // An icon-only opener, a slideshow's empty wrapper: with no destination
+  // and no text there is no link for a reader or a crawler to follow.
+  it('passes an anchor with neither a destination nor any text', () => {
+    for (const snippet of [
+      '<a class="smartpreview__panel-breadcrumb" href="javascript:void(0);" target="_blank">',
+      '<a target="_blank">',
+    ]) {
+      const rawHref = /href="([^"]*)"/.exec(snippet)?.[1] ?? null;
+      const empty = anchor({
+        snippet,
+        rawHref,
+        href: '',
+        id: '',
+        text: ' ',
+        hasHrefAssociatedAttribute: true,
+      });
+      expect(isUncrawlableAnchor(empty, PAGE_URL), snippet).toBe(false);
+      // The same anchor with words on it is a link that goes nowhere.
+      expect(isUncrawlableAnchor({ ...empty, text: 'Nos offres' }, PAGE_URL), snippet).toBe(true);
+    }
+  });
+
   it('passes a link with no destination inside a consent manager panel', () => {
     const opener = anchor({
       selector:

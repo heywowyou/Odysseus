@@ -6,10 +6,9 @@
  * Deliberately conservative on both fronts, per this codebase's "prefer
  * undetermined over a confident wrong answer" principle:
  *
- * keyboard-trap only fires when the exact same element received focus on
- * two consecutive Tab presses - the one signal that cannot have an
- * innocent explanation (a real browser always advances focus on Tab
- * unless something is actively intercepting it). A fuzzier "cycling
+ * keyboard-trap only fires when the walk ends on one element that kept
+ * focus for three presses in a row or more: the finding says a reader cannot
+ * get past it, so a pause the walk moves on from is not one. A fuzzier "cycling
  * among a small subset of elements" signal was considered and rejected:
  * an accessible modal dialog intentionally trapping focus within its own
  * several elements is correct behavior, not a defect, and a heuristic
@@ -113,6 +112,23 @@ export function isTabWalkTakenOver(input: KeyboardNavigationCheckInput): boolean
   return rest.length > 0 && rest.every((id) => id === null);
 }
 
+/** A trap holds focus: the walk ends on the element after it kept focus for
+ *  this many presses in a row. */
+const MIN_TRAP_PRESSES = 3;
+
+/** Where the walk's final run on one element began, when that run is a trap.
+ *  The finding says a reader cannot get past the element, so it is only made
+ *  when the walk never did: a control that takes two presses and lets Tab go
+ *  on through the page (jehandebeauce's menu entry) is not one, and neither
+ *  is a single repeat on the walk's last press. */
+function trapStartIndex(focusSequence: ReadonlyArray<number | null>): number | undefined {
+  const last = focusSequence.at(-1);
+  if (last === null || last === undefined) return undefined;
+  let start = focusSequence.length - 1;
+  while (start > 0 && focusSequence[start - 1] === last) start--;
+  return focusSequence.length - start >= MIN_TRAP_PRESSES ? start : undefined;
+}
+
 /** The walk did not measure the page: it gives no finding, and the page is
  *  recorded as not evaluated for keyboard navigation. */
 export function isTabWalkInconclusive(input: KeyboardNavigationCheckInput): boolean {
@@ -154,28 +170,27 @@ export function extractKeyboardNavigationCandidates(
   const { pageUrl } = input;
   if (isTabWalkInconclusive(input)) return candidates;
 
-  for (let i = 0; i < input.focusSequence.length - 1; i++) {
-    const current = input.focusSequence[i];
-    const next = input.focusSequence[i + 1];
-    if (current === null || current === undefined) continue;
-    if (current === next) {
-      const kind = input.tabbableKinds?.[current] ?? 'ordinary';
-      if (kind !== 'ordinary') continue;
-      const selector = input.tabbableSelectors[current] ?? `[tabbable-index="${current}"]`;
-      candidates.push({
-        source: 'custom',
-        ruleId: KEYBOARD_TRAP_RULE_ID,
-        category: 'accessibility',
-        severity: severityFromCustom(KEYBOARD_TRAP_RULE_ID),
-        wcagCriteria: ['2.1.2'],
-        title: 'Keyboard focus is trapped on one element',
-        description: `Pressing Tab while this element is focused does not move focus anywhere else. A keyboard-only user cannot get past it to reach the rest of the page.`,
-        pageUrl,
-        element: { pageUrl, selector, snippet: '' },
-        rawEvidenceForPage: { tabbableIndex: current, stepIndex: i },
-      });
-      break; // one trap finding per page is enough; the walk likely never recovers past it
-    }
+  const trapStart = trapStartIndex(input.focusSequence);
+  const trapped = trapStart === undefined ? undefined : input.focusSequence[trapStart];
+  if (
+    trapStart !== undefined &&
+    trapped !== null &&
+    trapped !== undefined &&
+    (input.tabbableKinds?.[trapped] ?? 'ordinary') === 'ordinary'
+  ) {
+    const selector = input.tabbableSelectors[trapped] ?? `[tabbable-index="${trapped}"]`;
+    candidates.push({
+      source: 'custom',
+      ruleId: KEYBOARD_TRAP_RULE_ID,
+      category: 'accessibility',
+      severity: severityFromCustom(KEYBOARD_TRAP_RULE_ID),
+      wcagCriteria: ['2.1.2'],
+      title: 'Keyboard focus is trapped on one element',
+      description: `Pressing Tab while this element is focused does not move focus anywhere else. A keyboard-only user cannot get past it to reach the rest of the page.`,
+      pageUrl,
+      element: { pageUrl, selector, snippet: '' },
+      rawEvidenceForPage: { tabbableIndex: trapped, stepIndex: trapStart },
+    });
   }
 
   const inversions = countInversions(input.focusSequence, input.skippedOutOfReach);

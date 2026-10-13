@@ -190,13 +190,20 @@ const JAVASCRIPT_VOID_PATTERN = /javascript:void(\(|)0(\)|)/;
  *  `display:none` admin loader, empty editable-link placeholders and "read
  *  more" expanders on every page, and on two more previews they became the
  *  same false priority. Read from the opening tag, so a stored scan is
- *  judged too. */
+ *  judged too.
+ *
+ *  One more batch showed the same control written other ways: a date
+ *  picker's arrows (`data-handler`, `data-event`) on 95 pages of one site, a
+ *  tab or a panel opener naming the element it shows (`data-target="#..."`),
+ *  a gallery filter (`data-filter-*`), and openers named only by their id
+ *  (`modalPlanityButton`) or by a class ending in `-open`. The id is read
+ *  like the classes, and a camel-cased name is read as its words. */
 const CONTROL_ATTRIBUTE_PATTERN =
-  /\s(?:type\s*=\s*["']?button|aria-(?:controls|expanded|haspopup)\s*=|[\w:-]*toggle[\w:-]*\s*=|hidden(?=[\s>=/]))/i;
+  /\s(?:type\s*=\s*["']?button|aria-(?:controls|expanded|haspopup)\s*=|[\w:-]*toggle[\w:-]*\s*=|data-(?:handler|event)\s*=|data-filter[\w-]*\s*=|data-(?:bs-)?target\s*=\s*["']?#|hidden(?=[\s>=/]))/i;
 const CONTROL_STYLE_PATTERN =
   /\sstyle\s*=\s*["'][^"']*(?:pointer-events\s*:\s*none|cursor\s*:\s*default|display\s*:\s*none|visibility\s*:\s*hidden)/i;
 const CONTROL_CLASS_PATTERN =
-  /(?:^|[\s_-])(?:btn|button|nolink|toggle|close|read-?more|tarteaucitron\w*|openaxeptio\w*|axeptio\w*|cmplz\w*|klaro\w*|cm-btn|didomi\w*|ot-sdk\w*|cky\w*|cookie\w*)(?:$|[\s_-])/i;
+  /(?:^|[\s_-])(?:btn|button|nolink|toggle|close|open|opener|modal|popup|popin|datepicker|read-?more|tarteaucitron\w*|openaxeptio\w*|axeptio\w*|cmplz\w*|klaro\w*|cm-btn|didomi\w*|ot-sdk\w*|cky\w*|cookie\w*)(?:$|[\s_-])/i;
 
 /** A consent manager's own panel, named by the id the link's selector
  *  starts from. Klaro writes its "set my preferences" opener as a bare
@@ -213,17 +220,23 @@ function declaresScriptControl(snippet: string, selector: string): boolean {
     return true;
   }
   const classes = /\sclass\s*=\s*["']([^"']*)/i.exec(openingTag)?.[1] ?? '';
-  return classes.split(/\s+/).some((name) => CONTROL_CLASS_PATTERN.test(name));
+  const id = /\sid\s*=\s*["']([^"']*)/i.exec(openingTag)?.[1] ?? '';
+  return [...classes.split(/\s+/), id].some((name) =>
+    CONTROL_CLASS_PATTERN.test(name.replace(/([a-z0-9])([A-Z])/g, '$1-$2')),
+  );
 }
 
 export function isUncrawlableAnchor(anchor: AnchorFactInput, pageUrl: string): boolean {
   const rawHref = (anchor.rawHref ?? '').replace(/\s/g, '');
   if (anchor.role.trim().length > 0) return false;
   // A control with no destination is not a link a crawler misses. An href
-  // that names a destination is still judged, whatever the markup says.
+  // that names a destination is still judged, whatever the markup says. An
+  // anchor with no destination and no text either is an icon control or an
+  // empty wrapper (a booking widget's toolbar, a slideshow's slide): there
+  // is no link there for a reader or a crawler to follow.
   if (
     (anchor.rawHref === null || anchor.href === '' || JAVASCRIPT_VOID_PATTERN.test(rawHref)) &&
-    declaresScriptControl(anchor.snippet, anchor.selector)
+    (anchor.text.trim() === '' || declaresScriptControl(anchor.snippet, anchor.selector))
   ) {
     return false;
   }

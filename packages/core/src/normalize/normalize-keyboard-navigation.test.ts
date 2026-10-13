@@ -181,12 +181,27 @@ describe('a Tab walk a late window takes over', () => {
     ).toHaveLength(1);
   });
 
-  it('still reports an element that holds focus before the walk moves on through the page', () => {
-    const sticky = baseInput({ focusSequence: [0, 1, 1, null, 2, 3] });
-    expect(isTabWalkTakenOver(sticky)).toBe(false);
+  // jehandebeauce, 2026-10-10: a menu entry took two presses, then Tab went
+  // on through the rest of the page. A reader gets past it.
+  it('gives no trap when the walk moves on through the page after a pause', () => {
+    const paused = baseInput({
+      tabbableCount: 30,
+      tabbableSelectors: Array.from({ length: 30 }, (_, i) => `#t${i}`),
+      focusSequence: [15, 16, 17, 17, 18, 19, 20, 21],
+    });
+    expect(isTabWalkTakenOver(paused)).toBe(false);
+    expect(isTabWalkInconclusive(paused)).toBe(false);
+    expect(extractKeyboardNavigationCandidates(paused)).toEqual([]);
+  });
+
+  // One repeated press as the walk ends, on a control it had passed before.
+  it('gives no trap for a single repeat on the last press', () => {
+    const lastPress = baseInput({ focusSequence: [0, 1, 2, 3, 0, 1, 2, 2] });
     expect(
-      extractKeyboardNavigationCandidates(sticky).filter((c) => c.ruleId === KEYBOARD_TRAP_RULE_ID),
-    ).toHaveLength(1);
+      extractKeyboardNavigationCandidates(lastPress).filter(
+        (c) => c.ruleId === KEYBOARD_TRAP_RULE_ID,
+      ),
+    ).toEqual([]);
   });
 });
 

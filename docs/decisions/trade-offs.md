@@ -5863,7 +5863,14 @@ declares a control, and on one preview that link, repeated on every page, was
 the whole card again. An anchor with no destination whose selector starts
 from a consent manager's own id (Klaro, Tarteaucitron, Axeptio, Complianz,
 Didomi, OneTrust, CookieYes, or an id beginning with `cookie`) is now exempt
-the same way.
+the same way. Reading every link the batch's audits still reported showed
+the same control written four more ways, so these are exempt too: a control
+named by its id or by a camel-cased name (`modalPlanityButton`), by an
+opener, modal, popup or date-picker name, or by `data-handler`,
+`data-event`, `data-filter-*` or a `data-target` naming an element of the
+page (a date picker's arrows were on 95 pages of one site); and any anchor
+with neither a destination nor any text, which is an icon control or an
+empty wrapper. A link with words on it and no destination is still reported.
 
 ### 111. Clean audit data is a prerequisite for client-facing certainty (2026-09-22)
 
@@ -6529,8 +6536,10 @@ shape another site can have:
   nine different links, the critical card of one preview. Tab passes every
   one of them on the live site. A walk that stays on a control and then
   leaves the page's own controls for good is now inconclusive, like a walk a
-  dialog held from the start; a trap is an element that keeps focus to the
-  end of the walk.
+  dialog held from the start. A trap is now an element the walk ends on after
+  it kept focus for three presses or more: a menu entry that took two presses
+  before Tab went on through the page was also reported as one, on another
+  site, and a reader gets past it.
 - Klaro's preferences link (trade-off 110, amended again).
 - A start URL entered with a trailing slash was fetched without it, as every
   page identity is. One site answers 404 to the bare path and redirects the

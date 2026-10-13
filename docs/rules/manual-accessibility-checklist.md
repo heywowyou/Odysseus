@@ -79,7 +79,9 @@ dismissed. The same holds when the window opens after the walk began (a
 consent banner shown a few seconds after load): focus pauses on whichever
 control the walk had reached, then never returns to the page's own controls.
 That pause is not a trap on that control, and the page is recorded as not
-evaluated. A trap is an element that keeps focus to the end of the walk.
+evaluated. A trap is an element the walk ends on after it kept focus for
+three presses or more; a control that takes two presses and lets Tab go on is
+not one.
 Inversions are counted within one pass through the page, so the
 wrap from the last control back to the first is not a backward jump.
 
