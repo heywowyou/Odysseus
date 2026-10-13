@@ -198,7 +198,16 @@ const CONTROL_STYLE_PATTERN =
 const CONTROL_CLASS_PATTERN =
   /(?:^|[\s_-])(?:btn|button|nolink|toggle|close|read-?more|tarteaucitron\w*|openaxeptio\w*|axeptio\w*|cmplz\w*|klaro\w*|cm-btn|didomi\w*|ot-sdk\w*|cky\w*|cookie\w*)(?:$|[\s_-])/i;
 
-function declaresScriptControl(snippet: string): boolean {
+/** A consent manager's own panel, named by the id the link's selector
+ *  starts from. Klaro writes its "set my preferences" opener as a bare
+ *  `<a class="" href="javascript:void(0);">` inside `#klaro-manager`: nothing
+ *  on the tag declares a control, and on one hotel preview that single link,
+ *  repeated on every page, became the same false priority. */
+const CONSENT_PANEL_SELECTOR_PATTERN =
+  /^#(?:klaro|tarteaucitron|axeptio|cmplz|didomi|onetrust|ot-sdk|cky|cookie)/i;
+
+function declaresScriptControl(snippet: string, selector: string): boolean {
+  if (CONSENT_PANEL_SELECTOR_PATTERN.test(selector)) return true;
   const openingTag = snippet.slice(0, snippet.indexOf('>') + 1 || undefined);
   if (CONTROL_ATTRIBUTE_PATTERN.test(openingTag) || CONTROL_STYLE_PATTERN.test(openingTag)) {
     return true;
@@ -214,7 +223,7 @@ export function isUncrawlableAnchor(anchor: AnchorFactInput, pageUrl: string): b
   // that names a destination is still judged, whatever the markup says.
   if (
     (anchor.rawHref === null || anchor.href === '' || JAVASCRIPT_VOID_PATTERN.test(rawHref)) &&
-    declaresScriptControl(anchor.snippet)
+    declaresScriptControl(anchor.snippet, anchor.selector)
   ) {
     return false;
   }

@@ -28,6 +28,11 @@
  * perceive and no developer can remove, and reporting those would bury
  * the real failures.
  *
+ * A page that hides its horizontal overflow (`overflow-x: hidden` or
+ * `clip` on the root or the body) cannot be scrolled sideways, so it is not
+ * reported here: what it cuts off is content loss, which the capability
+ * registry leaves to the manual review.
+ *
  * Runs on the already-loaded rendered page inside the existing
  * onRenderedPage hook: one viewport resize, no extra navigation, no
  * network. The viewport is restored afterwards so no later check in the
@@ -44,6 +49,15 @@ const REFLOW_VIEWPORT_HEIGHT = 640;
  *  or two on layouts that are in fact correct. Chosen to sit above that
  *  noise and well below anything a reader would notice. */
 const OVERFLOW_TOLERANCE_PX = 4;
+
+/** How long a page that overflows is given to finish laying itself out
+ *  before the overflow is taken as its settled state. Embedded widgets size
+ *  themselves in script and react to a resize after their own delay: an
+ *  Instagram feed measured 150 ms after the resize was still as wide as the
+ *  desktop layout on a page that fits at 320 (roches-blanches-cassis.com).
+ *  Only a page that overflows pays this wait. */
+const SETTLE_TIMEOUT_MS = 2_000;
+const SETTLE_POLL_MS = 250;
 
 /** More than this many offending elements almost always means one
  *  container overflowing and every descendant inheriting the width;
@@ -82,70 +96,101 @@ export async function checkReflow(
     await page.waitForTimeout(150);
     if (signal?.aborted) throw new Error('reflow aborted');
 
-    const measurement = await page.evaluate(
-      ({ tolerance, maxElements }) => {
-        const cssPath = (el: Element): string => {
-          const parts: string[] = [];
-          let current: Element | null = el;
-          while (current && current !== document.documentElement) {
-            if (current.id) {
-              parts.unshift(`#${CSS.escape(current.id)}`);
-              break;
+    const measure = () =>
+      page.evaluate(
+        ({ tolerance, maxElements }) => {
+          const cssPath = (el: Element): string => {
+            const parts: string[] = [];
+            let current: Element | null = el;
+            while (current && current !== document.documentElement) {
+              if (current.id) {
+                parts.unshift(`#${CSS.escape(current.id)}`);
+                break;
+              }
+              const parent: Element | null = current.parentElement;
+              if (!parent) break;
+              const index = Array.from(parent.children).indexOf(current) + 1;
+              parts.unshift(`${current.tagName.toLowerCase()}:nth-child(${index})`);
+              current = parent;
             }
-            const parent: Element | null = current.parentElement;
-            if (!parent) break;
-            const index = Array.from(parent.children).indexOf(current) + 1;
-            parts.unshift(`${current.tagName.toLowerCase()}:nth-child(${index})`);
-            current = parent;
+            return parts.join(' > ');
+          };
+
+          const viewportWidth = document.documentElement.clientWidth;
+          const scrollWidth = Math.max(
+            document.documentElement.scrollWidth,
+            document.body?.scrollWidth ?? 0,
+          );
+
+          const offenders: { selector: string; widthPx: number; snippet: string; depth: number }[] =
+            [];
+          for (const el of Array.from(document.body?.querySelectorAll('*') ?? [])) {
+            const rect = el.getBoundingClientRect();
+            if (rect.width <= viewportWidth + tolerance) continue;
+            // A hidden element cannot force a scrollbar the reader
+            // experiences, and offscreen menus are routinely wide.
+            const style = getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden') continue;
+
+            let depth = 0;
+            for (let node: Element | null = el; node; node = node.parentElement) depth += 1;
+            offenders.push({
+              selector: cssPath(el),
+              widthPx: Math.round(rect.width),
+              snippet: el.outerHTML.slice(0, 200),
+              depth,
+            });
           }
-          return parts.join(' > ');
-        };
 
-        const viewportWidth = document.documentElement.clientWidth;
-        const scrollWidth = Math.max(
-          document.documentElement.scrollWidth,
-          document.body?.scrollWidth ?? 0,
+          // Outermost first: the shallowest offender is the container
+          // actually setting the width, and the one worth fixing.
+          offenders.sort((a, b) => a.depth - b.depth || b.widthPx - a.widthPx);
+
+          // The viewport scrolls as the root element says, or as the body
+          // says when the root leaves its overflow visible. A page that
+          // hides or clips it cannot be scrolled sideways, whatever its
+          // scroll width: the two-directional scrolling this check proves
+          // is absent, and content it may cut off is the manual
+          // content-loss check, not this one.
+          const rootOverflowX = getComputedStyle(document.documentElement).overflowX;
+          const viewportOverflowX =
+            rootOverflowX !== 'visible' || document.body === null
+              ? rootOverflowX
+              : getComputedStyle(document.body).overflowX;
+          const scrollsSideways = viewportOverflowX !== 'hidden' && viewportOverflowX !== 'clip';
+
+          return {
+            viewportWidth,
+            scrollWidth,
+            requiresHorizontalScroll: scrollsSideways && scrollWidth > viewportWidth + tolerance,
+            overflowElements: offenders
+              .slice(0, maxElements)
+              .map(({ selector, widthPx, snippet }) => ({
+                selector,
+                widthPx,
+                snippet,
+              })),
+          };
+        },
+        { tolerance: OVERFLOW_TOLERANCE_PX, maxElements: MAX_REPORTED_ELEMENTS },
+      );
+
+    let measurement = await measure();
+    if (measurement.requiresHorizontalScroll) {
+      const deadline = Date.now() + SETTLE_TIMEOUT_MS;
+      while (Date.now() < deadline) {
+        await page.waitForTimeout(SETTLE_POLL_MS);
+        if (signal?.aborted) throw new Error('reflow aborted');
+        const stillOverflows = await page.evaluate(
+          (tolerance) =>
+            Math.max(document.documentElement.scrollWidth, document.body?.scrollWidth ?? 0) >
+            document.documentElement.clientWidth + tolerance,
+          OVERFLOW_TOLERANCE_PX,
         );
-
-        const offenders: { selector: string; widthPx: number; snippet: string; depth: number }[] =
-          [];
-        for (const el of Array.from(document.body?.querySelectorAll('*') ?? [])) {
-          const rect = el.getBoundingClientRect();
-          if (rect.width <= viewportWidth + tolerance) continue;
-          // A hidden element cannot force a scrollbar the reader
-          // experiences, and offscreen menus are routinely wide.
-          const style = getComputedStyle(el);
-          if (style.display === 'none' || style.visibility === 'hidden') continue;
-
-          let depth = 0;
-          for (let node: Element | null = el; node; node = node.parentElement) depth += 1;
-          offenders.push({
-            selector: cssPath(el),
-            widthPx: Math.round(rect.width),
-            snippet: el.outerHTML.slice(0, 200),
-            depth,
-          });
-        }
-
-        // Outermost first: the shallowest offender is the container
-        // actually setting the width, and the one worth fixing.
-        offenders.sort((a, b) => a.depth - b.depth || b.widthPx - a.widthPx);
-
-        return {
-          viewportWidth,
-          scrollWidth,
-          requiresHorizontalScroll: scrollWidth > viewportWidth + tolerance,
-          overflowElements: offenders
-            .slice(0, maxElements)
-            .map(({ selector, widthPx, snippet }) => ({
-              selector,
-              widthPx,
-              snippet,
-            })),
-        };
-      },
-      { tolerance: OVERFLOW_TOLERANCE_PX, maxElements: MAX_REPORTED_ELEMENTS },
-    );
+        if (!stillOverflows) break;
+      }
+      measurement = await measure();
+    }
 
     return {
       pageUrl,

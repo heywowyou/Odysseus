@@ -318,3 +318,91 @@ describe('a language home whose bare spelling serves an empty document', () => {
     expect(empty?.servedUrl).toBeUndefined();
   }, 30_000);
 });
+
+// A site whose bare language path does not exist while the slashed spelling
+// the operator entered redirects to the root: fetching the slash-free
+// identity alone recorded the start URL as a 404, so the audit had no
+// homepage and its report was blocked although the whole site was crawled
+// through the sitemap.
+describe('a start URL whose bare spelling does not exist', () => {
+  const PORT = 5198;
+  const origin = `http://localhost:${PORT}`;
+  let server: Server;
+  let ownBrowser: Browser;
+
+  beforeAll(async () => {
+    server = http.createServer((req, res) => {
+      const url = req.url ?? '/';
+      if (url === '/') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(
+          '<html lang="fr"><head><title>Accueil</title></head><body><h1>Hôtel</h1>' +
+            '<a href="/chambres/">Chambres</a></body></html>',
+        );
+        return;
+      }
+      if (url === '/fr/') {
+        res.writeHead(301, { Location: `${origin}/` });
+        res.end();
+        return;
+      }
+      if (url === '/chambres/') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(
+          '<html lang="fr"><head><title>Chambres</title></head><body><h1>Chambres</h1></body></html>',
+        );
+        return;
+      }
+      res.writeHead(404, { 'Content-Type': 'text/html' });
+      res.end('<html lang="fr"><head><title>Introuvable</title></head><body>404</body></html>');
+    });
+    await listen(server, PORT);
+    ({ browser: ownBrowser } = await launchBrowser());
+  }, 30_000);
+
+  afterAll(async () => {
+    await ownBrowser?.close();
+    await close(server);
+  });
+
+  it('follows the slashed spelling to the page it redirects to and takes that as the homepage', async () => {
+    const result = await crawlSite(`${origin}/fr/`, {
+      browser: ownBrowser,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+    });
+
+    const start = result.pages.find((page) => page.url === `${origin}/fr`);
+    expect(start?.status).toBe('redirect-interstitial');
+    expect(start?.redirectTargetUrl).toBe(`${origin}/`);
+    expect(result.homepageUrl).toBe(`${origin}/`);
+    expect(result.pages.find((page) => page.url === `${origin}/`)?.status).toBe('visited');
+  }, 30_000);
+
+  it('records a linked page that exists only with its slash as the served spelling', async () => {
+    const result = await crawlSite(`${origin}/`, {
+      browser: ownBrowser,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+    });
+
+    const rooms = result.pages.find((page) => page.url === `${origin}/chambres`);
+    expect(rooms?.status).toBe('visited');
+    expect(rooms?.servedUrl).toBe(`${origin}/chambres/`);
+  }, 30_000);
+
+  it('keeps a missing page missing when no spelling of it answers', async () => {
+    const result = await crawlSite(`${origin}/absente/`, {
+      browser: ownBrowser,
+      maxPages: 1,
+      maxDepth: 0,
+      delayMs: 0,
+    });
+
+    const missing = result.pages.find((page) => page.url === `${origin}/absente`);
+    expect(missing?.status).toBe('http-error-status');
+    expect(missing?.httpStatus).toBe(404);
+  }, 30_000);
+});

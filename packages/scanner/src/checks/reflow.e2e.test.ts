@@ -85,6 +85,40 @@ describe('checkReflow against a real browser layout', () => {
     expect(result.overflowElements).toEqual([]);
   }, 30_000);
 
+  // An embedded feed sizes itself in script and lays itself out again a
+  // moment after a resize: measured at once, it was still 1288 pixels wide
+  // on a page that fits at 320.
+  it('waits for a widget that lays itself out again after the resize', async () => {
+    const { result } = await run(
+      `<div id="feed" style="width:1288px;height:40px">Publications</div>
+       <script>
+         addEventListener('resize', () => {
+           setTimeout(() => { document.getElementById('feed').style.width = '300px'; }, 600);
+         });
+       </script>`,
+    );
+    expect(result.checked).toBe(true);
+    expect(result.requiresHorizontalScroll).toBe(false);
+    expect(result.overflowElements).toEqual([]);
+  }, 30_000);
+
+  // The criterion is about scrolling in two directions. A page that hides
+  // its horizontal overflow cannot be scrolled sideways; whether it cuts
+  // content off instead is the manual content-loss check.
+  it('does not report sideways scrolling on a page that hides horizontal overflow', async () => {
+    for (const rule of [
+      'body{overflow-x:hidden}',
+      'body{overflow-x:clip}',
+      'html{overflow-x:hidden}',
+    ]) {
+      const { result } = await run(
+        `<style>${rule}</style><div style="width:900px;height:40px;opacity:0"></div><p>Bonjour</p>`,
+      );
+      expect(result.requiresHorizontalScroll, rule).toBe(false);
+      expect(result.documentScrollWidthPx, rule).toBeGreaterThan(REFLOW_VIEWPORT_WIDTH);
+    }
+  }, 60_000);
+
   it('restores the original viewport, so a later check does not see a reshaped page', async () => {
     const { server, origin } = await startServer('<div style="width:900px"></div>');
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });

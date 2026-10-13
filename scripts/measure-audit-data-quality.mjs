@@ -288,9 +288,9 @@ async function main() {
   }
 
   let normalizeAudit;
-  let isTabWalkHeldByDialog;
+  let isTabWalkInconclusive;
   try {
-    ({ normalizeAudit, isTabWalkHeldByDialog } = await import(
+    ({ normalizeAudit, isTabWalkInconclusive } = await import(
       pathToFileURL(path.join(repoRoot, 'packages/core/dist/index.js')).href
     ));
   } catch {
@@ -334,7 +334,7 @@ async function main() {
         scans: pages,
         findings,
         registry,
-        helpers: { isTabWalkHeldByDialog },
+        helpers: { isTabWalkInconclusive },
       });
     const evaluationBefore = ledgerFor(storedFindings);
     let after = null;

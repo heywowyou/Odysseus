@@ -4,6 +4,8 @@ import {
   KEYBOARD_TRAP_RULE_ID,
   FOCUS_ORDER_MISMATCH_RULE_ID,
   isTabWalkHeldByDialog,
+  isTabWalkInconclusive,
+  isTabWalkTakenOver,
   type KeyboardNavigationCheckInput,
 } from './normalize-keyboard-navigation.js';
 
@@ -150,6 +152,41 @@ describe('a Tab walk held by a dialog', () => {
     const walk = baseInput({ focusSequence: [0, 1, 2, 3, null, 0, 1, 2, 3] });
     expect(isTabWalkHeldByDialog(walk)).toBe(false);
     expect(extractKeyboardNavigationCandidates(walk)).toEqual([]);
+  });
+});
+
+// hotel-keystone.com, 2026-10-10: the consent banner appears a few seconds
+// after load. The walk pauses on the link it had reached, then every later
+// press lands inside the banner, which did not exist when the walk began.
+describe('a Tab walk a late window takes over', () => {
+  const takenOver = baseInput({
+    tabbableCount: 18,
+    tabbableSelectors: Array.from({ length: 18 }, (_, i) => `#header-submenu a:nth-of-type(${i})`),
+    focusSequence: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 11, 11, ...Array<null>(9).fill(null)],
+  });
+
+  it('gives no trap on the link the walk had reached', () => {
+    expect(isTabWalkTakenOver(takenOver)).toBe(true);
+    expect(isTabWalkInconclusive(takenOver)).toBe(true);
+    expect(extractKeyboardNavigationCandidates(takenOver)).toEqual([]);
+  });
+
+  it('still reports an element that keeps focus to the end of the walk', () => {
+    const trapped = baseInput({ focusSequence: [0, 1, 2, 2, 2, 2, 2] });
+    expect(isTabWalkTakenOver(trapped)).toBe(false);
+    expect(
+      extractKeyboardNavigationCandidates(trapped).filter(
+        (c) => c.ruleId === KEYBOARD_TRAP_RULE_ID,
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('still reports an element that holds focus before the walk moves on through the page', () => {
+    const sticky = baseInput({ focusSequence: [0, 1, 1, null, 2, 3] });
+    expect(isTabWalkTakenOver(sticky)).toBe(false);
+    expect(
+      extractKeyboardNavigationCandidates(sticky).filter((c) => c.ruleId === KEYBOARD_TRAP_RULE_ID),
+    ).toHaveLength(1);
   });
 });
 

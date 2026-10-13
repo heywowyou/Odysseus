@@ -1240,9 +1240,18 @@ export async function crawlSite(
             // blank page). Fetch the written spelling once; when it answers
             // as the page itself, it is the served spelling and the page is
             // not a redirect.
+            //
+            // A bare spelling the server does not know at all is the same
+            // failure (aubergedecassagne.com: /fr 404, /fr/ 301 to /, so the
+            // start URL the operator entered was recorded as a dead link and
+            // the audit had no homepage). There the written spelling may also
+            // redirect to another page of the site, and the URL is then that
+            // redirect, not a missing page.
             const slashed = slashedSpelling(item.url);
+            const bareSpellingMissing = !isOffSite && (httpStatus === 404 || httpStatus === 410);
             const bareSpellingFailed =
               isSameSiteRedirect ||
+              bareSpellingMissing ||
               (!isOffSite &&
                 observed.emptyBody &&
                 httpStatus !== undefined &&
@@ -1251,13 +1260,13 @@ export async function crawlSite(
             if (bareSpellingFailed && item.writtenWithSlash === true && slashed !== undefined) {
               const retried = await navigateAfterLoadTimeout(slashed).catch(() => null);
               const retriedStatus = retried?.status();
-              if (
+              const retriedIdentity = normalizePageIdentityUrl(browserPage.url());
+              const retriedAnswered =
                 retried !== null &&
                 retriedStatus !== undefined &&
                 retriedStatus >= 200 &&
-                retriedStatus < 300 &&
-                normalizePageIdentityUrl(browserPage.url()) === item.url
-              ) {
+                retriedStatus < 300;
+              if (retried !== null && retriedAnswered && retriedIdentity === item.url) {
                 response = retried;
                 httpStatus = retriedStatus;
                 observed = await observeResponse();
@@ -1268,6 +1277,22 @@ export async function crawlSite(
                 landedUrl = browserPage.url();
                 landedIdentity = item.url;
                 isSameSiteRedirect = false;
+              } else if (
+                retried !== null &&
+                retriedAnswered &&
+                bareSpellingMissing &&
+                retriedIdentity !== undefined &&
+                sameSiteServerRedirect(slashed, browserPage.url())
+              ) {
+                response = retried;
+                httpStatus = retriedStatus;
+                observed = await observeResponse();
+                challengeMarkers = observed.markers;
+                contentType = response.headers()['content-type'];
+                finalHost = safeHostname(browserPage.url());
+                landedUrl = browserPage.url();
+                landedIdentity = retriedIdentity;
+                isSameSiteRedirect = true;
               }
             }
 

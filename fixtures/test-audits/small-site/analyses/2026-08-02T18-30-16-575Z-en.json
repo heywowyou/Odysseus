@@ -171,7 +171,7 @@
   "notes": "No intake questionnaire or business context was provided for this site. The priority ranking here reflects the technical severity of each finding and its general commercial risk only — it is not aligned to any stated business goal, target market, audience, or language strategy, because none was supplied. If you tell us what the site is meant to achieve (for example generating quote requests, recruiting staff, or promoting events), the ranking could shift considerably: in particular, the quote form and search indexing issues would move even higher if lead generation is the priority. Note also that four separate colour contrast findings were reported by the scanner; they have been grouped together because they most likely share a small number of underlying colour values in the site theme. Nothing in this report constitutes a legal assessment; accessibility criteria are cited as technical standards, and whether any specific regulation applies to your organisation depends on facts not examined here.",
   "findingsProvenance": {
     "findingsSchemaVersion": 1,
-    "normalizationFingerprint": "928307f9c7d6ce98",
+    "normalizationFingerprint": "fa37fa7f8fdfb968",
     "findingsDigest": "sha256:d6cf0ae36a391bd3c1d9c9a22eab152254655e7b67c0e2acf1cb5b90667579bc"
   },
   "analysisId": "7b145fa8-b93a-423f-8c69-1715eede26ce"

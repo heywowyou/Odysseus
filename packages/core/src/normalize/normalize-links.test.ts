@@ -139,6 +139,26 @@ describe('isUncrawlableAnchor', () => {
     }
   });
 
+  it('passes a link with no destination inside a consent manager panel', () => {
+    const opener = anchor({
+      selector:
+        '#klaro-manager > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > p:nth-child(2) > a:nth-child(1)',
+      snippet:
+        '<a class="" href="javascript:void(0);" style="display: block; text-align: center; margin-top: 0.5em;">',
+      rawHref: 'javascript:void(0);',
+      text: 'Paramétrer les préférences',
+      id: '',
+    });
+    expect(isUncrawlableAnchor(opener, PAGE_URL)).toBe(false);
+    // The same markup anywhere else is still a link nothing can follow.
+    expect(
+      isUncrawlableAnchor(
+        { ...opener, selector: '#main > p:nth-child(2) > a:nth-child(1)' },
+        PAGE_URL,
+      ),
+    ).toBe(true);
+  });
+
   it('still fails a javascript: link the markup does not declare a control', () => {
     const snippet = '<a id="" class="" href="javascript:void(0);" target="_self">';
     expect(

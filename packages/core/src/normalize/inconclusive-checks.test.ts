@@ -43,6 +43,15 @@ describe('inconclusiveCheckIdsOf', () => {
     ).toEqual(['keyboard-navigation', 'video-captions']);
   });
 
+  it('names a Tab walk a window took over after it began', () => {
+    expect(
+      inconclusiveCheckIdsOf({
+        pageUrl: heldWalk.pageUrl,
+        keyboardNavigation: { ...heldWalk, focusSequence: [0, 1, 2, 3, 4, 5, 5, null, null, null] },
+      }),
+    ).toEqual(['keyboard-navigation']);
+  });
+
   it('names nothing for a walk that went through the page and a captioned video', () => {
     expect(
       inconclusiveCheckIdsOf({

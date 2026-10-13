@@ -13,10 +13,35 @@ import type { RenderDiffResult } from '../types/findings.js';
  */
 const DEAD_LINK_STATUSES = new Set([404, 410]);
 
+/** A path that carries a whole address: the href left out its scheme's
+ *  slashes or was resolved against the page (lacasernechanzy linked
+ *  `/https://www.lacasernechanzy.com`). No page can live there, so whatever
+ *  client error the site answers it with is its answer to a path it does not
+ *  know, not a refusal of the crawler: that site answers 403 to every unknown
+ *  path, and the one link held its report behind the blocked-page gate. A
+ *  rate limit, a server error or a challenge document stays a refusal. */
+const ADDRESS_AS_PATH_PATTERN = /\/(?:https?:\/|mailto:|tel:)/i;
+
+function isAddressWrittenAsPath(url: string): boolean {
+  try {
+    return ADDRESS_AS_PATH_PATTERN.test(decodeURIComponent(new URL(url).pathname));
+  } catch {
+    return false;
+  }
+}
+
+function isDeadLinkStatus(status: number, pageUrl: string): boolean {
+  if (DEAD_LINK_STATUSES.has(status)) return true;
+  return status >= 400 && status < 500 && status !== 429 && isAddressWrittenAsPath(pageUrl);
+}
+
 export function isDeadLinkRender(result: RenderDiffResult | undefined): boolean {
   if (result === undefined) return false;
   const renderedStatus = result.renderedHttpStatus ?? result.httpStatus;
-  if (!DEAD_LINK_STATUSES.has(renderedStatus) || !DEAD_LINK_STATUSES.has(result.httpStatus)) {
+  if (
+    !isDeadLinkStatus(renderedStatus, result.pageUrl) ||
+    !isDeadLinkStatus(result.httpStatus, result.pageUrl)
+  ) {
     return false;
   }
   const rendered = classifyDocumentWall({

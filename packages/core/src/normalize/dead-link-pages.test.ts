@@ -65,6 +65,54 @@ describe('isDeadLinkRender', () => {
   });
 });
 
+// lacasernechanzy, 2026-10-10: a link whose href resolved the site's own
+// address as a path. The site answers 403, with its own template, to every
+// path it does not know, and that one page held the report.
+const addressAsPath403 = buildRenderDiffResult({
+  pageUrl: 'https://www.lacasernechanzy.com/https://www.lacasernechanzy.com',
+  httpStatus: 403,
+  renderedHttpStatus: 403,
+  rawTextLength: 1234,
+  renderedTextLength: 1234,
+  renderedTitle: 'La Caserne Chanzy',
+  renderedInterstitialMarkers: [],
+});
+
+describe('a link that wrote an address as a path', () => {
+  it('is a dead link whatever client error the site answers it with', () => {
+    expect(isDeadLinkRender(addressAsPath403)).toBe(true);
+    expect(
+      isDeadLinkRender({
+        ...addressAsPath403,
+        pageUrl: 'https://hotel.example/fr/contact/mailto:accueil@hotel.example',
+        httpStatus: 400,
+        renderedHttpStatus: 400,
+      }),
+    ).toBe(true);
+  });
+
+  it('stays blocked when the answer is a rate limit, a server error or a challenge', () => {
+    for (const status of [429, 503]) {
+      expect(
+        isDeadLinkRender({ ...addressAsPath403, httpStatus: status, renderedHttpStatus: status }),
+      ).toBe(false);
+    }
+    expect(
+      isDeadLinkRender({
+        ...addressAsPath403,
+        renderedInterstitialMarkers: ['bot-challenge'],
+        renderedTextLength: 40,
+      }),
+    ).toBe(false);
+  });
+
+  it('does not excuse a refusal on a path a page could live at', () => {
+    expect(
+      isDeadLinkRender({ ...addressAsPath403, pageUrl: 'https://www.lacasernechanzy.com/fr/spa' }),
+    ).toBe(false);
+  });
+});
+
 describe('nameDeadLinkReferrers', () => {
   const dead = (url: string, extra: Partial<ManifestPageEntry> = {}): ManifestPageEntry =>
     ({

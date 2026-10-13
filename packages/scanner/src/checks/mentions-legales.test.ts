@@ -235,6 +235,18 @@ describe('legal-notice slugs (issue #496)', () => {
     }
   });
 
+  // A hand-built PHP site names its legal notice /mentions.php: the bare
+  // family accepted only .html, so the check read the homepage and reported
+  // no identifier although the notice prints the SIRET.
+  it('finds a bare "mentions" page whatever its file extension', () => {
+    for (const path of ['/mentions.php', '/en/mentions.php', '/mentions.aspx', '/mentions.htm']) {
+      expect(findMentionsLegalesUrl([`https://hotel.fr${path}`]), path).toBe(
+        `https://hotel.fr${path}`,
+      );
+    }
+    expect(findMentionsLegalesUrl(['https://hotel.fr/mentions.presse/dossier'])).toBe(null);
+  });
+
   it('still does not lock onto a bare "legal" page', () => {
     expect(findMentionsLegalesUrl(['https://hotel.fr/legal', 'https://hotel.fr/fr/legal'])).toBe(
       null,

@@ -1,6 +1,6 @@
 import type { ManifestPageEntry } from '../types/manifest.js';
 import {
-  isTabWalkHeldByDialog,
+  isTabWalkInconclusive,
   type KeyboardNavigationCheckInput,
 } from './normalize-keyboard-navigation.js';
 import type { VideoCaptionsCheckInput } from './normalize-video-captions.js';
@@ -20,7 +20,7 @@ export interface InconclusiveCheckPage {
 
 export function inconclusiveCheckIdsOf(page: InconclusiveCheckPage): string[] {
   const ids: string[] = [];
-  if (page.keyboardNavigation !== undefined && isTabWalkHeldByDialog(page.keyboardNavigation)) {
+  if (page.keyboardNavigation !== undefined && isTabWalkInconclusive(page.keyboardNavigation)) {
     ids.push('keyboard-navigation');
   }
   const videos = page.videoCaptions?.videos ?? [];

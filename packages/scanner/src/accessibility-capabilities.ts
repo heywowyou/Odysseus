@@ -115,11 +115,12 @@ const CAPABILITIES: readonly AccessibilityCheckCapability[] = [
   },
   {
     checkId: 'reflow',
-    version: 'reflow-v1',
+    version: 'reflow-v2',
     criterionRefs: ['1.4.10'],
     evidenceKind: 'deterministic',
     proves: 'Horizontal scrolling at a 320 CSS pixel viewport width.',
-    falseNegativeBoundary: 'Content lost or overlapping without causing horizontal scroll.',
+    falseNegativeBoundary:
+      'Content lost or overlapping without causing horizontal scroll, including on a page that hides its horizontal overflow.',
     traversal: DOCUMENT_ONLY,
     requiredInteractionStates: ['baseline'],
     requiredSurfaceProfiles: BASELINE_DESKTOP,

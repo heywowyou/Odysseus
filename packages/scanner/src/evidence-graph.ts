@@ -21,7 +21,7 @@ import {
   buildFindingsProvenance,
   canonicalDigest,
   FINDINGS_DELTA_COVERAGE_VERSION,
-  isTabWalkHeldByDialog,
+  isTabWalkInconclusive,
   type AuditScopeSnapshot,
   type DeltaObservationCoordinates,
   type EvidenceCoverageSignature as ReportEvidenceCoverageSignature,
@@ -1045,7 +1045,7 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
   const keyboardHeldPages = input.pages
     .filter(
       (page) =>
-        page.keyboardNavigation !== undefined && isTabWalkHeldByDialog(page.keyboardNavigation),
+        page.keyboardNavigation !== undefined && isTabWalkInconclusive(page.keyboardNavigation),
     )
     .map((page) => page.url)
     .sort();
@@ -1060,15 +1060,15 @@ export function assembleAuditEvidenceGraph(input: AuditEvidenceGraphInput): Audi
         'keyboard-walk-held-by-dialog',
         byCount(
           keyboardHeldPages.length,
-          "Sur une page, une fenêtre ouverte au chargement (bandeau de consentement ou fenêtre surgissante) a retenu la navigation au clavier : l'ordre de tabulation et les pièges au clavier n'y ont pas été évalués.",
+          "Sur une page, une fenêtre ouverte au chargement ou juste après (bandeau de consentement ou fenêtre surgissante) a retenu la navigation au clavier : l'ordre de tabulation et les pièges au clavier n'y ont pas été évalués.",
           (n) =>
-            `Sur ${n} pages, une fenêtre ouverte au chargement (bandeau de consentement ou fenêtre surgissante) a retenu la navigation au clavier : l'ordre de tabulation et les pièges au clavier n'y ont pas été évalués.`,
+            `Sur ${n} pages, une fenêtre ouverte au chargement ou juste après (bandeau de consentement ou fenêtre surgissante) a retenu la navigation au clavier : l'ordre de tabulation et les pièges au clavier n'y ont pas été évalués.`,
         ),
         byCount(
           keyboardHeldPages.length,
-          'On one page, a window open on load (a consent banner or a popup) held keyboard navigation: tab order and keyboard traps were not evaluated there.',
+          'On one page, a window open on load or shortly after (a consent banner or a popup) held keyboard navigation: tab order and keyboard traps were not evaluated there.',
           (n) =>
-            `On ${n} pages, a window open on load (a consent banner or a popup) held keyboard navigation: tab order and keyboard traps were not evaluated there.`,
+            `On ${n} pages, a window open on load or shortly after (a consent banner or a popup) held keyboard navigation: tab order and keyboard traps were not evaluated there.`,
         ),
         keyboardHeldPages,
       ),

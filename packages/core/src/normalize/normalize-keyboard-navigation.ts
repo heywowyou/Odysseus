@@ -35,6 +35,10 @@
  * in production was false, and the absence of `keyboard-trap` on those
  * pages said nothing. Such a walk gives neither finding, and the evidence
  * graph discloses the pages as not evaluated for keyboard navigation.
+ *
+ * So is a walk a window takes over after it began (isTabWalkTakenOver): the
+ * two consecutive presses on one element are then the moment the window
+ * opened, not a trap on that element.
  */
 
 import type { FindingCandidate } from './candidate.js';
@@ -90,6 +94,31 @@ export function isTabWalkHeldByDialog(input: KeyboardNavigationCheckInput): bool
   return distinct.size >= 2 || input.focusSequence.includes(null);
 }
 
+/** Focus stayed on one control for consecutive presses, then left the
+ *  page's tabbables and never came back: a window that opened during the walk
+ *  took the keyboard, and what was read before it says nothing about a trap.
+ *  hotel-keystone.com, 2026-10-10: Complianz shows its banner a few seconds
+ *  after load, so on 13 pages the walk paused on whichever link it had
+ *  reached (a menu entry, a footer link, a gallery photo) and then cycled
+ *  inside the banner; nine critical traps were reported and Tab passes every
+ *  one of those links on the live site. A real trap keeps focus to the end
+ *  of the walk (Hotel Europe's date field), which this never matches. */
+export function isTabWalkTakenOver(input: KeyboardNavigationCheckInput): boolean {
+  const sequence = input.focusSequence;
+  const start = sequence.findIndex((id, index) => id !== null && id === sequence[index + 1]);
+  if (start === -1) return false;
+  let end = start;
+  while (sequence[end + 1] === sequence[start]) end++;
+  const rest = sequence.slice(end + 1);
+  return rest.length > 0 && rest.every((id) => id === null);
+}
+
+/** The walk did not measure the page: it gives no finding, and the page is
+ *  recorded as not evaluated for keyboard navigation. */
+export function isTabWalkInconclusive(input: KeyboardNavigationCheckInput): boolean {
+  return isTabWalkHeldByDialog(input) || isTabWalkTakenOver(input);
+}
+
 /** Backward jumps within each pass through the page. A pass ends when focus
  *  reaches an element it already visited in that pass. A jump back to an
  *  element the walk skipped while Tab could not reach it in order is not
@@ -123,7 +152,7 @@ export function extractKeyboardNavigationCandidates(
 ): FindingCandidate[] {
   const candidates: FindingCandidate[] = [];
   const { pageUrl } = input;
-  if (isTabWalkHeldByDialog(input)) return candidates;
+  if (isTabWalkInconclusive(input)) return candidates;
 
   for (let i = 0; i < input.focusSequence.length - 1; i++) {
     const current = input.focusSequence[i];

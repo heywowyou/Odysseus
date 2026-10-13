@@ -5856,6 +5856,15 @@ opening tag hides it (`display:none`, `visibility:hidden`, the `hidden`
 attribute) or carries a `read-more`/`readmore` class is now exempt the same
 way. A hidden anchor that names a destination is still judged.
 
+**Amended 2026-10-13: links inside a consent manager's panel.** Klaro writes
+its "set my preferences" opener as a bare `<a class=""
+href="javascript:void(0);">` inside `#klaro-manager`: nothing on the tag
+declares a control, and on one preview that link, repeated on every page, was
+the whole card again. An anchor with no destination whose selector starts
+from a consent manager's own id (Klaro, Tarteaucitron, Axeptio, Complianz,
+Didomi, OneTrust, CookieYes, or an id beginning with `cookie`) is now exempt
+the same way.
+
 ### 111. Clean audit data is a prerequisite for client-facing certainty (2026-09-22)
 
 Plan 075 closes the population boundary exposed by the WAF/challenge and
@@ -6509,6 +6518,43 @@ crawler blocks, self-nesting relative links) now anchor on the homepage the
 crawl resolved, falling back to the start URL only when no homepage was
 recorded. Three audits whose blocked pages answered normally when checked
 again were accepted under trade-off 122.
+
+**Fourth batch fix, 2026-10-13.** Sixteen audits new since the last batch and
+four whose report was blocked. Six defects, each from one site and each a
+shape another site can have:
+
+- A consent banner shown a few seconds after load took the keyboard during
+  the Tab walk. The walk paused on whichever link it had reached and never
+  came back to the page, and that pause was reported as a keyboard trap on
+  nine different links, the critical card of one preview. Tab passes every
+  one of them on the live site. A walk that stays on a control and then
+  leaves the page's own controls for good is now inconclusive, like a walk a
+  dialog held from the start; a trap is an element that keeps focus to the
+  end of the walk.
+- Klaro's preferences link (trade-off 110, amended again).
+- A start URL entered with a trailing slash was fetched without it, as every
+  page identity is. One site answers 404 to the bare path and redirects the
+  slashed one to its root, so its audit had no homepage and its report was
+  blocked. The crawl now tries the written spelling when the bare one is
+  missing, as it already did when the bare one redirected or came back empty,
+  and follows it when it redirects to another page of the site.
+- A link that wrote the site's own address as a path answered 403 with the
+  site's template, as that site answers every unknown path, and was recorded
+  as a page that refused the crawler. No page can live at such a path: any
+  client error there except a rate limit is a dead link.
+- A legal notice named `/mentions.php` was not recognised (only `.html` was),
+  so the identifier check read the homepage and reported no SIRET.
+- The reflow check measured 150 ms after resizing to 320 pixels. An embedded
+  feed that lays itself out again a moment later was still desktop-wide, and
+  the page was reported as scrolling sideways on a site that fits. A page
+  that overflows is now given two seconds to settle before it is measured
+  again. The check also no longer reports a page whose root or body hides
+  horizontal overflow: it cannot be scrolled sideways, which is all this
+  check proves, and content it may cut off is the manual content-loss review
+  the capability registry already names (`reflow-v2`).
+
+The start URL, legal notice and reflow fixes act at scan time, so those
+three sites are rescanned; the others replay on stored scans.
 
 ### 128. The reminder names what the analysis covers, and the signature leads with accessibility (operator decision, 2026-10-10)
 

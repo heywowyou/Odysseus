@@ -58,12 +58,12 @@ function outcomeOf(scan, entry) {
 }
 
 /** Checks that can complete without concluding, each read from its stored
- *  result. `isTabWalkHeldByDialog` comes from core, so the ledger and the
+ *  result. `isTabWalkInconclusive` comes from core, so the ledger and the
  *  normalizer never disagree on what a held walk is. */
 function inconclusiveOf(scan, checkId, helpers) {
   if (checkId === 'keyboard-navigation') {
     const walk = scan.keyboardNavigation;
-    return walk !== undefined && helpers.isTabWalkHeldByDialog?.(walk) === true;
+    return walk !== undefined && helpers.isTabWalkInconclusive?.(walk) === true;
   }
   if (checkId === 'video-captions') {
     const videos = scan.videoCaptions?.videos ?? [];
@@ -78,7 +78,7 @@ function inconclusiveOf(scan, checkId, helpers) {
  * @param {object[]} input.scans the pages' scan.json documents
  * @param {object[]} input.findings the stored or replayed findings
  * @param {readonly object[]} input.registry CHECK_SCOPE_REGISTRY from the scanner build
- * @param {{ isTabWalkHeldByDialog?: (walk: object) => boolean }} [input.helpers]
+ * @param {{ isTabWalkInconclusive?: (walk: object) => boolean }} [input.helpers]
  */
 export function buildEvaluationLedger({ manifest, scans, findings, registry, helpers = {} }) {
   const analysed = new Set(

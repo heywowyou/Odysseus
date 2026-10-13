@@ -20,7 +20,7 @@ const registry = [
 
 const heldWalk = { focusSequence: [1, 2, 1, 2], tabbableCount: 30 };
 const walked = { focusSequence: [0, 1, 2], tabbableCount: 3 };
-const isTabWalkHeldByDialog = (walk) => walk === heldWalk;
+const isTabWalkInconclusive = (walk) => walk === heldWalk;
 
 function audit(pageCount, scanFor) {
   const urls = Array.from({ length: pageCount }, (_, i) => `https://example.com/p${i}`);
@@ -42,7 +42,7 @@ describe('evaluation ledger', () => {
       scans,
       findings: [],
       registry,
-      helpers: { isTabWalkHeldByDialog },
+      helpers: { isTabWalkInconclusive },
     });
 
     expect(ledger.checks['keyboard-navigation']).toMatchObject({ completed: 4, inconclusive: 34 });

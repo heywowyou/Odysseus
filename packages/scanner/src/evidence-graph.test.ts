@@ -447,7 +447,9 @@ describe('Tab walks held by a dialog in the evidence graph', () => {
     );
     expect(limitation?.severity).toBe('limitation');
     expect(limitation?.evidenceRefs).toEqual([HOME]);
-    expect(limitation?.disclosure?.summary.fr).toContain('une fenêtre ouverte au chargement');
+    expect(limitation?.disclosure?.summary.fr).toContain(
+      'une fenêtre ouverte au chargement ou juste après',
+    );
   });
 
   it('discloses nothing when the walk went through the page', () => {
