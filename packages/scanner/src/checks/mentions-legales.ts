@@ -83,7 +83,7 @@ const LEGAL_PAGE_FAMILIES: readonly RegExp[] = [
   /legal-?notices?|\blegals\b/u,
   /mentions?-?(?:et-?)?(?:credits|informations)/u,
   /(?:^|\/)mentions?(?:\/|\.[a-z0-9]{2,5}$|$)/u,
-  /conditions-?generales|\bcgu\b|\bcgv\b/u,
+  /conditions-?(?:generales|(?:d-?)?utilisation)|\bcgu\b|\bcgv\b/u,
 ];
 
 function legalPageRank(url: string): number {

@@ -247,6 +247,17 @@ describe('legal-notice slugs (issue #496)', () => {
     expect(findMentionsLegalesUrl(['https://hotel.fr/mentions.presse/dossier'])).toBe(null);
   });
 
+  // A hotel CMS names the page that carries the RCS and VAT numbers
+  // "conditions d'utilisation": the terms family knew only the "générales"
+  // spelling and the CGU initials, so the homepage was read instead.
+  it('finds terms of use spelled out', () => {
+    for (const path of ['/fr/conditions-d-utilisation.html', '/conditions-utilisation']) {
+      expect(findMentionsLegalesUrl([`https://hotel.fr${path}`]), path).toBe(
+        `https://hotel.fr${path}`,
+      );
+    }
+  });
+
   it('still does not lock onto a bare "legal" page', () => {
     expect(findMentionsLegalesUrl(['https://hotel.fr/legal', 'https://hotel.fr/fr/legal'])).toBe(
       null,
