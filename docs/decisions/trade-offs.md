@@ -6565,6 +6565,13 @@ shape another site can have:
 The start URL, legal notice and reflow fixes act at scan time, so those
 three sites are rescanned; the others replay on stored scans.
 
+On 2026-10-19 one more rescan showed the consent-preferences link written a
+third way: plain bold text (`class="link"`) in a privacy policy whose only
+tell is `onclick="openAxeptioCookies()"`. It was the whole "links search
+engines cannot read" card of that preview. A click handler that names a
+consent manager now declares a control too; any other handler behind a text
+link is still judged as a link.
+
 ### 128. The reminder names what the analysis covers, and the signature leads with accessibility (operator decision, 2026-10-10)
 
 The first reply of the campaign, received 2026-10-05 after the reminder,

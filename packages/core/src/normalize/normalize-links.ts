@@ -197,9 +197,14 @@ const JAVASCRIPT_VOID_PATTERN = /javascript:void(\(|)0(\)|)/;
  *  tab or a panel opener naming the element it shows (`data-target="#..."`),
  *  a gallery filter (`data-filter-*`), and openers named only by their id
  *  (`modalPlanityButton`) or by a class ending in `-open`. The id is read
- *  like the classes, and a camel-cased name is read as its words. */
+ *  like the classes, and a camel-cased name is read as its words.
+ *
+ *  A privacy policy writes its cookie-preferences link as plain bold text
+ *  (`class="link"`) whose only tell is a click handler that opens the
+ *  consent manager (`onclick="openAxeptioCookies()"`); on one more preview
+ *  it was the whole "links search engines cannot read" priority. */
 const CONTROL_ATTRIBUTE_PATTERN =
-  /\s(?:type\s*=\s*["']?button|aria-(?:controls|expanded|haspopup)\s*=|[\w:-]*toggle[\w:-]*\s*=|data-(?:handler|event)\s*=|data-filter[\w-]*\s*=|data-(?:bs-)?target\s*=\s*["']?#|hidden(?=[\s>=/]))/i;
+  /\s(?:type\s*=\s*["']?button|aria-(?:controls|expanded|haspopup)\s*=|[\w:-]*toggle[\w:-]*\s*=|data-(?:handler|event)\s*=|data-filter[\w-]*\s*=|data-(?:bs-)?target\s*=\s*["']?#|onclick\s*=\s*["'][^"']*(?:axeptio|tarteaucitron|didomi|klaro|cookiebot|onetrust|cmplz|cookie)|hidden(?=[\s>=/]))/i;
 const CONTROL_STYLE_PATTERN =
   /\sstyle\s*=\s*["'][^"']*(?:pointer-events\s*:\s*none|cursor\s*:\s*default|display\s*:\s*none|visibility\s*:\s*hidden)/i;
 const CONTROL_CLASS_PATTERN =

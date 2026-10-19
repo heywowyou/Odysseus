@@ -164,6 +164,25 @@ describe('isUncrawlableAnchor', () => {
     }
   });
 
+  // A privacy policy's "set your cookie preferences" link, styled as an
+  // ordinary text link: only its click handler says what it opens.
+  it('passes a text link whose click handler opens the consent manager', () => {
+    const snippet =
+      '<a style="font-weight: bold;" class="link" target="_blank" href="javascript:void(0)" onclick="openAxeptioCookies()">';
+    const consent = anchor({
+      snippet,
+      rawHref: 'javascript:void(0)',
+      href: '',
+      id: '',
+      text: 'ici',
+      hasEventListener: true,
+    });
+    expect(isUncrawlableAnchor(consent, PAGE_URL)).toBe(false);
+    // Any other script behind a plain text link still hides a page.
+    const navigation = { ...consent, snippet: snippet.replace('openAxeptioCookies()', 'goTo(3)') };
+    expect(isUncrawlableAnchor(navigation, PAGE_URL)).toBe(true);
+  });
+
   // An icon-only opener, a slideshow's empty wrapper: with no destination
   // and no text there is no link for a reader or a crawler to follow.
   it('passes an anchor with neither a destination nor any text', () => {
