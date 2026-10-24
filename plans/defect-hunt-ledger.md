@@ -301,6 +301,14 @@ input of the next batch fix.
 | 2026-10-24 | Hôtel Les Hayes en Sologne b8870ea0 | preview --fix | SEND | Blocking: -. Backlog: a WordPress author archive analysed as a page (card 3 samples) | - | - |
 | 2026-10-24 | Hôtel Les Autanes 7346e1ab, Hôtel Madeloc 34252155, Hôtel Misíncu 37dc2979, Hôtel de Montesquieu 637adef4, Château de la Rozelle 935465e3 | preview --fix | SEND | Blocking: -. Backlog: keyboard walk inconclusive on almost every page (Autanes 45 of 46, Misíncu 145 of 145); Montesquieu card 3 is a moderate X-Frame-Options header | - | - |
 | 2026-10-24 | Hôtel Altapura ee5c942a, Hôtel Au Lion d'Or a4a38848, Hôtel Bayard Bellecour 5c88173b, Hôtel Ivan Vautier fc185845, Hôtel C Suites 4ca941c2, Hôtel La Réserve 50964c0e, Hôtel Padoue b3e21f29, La Caserne Chanzy e224f043, Auberge de Cassagne e90b3623, Hôtel Les Roches Blanches 15c18cf2 | preview --fix | SEND | Blocking: -. Figures reconcile, cards hold. Backlog: Lion d'Or keyboard walk inconclusive on 42 of 42 pages | - | - |
+| 2026-10-24 | Hôtel Le Blizzard 64dfd1c6 | preview --fix | SEND | Blocking: - after deploy 6867d0f0 and refresh (36 -> 34 findings, consent openers gone); new card 3 jsonld-missing confirmed live (no JSON-LD on the homepage). Backlog: - | 869ae6e0 deployed | - |
+| 2026-10-24 | the other 17 audits of the earlier 24 October rows (Autanes to Roches Blanches) | preview --fix | SEND | Blocking: -. Rechecked after deploy 6867d0f0, refresh and regeneration; figures reconcile, findings unchanged | - | - |
+| 2026-10-24 | Hôtel Oldegar 702d5cc2 -> 90fcab0c | preview --fix | SEND | Blocking: - after rescan on 6867d0f0; card 2 reflow now rests on real overflow (privacy policy 463 px wide at 320 live). Backlog: - | fifth batch fix | 1 |
+| 2026-10-24 | Château de Vault de Lugny 20dc9f62 -> 9af8cef0 | preview --fix | SEND | Blocking: - after rescan; 57 pages analysed, the 9 theme and form objects recorded discovered-not-scanned. Backlog: no-identifier claim still false (legal notice only as a linked PDF), seen before | fifth batch fix | 1 |
+| 2026-10-24 | Le Petit Hôtel ea82fc35 -> d20f109f | preview --fix | SEND | Blocking: -. No-identifier claim gone after rescan (SIRET read on /m-legales) | fifth batch fix | 1 |
+| 2026-10-24 | Hôtel Madame Rêve (failed job deleted) -> 89b679c2 | preview --fix | SEND | Blocking: report blocked by an email address linked without mailto: (403 challenge on the resolved path), fixed; rescan clean. Backlog: card 2 contrast samples sit in the Axeptio consent banner | fifth batch fix (6867d0f0) | 1 |
+| 2026-10-24 | Private Hôtel (no audit) | preview --fix | archived | Blocking: crawl rejected twice (403 bot challenges at default pacing, 33% of URLs failed at 5 s and concurrency 1) | - | 1 (5 s) |
+| 2026-10-24 | Hôtel Saint Gothard, Hôtel Villa Louise (no audit) | cleanup | archived | Blocking: Saint Gothard 403 on every URL over four runs; Villa Louise rate-limited (429) and failed twice | - | - |
 
 ## Sweep 4 notes
 
