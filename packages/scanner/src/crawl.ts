@@ -367,6 +367,10 @@ export interface QueueItem {
    *  the slash-free identity redirects off itself, the slashed spelling is
    *  fetched once before the URL is recorded as a redirect. */
   writtenWithSlash?: true;
+  /** The redirect target of a sitemap entry no page linked to (a sitemap
+   *  that still spells `http:` on an `https:` site). It stays as unlinked as
+   *  the entry, so the plugin-object rule still applies to it. */
+  unlinkedSitemapTarget?: true;
 }
 
 /** How long link extraction waits for a client-side redirect's document
@@ -1347,6 +1351,9 @@ export async function crawlSite(
                   ...(isWrittenWithTrailingSlash(landedUrl)
                     ? { writtenWithSlash: true as const }
                     : {}),
+                  ...(discoveryMethod === 'sitemap-only' && discoveredFrom === undefined
+                    ? { unlinkedSitemapTarget: true as const }
+                    : {}),
                 });
               }
               if (item.isHomepage === true && landedIdentity !== undefined) {
@@ -1453,7 +1460,8 @@ export async function crawlSite(
               let auditProfile: PageAuditProfile | undefined;
               let rawFacts: RawPageAuditFacts | undefined;
               const mayBePluginObject =
-                discoveryMethod === 'sitemap-only' && discoveredFrom === undefined;
+                (discoveryMethod === 'sitemap-only' && discoveredFrom === undefined) ||
+                (item.unlinkedSitemapTarget === true && !linkDiscoveredUrls.has(item.url));
               if (!discoverOnly || mayBePluginObject) {
                 const profileContext = {
                   url: item.url,
@@ -1481,11 +1489,10 @@ export async function crawlSite(
               }
 
               const pluginObject =
-                rawFacts === undefined
+                rawFacts === undefined || !mayBePluginObject
                   ? undefined
                   : classifyNonPublicPluginObject({
-                      discoveryMethod,
-                      ...(discoveredFrom !== undefined ? { discoveredFrom } : {}),
+                      discoveryMethod: 'sitemap-only',
                       bodyClassTokens: rawFacts.bodyClassTokens,
                     });
               if (pluginObject !== undefined) discoverOnly = true;

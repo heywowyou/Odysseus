@@ -118,7 +118,16 @@ const NON_PUBLIC_WP_POST_TYPES = new Set([
 // E9: confirmed against grandhoteldesalpes' sitemap. Keep this separate from
 // the query-string admission list above because these objects arrive as
 // ordinary sitemap paths and need structural, not URL-shape, evidence.
-const NON_PUBLIC_PLUGIN_POST_TYPES = new Set(['rl_gallery']);
+// The UiCore theme's header, footer and drawer templates (`uicore-tb`) and
+// its dashboard objects (`uicore-cd`), and MetForm's form objects
+// (`metform-form`): confirmed against one hotel's Yoast sitemap, which lists
+// each type in its own sitemap and links none of them from a page.
+const NON_PUBLIC_PLUGIN_POST_TYPES = new Set([
+  'rl_gallery',
+  'uicore-tb',
+  'uicore-cd',
+  'metform-form',
+]);
 
 export interface NonPublicPluginObjectInput {
   discoveryMethod: 'link' | 'seed' | 'sitemap-only';

@@ -73,13 +73,16 @@ function legalPathKey(url: string): string | undefined {
 }
 
 /** Ranked legal-page families. Words may be joined by `-` or by nothing
- *  (`/mentionslegales`). A bare `mentions` path segment (Wix names its legal
+ *  (`/mentionslegales`). The abbreviation `m-legales` is a whole path
+ *  segment, since a site printed its SIRET there beside an empty
+ *  `/mentions-legales`. A bare `mentions` path segment (Wix names its legal
  *  notice `/mentions`, a hand-built PHP site `/mentions.php`) ranks below
  *  every real legal-notice name. Bare `legal`
  *  stays excluded, for the wrong-lock reason above. */
 const LEGAL_PAGE_FAMILIES: readonly RegExp[] = [
   /mentions?-?legales?/u,
   /informations?-?legales?/u,
+  /(?:^|\/)m-?legales?(?:\/|\.[a-z0-9]{2,5}$|$)/u,
   /legal-?notices?|\blegals\b/u,
   /mentions?-?(?:et-?)?(?:credits|informations)/u,
   /(?:^|\/)mentions?(?:\/|\.[a-z0-9]{2,5}$|$)/u,

@@ -6572,6 +6572,29 @@ engines cannot read" card of that preview. A click handler that names a
 consent manager now declares a control too; any other handler behind a text
 link is still judged as a link.
 
+**Fifth batch fix, 2026-10-24.** Ten audits new since the fourth batch
+brought three shared defects, all at scan time:
+
+- A site printed its SIRET on `/m-legales` beside an empty
+  `/mentions-legales`. The abbreviation was no legal-notice candidate, so the
+  identifier check read only the empty page and reported none. `m-legales` is
+  now a candidate when it is a whole path segment.
+- A Yoast sitemap listed a theme's header, footer and drawer templates, its
+  dashboard objects and a form plugin's forms, each in its own sitemap and
+  linked from no page, under an `http:` spelling the `https:` site
+  redirects. The redirect target was enqueued as a linked page, so the
+  plugin-object rule (sitemap-only, no inbound link, a non-public post type's
+  body class) never applied, and nine of 66 analysed pages were templates.
+  The target of an unlinked sitemap entry now stays unlinked, and the
+  `uicore-tb`, `uicore-cd` and `metform-form` types join `rl_gallery`.
+- The reflow check named a transparent off-canvas menu fixed to the
+  viewport, 510 pixels wide, as the cause of a five-pixel overflow. A fixed
+  box never widens the page, so it and its contents are no longer named.
+
+A legal notice published only as a linked PDF is recorded, not fixed: the
+check reads HTML pages, so on that site it reported no SIRET although the
+PDF prints the RCS, SIRET and VAT number.
+
 ### 128. The reminder names what the analysis covers, and the signature leads with accessibility (operator decision, 2026-10-10)
 
 The first reply of the campaign, received 2026-10-05 after the reminder,

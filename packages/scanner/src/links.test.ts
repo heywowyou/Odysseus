@@ -259,6 +259,30 @@ describe('E9: non-public plugin objects', () => {
     ).toEqual({ postType: 'rl_gallery', bodyClass: 'single-rl_gallery' });
   });
 
+  it('classifies theme template and form objects by their single-<type> class', () => {
+    for (const postType of ['uicore-tb', 'uicore-cd', 'metform-form']) {
+      expect(
+        classifyNonPublicPluginObject({
+          discoveryMethod: 'sitemap-only',
+          bodyClassTokens: [
+            'wp-singular',
+            `${postType}-template-default`,
+            'single',
+            `single-${postType}`,
+          ],
+        }),
+        postType,
+      ).toEqual({ postType, bodyClass: `${postType}-template-default` });
+    }
+    // The same theme's ordinary pages carry other uicore classes.
+    expect(
+      classifyNonPublicPluginObject({
+        discoveryMethod: 'sitemap-only',
+        bodyClassTokens: ['page-template-default', 'uicore-sticky-tb', 'uicore-animate-fade'],
+      }),
+    ).toBeUndefined();
+  });
+
   it('does not classify a linked or differently shaped public page', () => {
     expect(
       classifyNonPublicPluginObject({

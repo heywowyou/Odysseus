@@ -85,6 +85,24 @@ describe('checkReflow against a real browser layout', () => {
     expect(result.overflowElements).toEqual([]);
   }, 30_000);
 
+  // A transparent off-canvas menu fixed to the viewport was named as the
+  // cause of a page's overflow, although a fixed box never widens the page.
+  it('names the element that widens the page, not a wider fixed menu', async () => {
+    const { result } = await run(
+      '<nav id="menu" style="position:fixed;left:0;top:0;width:510px;opacity:0">' +
+        '<ul style="width:450px"><li>Bar</li></ul></nav>' +
+        '<div id="wide" style="width:340px;height:10px"></div>',
+    );
+    expect(result.requiresHorizontalScroll).toBe(true);
+    expect(result.overflowElements.map((e) => e.selector)).toEqual(['#wide']);
+
+    const fixedOnly = await run(
+      '<nav style="position:fixed;left:0;width:510px"><ul style="width:450px"><li>Bar</li></ul></nav>',
+    );
+    expect(fixedOnly.result.requiresHorizontalScroll).toBe(false);
+    expect(fixedOnly.result.overflowElements).toEqual([]);
+  }, 30_000);
+
   // An embedded feed sizes itself in script and lays itself out again a
   // moment after a resize: measured at once, it was still 1288 pixels wide
   // on a page that fits at 320.

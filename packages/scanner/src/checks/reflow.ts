@@ -116,6 +116,16 @@ export async function checkReflow(
             return parts.join(' > ');
           };
 
+          // A box fixed to the viewport, and everything inside it, never
+          // widens the page: an off-canvas menu 510 pixels wide was named
+          // as the cause of an overflow it took no part in.
+          const insideFixedBox = (el: Element): boolean => {
+            for (let node: Element | null = el; node; node = node.parentElement) {
+              if (getComputedStyle(node).position === 'fixed') return true;
+            }
+            return false;
+          };
+
           const viewportWidth = document.documentElement.clientWidth;
           const scrollWidth = Math.max(
             document.documentElement.scrollWidth,
@@ -131,6 +141,7 @@ export async function checkReflow(
             // experiences, and offscreen menus are routinely wide.
             const style = getComputedStyle(el);
             if (style.display === 'none' || style.visibility === 'hidden') continue;
+            if (insideFixedBox(el)) continue;
 
             let depth = 0;
             for (let node: Element | null = el; node; node = node.parentElement) depth += 1;

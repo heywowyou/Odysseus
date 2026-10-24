@@ -258,6 +258,24 @@ describe('legal-notice slugs (issue #496)', () => {
     }
   });
 
+  // A site kept an empty /mentions-legales page and printed its SIRET on
+  // /m-legales: the abbreviation was no candidate, so the check read only
+  // the empty page and reported no identifier.
+  it('finds the abbreviated "m-legales" page', () => {
+    for (const path of ['/fr/m-legales', '/m-legale', '/en/mlegales.html']) {
+      expect(findMentionsLegalesUrl([`https://hotel.fr${path}`]), path).toBe(
+        `https://hotel.fr${path}`,
+      );
+    }
+    expect(findMentionsLegalesUrl(['https://hotel.fr/salle-m-legales-2'])).toBe(null);
+    expect(
+      findMentionsLegalesUrls([
+        'https://hotel.fr/fr/m-legales',
+        'https://hotel.fr/fr/mentions-legales',
+      ]),
+    ).toEqual(['https://hotel.fr/fr/mentions-legales', 'https://hotel.fr/fr/m-legales']);
+  });
+
   it('still does not lock onto a bare "legal" page', () => {
     expect(findMentionsLegalesUrl(['https://hotel.fr/legal', 'https://hotel.fr/fr/legal'])).toBe(
       null,

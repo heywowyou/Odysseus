@@ -406,3 +406,63 @@ describe('a start URL whose bare spelling does not exist', () => {
     expect(missing?.httpStatus).toBe(404);
   }, 30_000);
 });
+
+// A sitemap that still spells http: on an https: site lists a theme's footer
+// template; its redirect target was then a linked page, so the plugin-object
+// rule never applied and the template was analysed like a page.
+describe('a plugin object reached through a sitemap redirect', () => {
+  const PORT = 5199;
+  const origin = `http://localhost:${PORT}`;
+  let server: Server;
+  let ownBrowser: Browser;
+
+  beforeAll(async () => {
+    server = http.createServer((req, res) => {
+      if (req.url === '/robots.txt') {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end(`User-agent: *\nAllow: /\nSitemap: ${origin}/sitemap.xml`);
+        return;
+      }
+      if (req.url === '/sitemap.xml') {
+        res.writeHead(200, { 'Content-Type': 'application/xml' });
+        res.end(
+          `<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` +
+            `<url><loc>${origin}/</loc></url><url><loc>${origin}/old-footer</loc></url></urlset>`,
+        );
+        return;
+      }
+      if (req.url === '/old-footer') {
+        res.writeHead(301, { Location: `${origin}/footer` });
+        res.end();
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      if (req.url === '/footer') {
+        res.end('<html lang="fr"><body class="single single-uicore-tb"><p>Pied</p></body></html>');
+        return;
+      }
+      res.end('<html lang="fr"><body class="home"><h1>Accueil</h1></body></html>');
+    });
+    await listen(server, PORT);
+    ({ browser: ownBrowser } = await launchBrowser());
+  }, 30_000);
+
+  afterAll(async () => {
+    await ownBrowser?.close();
+    await close(server);
+  });
+
+  it('records the redirect target as a plugin object, not a page', async () => {
+    const result = await crawlSite(`${origin}/`, {
+      browser: ownBrowser,
+      maxPages: 10,
+      maxDepth: 3,
+      delayMs: 0,
+      sitemapMode: 'supplement',
+    });
+
+    const footer = result.pages.find((page) => page.url === `${origin}/footer`);
+    expect(footer?.status).toBe('discovered-not-scanned');
+    expect(footer?.pluginObject?.postType).toBe('uicore-tb');
+  }, 45_000);
+});
