@@ -158,6 +158,22 @@ export function classifyNonPublicPluginObject(
   return undefined;
 }
 
+/** A link written `href="contact@hotel.fr"`, without `mailto:`, resolves to
+ *  a path under the page. No page lives there: one site answered it 403 with
+ *  a challenge, and the one link held the report behind the blocked-page
+ *  gate. */
+const EMAIL_ADDRESS_SEGMENT = /(?:^|\/)[^/@\s]+@[^/@\s]+\.[a-z]{2,}(?:\/|$)/i;
+
+function isEmailAddressAsPath(url: URL): boolean {
+  let pathname = url.pathname;
+  try {
+    pathname = decodeURIComponent(pathname);
+  } catch {
+    // A malformed escape: match the path as it came.
+  }
+  return EMAIL_ADDRESS_SEGMENT.test(pathname);
+}
+
 function isNonPublicWordPressObject(url: URL): boolean {
   const postType = url.searchParams.get('post_type');
   return postType !== null && NON_PUBLIC_WP_POST_TYPES.has(postType.toLowerCase());
@@ -225,6 +241,7 @@ export function normalizePageUrl(
   }
   if (NON_HTML_EXTENSIONS.has(path.posix.extname(resolved.pathname).toLowerCase()))
     return undefined;
+  if (isEmailAddressAsPath(resolved)) return undefined;
   if (isNonPublicWordPressObject(resolved)) return undefined;
   dropTrackingParameters(resolved);
   resolved.hash = '';

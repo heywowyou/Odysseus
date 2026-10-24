@@ -6573,7 +6573,7 @@ consent manager now declares a control too; any other handler behind a text
 link is still judged as a link.
 
 **Fifth batch fix, 2026-10-24.** Ten audits new since the fourth batch
-brought three shared defects, all at scan time:
+brought four shared defects, all at scan time:
 
 - A site printed its SIRET on `/m-legales` beside an empty
   `/mentions-legales`. The abbreviation was no legal-notice candidate, so the
@@ -6590,6 +6590,10 @@ brought three shared defects, all at scan time:
 - The reflow check named a transparent off-canvas menu fixed to the
   viewport, 510 pixels wide, as the cause of a five-pixel overflow. A fixed
   box never widens the page, so it and its contents are no longer named.
+- A press page linked an email address without `mailto:`, so it resolved to
+  a path under the page; the site answered it 403 with a challenge and the
+  one link held the report behind the blocked-page gate. A path segment that
+  is an email address is no longer followed.
 
 A legal notice published only as a linked PDF is recorded, not fixed: the
 check reads HTML pages, so on that site it reported no SIRET although the

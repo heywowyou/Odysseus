@@ -151,6 +151,20 @@ describe('normalizeInternalLinks', () => {
   it('does not strip the root path itself down to an empty pathname', () => {
     expect(normalizeInternalLinks(['/'], BASE)).toEqual(['https://client.example/']);
   });
+
+  // A press page linked `href="communication@hotel.fr"` without mailto:.
+  it('drops an email address written as a link path', () => {
+    expect(
+      normalizeInternalLinks(
+        ['communication@hotel.fr', '/it/contact%40hotel.fr/', '/presse'],
+        'https://client.example/it/sala-stampa',
+      ),
+    ).toEqual(['https://client.example/presse']);
+    expect(normalizeInternalLinks(['/@hotel', '/chambres@2x'], BASE)).toEqual([
+      'https://client.example/@hotel',
+      'https://client.example/chambres@2x',
+    ]);
+  });
 });
 
 describe('globToRegExp', () => {
