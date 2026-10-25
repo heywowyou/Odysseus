@@ -121,12 +121,16 @@ const NON_PUBLIC_WP_POST_TYPES = new Set([
 // The UiCore theme's header, footer and drawer templates (`uicore-tb`) and
 // its dashboard objects (`uicore-cd`), and MetForm's form objects
 // (`metform-form`): confirmed against one hotel's Yoast sitemap, which lists
-// each type in its own sitemap and links none of them from a page.
+// each type in its own sitemap and links none of them from a page. The7
+// theme's slideshow objects (`dt_slideshow`), single and archive: confirmed
+// against another hotel's sitemap, where they are the slides of the homepage
+// carousel.
 const NON_PUBLIC_PLUGIN_POST_TYPES = new Set([
   'rl_gallery',
   'uicore-tb',
   'uicore-cd',
   'metform-form',
+  'dt_slideshow',
 ]);
 
 export interface NonPublicPluginObjectInput {

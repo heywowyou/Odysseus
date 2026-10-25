@@ -297,6 +297,28 @@ describe('E9: non-public plugin objects', () => {
     ).toBeUndefined();
   });
 
+  it('classifies a theme slideshow object, single or archive', () => {
+    expect(
+      classifyNonPublicPluginObject({
+        discoveryMethod: 'sitemap-only',
+        bodyClassTokens: ['wp-singular', 'single', 'single-dt_slideshow'],
+      }),
+    ).toEqual({ postType: 'dt_slideshow', bodyClass: 'single-dt_slideshow' });
+    expect(
+      classifyNonPublicPluginObject({
+        discoveryMethod: 'sitemap-only',
+        bodyClassTokens: ['archive', 'post-type-archive', 'post-type-archive-dt_slideshow'],
+      }),
+    ).toEqual({ postType: 'dt_slideshow', bodyClass: 'post-type-archive-dt_slideshow' });
+    // The homepage that shows the carousel says so in another class.
+    expect(
+      classifyNonPublicPluginObject({
+        discoveryMethod: 'sitemap-only',
+        bodyClassTokens: ['home', 'page', 'slideshow-on'],
+      }),
+    ).toBeUndefined();
+  });
+
   it('does not classify a linked or differently shaped public page', () => {
     expect(
       classifyNonPublicPluginObject({

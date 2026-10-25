@@ -6599,6 +6599,13 @@ A legal notice published only as a linked PDF is recorded, not fixed: the
 check reads HTML pages, so on that site it reported no SIRET although the
 PDF prints the RCS, SIRET and VAT number.
 
+**Sixth batch fix, 2026-10-25.** One theme's homepage carousel slides
+(`dt_slideshow`, single and archive) were listed in the sitemap and analysed
+as pages, and two preview cards drew their samples from them. The type joins
+the plugin-object list. Recorded, not fixed: a site whose apex `robots.txt`
+redirects to a malformed host failed its crawl outright; the site's own host
+answered 404 for its robots file, so it was rescanned from there.
+
 ### 128. The reminder names what the analysis covers, and the signature leads with accessibility (operator decision, 2026-10-10)
 
 The first reply of the campaign, received 2026-10-05 after the reminder,
