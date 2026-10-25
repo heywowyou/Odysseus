@@ -309,6 +309,11 @@ input of the next batch fix.
 | 2026-10-24 | Hôtel Madame Rêve (failed job deleted) -> 89b679c2 | preview --fix | SEND | Blocking: report blocked by an email address linked without mailto: (403 challenge on the resolved path), fixed; rescan clean. Backlog: card 2 contrast samples sit in the Axeptio consent banner | fifth batch fix (6867d0f0) | 1 |
 | 2026-10-24 | Private Hôtel (no audit) | preview --fix | archived | Blocking: crawl rejected twice (403 bot challenges at default pacing, 33% of URLs failed at 5 s and concurrency 1) | - | 1 (5 s) |
 | 2026-10-24 | Hôtel Saint Gothard, Hôtel Villa Louise (no audit) | cleanup | archived | Blocking: Saint Gothard 403 on every URL over four runs; Villa Louise rate-limited (429) and failed twice | - | - |
+| 2026-10-25 | Hôtel Le Ballu 7ef8848e, Hôtel Hiro bc3c81dc, Grand Hôtel de Cala Rossa 5597e5d1, Château de Maubreuil 0d798ea7 | preview --fix | SEND | Blocking: -. Figures reconcile, cards hold. Backlog: - | - | - |
+| 2026-10-25 | Auberge du Camp Romain f6d38041 | preview --fix | SEND | Blocking: -. Backlog: 4 room pages (?RoomTypeCode=) share one raw document, the booking widget fills them in script; all three cards are moderate SEO and structure findings | - | - |
+| 2026-10-25 | Atlantic Hôtel 2081645d | preview --fix | HOLD (2), rescan pending deploy | Blocking: 4 of 34 analysed pages are not pages (two The7 slideshow objects, an orphan draft, an author archive); card 2 and card 3 samples on them | sixth batch fix (dt_slideshow plugin object) | - |
+| 2026-10-25 | Hôtel La Chaize, Au Palmyre Hôtel (failed jobs deleted) | preview --fix | rescan running | Blocking: report blocked by 2 pages answering 503 each (origin pushback) | - | 1 (5 s) |
+| 2026-10-25 | Belle Hôtel (failed job deleted) | preview --fix | rescan running | Blocking: crawl failed, the apex robots.txt redirects to a malformed host (www.<domain>robots.txt); rescanned from the www host, whose robots.txt answers 404 | - | 1 |
 
 ## Sweep 4 notes
 
