@@ -659,9 +659,8 @@ describe('crawlSite non-2xx responses (issue #39)', () => {
     installFetchStub({ 'https://example.com/robots.txt': ROBOTS_BODY });
     const result = await crawlSite('https://example.com', {
       browser: makeStatusFakeBrowser(
-        (url) => (url === 'https://example.com/back-office/bienvenue@villasfoch.fr' ? 404 : 200),
-        (url) =>
-          url === 'https://example.com/' ? [{ href: '/back-office/bienvenue@villasfoch.fr' }] : [],
+        (url) => (url === 'https://example.com/back-office/ancienne-offre' ? 404 : 200),
+        (url) => (url === 'https://example.com/' ? [{ href: '/back-office/ancienne-offre' }] : []),
       ),
       maxPages: 10,
       maxDepth: 5,

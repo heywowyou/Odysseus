@@ -6606,6 +6606,14 @@ the plugin-object list. Recorded, not fixed: a site whose apex `robots.txt`
 redirects to a malformed host failed its crawl outright; the site's own host
 answered 404 for its robots file, so it was rescanned from there.
 
+On 2026-10-27 a site with no legal notice printed its RCS and VAT numbers in
+its privacy policy, and the identifier check read only the homepage and
+reported none. Privacy pages were kept out of the legal-notice candidates so
+the check could not lock onto the wrong page; now that every candidate is
+read before the absence is claimed, that risk is gone, and a privacy policy
+joins the candidates, ranked last. Cookie pages and a bare `legal` page stay
+out.
+
 ### 128. The reminder names what the analysis covers, and the signature leads with accessibility (operator decision, 2026-10-10)
 
 The first reply of the campaign, received 2026-10-05 after the reminder,

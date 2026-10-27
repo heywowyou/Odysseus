@@ -61,10 +61,33 @@ describe('findMentionsLegalesUrl', () => {
     ).toBe('https://example.com/conditions-generales-dutilisation/');
   });
 
-  it('does not match an unrelated legal page (privacy, cookies)', () => {
+  it('does not match a cookie page', () => {
+    expect(findMentionsLegalesUrl(['https://example.com/cookies'])).toBeNull();
+  });
+
+  // A site with no legal notice printed its RCS and VAT numbers in its
+  // privacy policy; the check read only the homepage and reported none.
+  it('reads a privacy policy, ranked below every legal-notice and terms page', () => {
+    for (const path of [
+      '/privacy-policy',
+      '/fr/politique-de-confidentialite',
+      '/donnees-personnelles',
+    ]) {
+      expect(findMentionsLegalesUrl([`https://example.com${path}`]), path).toBe(
+        `https://example.com${path}`,
+      );
+    }
     expect(
-      findMentionsLegalesUrl(['https://example.com/privacy', 'https://example.com/cookies']),
-    ).toBeNull();
+      findMentionsLegalesUrls([
+        'https://example.com/privacy-policy',
+        'https://example.com/cgv',
+        'https://example.com/mentions-legales',
+      ]),
+    ).toEqual([
+      'https://example.com/mentions-legales',
+      'https://example.com/cgv',
+      'https://example.com/privacy-policy',
+    ]);
   });
 
   it('matches the singular "mention-legale" variant', () => {
@@ -103,14 +126,12 @@ describe('findMentionsLegalesUrl', () => {
     );
   });
 
-  it('still does not match a bare "legal" page or a privacy/cookies page', () => {
+  it('still does not match a bare "legal" page or a cookies page', () => {
     // Bare "legal" stays excluded on purpose: it is the same wrong-lock
     // risk LEGAL_PATH_PATTERN's own narrowing warns about, and the issue
     // only names "legals" and "legal-notice" as the English forms.
     expect(findMentionsLegalesUrl(['https://example.com/legal'])).toBeNull();
-    expect(
-      findMentionsLegalesUrl(['https://example.com/privacy', 'https://example.com/cookies']),
-    ).toBeNull();
+    expect(findMentionsLegalesUrl(['https://example.com/cookies'])).toBeNull();
     expect(findMentionsLegalesUrl(['https://example.com/terms'])).toBeNull();
   });
 });
