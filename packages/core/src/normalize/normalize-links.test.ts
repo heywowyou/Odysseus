@@ -149,6 +149,8 @@ describe('isUncrawlableAnchor', () => {
       '<a data-tracking-label="sp_toolbar_open" href="javascript:void(0);" class="smartpreview__toolbar-open">',
       '<a class="smartpreview__tabs-title active" data-target="#tab-prices">',
       '<a data-filter-value="">',
+      '<a aria-label="hotel restaurant spa bretagne" id="" class="book " target="" href="javascript:void(0);">',
+      '<a class="btn-reservation" href="javascript:void(0)">',
     ];
     for (const snippet of controls) {
       const rawHref = /href="([^"]*)"/.exec(snippet)?.[1] ?? null;
@@ -291,10 +293,12 @@ describe('extractLinkCandidates', () => {
 });
 
 describe('crawlable-anchors identity on capped snippets', () => {
-  // The shape of a real hotel booking button: a different SEO aria-label on
-  // each page moves the 200-character cap through the next attribute's name.
-  function bookingButton(label: string): AnchorFactInput {
-    const tag = `<a aria-label="${label}" id="" class="book-link " target="" href="javascript:void(0);" onclick="event.preventDefault();" data-ctx-type="booking" data-ctx-code="4301" data-ctx-lang="fr">`;
+  // The shape of a real hotel link written as a script call: a different SEO
+  // aria-label on each page moves the 200-character cap through the next
+  // attribute's name. (The site's booking button had this shape; a booking
+  // class now reads as a control, so the fixture names a room link.)
+  function roomLink(label: string): AnchorFactInput {
+    const tag = `<a aria-label="${label}" id="" class="room-link " target="" href="javascript:void(0);" onclick="event.preventDefault();" data-ctx-type="room" data-ctx-code="4301" data-ctx-lang="fr">`;
     return anchor({ rawHref: 'javascript:void(0);', snippet: tag.slice(0, 200) });
   }
 
@@ -304,14 +308,14 @@ describe('crawlable-anchors identity on capped snippets', () => {
         'hotel rue des dames',
         'hotel near gare saint lazare paris',
         'hotels near gare st lazare',
-      ].map((label) => extractLinkCandidates([bookingButton(label)], PAGE_URL)[0]?.dedupeIdentity),
+      ].map((label) => extractLinkCandidates([roomLink(label)], PAGE_URL)[0]?.dedupeIdentity),
     );
     expect(identities.size).toBe(1);
     expect([...identities][0]).toBeDefined();
   });
 
   it('keeps two kinds of link apart', () => {
-    const booking = extractLinkCandidates([bookingButton('hotel')], PAGE_URL)[0];
+    const room = extractLinkCandidates([roomLink('hotel')], PAGE_URL)[0];
     const menu = extractLinkCandidates(
       [
         anchor({
@@ -321,8 +325,8 @@ describe('crawlable-anchors identity on capped snippets', () => {
       ],
       PAGE_URL,
     )[0];
-    expect(booking?.dedupeIdentity).toBeDefined();
+    expect(room?.dedupeIdentity).toBeDefined();
     expect(menu?.dedupeIdentity).toBeDefined();
-    expect(booking?.dedupeIdentity).not.toBe(menu?.dedupeIdentity);
+    expect(room?.dedupeIdentity).not.toBe(menu?.dedupeIdentity);
   });
 });

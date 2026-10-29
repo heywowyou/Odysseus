@@ -152,6 +152,23 @@ describe('jsonld-missing / jsonld-invalid', () => {
     expect(candidates[0]?.element?.selector).toBe('#ld1');
   });
 
+  it('reads an empty JSON-LD container as no structured data, not as invalid JSON', () => {
+    const empty = { raw: ' \n ', selector: 'script:nth-of-type(3)', parsed: null };
+    const alone = extractHeadMetadataCandidates(
+      baseInput({ jsonLdBlocks: [{ ...empty, parseError: 'Unexpected end of JSON input' }] }),
+    );
+    expect(ruleIds(alone)).toEqual([JSONLD_MISSING_RULE_ID]);
+    const besideData = extractHeadMetadataCandidates(
+      baseInput({
+        jsonLdBlocks: [
+          { raw: '{"@type":"Hotel"}', selector: '#ld1', parsed: { '@type': 'Hotel' } },
+          { ...empty, parseError: 'Unexpected end of JSON input' },
+        ],
+      }),
+    );
+    expect(besideData).toEqual([]);
+  });
+
   it('does not fire either when a block parses cleanly', () => {
     expect(extractHeadMetadataCandidates(baseInput())).toEqual([]);
   });

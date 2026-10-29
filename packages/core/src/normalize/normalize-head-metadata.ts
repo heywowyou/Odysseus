@@ -346,7 +346,11 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
     }
   }
 
-  if (input.jsonLdBlocks.length === 0) {
+  // A CMS writes an empty `<script type="application/ld+json"></script>`
+  // container where a template has nothing to declare. It holds no data to
+  // read, so it is neither structured data nor invalid structured data.
+  const jsonLdBlocks = input.jsonLdBlocks.filter((block) => block.raw.trim() !== '');
+  if (jsonLdBlocks.length === 0) {
     candidates.push(
       pageCandidate(
         JSONLD_MISSING_RULE_ID,
@@ -361,7 +365,7 @@ export function extractHeadMetadataCandidates(input: HeadMetadataCheckInput): Fi
     );
   }
 
-  for (const block of input.jsonLdBlocks) {
+  for (const block of jsonLdBlocks) {
     if (block.parseError === undefined) continue;
     candidates.push(
       pageCandidate(

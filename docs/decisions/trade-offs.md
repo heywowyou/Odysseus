@@ -6614,6 +6614,17 @@ read before the absence is claimed, that risk is gone, and a privacy policy
 joins the candidates, ranked last. Cookie pages and a bare `legal` page stay
 out.
 
+The seventh batch, on 2026-10-29, found two more false cards. One hotel's
+booking button, `<a class="book" href="javascript:void(0);">`, was every
+sample of a "links search engines cannot read" card: it opens the booking
+engine from script and has no page behind it. A booking class (`book`,
+`booking`, `reserv…`, `resa`) now reads as a control, under the same rule
+as the other names: only when the link has no destination. Another site's
+CMS writes empty `application/ld+json` containers on every page, and the
+parser's "unexpected end of input" became a serious invalid-structured-data
+card. An empty container holds nothing to read, so it now counts as no
+structured data rather than as invalid JSON-LD.
+
 ### 128. The reminder names what the analysis covers, and the signature leads with accessibility (operator decision, 2026-10-10)
 
 The first reply of the campaign, received 2026-10-05 after the reminder,

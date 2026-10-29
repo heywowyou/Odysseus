@@ -202,13 +202,18 @@ const JAVASCRIPT_VOID_PATTERN = /javascript:void(\(|)0(\)|)/;
  *  A privacy policy writes its cookie-preferences link as plain bold text
  *  (`class="link"`) whose only tell is a click handler that opens the
  *  consent manager (`onclick="openAxeptioCookies()"`); on one more preview
- *  it was the whole "links search engines cannot read" priority. */
+ *  it was the whole "links search engines cannot read" priority.
+ *
+ *  A booking button written as `<a class="book" href="javascript:void(0);">`
+ *  opens the booking engine's overlay from script; on one more preview it
+ *  was every sample of that priority. A booking class reads as a control
+ *  only when the link has no destination, like every name here. */
 const CONTROL_ATTRIBUTE_PATTERN =
   /\s(?:type\s*=\s*["']?button|aria-(?:controls|expanded|haspopup)\s*=|[\w:-]*toggle[\w:-]*\s*=|data-(?:handler|event)\s*=|data-filter[\w-]*\s*=|data-(?:bs-)?target\s*=\s*["']?#|onclick\s*=\s*["'][^"']*(?:axeptio|tarteaucitron|didomi|klaro|cookiebot|onetrust|cmplz|cookie)|hidden(?=[\s>=/]))/i;
 const CONTROL_STYLE_PATTERN =
   /\sstyle\s*=\s*["'][^"']*(?:pointer-events\s*:\s*none|cursor\s*:\s*default|display\s*:\s*none|visibility\s*:\s*hidden)/i;
 const CONTROL_CLASS_PATTERN =
-  /(?:^|[\s_-])(?:btn|button|nolink|toggle|close|open|opener|modal|popup|popin|datepicker|read-?more|tarteaucitron\w*|openaxeptio\w*|axeptio\w*|cmplz\w*|klaro\w*|cm-btn|didomi\w*|ot-sdk\w*|cky\w*|cookie\w*)(?:$|[\s_-])/i;
+  /(?:^|[\s_-])(?:btn|button|nolink|toggle|close|open|opener|modal|popup|popin|datepicker|read-?more|book(?:ing)?|reserv\w*|resa|tarteaucitron\w*|openaxeptio\w*|axeptio\w*|cmplz\w*|klaro\w*|cm-btn|didomi\w*|ot-sdk\w*|cky\w*|cookie\w*)(?:$|[\s_-])/i;
 
 /** A consent manager's own panel, named by the id the link's selector
  *  starts from. Klaro writes its "set my preferences" opener as a bare
