@@ -77,7 +77,10 @@ function legalPathKey(url: string): string | undefined {
  *  segment, since a site printed its SIRET there beside an empty
  *  `/mentions-legales`. A bare `mentions` path segment (Wix names its legal
  *  notice `/mentions`, a hand-built PHP site `/mentions.php`) ranks below
- *  every real legal-notice name. A privacy policy ranks last: a site with
+ *  every real legal-notice name. A hotel CMS writes the legal notice as an
+ *  SEO slug that only starts with the word (`mentions-hotel-spa-savoie.4383.html`);
+ *  a last path segment that opens with `mentions-` ranks just below the bare
+ *  name. A privacy policy ranks last: a site with
  *  no legal notice printed its RCS and VAT numbers there, and every
  *  candidate is read before the absence is claimed, so it can no longer lock
  *  the check onto the wrong page. Bare `legal` and cookie pages stay
@@ -89,6 +92,7 @@ const LEGAL_PAGE_FAMILIES: readonly RegExp[] = [
   /legal-?notices?|\blegals\b/u,
   /mentions?-?(?:et-?)?(?:credits|informations)/u,
   /(?:^|\/)mentions?(?:\/|\.[a-z0-9]{2,5}$|$)/u,
+  /(?:^|\/)mentions?-[^/]+$/u,
   /conditions-?(?:generales|(?:d-?)?utilisation)|\bcgu\b|\bcgv\b/u,
   /confidentialite|privacy|donnees-?personnelles/u,
 ];

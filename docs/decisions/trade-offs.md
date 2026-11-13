@@ -6625,6 +6625,16 @@ parser's "unexpected end of input" became a serious invalid-structured-data
 card. An empty container holds nothing to read, so it now counts as no
 structured data rather than as invalid JSON-LD.
 
+The eighth batch, on 2026-11-13, found a hotel CMS that slugs its legal
+notice from the title and keywords (`mentions-hotel-spa-savoie.4383.html`).
+No legal-page family matched, so the identifier check read only the terms
+of sale and reported no SIREN although the notice prints it. A last path
+segment that opens with `mentions-` is now a candidate, ranked just below a
+bare `mentions` page. It needs a rescan, since the candidates are chosen at
+scan time. Recorded, not fixed: a scan whose content checks timed out on 22
+of 25 pages still completed with a report that analyses 3 pages; the quick
+check held it and it was rescanned.
+
 ### 128. The reminder names what the analysis covers, and the signature leads with accessibility (operator decision, 2026-10-10)
 
 The first reply of the campaign, received 2026-10-05 after the reminder,

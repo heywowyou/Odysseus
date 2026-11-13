@@ -297,6 +297,25 @@ describe('legal-notice slugs (issue #496)', () => {
     ).toEqual(['https://hotel.fr/fr/mentions-legales', 'https://hotel.fr/fr/m-legales']);
   });
 
+  // A hotel CMS slugs the legal notice from its title and keywords: the page
+  // that printed the SIREN was never a candidate, so the check read only the
+  // terms of sale and reported no identifier.
+  it('finds a legal notice whose slug only starts with "mentions"', () => {
+    const notice = 'https://hotel.fr/fr/page/mentions-hotel-spa-savoie.4383.html';
+    expect(
+      findMentionsLegalesUrls(['https://hotel.fr/en/page/cgv-courchevel.27545.html', notice]),
+    ).toEqual([notice, 'https://hotel.fr/en/page/cgv-courchevel.27545.html']);
+    expect(
+      findMentionsLegalesUrls([
+        'https://hotel.fr/fr/mentions',
+        notice,
+        'https://hotel.fr/mentions-legales',
+      ]),
+    ).toEqual(['https://hotel.fr/mentions-legales', 'https://hotel.fr/fr/mentions', notice]);
+    // Only the last segment: a section named that way is not the page.
+    expect(findMentionsLegalesUrl(['https://hotel.fr/mentions-presse/dossier'])).toBe(null);
+  });
+
   it('still does not lock onto a bare "legal" page', () => {
     expect(findMentionsLegalesUrl(['https://hotel.fr/legal', 'https://hotel.fr/fr/legal'])).toBe(
       null,
